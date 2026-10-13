@@ -1,0 +1,12 @@
+// Connection URL lives in prisma.config.ts (Prisma 7 no longer accepts `url` here).
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  // The API compiles to CommonJS. With "esm" the client uses import.meta.url and
+  // imports ".ts" paths, which break `nest build`.
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}

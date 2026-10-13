@@ -2,3 +2,6 @@ pnpm-lock.yaml
 # Hand-written prose and agent configs keep their own layout.
 *.md
 .claude/
+
+# Generated code.
+apps/api/src/generated/

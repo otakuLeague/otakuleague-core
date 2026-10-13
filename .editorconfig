@@ -10,3 +10,8 @@ trim_trailing_whitespace = true
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Applied migrations are checksummed: an added final newline makes Prisma see them as modified.
+[apps/api/prisma/migrations/**]
+insert_final_newline = unset
+trim_trailing_whitespace = unset
