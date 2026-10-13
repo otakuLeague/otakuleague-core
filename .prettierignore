@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+# Hand-written prose and agent configs keep their own layout.
+*.md
+.claude/
