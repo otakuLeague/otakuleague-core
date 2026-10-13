@@ -77,3 +77,21 @@ This is a guardrail, not a security boundary: `Reflect.get(globalThis, 'fetch')`
 - `apps/web/node_modules/next/types/global.d.ts`: `NextFetchRequestConfig` on `RequestInit`.
 - `next/dist/docs/01-app/02-guides/data-security.md`: `server-only`.
 - `next/dist/docs/01-app/03-api-reference/04-functions/unstable_rethrow.md`.
+
+## Addendum: home page, error pages and caching flags (2026-10-14, OTA-86)
+
+**Home health is its own union.** `ApiResult<HealthResponse>` has `ok: true` for both "all up" and "database down" (see Consequences above), which a page can misread. The home page maps it once, in `toHomeHealth` (`apps/web/app/health-status.tsx`), to `healthy | degraded | unknown`, where `unknown` carries the `ApiFailure` (network, timeout, invalid response, or an envelope). `HealthStatusView` renders it with an exhaustive `switch` and `assertNever`, so a new state is a compile error. This is an exception, not a new rule: the client and every other call keep returning `ApiResult`. An `api_error` message is never shown; it can be internal. A configuration error (missing or invalid `API_BASE_URL`) still throws, as the client is designed to, so it is not `unknown`: the whole home page falls back to `error.tsx`. Accepted until boot validation lands (see Still open).
+
+**Caching flags: keep `cacheComponents` and `partialPrefetching`.** Tested with the home page on a production build (`next build && next start`):
+
+| | Flags on | Flags off |
+|---|---|---|
+| Route type | `◐` Partial Prerender: the shell (heading, "Checking the API…") is prerendered; the status streams per request | `ƒ` Dynamic: the whole page renders per request |
+| API hanging (timeout path), TTFB / total | 0.011 s / 5.05 s | 0.039 s / 5.02 s |
+| Uncached fetch outside `<Suspense>` | Build fails ("uncached or runtime data during prerendering") | Builds; the whole page waits up to the 5 s timeout before its first byte |
+
+The status is never cached: `getHealth` uses `cache: 'no-store'` and runs in `HealthStatus` inside `<Suspense>`, so the prerendered HTML only holds the fallback (checked in `.next/server/app/index.html`). Stopping the database with the web server still running turned the next request into "degraded" with no restart. Reason for keeping the flags: with Suspense both modes stream, so speed alone does not decide it; but with the flags on, caching is opt-in (`"use cache"`) and an uncached read that would block the page fails the build. Both flags become the default in the next Next.js major (`next/dist/docs/.../cacheComponents.md`), so turning them off now means migrating back later. Cost: every uncached read needs a Suspense boundary or an explicit `"use cache"` decision. Not added: a "checked at" timestamp; it only matters if the status is ever cached.
+
+**Error pages.** `error.tsx`, `global-error.tsx` and `not-found.tsx` show fixed text and a way out ("Try again" calls Next's `retry`, a link home). They never render `error.message`, `error.stack` or `error.digest`: in development Next forwards the original message, and a Client Component error keeps it in production too. `global-error.tsx` replaces the root layout, so it renders its own `<html lang>`, `<body>`, `<title>` and imports `globals.css`. "Try again" is a visitor's choice; the client still never retries on its own.
+
+**Still open.** Failing at boot on a bad `API_BASE_URL` (`instrumentation.ts`) and the caching rule for authenticated calls stay with the deploy and auth tickets.
