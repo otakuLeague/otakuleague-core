@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Reject any push that updates or deletes main on the remote.
+# Git passes one line per ref on stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Blocked: never push directly to main. Push a branch and open a PR." >&2
+    exit 1
+  fi
+done
+exit 0
