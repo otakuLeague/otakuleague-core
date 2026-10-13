@@ -48,3 +48,8 @@ The browser extension is a separate repository: different build toolchain, store
 ## Sources checked 2026-10-13
 - Node.js release schedule (nodejs.org, verify before relying on dates)
 - Expo monorepo guide (docs.expo.dev/guides/monorepos)
+
+## Addendum (2026-10-13, OTA-73 scaffold)
+- **Web unit test runner: Vitest.** It needs one small config file (React plugin plus jsdom) and runs the App Router page component directly. Jest would need `next/jest` and a separate transform setup for the same result. Async Server Components are not supported by either runner; those go to Playwright.
+- **NestJS no longer defaults to Jest.** Nest CLI 12 now generates an ESM project with Vitest and oxlint. The `@nestjs/*` 12 packages are themselves ESM-only. The API keeps CommonJS and Jest as decided above: Node 24 loads the ESM packages through `require()`, but Jest only does so with Node's experimental `--experimental-vm-modules` flag, which the API test script sets. The "NestJS default" reason in the Tests row is therefore out of date, and the API depends on an experimental flag to run its tests. Revisit "Vitest everywhere" (now Nest's own default) before the API test suite grows.
+- **TypeScript pinned to ~6.0.3, ESLint to 9.** TypeScript 7 is out, but typescript-eslint and ts-jest do not support it yet. eslint-config-next still depends on plugins that cap ESLint at 9.

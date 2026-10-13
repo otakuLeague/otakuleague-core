@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+engineStrict: true
+
+# Build scripts are opt-in. These ship prebuilt binaries, so their install scripts are not needed.
+allowBuilds:
+  '@parcel/watcher': false
+  sharp: false
+  unrs-resolver: false
