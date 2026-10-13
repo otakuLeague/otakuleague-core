@@ -7,5 +7,10 @@ engineStrict: true
 # Build scripts are opt-in. These ship prebuilt binaries, so their install scripts are not needed.
 allowBuilds:
   '@parcel/watcher': false
+  # Prisma 7: preinstall only checks the Node version; the CLI downloads its schema engine on first use (see ADR 0002).
+  '@prisma/engines': false
+  prisma: false
+  # Install-time telemetry pulled in by swagger-ui-dist; nothing to build.
+  '@scarf/scarf': false
   sharp: false
   unrs-resolver: false

@@ -9,7 +9,7 @@ TypeScript strict everywhere, React frontend, NestJS backend, PostgreSQL (real P
 ## Commands
 Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.json `packageManager`).
 - `pnpm install`: install everything; also builds shared-types and points git at .githooks.
-- `pnpm dev`: shared-types in watch mode, API on :3001 (PORT env), web on :3000.
+- `pnpm dev`: shared-types in watch mode, API on :3001 (PORT in .env), web on :3000.
 - `pnpm build`: shared-types first, then api and web.
 - `pnpm lint`: ESLint, zero warnings allowed.
 - `pnpm typecheck`: tsc in every package.
@@ -25,6 +25,16 @@ Requires Docker. First time: `cp .env.example .env` (until `.env` exists, Compos
 - `pnpm db:logs`: follow the database logs.
 - Port conflict ("port is already allocated" / "address already in use"): set `POSTGRES_PORT` in `.env` (e.g. 5433) and update the port in `DATABASE_URL` and `DATABASE_URL_TEST`, then `pnpm db:up`.
 - Leftover volume (`db:up` ends with "container ... is unhealthy" because the test DB is missing, or the logs say "database files are incompatible with server" after a version change): init scripts only run on an empty volume, so run `pnpm db:reset`. This deletes all local data.
+
+### API with the database
+The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit code 1, with one message listing every missing or invalid variable (`NODE_ENV`, `PORT`, `DATABASE_URL`).
+1. `cp .env.example .env` (an older `.env` needs `NODE_ENV=development` added), then `pnpm db:up`.
+2. `pnpm --filter @otakuleague/api exec prisma migrate deploy`: apply migrations to the dev DB (`prisma migrate status` to check).
+3. `pnpm dev`, or `pnpm build && pnpm --filter @otakuleague/api start`.
+4. `curl localhost:3001/health`: 200 `{"status":"ok",...}`, or 503 while Postgres is down (the API keeps running and recovers by itself). Swagger UI at `/docs`, JSON at `/docs-json`, both off when `NODE_ENV=production`.
+- Prisma CLI: run it inside apps/api (`pnpm --filter @otakuleague/api exec prisma ...`); `pnpm install` regenerates the client into `apps/api/src/generated` (gitignored). After a schema change: `prisma migrate dev --name <change>`, then `prisma generate`.
+- Migrations: `migrate dev` only against the dev DB; `migrate deploy` for test, CI and production. Never edit an applied migration; add a new one.
+- API tests point `DATABASE_URL` at `DATABASE_URL_TEST`; if Postgres is down they fail with "Run `pnpm db:up`".
 
 ## Definition of done
 1. Tests cover the behavior and pass (run them, don't assume).

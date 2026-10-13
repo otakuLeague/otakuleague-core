@@ -1,11 +1,9 @@
-import { APP_NAME, type AppInfo } from '@otakuleague/shared-types';
-
-const appInfo: AppInfo = { name: APP_NAME };
+import { APP_NAME } from '@otakuleague/shared-types';
 
 export default function Home() {
   return (
     <main>
-      <h1>{appInfo.name}</h1>
+      <h1>{APP_NAME}</h1>
     </main>
   );
 }

@@ -9,3 +9,6 @@ next-env.d.ts
 !.env.example
 .DS_Store
 .claude/settings.local.json
+
+# Prisma Client, generated on install (apps/api postinstall).
+apps/api/src/generated/
