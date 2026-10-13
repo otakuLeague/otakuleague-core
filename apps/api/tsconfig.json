@@ -10,7 +10,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["jest", "node"]
+    "types": ["node"]
   },
   "include": ["src"]
 }

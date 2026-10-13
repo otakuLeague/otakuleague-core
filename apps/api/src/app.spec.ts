@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { APP_NAME } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from './app.module';
 
 describe('API (full AppModule over HTTP)', () => {

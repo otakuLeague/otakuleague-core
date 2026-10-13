@@ -13,7 +13,7 @@ Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.js
 - `pnpm build`: shared-types first, then api and web.
 - `pnpm lint`: ESLint, zero warnings allowed.
 - `pnpm typecheck`: tsc in every package.
-- `pnpm test`: node:test (shared-types), Jest (api), Vitest (web).
+- `pnpm test`: node:test (shared-types), Vitest (api and web).
 - `pnpm format`: Prettier over the whole repo.
 - One package only: `pnpm --filter @otakuleague/api test`.
 
