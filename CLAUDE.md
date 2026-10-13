@@ -36,6 +36,10 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 - Migrations: `migrate dev` only against the dev DB; `migrate deploy` for test, CI and production. Never edit an applied migration; add a new one.
 - API tests point `DATABASE_URL` at `DATABASE_URL_TEST`; if Postgres is down they fail with "Run `pnpm db:up`".
 
+### Web with the API
+- The web app copies its own variables (`WEB_ENV_VARIABLES` in `next.config.ts`) from the repo-root `.env`, inside the repo only; real env vars win. It needs `API_BASE_URL` (server-only, example value in `.env.example`; an older `.env` needs it added). A missing or invalid value fails the first API call with one message naming the variable.
+- Restart `pnpm dev` after editing the root `.env`, and don't add `apps/web/.env*` files (ADR 0003).
+
 ## Definition of done
 1. Tests cover the behavior and pass (run them, don't assume).
 2. Typecheck and lint pass with zero warnings.
@@ -61,6 +65,7 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 - Validate at the boundary. Derive the current user from the auth token, never from the request body.
 - Error envelope: { "error": { "code": "QUIZ_NOT_FOUND", "message": "..." } } with correct 4xx/5xx.
 - Business logic in services, never controllers. External providers behind interfaces.
+- All network calls from the web app go through `apps/web/src/api/client.ts`; pages use `apiClient()`. ESLint blocks raw `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `http`/`https`/`undici` imports and `createApiClient` elsewhere. Expected failures come back as `ApiResult`, never thrown (ADR 0003).
 - No dead code, no commented-out code, no TODO without a Linear ticket.
 - Every list endpoint is paginated with a max page size.
 
