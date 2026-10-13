@@ -35,6 +35,7 @@ TypeScript strict everywhere, React frontend, NestJS backend, PostgreSQL (real P
 - Every list endpoint is paginated with a max page size.
 
 ## Git
+Never push directly to main; always open a PR. Never merge with red CI. GitHub does not enforce this on the free plan, so a pre-push hook in .githooks blocks direct pushes to main.
 Conventional Commits, small PRs (under ~400 lines), self-review before merge. NEVER add Co-Authored-By or any AI attribution to commits, PRs or code. Never change git user.name/user.email.
 
 ## Security
