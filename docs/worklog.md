@@ -1,6 +1,15 @@
 # Worklog
 What I shipped, with numbers when possible: problem, what I did, what changed.
 
+## 2026-10-14: Sentry tunnel for browser errors (OTA-87)
+- Problem: in Opera GX, browser errors never reached Sentry (`net::ERR_BLOCKED_BY_CLIENT` on `ingest.de.sentry.io`), so a share of production browser errors would be lost silently.
+- Found: the SDK's built-in `tunnelRoute` (`@sentry/nextjs` 11.7.0) is a rewrite that takes the org and project from the query string: an open relay to any sentry.io project, with no size limit. Not used.
+- Did: the browser SDK sends to `/hikari` on our origin; a route handler forwards only envelopes whose DSN matches `NEXT_PUBLIC_SENTRY_DSN` (host and project id), to a URL built from that DSN, up to 1 MiB read within 10 s, 20 at a time, without following redirects, with a 5 s timeout, and never throws. `fetch` is allowed in that one file (ADR 0003 addendum, lint test).
+- Tests: 22 tunnel cases against a fake Sentry over real HTTP (forwarded unchanged with rate-limit headers, foreign project/host/port 403, 413 by header and by bytes read, 9 malformed shapes 400, no DSN 404, hanging Sentry 504 under 1 s with a 200 ms timeout, unreachable 502, redirect not followed 502, slow body 408, over the in-flight limit 503), and one browser-build test proving envelopes reach `/hikari` already scrubbed. Each guard was removed once to check its test fails.
+- Reviews: the security review found nothing critical; its medium (no cap on concurrent or slow requests) and two lows (unread upstream body, redirects followed) are fixed, and the Origin check is left to the deploy ticket (proxy). The code review caught docs still saying only `client.ts` may call `fetch`, and a lint test picking its cases by position.
+- Verified live: on a production build, valid 200 (forwarded), foreign 403, malformed 400, 1.1 MB 413, GET 405, no DSN 404. In headless Chrome on `/debug/client-error`, the click sent 3 envelopes to `/hikari` (all 200, all forwarded) and none to sentry.io.
+- Pending: the Opera GX check with its blocker on (ticket test plan).
+
 ## 2026-10-14: Phase 0 (Foundation) summary (OTA-71 to OTA-86)
 - Goal: a base where every later feature can be built, tested and shipped the same way, before any product code.
 - Shipped:

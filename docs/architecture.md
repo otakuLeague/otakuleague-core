@@ -9,6 +9,7 @@ flowchart LR
   subgraph web["apps/web (Next.js, React)"]
     pages["app/ pages<br/>(mostly Server Components)"]
     client["API client<br/>src/api/client.ts"]
+    tunnel["POST /hikari<br/>Sentry tunnel"]
   end
 
   subgraph api["apps/api (NestJS)"]
@@ -32,7 +33,8 @@ flowchart LR
   shared -.->|imported by| web
   shared -.->|imported by| api
 
-  browser -.->|errors| sentry
+  browser -.->|"errors, scrubbed"| tunnel
+  tunnel -.->|"own DSN only"| sentry
   web -.->|errors| sentry
   api -.->|errors| sentry
 
@@ -42,11 +44,11 @@ flowchart LR
 
 ## Pieces
 
-- **apps/web**: Next.js App Router. Pages are Server Components, except the error boundaries and the client-error debug button; the browser never calls the API. Every network call goes through `src/api/client.ts` (`apiClient()`), which applies timeouts and returns expected failures as an `ApiResult` instead of throwing; ESLint blocks raw `fetch` elsewhere ([ADR 0003](decisions/0003-web-api-client.md)). Today the home page shows the API health; there are also error pages and debug pages for testing Sentry.
+- **apps/web**: Next.js App Router. Pages are Server Components, except the error boundaries and the client-error debug button; the browser never calls the API. Every network call goes through `src/api/client.ts` (`apiClient()`), which applies timeouts and returns expected failures as an `ApiResult` instead of throwing; ESLint blocks raw `fetch` elsewhere, except in the Sentry tunnel `src/observability/sentry-tunnel.ts` ([ADR 0003](decisions/0003-web-api-client.md) and its OTA-87 addendum). Today the home page shows the API health; there are also error pages and debug pages for testing Sentry.
 - **apps/api**: NestJS. Validated config from the repo-root `.env` (the API refuses to boot on a missing or invalid variable), one error envelope `{ "error": { "code", "message" } }` (except the 503 body of `/health`, a `HealthResponse`), request validation, `GET /health` (200, or 503 while Postgres is down), Swagger at `/docs` outside production ([ADR 0002](decisions/0002-api-validation-and-errors.md)). Logs are one JSON object per line with a `requestId` ([ADR 0004](decisions/0004-error-tracking-and-logging.md)).
 - **PostgreSQL**: one container from `docker-compose.yml`, bound to 127.0.0.1, with a dev database and a test database. Prisma 7 owns the schema and migrations (`apps/api/prisma`); there are no tables yet.
 - **packages/shared-types**: built to `dist/` and imported by both apps: the API response types (`HealthResponse`, `ApiError`), error codes and their type guards, and the redaction used before anything reaches a log or Sentry.
-- **Sentry**: the API, the web server and the browser report errors when their DSN is set; with no DSN nothing is sent. Scrubbing runs before sending ([ADR 0004](decisions/0004-error-tracking-and-logging.md)).
+- **Sentry**: the API, the web server and the browser report errors when their DSN is set; with no DSN nothing is sent. Scrubbing runs before sending ([ADR 0004](decisions/0004-error-tracking-and-logging.md)). The browser sends to our own `/hikari` route, which forwards only envelopes for our DSN, so blockers of sentry.io do not drop them ([ADR 0003 addendum](decisions/0003-web-api-client.md)).
 - **CI**: `.github/workflows/ci.yml`, five parallel jobs on every PR and push to main. The unit job has no database; the integration job gets a Postgres service and recreates the test database itself ([ADR 0005](decisions/0005-integration-tests-real-postgres.md)).
 
 ## Decisions
