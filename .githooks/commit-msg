@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Reject AI attribution in the final commit message, however it was written (-m, -F, $(cat ...),
+# an editor, --amend). Same pattern as .claude/hooks/block-ai-attribution.sh.
+ATTRIBUTION='co-authored-by:|generated (with|by)[^a-z0-9]*(claude|anthropic|chatgpt|openai|copilot|gemini|cursor)|noreply@anthropic\.com'
+if grep -qiE "$ATTRIBUTION" "$1"; then
+  echo "Blocked: remove AI attribution (Co-Authored-By, \"Generated with ...\") from the commit message." >&2
+  exit 1
+fi
+exit 0

@@ -1,13 +1,33 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(git clean *x*)",
+      "Bash(git clean *X*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/block-ai-attribution.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-ai-attribution.sh\" || exit 2"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-env.sh\" || exit 2"
+          }
+        ]
       },
       {
-        "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/protect-env.sh" }]
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-env.sh\" || exit 2"
+          }
+        ]
       }
     ]
   }
