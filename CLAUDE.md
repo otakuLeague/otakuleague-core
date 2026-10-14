@@ -10,6 +10,7 @@ TypeScript strict everywhere, React frontend, NestJS backend, PostgreSQL (real P
 Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.json `packageManager`).
 - `pnpm install`: install everything; also builds shared-types and points git at .githooks.
 - `pnpm dev`: shared-types in watch mode, API on :3001 (PORT in .env), web on :3000.
+  - A shared-types change reaches both apps in about 1.5 s with no manual restart (verified in OTA-84). The web app reloads it itself. The API restarts through `nest start --watch` when the `.d.ts` changes, and through `node --watch-path=../../packages/shared-types/dist` (the API `dev` script's `--exec`) when only the JS changes, e.g. a function body; without it the API kept the old code. Each build gives one API restart (about 1 s down), even for a type-only change. On macOS, a rebuild that deletes `dist/` (`pnpm test`, `lint`, `typecheck`) does not break the watch; Linux is unverified. If the API restarts in the instant `dist/` is missing, it exits with `ENOENT ... watch`: edit an API file or restart `pnpm dev`.
 - `pnpm build`: shared-types first, then api and web.
 - `pnpm lint`: ESLint, zero warnings allowed.
 - `pnpm typecheck`: tsc in every package.

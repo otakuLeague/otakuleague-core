@@ -1,6 +1,11 @@
 # Worklog
 What I shipped, with numbers when possible: problem, what I did, what changed.
 
+## 2026-10-14: API dev restart on shared-types changes (OTA-84)
+- Problem: unverified whether the API in `pnpm dev` picks up shared-types changes.
+- Found: the web app always did (about 0.5 s). The API restarted only when shared-types' `.d.ts` changed: a JS-only change (same types, new behavior) left it serving the old code with no restart for 19+ s.
+- Did: one-line fix to the API `dev` script: `nest start --watch --exec "node --watch-path=../../packages/shared-types/dist ..."`. Now every change reaches the API in about 1.2–1.5 s, one restart per build, also after a full rebuild that deletes `dist/` (macOS; Linux unverified, Docker could not pull a Node image); quick double edits (50/200/500 ms apart) always end on the last value.
+
 ## 2026-10-14: Integration tests against a real PostgreSQL (OTA-78)
 - Problem: parallel test files could share rows in the one test database, nothing migrated it, and "unit" tests secretly needed Postgres.
 - Did: one database per test file cloned from a template rebuilt and migrated each run, an advisory lock against overlapping runs, injectable `Clock`/`Random`, unit tests cut off from the database, CI Unit job without Postgres.
