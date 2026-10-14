@@ -5,6 +5,12 @@ import base from '../../eslint.config.mjs';
 const NETWORK_RULE_MESSAGE =
   'All network calls go through src/api/client.ts (ADR 0003).';
 
+const NETWORK_GLOBALS = ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'];
+
+/** @param {string[]} names */
+const restrictedGlobals = (names) =>
+  names.map((name) => ({ name, message: NETWORK_RULE_MESSAGE }));
+
 const NETWORK_IMPORTS = [
   'http',
   'https',
@@ -21,12 +27,7 @@ export default defineConfig([
   {
     ignores: ['src/api/client.ts'],
     rules: {
-      'no-restricted-globals': [
-        'error',
-        ...['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'].map(
-          (name) => ({ name, message: NETWORK_RULE_MESSAGE }),
-        ),
-      ],
+      'no-restricted-globals': ['error', ...restrictedGlobals(NETWORK_GLOBALS)],
       'no-restricted-properties': [
         'error',
         ...['globalThis', 'window', 'self', 'global'].map((object) => ({
@@ -48,6 +49,19 @@ export default defineConfig([
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    // The Sentry tunnel forwards envelopes to Sentry, not to our API: the fetch global is its
+    // one exception (ADR 0003 addendum, OTA-87). The other network globals stay banned.
+    files: ['src/observability/sentry-tunnel.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...restrictedGlobals(
+          NETWORK_GLOBALS.filter((name) => name !== 'fetch'),
+        ),
       ],
     },
   },

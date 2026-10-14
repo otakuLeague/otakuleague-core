@@ -95,3 +95,32 @@ The status is never cached: `getHealth` uses `cache: 'no-store'` and runs in `He
 **Error pages.** `error.tsx`, `global-error.tsx` and `not-found.tsx` show fixed text and a way out ("Try again" calls Next's `retry`, a link home). They never render `error.message`, `error.stack` or `error.digest`: in development Next forwards the original message, and a Client Component error keeps it in production too. `global-error.tsx` replaces the root layout, so it renders its own `<html lang>`, `<body>`, `<title>` and imports `globals.css`. "Try again" is a visitor's choice; the client still never retries on its own.
 
 **Still open.** Failing at boot on a bad `API_BASE_URL` (`instrumentation.ts`) and the caching rule for authenticated calls stay with the deploy and auth tickets.
+
+## Addendum: Sentry tunnel, a second file allowed to call fetch (2026-10-14, OTA-87)
+
+**Problem.** Browser errors sent straight to `*.ingest.sentry.io` are dropped by ad and tracker blockers (`net::ERR_BLOCKED_BY_CLIENT` in Opera GX during OTA-79). The SDK's `tunnel` option sends them to a route on our own origin instead, and that route must forward them to Sentry from the web server.
+
+**Options.**
+
+| Option | Why not / cost |
+|---|---|
+| `withSentryConfig({ tunnelRoute })` (built in) | A Next rewrite to `o<org>.ingest[.<region>].sentry.io/api/<project>/envelope/` taking the org and project from the query string (`@sentry/nextjs` 11.7.0, `config/withSentryConfig/tunnel.js`). Any org and project on sentry.io can be reached through our domain, with no size limit and no check of the envelope: an open relay to Sentry. |
+| Forward through `src/api/client.ts` | That client is for our API: base URL from `API_BASE_URL`, `ApiPath` paths, JSON bodies read into `ApiResult`. The tunnel posts raw envelope bytes to another host and passes Sentry's status and rate-limit headers back. Bending the client to do that turns it into a generic HTTP helper, a bigger hole in the rule than one named exception. |
+| Re-send through the server SDK's transport | No `fetch` in our code, but the envelope is parsed and re-serialized, it depends on the server `Sentry.init` having run, and the browser never sees Sentry's status or rate limits. |
+| **Chosen: a route handler, with `fetch` allowed in one more file** | `app/hikari/route.ts` (one line) calls `forwardSentryEnvelope` in `src/observability/sentry-tunnel.ts`, the only file besides `client.ts` where ESLint allows the `fetch` global. Everything else stays banned there too (`XMLHttpRequest`, `WebSocket`, `EventSource`, `globalThis.fetch`, `http`/`https`/`undici` imports). |
+
+**Rules of the tunnel.**
+- Path `/hikari` (`SENTRY_TUNNEL_PATH`): filter lists match words like `sentry`, `monitoring`, `tunnel` or `envelope`, not this one. Unverified against every list; if it gets listed, change the constant and the folder name.
+- No DSN configured, or the configured DSN is invalid: 404. Only POST is exported, so Next answers 405 to anything else.
+- Body capped at 1 MiB (`MAX_ENVELOPE_BYTES`), checked on `Content-Length` and again while reading, since a streamed body has none: 413.
+- The envelope header (first line, JSON) must hold a `dsn` with a public key and a numeric project id: 400 otherwise. Its host (with port) and project id must equal `NEXT_PUBLIC_SENTRY_DSN`'s: 403 otherwise. The target URL is built from the configured DSN only, never from the request, so the route cannot be pointed anywhere else.
+- At most 20 requests handled at once per server process (`MAX_IN_FLIGHT`): 503 above, so memory stays around 20 MiB and outbound calls are bounded. A body not fully received within 10 s (`READ_TIMEOUT_MS`): 408, so a slow client cannot hold a slot.
+- Forwarded unchanged, without the visitor's IP or headers. Redirects from Sentry are not followed (`redirect: 'error'`, 502): the configured DSN alone decides where an envelope goes. Sentry's response body is cancelled so the connection goes back to the pool. Sentry's status, `Retry-After` and `X-Sentry-Rate-Limits` go back to the browser SDK so it backs off.
+- Sentry slow or down: the forward is aborted after 5 s (504), or fails at once (502). The handler never throws, so a Sentry outage never shows up as a route error, and the browser SDK sends in the background, so a page never waits on it.
+
+**Scrubbing (ADR 0004) still applies**, because it runs in the browser before sending: `beforeSend` and `beforeBreadcrumb` are part of `BROWSER_SENTRY_OPTIONS` in `src/observability/sentry.ts`. `sentry-browser.test.ts` initialises the browser build of the SDK with those exact options and asserts the envelope goes to `/hikari` with no email, password, bearer token, console text or user id in it. The tunnel does not scrub again: it only moves bytes it has already checked the destination of.
+
+**Consequences.**
+- Anyone can post envelopes for our project through `/hikari`, as they already could to Sentry with the public DSN. The tunnel adds our bandwidth (1 MiB per request at most) and a server hop, not a new capability. The Sentry rate limit per key and spike protection (ADR 0004) remain the quota guard.
+- The `Origin` header is not checked, so another site could make its visitors' browsers post envelopes for our project. Not added: behind a reverse proxy the origin Next sees can differ from the browser's, and a wrong check would silently drop every browser event. Decide with the deploy ticket, once the proxy and its trusted headers are known.
+- Sentry's Allowed Domains setting (ADR 0004) checks the `Origin` / `Referer` of the request it receives. Through the tunnel that request comes from our server and carries neither. How Sentry treats that is unverified: check that events still arrive once Allowed Domains is set.

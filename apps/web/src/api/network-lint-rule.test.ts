@@ -9,6 +9,7 @@ const OUTSIDE_CLIENT = 'src/api/network-lint-rule.test.ts';
 // The createApiClient ban applies outside src/api; every Next app has app/page.tsx.
 const OUTSIDE_API_FOLDER = 'app/page.tsx';
 const CLIENT = 'src/api/client.ts';
+const SENTRY_TUNNEL = 'src/observability/sentry-tunnel.ts';
 
 const RAW_FETCH_CALLS = [
   "await fetch('http://127.0.0.1:3001/health');",
@@ -19,6 +20,7 @@ const RAW_FETCH_CALLS = [
   'const { fetch: rawFetch } = globalThis;\nawait rawFetch("/health");',
   "new XMLHttpRequest().open('GET', '/health');",
   "new EventSource('/events').close();",
+  "new WebSocket('ws://127.0.0.1:3001').close();",
 ]
   .map(
     (statement) =>
@@ -80,6 +82,23 @@ describe('network lint rule', () => {
       );
     },
   );
+
+  it('allows only the fetch global in the Sentry tunnel (ADR 0003 addendum)', async () => {
+    const isBareFetch = (code: string) => /\bawait fetch\(/.test(code);
+    const [bareFetch, ...unexpected] = RAW_FETCH_CALLS.filter(isBareFetch);
+    const others = RAW_FETCH_CALLS.filter((code) => !isBareFetch(code));
+    expect(bareFetch).toBeDefined();
+    expect(unexpected).toEqual([]);
+
+    expect(await ruleIdsFor(bareFetch ?? '', SENTRY_TUNNEL)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(NETWORK_RULE)]),
+    );
+    for (const code of others) {
+      expect(await ruleIdsFor(code, SENTRY_TUNNEL)).toEqual(
+        expect.arrayContaining([expect.stringMatching(NETWORK_RULE)]),
+      );
+    }
+  });
 
   it('allows createApiClient inside src/api, where the tests live', async () => {
     const code = BUILD_OWN_CLIENT.replace('../src/api/client', './client');

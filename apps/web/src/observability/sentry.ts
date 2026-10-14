@@ -1,5 +1,6 @@
 import {
   PRIVATE_DATA_COLLECTION,
+  scrubBreadcrumb,
   scrubErrorEvent,
 } from '@otakuleague/shared-types';
 import * as Sentry from '@sentry/nextjs';
@@ -15,6 +16,27 @@ export const SHARED_SENTRY_OPTIONS = {
   release: process.env.SENTRY_RELEASE || undefined,
   dataCollection: PRIVATE_DATA_COLLECTION,
   beforeSend: (event) => scrubErrorEvent(event),
+} satisfies Parameters<typeof Sentry.init>[0];
+
+/**
+ * Same-origin route the browser sends envelopes to, so blockers of sentry.io do not drop them
+ * (OTA-87). A neutral word: filter lists match paths like /sentry, /monitoring or /tunnel.
+ */
+export const SENTRY_TUNNEL_PATH = '/hikari';
+
+/** Browser options; scrubbing runs in beforeSend, before the envelope reaches the tunnel. */
+export const BROWSER_SENTRY_OPTIONS = {
+  ...SHARED_SENTRY_OPTIONS,
+  tunnel: SENTRY_TUNNEL_PATH,
+  // Console output can hold anything; URLs lose their query.
+  beforeBreadcrumb: (breadcrumb) => scrubBreadcrumb(breadcrumb),
+  // Noise that is not a bug of ours and would eat the free-tier quota: browser quirks, a visitor
+  // going offline, and chunks deleted by a deploy while a tab was open.
+  ignoreErrors: [
+    /^ResizeObserver loop/,
+    /Failed to fetch|Load failed|NetworkError|ChunkLoadError|Loading chunk \S+ failed/,
+  ],
+  denyUrls: [/^(chrome|moz|safari(-web)?)-extension:\/\//],
 } satisfies Parameters<typeof Sentry.init>[0];
 
 /** For error boundaries. An error with a digest was thrown on the server, which already reported it. */
