@@ -43,12 +43,13 @@ Stop with Ctrl+C, then `pnpm db:down` (keeps the data).
 - **Port 5432 already in use**: set `POSTGRES_PORT` (e.g. 5433) in `.env`, change the port in `DATABASE_URL` and `DATABASE_URL_TEST` to match, then `pnpm db:up`.
 - **`db:up` ends with "container ... is unhealthy"**, or the logs say the database files are incompatible: an old data volume. `pnpm db:reset` recreates it (deletes local data).
 - **The API exits at boot with a list of variables**: `.env` is missing or outdated; compare it with `.env.example`.
+- **Start from scratch** (stale dependencies or build output): `pnpm clean`, then `pnpm install`. It deletes `node_modules`, `dist`, `.next` and the generated Prisma client, and never `.env`. Never use `git clean -x` / `-X` for this: `.env` is gitignored, so they delete it too.
 
 ## Tests
 
 | Command | What it runs | Needs |
 | --- | --- | --- |
-| `pnpm test` | Unit tests: node:test (shared-types), Vitest (api, web), then the hook tests | nothing running |
+| `pnpm test` | Unit tests: node:test (shared-types), Vitest (api, web), then the hook and `scripts/` tests | nothing running |
 | `pnpm test:integration` | API `*.integration.spec.ts` against a real PostgreSQL; recreates and migrates the test database each run | `pnpm db:up` |
 | `pnpm test:hooks` | Claude Code hook and permission tests in `.claude/hooks` | `jq` |
 | `pnpm lint` / `pnpm typecheck` | ESLint (zero warnings) / `tsc` in every package | nothing |

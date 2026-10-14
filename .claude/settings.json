@@ -2,7 +2,9 @@
   "permissions": {
     "deny": [
       "Bash(git clean *x*)",
-      "Bash(git clean *X*)"
+      "Bash(git clean *X*)",
+      "Bash(git stash *-a*)",
+      "Bash(git stash *-u*)"
     ]
   },
   "hooks": {
