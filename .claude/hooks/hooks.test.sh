@@ -196,5 +196,24 @@ mkdir -p "$SCRATCH/missing/.claude/hooks"
 expect_configured 2 Bash "scripts missing" "$(bash_input 'pnpm test')" "$SCRATCH/missing"
 expect_configured 2 "Edit|Write|MultiEdit|NotebookEdit" "script missing" "$(file_input Edit /repo/.env.example)" "$SCRATCH/missing"
 
+# --- permissions.deny: git clean -x / -X would delete the gitignored .env without naming it ---
+# Bash glob approximates Claude Code's documented rule matching (* matches any text, spaces included).
+# Wrappers, env prefixes and && chains are handled by Claude Code itself, not checked here.
+expect_denied() { # expect_denied <0|1> <command>: 1 = some deny rule matches
+  local want=$1 command=$2 got=0 pattern
+  while IFS= read -r pattern; do
+    # shellcheck disable=SC2053 # $pattern is a glob on purpose
+    [[ $command == $pattern ]] && got=1
+  done < <(jq -r '.permissions.deny[] | select(startswith("Bash(")) | .[5:-1]' "$SETTINGS")
+  record "$want" "$got" "settings deny: $command"
+}
+for command in 'git clean -fdx' 'git clean -xdf' 'git clean -fX' 'git clean -x -f' \
+  'git clean -f -d -x' 'git clean --force -x' 'git clean -ffdx' 'git clean -nX'; do
+  expect_denied 1 "$command"
+done
+for command in 'git clean -fd' 'git clean -n' 'git clean -fd src/' 'git status'; do
+  expect_denied 0 "$command"
+done
+
 echo "hooks: $((count - failures))/$count passed"
 ((failures == 0))
