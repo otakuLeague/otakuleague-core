@@ -22,6 +22,7 @@ Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.js
 - One package only: `pnpm --filter @otakuleague/api test`.
 - CI (`.github/workflows/ci.yml`) runs the same scripts on every PR and push to main: jobs Lint (after `pnpm peers check` and `pnpm dedupe --check`), Typecheck, Unit tests (no database), Integration tests (Postgres service), Build. It uses no secrets, so fork and Dependabot PRs run identically.
 - Dependabot (`.github/dependabot.yml`) opens grouped PRs weekly: GitHub Actions (SHA pins), and npm as `blocked-tooling` (typescript, eslint, @eslint/js, held back by upstream peer ranges, see the OTA-83 worklog entry), minor+patch, and majors. After a dependency change, check typescript-eslint is installed once (`pnpm why typescript-eslint -r`); two copies break web lint with "Cannot redefine plugin", and `pnpm dedupe` fixes it.
+- `@types/node` follows the Node major in `.nvmrc` (24): Dependabot ignores its major updates, so bump it by hand in the same PR as a Node upgrade (`.nvmrc`, `engines`, CI). Its minor and patch updates still come weekly.
 
 ### Database
 Requires Docker. First time: `cp .env.example .env` (until `.env` exists, Compose stops with "required variable ... is missing a value").
