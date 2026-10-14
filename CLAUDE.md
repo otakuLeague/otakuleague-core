@@ -16,6 +16,7 @@ Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.js
 - `pnpm test`: node:test (shared-types), Vitest (api and web).
 - `pnpm format`: Prettier over the whole repo.
 - One package only: `pnpm --filter @otakuleague/api test`.
+- CI (`.github/workflows/ci.yml`) runs the same scripts on every PR and push to main: jobs Lint, Typecheck, Unit tests (Postgres service), Integration tests (no-op until OTA-78 adds `test:integration`), Build. It uses no secrets, so fork and Dependabot PRs run identically.
 
 ### Database
 Requires Docker. First time: `cp .env.example .env` (until `.env` exists, Compose stops with "required variable ... is missing a value").

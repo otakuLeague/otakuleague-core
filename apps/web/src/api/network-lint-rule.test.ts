@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 // Runs the real apps/web ESLint config on in-memory code. Type-aware linting only accepts paths
 // that exist in the TypeScript project, so "outside the client" borrows this test file's own path.
@@ -42,6 +42,12 @@ async function ruleIdsFor(code: string, filePath: string): Promise<string[]> {
 }
 
 describe('network lint rule', () => {
+  // The first lint builds the TypeScript program (over 5 s on a CI runner); pay it once here so
+  // each case's default timeout covers one lint, not the cold start.
+  beforeAll(async () => {
+    await eslint.lintText('export {};\n', { filePath: OUTSIDE_CLIENT });
+  }, 60_000);
+
   it.each(RAW_FETCH_CALLS)(
     'fires on a raw fetch outside the client:\n%s',
     async (code) => {

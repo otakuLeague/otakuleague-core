@@ -60,7 +60,7 @@ A change is done only when all of these are true:
 - Inject the clock and randomness so tests are deterministic. Test timezone and day-boundary cases explicitly.
 - For anything concurrent (score updates, counters), write a test that runs operations in parallel.
 - Run a test before concluding that something works. Many of my bugs were invisible when reading and obvious the moment I ran real data.
-- CI runs lint, typecheck and tests on every push. GitHub cannot enforce required checks on a private repo on the free plan, so I never merge a PR with a red pipeline (a convention, see OTA-71).
+- CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests against a real Postgres and build on every PR and every push to main, with no test retries. GitHub cannot enforce required checks on a private repo on the free plan, so I never merge a PR with a red pipeline (a convention, see OTA-71).
 
 ## 6. Documentation (written first, always current)
 
