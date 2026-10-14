@@ -13,10 +13,11 @@ Requires Node 24 (`nvm use` reads .nvmrc) and pnpm 12.11.2 (pinned in package.js
 - `pnpm build`: shared-types first, then api and web.
 - `pnpm lint`: ESLint, zero warnings allowed.
 - `pnpm typecheck`: tsc in every package.
-- `pnpm test`: node:test (shared-types), Vitest (api and web).
+- `pnpm test`: unit tests, no database needed: node:test (shared-types), Vitest (api and web).
+- `pnpm test:integration`: API `*.integration.spec.ts` against real Postgres (`pnpm db:up` first). Same command in CI. Recreates and migrates the `DATABASE_URL_TEST` database each run, one cloned database per test file (ADR 0005).
 - `pnpm format`: Prettier over the whole repo.
 - One package only: `pnpm --filter @otakuleague/api test`.
-- CI (`.github/workflows/ci.yml`) runs the same scripts on every PR and push to main: jobs Lint, Typecheck, Unit tests (Postgres service), Integration tests (no-op until OTA-78 adds `test:integration`), Build. It uses no secrets, so fork and Dependabot PRs run identically.
+- CI (`.github/workflows/ci.yml`) runs the same scripts on every PR and push to main: jobs Lint, Typecheck, Unit tests (no database), Integration tests (Postgres service), Build. It uses no secrets, so fork and Dependabot PRs run identically.
 
 ### Database
 Requires Docker. First time: `cp .env.example .env` (until `.env` exists, Compose stops with "required variable ... is missing a value").
@@ -34,8 +35,8 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 3. `pnpm dev`, or `pnpm build && pnpm --filter @otakuleague/api start`.
 4. `curl localhost:3001/health`: 200 `{"status":"ok",...}`, or 503 while Postgres is down (the API keeps running and recovers by itself). Swagger UI at `/docs`, JSON at `/docs-json`, both off when `NODE_ENV=production`.
 - Prisma CLI: run it inside apps/api (`pnpm --filter @otakuleague/api exec prisma ...`); `pnpm install` regenerates the client into `apps/api/src/generated` (gitignored). After a schema change: `prisma migrate dev --name <change>`, then `prisma generate`.
-- Migrations: `migrate dev` only against the dev DB; `migrate deploy` for test, CI and production. Never edit an applied migration; add a new one.
-- API tests point `DATABASE_URL` at `DATABASE_URL_TEST`; if Postgres is down they fail with "Run `pnpm db:up`".
+- Migrations: `migrate dev` only against the dev DB; `migrate deploy` for production; the integration suite migrates the test DB itself. Never edit an applied migration; add a new one.
+- Unit tests point `DATABASE_URL` at a closed port; anything that queries Postgres is a `*.integration.spec.ts`. Copy `apps/api/src/testing/example.integration.spec.ts` (inject `Clock` and `Random`, never `new Date()` or `randomUUID()`). If Postgres is down the integration suite stops with "Run `pnpm db:up`"; "Another integration run is using ..." means two runs overlap.
 
 ### Web with the API
 - The web app copies its own variables (`WEB_ENV_VARIABLES` in `next.config.ts`) from the repo-root `.env`, inside the repo only; real env vars win. It needs `API_BASE_URL` (server-only, example value in `.env.example`; an older `.env` needs it added). A missing or invalid value fails the first API call with one message naming the variable.

@@ -12,5 +12,10 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["src", "prisma.config.ts", "vitest.config.mts"]
+  "include": [
+    "src",
+    "prisma.config.ts",
+    "vitest.config.mts",
+    "vitest.integration.config.mts"
+  ]
 }
