@@ -43,7 +43,7 @@ Tests prove it end to end: the API test sends a request with an `Authorization` 
 
 **Source maps.** Not uploaded anywhere yet: `withSentryConfig` gets `sourcemaps: { disable: true }`, `telemetry: false` and `release.create: false`, so `next dev` and `next build` never talk to Sentry's API. Upload (with `SENTRY_AUTH_TOKEN` in CI only, never in `.env`) belongs to the deploy ticket. Until then, production browser stack traces are minified.
 
-**Deliberate test errors (non-production only).** `GET /debug/error` in the API (`DebugModule`, loaded by `ConditionalModule` only when `NODE_ENV` is not `production`), and `/debug/server-error` and `/debug/client-error` in the web app (a `notFound()` in production).
+**Deliberate test errors (development and test only).** `GET /debug/error` in the API (`DebugModule`, loaded by `ConditionalModule` only when `debugRoutesEnabled` allows the `NODE_ENV`), and `/debug/server-error` and `/debug/client-error` in the web app (a `notFound()` otherwise). The guard is an allowlist: `production` or any value added later, such as `staging`, gets a 404.
 
 ## Consequences
 - **Heuristic text redaction.** `redactText` catches known shapes, not every secret: a password in free text without a `password=`-style key, or a cookie header's second value, gets through. The real protection is not logging raw headers, bodies or query strings, which no code does today. Review any new log call that takes request data.
