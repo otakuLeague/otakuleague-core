@@ -26,6 +26,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+      # Dependency hygiene for Dependabot PRs (OTA-83): an unsupported peer range (the blocked
+      # TypeScript/ESLint majors) or a second typescript-eslint copy ("Cannot redefine plugin")
+      # fails here with its own name instead of as an obscure lint error.
+      - run: pnpm peers check
+      - run: pnpm dedupe --check
       - run: pnpm lint
 
   typecheck:
