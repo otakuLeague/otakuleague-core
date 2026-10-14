@@ -1,0 +1,39 @@
+# Weekly, grouped dependency PRs (OTA-83). They replace the monthly manual re-check of the pinned
+# tooling: CI runs on each PR, so a red one shows what is still blocked.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    # "/" covers .github/workflows only; the composite setup action is listed itself.
+    # Actions are pinned by commit SHA; Dependabot updates the SHA and the "# vX.Y.Z" comment.
+    directories: ['/', '/.github/actions/*']
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
+
+  # pnpm workspace: one lockfile at the root. pnpm 12 is newer than the versions Dependabot
+  # documents (v7-v10); if its runs fail, the Dependabot logs say so (OTA-83).
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    # A release must be a week old before a PR proposes it.
+    cooldown:
+      default-days: 7
+    # First matching group wins.
+    groups:
+      # Held back by upstream peer ranges (OTA-83, docs/worklog.md): typescript-eslint allows
+      # typescript <6.1.0; eslint-plugin-react / jsx-a11y / import (via eslint-config-next) allow
+      # eslint ^9 only, and @eslint/js 10 needs eslint 10. Kept apart so their red PR blocks nothing else.
+      # Every update type on purpose: TypeScript 6.1 is a minor and is blocked too. So patches of
+      # these three ride in this PR; check them by hand while it stays red. typescript-eslint is
+      # left out: its major (the likely unblocker) comes in npm-major and must merge first.
+      blocked-tooling:
+        patterns: ['typescript', 'eslint', '@eslint/js']
+      npm-minor-and-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+      npm-major:
+        patterns: ['*']
+        update-types: ['major']
