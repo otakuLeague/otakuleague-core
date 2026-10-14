@@ -12,6 +12,7 @@
     "lint": "pnpm --filter @otakuleague/shared-types build && pnpm -r lint",
     "typecheck": "pnpm --filter @otakuleague/shared-types build && pnpm -r typecheck",
     "test": "pnpm --filter @otakuleague/shared-types build && pnpm -r test",
+    "test:integration": "pnpm --filter @otakuleague/shared-types build && pnpm -r --if-present test:integration",
     "format": "prettier --write .",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",

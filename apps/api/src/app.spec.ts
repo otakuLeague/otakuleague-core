@@ -21,7 +21,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from './prisma/prisma.service';
-import { createTestApp, requireTestDatabase } from './testing/test-app';
+import { createTestApp } from './testing/test-app';
 
 class TestStudioDto {
   @IsString()
@@ -79,25 +79,16 @@ const VALID_ENTRY = {
   studio: { name: 'Madhouse' },
 };
 
-describe('API over HTTP with the test database', () => {
+// No database here (unit suite): GET /health with the database up is in health.integration.spec.ts.
+describe('API over HTTP', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
     app = await createTestApp({ controllers: [TestOnlyController] });
-    await requireTestDatabase(app);
   });
 
   afterAll(async () => {
     await app.close();
-  });
-
-  it('GET /health responds 200 with the database up', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect('Content-Type', /application\/json/);
-
-    expect(response.body).toEqual({ status: 'ok', checks: { database: 'up' } });
   });
 
   it('no longer serves the placeholder GET /', async () => {

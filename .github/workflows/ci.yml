@@ -39,37 +39,17 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
+  # Two jobs on purpose: the Unit job has no Postgres, so a unit test that starts needing
+  # a database fails here instead of quietly becoming an integration test. They run in parallel.
   test:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # The API tests already boot the app against a real database (app.spec.ts).
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: otakuleague
-          POSTGRES_PASSWORD: otakuleague_ci_password
-          POSTGRES_DB: otakuleague_test
-        ports:
-          - 5432:5432
-        # Steps start only once this passes. TCP, not the socket: during init Postgres listens on the socket only.
-        options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U otakuleague -d otakuleague_test"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 30
-    env:
-      DATABASE_URL_TEST: postgresql://otakuleague:otakuleague_ci_password@127.0.0.1:5432/otakuleague_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - name: Apply migrations to the test database
-        run: pnpm --filter @otakuleague/api exec prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
       - run: pnpm test
 
   integration:
@@ -85,35 +65,21 @@ jobs:
           POSTGRES_DB: otakuleague_test
         ports:
           - 5432:5432
+        # Steps start only once this passes. TCP, not the socket: during init Postgres listens on the socket only.
         options: >-
           --health-cmd "pg_isready -h 127.0.0.1 -U otakuleague -d otakuleague_test"
           --health-interval 2s
           --health-timeout 5s
           --health-retries 30
+    # The suite recreates and migrates this database itself (ADR 0005), as it does locally.
     env:
       DATABASE_URL_TEST: postgresql://otakuleague:otakuleague_ci_password@127.0.0.1:5432/otakuleague_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # OTA-78 adds the `test:integration` script. Until then this job says so and passes.
-      # Checks workspace packages only, the same set `pnpm -r` runs (it skips the root package.json).
-      - id: script
-        run: |
-          if node -e "const fs = require('fs'); const found = ['apps', 'packages'].flatMap((dir) => fs.readdirSync(dir).map((name) => dir + '/' + name + '/package.json')).filter((file) => fs.existsSync(file)).some((file) => JSON.parse(fs.readFileSync(file, 'utf8')).scripts?.['test:integration']); process.exit(found ? 0 : 1)"; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No test:integration script yet (OTA-78). Nothing to run."
-          fi
-      - if: steps.script.outputs.present == 'true'
-        uses: ./.github/actions/setup
-      - if: steps.script.outputs.present == 'true'
-        name: Apply migrations to the test database
-        run: pnpm --filter @otakuleague/api exec prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL_TEST }}
-      - if: steps.script.outputs.present == 'true'
-        run: pnpm -r --if-present test:integration
+      - uses: ./.github/actions/setup
+      - run: pnpm test:integration
 
   build:
     name: Build

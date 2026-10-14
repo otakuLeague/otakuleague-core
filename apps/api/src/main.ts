@@ -1,10 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { Random } from './common/clock-and-random.module';
 import { ApiExpressAdapter } from './common/api-express.adapter';
 import type { EnvironmentVariables } from './config/environment';
 import { JsonLogger } from './observability/json-logger';
-import { requestContext } from './observability/request-context';
+import { createRequestContext } from './observability/request-context';
 import { initSentry } from './observability/sentry';
 import { setupOpenApi } from './openapi';
 
@@ -13,7 +14,7 @@ async function bootstrap(): Promise<void> {
     logger: new JsonLogger(),
   });
   // Before listen, so it runs ahead of the body parser that init() registers.
-  app.use(requestContext);
+  app.use(createRequestContext(app.get(Random)));
   // Runs onModuleDestroy (Prisma $disconnect) on SIGTERM/SIGINT.
   app.enableShutdownHooks();
   const config =
