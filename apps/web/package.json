@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@otakuleague/shared-types": "workspace:*",
+    "@sentry/nextjs": "11.7.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

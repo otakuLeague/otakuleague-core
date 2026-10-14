@@ -143,6 +143,46 @@ describe('validateEnvironment', () => {
     expect(error.stack).not.toContain(secret);
     expect(error.stack).not.toContain('    at ');
   });
+
+  it('leaves the Sentry variables unset when they are missing or empty', () => {
+    const environment = validateEnvironment({
+      ...VALID_ENVIRONMENT,
+      SENTRY_DSN: '',
+    });
+
+    expect(environment.SENTRY_DSN).toBeUndefined();
+    expect(environment.SENTRY_ENVIRONMENT).toBeUndefined();
+    expect(environment.SENTRY_RELEASE).toBeUndefined();
+  });
+
+  it('accepts a Sentry DSN, environment and release', () => {
+    const dsn = 'https://abc123@o42.ingest.sentry.io/4507';
+    const environment = validateEnvironment({
+      ...VALID_ENVIRONMENT,
+      SENTRY_DSN: dsn,
+      SENTRY_ENVIRONMENT: 'staging',
+      SENTRY_RELEASE: '1f2e3d',
+    });
+
+    expect(environment.SENTRY_DSN).toBe(dsn);
+    expect(environment.SENTRY_ENVIRONMENT).toBe('staging');
+    expect(environment.SENTRY_RELEASE).toBe('1f2e3d');
+  });
+
+  it.each([
+    'not a url',
+    'https://o42.ingest.sentry.io/4507',
+    'https://abc123@o42.ingest.sentry.io/',
+    'ftp://abc123@o42.ingest.sentry.io/4507',
+  ])('rejects an invalid SENTRY_DSN without echoing it: %s', (dsn) => {
+    const message = validationMessage({
+      ...VALID_ENVIRONMENT,
+      SENTRY_DSN: dsn,
+    });
+
+    expect(message).toContain('SENTRY_DSN must be a Sentry DSN');
+    expect(message).not.toContain(dsn);
+  });
 });
 
 describe('isInsideRepo', () => {

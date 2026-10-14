@@ -87,3 +87,11 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
     (value.status === 'error' && database === 'down')
   );
 }
+
+export {
+  PRIVATE_DATA_COLLECTION,
+  redactText,
+  redactValue,
+  scrubBreadcrumb,
+  scrubErrorEvent,
+} from './redaction';
