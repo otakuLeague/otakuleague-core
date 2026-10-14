@@ -268,7 +268,10 @@ describe('ApiExceptionFilter', () => {
       end: vi.fn(),
     };
     const host = {
-      switchToHttp: () => ({ getResponse: () => response }),
+      switchToHttp: () => ({
+        getRequest: () => ({ method: 'GET', originalUrl: '/test' }),
+        getResponse: () => response,
+      }),
     } as unknown as ArgumentsHost;
     return { host, response };
   }

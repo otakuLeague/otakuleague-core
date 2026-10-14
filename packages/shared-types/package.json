@@ -2,7 +2,7 @@
   "name": "@otakuleague/shared-types",
   "version": "0.0.0",
   "private": true,
-  "description": "Public API contract shared by the API and its clients.",
+  "description": "Public API contract shared by the API and its clients, and the redaction both apps apply to logs and error reports.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

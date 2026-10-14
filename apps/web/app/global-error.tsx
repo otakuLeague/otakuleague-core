@@ -1,11 +1,17 @@
 'use client';
 
 import { APP_NAME } from '@otakuleague/shared-types';
+import { useEffect } from 'react';
+import { reportRenderError } from '../src/observability/sentry';
 import type { ErrorPageProps } from './error';
 import './globals.css';
 
 /** Replaces the root layout when it fails, so it brings its own html, body and title. */
-export default function GlobalError({ retry }: ErrorPageProps) {
+export default function GlobalError({ error, retry }: ErrorPageProps) {
+  useEffect(() => {
+    reportRenderError(error);
+  }, [error]);
+
   return (
     <html lang="en">
       <body>

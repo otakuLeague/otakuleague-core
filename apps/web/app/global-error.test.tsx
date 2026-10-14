@@ -1,12 +1,25 @@
 import { cleanup, fireEvent, render, within } from '@testing-library/react';
+import * as Sentry from '@sentry/nextjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import GlobalError from './global-error';
 
 // Own file: once another root has rendered into <body>, a root mounted on the document
 // no longer receives clicks in jsdom, so this test needs a fresh document.
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
+
 describe('global error page', () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('global-error.tsx reports a browser error, which has no digest', () => {
+    const error = new Error('Cannot read properties of undefined');
+    render(<GlobalError error={error} retry={vi.fn<() => void>()} />, {
+      container: document,
+    });
+
+    expect(Sentry.captureException).toHaveBeenCalledExactlyOnceWith(error);
   });
 
   it('global-error.tsx renders its own document with a generic message, never the error', () => {

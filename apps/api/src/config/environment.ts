@@ -6,6 +6,8 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsOptional,
+  IsString,
   Max,
   Min,
   ValidateBy,
@@ -15,7 +17,7 @@ import {
 
 // Same depth from src/config and dist/config, so this resolves to the repo root
 // whether the API starts from the repo root, from apps/api, or from dist.
-const REPO_ROOT = resolve(__dirname, '../../../..');
+export const REPO_ROOT = resolve(__dirname, '../../../..');
 export const REPO_ROOT_ENV_FILE = resolve(REPO_ROOT, '.env');
 
 /**
@@ -38,6 +40,17 @@ export function isPostgresUrl(value: unknown): boolean {
   );
 }
 
+// A DSN carries the project's public key as the URL user name and ends with the project id.
+export function isSentryDsn(value: unknown): boolean {
+  if (typeof value !== 'string' || !URL.canParse(value)) return false;
+  const { protocol, username, pathname } = new URL(value);
+  return (
+    ['https:', 'http:'].includes(protocol) &&
+    username !== '' &&
+    /\/\d+$/.test(pathname)
+  );
+}
+
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const;
 
 export class EnvironmentVariables {
@@ -57,6 +70,27 @@ export class EnvironmentVariables {
     { message: 'DATABASE_URL must be a postgres:// or postgresql:// URL' },
   )
   readonly DATABASE_URL!: string;
+
+  // Optional: without it Sentry stays off (ADR 0004).
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isSentryDsn', validator: { validate: isSentryDsn } },
+    {
+      message:
+        'SENTRY_DSN must be a Sentry DSN, like https://<public key>@o0.ingest.sentry.io/<project id>',
+    },
+  )
+  readonly SENTRY_DSN?: string;
+
+  // Defaults to NODE_ENV.
+  @IsOptional()
+  @IsString()
+  readonly SENTRY_ENVIRONMENT?: string;
+
+  // Defaults to the git commit, or a CI commit variable.
+  @IsOptional()
+  @IsString()
+  readonly SENTRY_RELEASE?: string;
 }
 
 // Messages name the variable and the rule, never the value: DATABASE_URL holds a password.

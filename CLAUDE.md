@@ -40,6 +40,12 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 - The web app copies its own variables (`WEB_ENV_VARIABLES` in `next.config.ts`) from the repo-root `.env`, inside the repo only; real env vars win. It needs `API_BASE_URL` (server-only, example value in `.env.example`; an older `.env` needs it added). A missing or invalid value fails the first API call with one message naming the variable.
 - Restart `pnpm dev` after editing the root `.env`, and don't add `apps/web/.env*` files (ADR 0003).
 
+### Logs and error tracking (ADR 0004)
+- API logs are one JSON object per line; lines written during a request carry `requestId`, also returned as the `X-Request-Id` header. Pipe through `jq` to read them.
+- Sentry is off until `SENTRY_DSN` (API) or `NEXT_PUBLIC_SENTRY_DSN` (web) is set in the root `.env`. `SENTRY_ENVIRONMENT` defaults to `NODE_ENV`, `SENTRY_RELEASE` to the git commit.
+- Deliberate test errors, outside production only: `curl localhost:3001/debug/error`, and in a browser `localhost:3000/debug/server-error` and `localhost:3000/debug/client-error` (click the button).
+- Never log raw headers, bodies or query strings, and never put a secret in a URL path: redaction (`redactValue` in shared-types) is a safety net, not a guarantee.
+
 ## Definition of done
 1. Tests cover the behavior and pass (run them, don't assume).
 2. Typecheck and lint pass with zero warnings.

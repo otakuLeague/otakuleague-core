@@ -1,13 +1,15 @@
-import type { INestApplication, Type } from '@nestjs/common';
+import type { INestApplication, LoggerService, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { App } from 'supertest/types';
 import { AppModule } from '../app.module';
 import { ApiExpressAdapter } from '../common/api-express.adapter';
+import { requestContext } from '../observability/request-context';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface TestAppOptions {
   readonly controllers?: readonly Type[];
   readonly prisma?: PrismaService;
+  readonly logger?: LoggerService;
 }
 
 /** The real AppModule over HTTP, wired like main.ts. */
@@ -24,8 +26,9 @@ export async function createTestApp(
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<INestApplication<App>>(
     new ApiExpressAdapter(),
-    { logger: false },
+    { logger: options.logger ?? false },
   );
+  app.use(requestContext);
   await app.init();
   return app;
 }

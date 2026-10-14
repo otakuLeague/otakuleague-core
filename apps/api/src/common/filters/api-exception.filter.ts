@@ -7,8 +7,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { ApiError, ApiErrorCode } from '@otakuleague/shared-types';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { Prisma } from '../../generated/prisma/client';
+import { captureServerError } from '../../observability/sentry';
 import { ApiException } from '../api.exception';
 
 export interface ErrorResponse {
@@ -117,6 +118,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const { status, body } = toErrorResponse(exception);
+    const http = host.switchToHttp();
     if (status >= 500) {
       // The real cause stays server-side; the client only gets the generic body.
       this.logger.error(
@@ -124,7 +126,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : undefined,
       );
     }
-    const response = host.switchToHttp().getResponse<Response>();
+    // Only real faults: a 503 means the database is down, once per request during an outage (ADR 0004).
+    if (status === INTERNAL_ERROR.status) {
+      captureServerError(exception, http.getRequest<Request>());
+    }
+    const response = http.getResponse<Response>();
     if (response.headersSent) {
       // Too late for an envelope; close the response so the client is not left hanging.
       response.end();
