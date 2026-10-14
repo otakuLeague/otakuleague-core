@@ -1,6 +1,25 @@
 # Worklog
 What I shipped, with numbers when possible: problem, what I did, what changed.
 
+## 2026-10-14: Phase 0 (Foundation) summary (OTA-71 to OTA-86)
+- Goal: a base where every later feature can be built, tested and shipped the same way, before any product code.
+- Shipped:
+  - Repo and decisions: merge rules, with a pre-push hook blocking direct pushes to main since the free plan cannot enforce it (OTA-71); core stack ADR 0001 (OTA-72).
+  - Monorepo: pnpm workspaces with `apps/api`, `apps/web` and `packages/shared-types` (OTA-73).
+  - Local Postgres 16 in Docker Compose with a dev and a test database, and `.env.example` (OTA-74).
+  - API base: validated config, error envelope, request validation, `GET /health`, Swagger, Prisma wiring (OTA-75, ADR 0002).
+  - Web: typed server-side API client (OTA-76, ADR 0003); layout, home page with the API health, error pages (OTA-86).
+  - CI on every PR and push to main: lint, typecheck, unit, integration, build (OTA-77).
+  - Integration tests against a real Postgres, one cloned database per test file (OTA-78, ADR 0005).
+  - Sentry in the API, web server and browser, and JSON logs with a request id (OTA-79, ADR 0004).
+  - API tests moved from Jest to Vitest (OTA-82); API dev restart on shared-types changes (OTA-84).
+  - Claude Code hooks that fail closed and cover Bash, and a `git clean -x/-X` deny rule (OTA-81).
+  - README and `docs/architecture.md` (OTA-80).
+- Follow-ups left:
+  - OTA-83: tooling pinned behind the latest versions (TypeScript 6.0, ESLint 9).
+  - OTA-85: known API gaps to close before the first deployment.
+  - OTA-87: a Sentry tunnel, so ad blockers don't hide browser errors.
+
 ## 2026-10-14: Claude Code hooks, agents and plugins verified (OTA-81)
 - Problem: the attribution and env-file protections were written from memory and never tested. During OTA-76 an agent appended `API_BASE_URL` to `.env` with a shell command, and the env hook (Edit/Write only) let it through. The attribution hook blocked a `gh pr view | grep` check (OTA-82 false positive).
 - Found: against 60 sample hook calls, the old hooks failed 35. Every Bash write to an env file passed (redirect, `tee`, `sed -i`, `perl -i`, `cp`, `mv`, `rm`, `python`, `node`, a variable, `bash -c`). A missing `jq`, unreadable input, a script without its executable bit (exit 126) or a missing script (127) all allowed the call, because only exit 2 blocks. "generated with" also blocked text like "client generated with prisma".
