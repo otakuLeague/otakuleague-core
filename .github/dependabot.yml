@@ -21,6 +21,12 @@ updates:
     # A release must be a week old before a PR proposes it.
     cooldown:
       default-days: 7
+    ignore:
+      # @types/node describes the Node.js API, so its major must match the Node major in .nvmrc
+      # (24): a newer major types APIs our runtime lacks. Bump it by hand together with Node.
+      # Minor and patch updates still come in npm-minor-and-patch.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     # First matching group wins.
     groups:
       # Held back by upstream peer ranges (OTA-83, docs/worklog.md): typescript-eslint allows
