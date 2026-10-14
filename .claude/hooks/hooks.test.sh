@@ -196,7 +196,7 @@ mkdir -p "$SCRATCH/missing/.claude/hooks"
 expect_configured 2 Bash "scripts missing" "$(bash_input 'pnpm test')" "$SCRATCH/missing"
 expect_configured 2 "Edit|Write|MultiEdit|NotebookEdit" "script missing" "$(file_input Edit /repo/.env.example)" "$SCRATCH/missing"
 
-# --- permissions.deny: git clean -x / -X would delete the gitignored .env without naming it ---
+# --- permissions.deny: git clean -x / -X and git stash -a would remove the gitignored .env without naming it ---
 # Bash glob approximates Claude Code's documented rule matching (* matches any text, spaces included).
 # Wrappers, env prefixes and && chains are handled by Claude Code itself, not checked here.
 expect_denied() { # expect_denied <0|1> <command>: 1 = some deny rule matches
@@ -212,6 +212,17 @@ for command in 'git clean -fdx' 'git clean -xdf' 'git clean -fX' 'git clean -x -
   expect_denied 1 "$command"
 done
 for command in 'git clean -fd' 'git clean -n' 'git clean -fd src/' 'git status'; do
+  expect_denied 0 "$command"
+done
+# git stash -a / --all moves ignored files (.env) out of the tree; -u / --include-untracked moves
+# untracked ones (OTA-89). Substring rules: --all contains -a, --include-untracked contains -u.
+for command in 'git stash -a' 'git stash --all' 'git stash push -a' 'git stash push --all -m wip' \
+  'git stash -u' 'git stash --include-untracked' 'git stash push -u -- src' 'git stash save -u wip' \
+  'git stash -au' 'git stash -ua'; do
+  expect_denied 1 "$command"
+done
+for command in 'git stash' 'git stash push -m wip' 'git stash list' 'git stash pop' \
+  'git stash show -p stash@{0}' 'git stash apply'; do
   expect_denied 0 "$command"
 done
 
