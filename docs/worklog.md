@@ -1,6 +1,17 @@
 # Worklog
 What I shipped, with numbers when possible: problem, what I did, what changed.
 
+## 2026-10-15: Spike, anime data sources and their terms (OTA-90)
+- Problem: the anime page needs data we do not own, and the site may show ads; a source whose terms forbid that would mean rewriting the import later.
+- Found (ADR 0006, terms read 2026-10-15, quoted verbatim there):
+  - AniList covers most of the page (header, characters, voice actors per language, staff, relations, stats, recommendations, airing schedule, trailer, streaming links), but not per-episode ratings, a full episode list, themes, OSTs, other videos or filler. Free below $150 of revenue per month. But its terms forbid use "within competing, non-complementary services", naming "anime and manga list or tracker services", for media data too, and forbid "hoarding or mass collection". Our watchlists make us a tracker: we need AniList's written permission before Phase 1 builds on it.
+  - MAL's official API counts some non-disruptive ads as non-commercial (not targeting minors, after notifying MAL, which may refuse), but has no episodes, characters, staff, themes or videos, and forbids combining it with other sources or altering its content without written authorization: not a clean plan B. Jikan fills the gaps by scraping MAL, which MAL's agreement forbids: not for production.
+  - AnimeThemes (openings, endings) needs its moderation team's approval for any commercial or competing use. TMDB needs a paid agreement once there are ads. Kitsu's terms could not be read (403).
+  - Per-episode ratings: none in AniList, MAL API or Kitsu; only MAL's website (scraping) and TMDB (paid with ads). Launch without them; our own episode ratings in Phase 2. Their sparsity could not be measured: Jikan, the only way to read MAL's, refused connections for the whole spike.
+  - Data traps: AniList's trailer id came with a trailing tab; aliased `voiceActors(language:)` fields in one AniList query all returned the French actors, while one query per language is correct; Kitsu answers 406 without `Accept: application/vnd.api+json`.
+- Decided (proposed until AniList and MAL answer): AniList primary per field, on demand, cached 7 days and dropped after 30 days unopened, never bulk; MAL only with its written authorization; one primary per field, fallback only when empty, never averaged; at today's 30 requests per minute, about 5 to 10 cold pages per minute; IDs via AniList `idMal` plus anime-offline-database (ODbL) for the rest; images hotlinked, reviews never copied.
+- Throwaway script and raw outputs for Attack on Titan: outside the repo, attached to OTA-90.
+
 ## 2026-10-14: Pinned tooling re-checked, Dependabot added (OTA-83)
 - Problem: TypeScript was pinned to `~6.0.3` and ESLint to 9 because of upstream peer ranges, with a manual monthly re-check, and the SHA-pinned GitHub Actions never update on their own.
 - Blockers today (npm registry, `npm view <pkg>@latest peerDependencies`, 2026-10-14):
