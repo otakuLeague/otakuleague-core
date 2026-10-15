@@ -152,3 +152,20 @@ Plan: launch with **no per-episode ratings** and build our own episode ratings i
 - The fetch tools of an AI assistant hit bot walls (AniList 403) and client-side-rendered docs (Jikan, Kitsu, AnimeThemes); the docs' source repos on GitHub and a plain `curl` were the way to read the actual text.
 - GraphQL aliases on AniList's `voiceActors(language:)` silently returned the same data for every language: test each argument separately.
 - A review of the first draft found the MAL fallback unsafe (clauses 3(a)(vii), (ix), (xii) were missing) and claims marked "verified" that were not: write "per the docs" unless the call was made.
+
+## Update 2026-10-15: use every useful source now, keep it reversible (OTA-92)
+
+Decision by the owner: use every useful source now and handle the legal side later (OTA-127, written permission from AniList, MyAnimeList and AnimeThemes). AniList stays the primary source; Jikan fills core gaps (MAL score, rank, members, and any core field AniList lacks). Episodes (OTA-101), music (OTA-107) and media (OTA-110) add their own sources in their tickets. This supersedes decisions 1 to 3 above for now; the legal analysis above stands and is what OTA-127 resolves.
+
+Reversibility rules, so that a refusal from any source costs a config change, not a rewrite:
+
+- **One adapter per source** behind a common interface (`AnimeSourceAdapter` in `apps/api/src/anime/sources`). Nothing outside an adapter knows a source's API.
+- **One kill switch per source**: `ANIME_SOURCE_<NAME>_ENABLED`, default on. Off means the source is never called and everything it ever stored is hidden from every response (fields, scores, attribution), with no code change and no data deleted, so switching it back on restores it. Read at startup: changing it means a restart, not a deploy.
+- **Every stored value keeps its source and fetch time**: one row per anime and source (`anime_source_snapshot`), merged at read time. The model, service and endpoint never know where a value came from except through that stored label.
+- **Merge rule unchanged** (decision 7): one primary per field, a fallback only fills an empty field, never an average; scores are listed per source.
+- **Cache rules unchanged** (decision 10), with on-demand import and per-source rate limiting (AniList 30 per minute today, Jikan 3 per second and 60 per minute), honoring `Retry-After`.
+- **Jikan is optional at runtime**: the core page imports and renders from AniList alone; Jikan fills in when it answers. It was down for the whole OTA-90 spike.
+
+**Adult content**: entries flagged adult (AniList `isAdult`, MyAnimeList rating "Rx - Hentai") are neither imported nor shown for now; the API answers 404 (`ANIME_NOT_FOUND`) as for an unknown id. An anime that any source flags adult on a later refresh is deleted with all its data. Revisit with an explicit age gate if we ever want them.
+
+**Purge and user data**: the 30-day purge deletes an anime with its ids and snapshots (cascade). Before any user table (watchlist entries, quiz attempts) references `anime`, its foreign key must use `Restrict`, and the purge must skip anime that user data references. Otherwise the purge would delete users' rows, or fail as a whole.
