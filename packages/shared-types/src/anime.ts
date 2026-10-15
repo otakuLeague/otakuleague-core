@@ -1,0 +1,109 @@
+/** Where a stored value came from (ADR 0006). Each one can be switched off on its own. */
+export const ANIME_DATA_SOURCES = ['anilist', 'jikan'] as const;
+export type AnimeDataSource = (typeof ANIME_DATA_SOURCES)[number];
+
+/** Id namespaces: an anime is reachable by its AniList id or its MyAnimeList id. */
+export const ANIME_ID_SOURCES = ['anilist', 'myanimelist'] as const;
+export type AnimeIdSource = (typeof ANIME_ID_SOURCES)[number];
+
+export type AnimeFormat =
+  'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC';
+export type AnimeStatus =
+  'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
+export type AnimeSeason = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
+
+/** Sources often know only the year, or the year and month. */
+export interface PartialDate {
+  readonly year: number;
+  readonly month: number | null;
+  readonly day: number | null;
+}
+
+/** A value with the source it came from and when it was fetched (ISO 8601). */
+export interface Sourced<T> {
+  readonly value: T;
+  readonly source: AnimeDataSource;
+  readonly fetchedAt: string;
+}
+
+export interface AnimeTag {
+  readonly name: string;
+  /** 0-100, how relevant the tag is; null when the source has no rank. */
+  readonly rank: number | null;
+  readonly spoiler: boolean;
+}
+
+export interface AnimeStudio {
+  readonly name: string;
+  readonly main: boolean;
+}
+
+export interface AnimeLink {
+  readonly site: string;
+  readonly url: string;
+  readonly kind: 'streaming' | 'other';
+}
+
+export interface AnimeTrailer {
+  readonly site: 'youtube' | 'dailymotion';
+  readonly id: string;
+}
+
+export interface AnimeNextEpisode {
+  readonly episode: number;
+  /** ISO 8601. */
+  readonly airingAt: string;
+}
+
+/** One source's score. Scores from two sources are listed side by side, never averaged. */
+export interface AnimeScore {
+  readonly source: AnimeDataSource;
+  readonly fetchedAt: string;
+  readonly score: number;
+  /** AniList scores out of 100, MyAnimeList out of 10. */
+  readonly scale: 10 | 100;
+  readonly scoredBy: number | null;
+  readonly rank: number | null;
+  /** Users who have the anime in a list on that site. */
+  readonly members: number | null;
+}
+
+/** A source shown on the page: required attribution and a link back. */
+export interface AnimeAttribution {
+  readonly source: AnimeDataSource;
+  readonly url: string;
+  readonly fetchedAt: string;
+}
+
+/** GET /anime/:idSource/:externalId. A field is null when no enabled source has it. */
+export interface AnimeDetails {
+  readonly id: string;
+  readonly externalIds: readonly {
+    readonly source: AnimeIdSource;
+    readonly id: string;
+  }[];
+  readonly titleRomaji: Sourced<string> | null;
+  readonly titleEnglish: Sourced<string> | null;
+  readonly titleNative: Sourced<string> | null;
+  readonly synonyms: Sourced<readonly string[]> | null;
+  readonly format: Sourced<AnimeFormat> | null;
+  readonly status: Sourced<AnimeStatus> | null;
+  readonly startDate: Sourced<PartialDate> | null;
+  readonly endDate: Sourced<PartialDate> | null;
+  readonly season: Sourced<AnimeSeason> | null;
+  readonly seasonYear: Sourced<number> | null;
+  readonly episodes: Sourced<number> | null;
+  readonly durationMinutes: Sourced<number> | null;
+  /** Plain text, paragraphs separated by blank lines. Never HTML. */
+  readonly synopsis: Sourced<string> | null;
+  readonly coverImageUrl: Sourced<string> | null;
+  readonly bannerImageUrl: Sourced<string> | null;
+  readonly trailer: Sourced<AnimeTrailer> | null;
+  readonly genres: Sourced<readonly string[]> | null;
+  readonly tags: Sourced<readonly AnimeTag[]> | null;
+  readonly studios: Sourced<readonly AnimeStudio[]> | null;
+  readonly links: Sourced<readonly AnimeLink[]> | null;
+  readonly nextEpisode: Sourced<AnimeNextEpisode> | null;
+  readonly scores: readonly AnimeScore[];
+  readonly attributions: readonly AnimeAttribution[];
+}

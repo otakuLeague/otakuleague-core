@@ -38,6 +38,11 @@ interface TestAppOptions {
   readonly logger?: LoggerService;
   readonly clock?: Clock;
   readonly random?: Random;
+  /** Any other provider to replace, e.g. a feature's settings. */
+  readonly overrides?: readonly {
+    readonly provide: unknown;
+    readonly useValue: unknown;
+  }[];
 }
 
 /** The real AppModule over HTTP, wired like main.ts. */
@@ -57,6 +62,11 @@ export async function createTestApp(
   }
   if (options.random) {
     builder = builder.overrideProvider(Random).useValue(options.random);
+  }
+  for (const override of options.overrides ?? []) {
+    builder = builder
+      .overrideProvider(override.provide)
+      .useValue(override.useValue);
   }
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<INestApplication<App>>(

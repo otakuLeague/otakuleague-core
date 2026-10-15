@@ -1,0 +1,652 @@
+{
+  "data": {
+    "Media": {
+      "id": 21,
+      "idMal": 21,
+      "siteUrl": "https://anilist.co/anime/21",
+      "isAdult": false,
+      "title": {
+        "romaji": "ONE PIECE",
+        "english": "ONE PIECE",
+        "native": "ONE PIECE"
+      },
+      "synonyms": [
+        "ワンピース",
+        "海贼王",
+        "וואן פיס",
+        "ون بيس",
+        "วันพีซ",
+        "Vua Hải Tặc",
+        "All'arrembaggio!",
+        "Tutti all'arrembaggio!",
+        "Ντρέηκ, το Κυνήγι του Θησαυρού",
+        "OP",
+        "Ван-Пис"
+      ],
+      "format": "TV",
+      "status": "RELEASING",
+      "startDate": {
+        "year": 1999,
+        "month": 10,
+        "day": 20
+      },
+      "endDate": {
+        "year": null,
+        "month": null,
+        "day": null
+      },
+      "season": "FALL",
+      "seasonYear": 1999,
+      "episodes": null,
+      "duration": 24,
+      "description": "Gold Roger was known as the Pirate King, the strongest and most infamous being to have sailed the Grand Line. The capture and death of Roger by the World Government brought a change throughout the world. His last words before his death revealed the location of the greatest treasure in the world, One Piece. It was this revelation that brought about the Grand Age of Pirates, men who dreamed of finding One Piece (which promises an unlimited amount of riches and fame), and quite possibly the most coveted of titles for the person who found it, the title of the Pirate King.<br><br>\nEnter Monkey D. Luffy, a 17-year-old boy that defies your standard definition of a pirate. Rather than the popular persona of a wicked, hardened, toothless pirate who ransacks villages for fun, Luffy’s reason for being a pirate is one of pure wonder; the thought of an exciting adventure and meeting new and intriguing people, along with finding One Piece, are his reasons of becoming a pirate. Following in the footsteps of his childhood hero, Luffy and his crew travel across the Grand Line, experiencing crazy adventures, unveiling dark mysteries and battling strong enemies, all in order to reach One Piece.<br><br>\n<b>*This includes the following special episodes:</b><br>\n- Chopperman to the Rescue! Protect the TV Station by the Shore! (Episode 336)<br>\n- The Strongest Tag-Team! Luffy and Toriko's Hard Struggle! (Episode 492)<br>\n- Team Formation! Save Chopper (Episode 542)<br>\n- History's Strongest Collaboration vs. Glutton of the Sea (Episode 590)<br>\n- 20th Anniversary! Special Romance Dawn (Episode 907)",
+      "coverImage": {
+        "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg",
+        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-ELSYx3yMPcKM.jpg"
+      },
+      "bannerImage": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg",
+      "trailer": null,
+      "genres": ["Action", "Adventure", "Comedy", "Drama", "Fantasy"],
+      "tags": [
+        {
+          "name": "Pirates",
+          "rank": 98,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Travel",
+          "rank": 94,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Shounen",
+          "rank": 93,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Ensemble Cast",
+          "rank": 93,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Super Power",
+          "rank": 90,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Found Family",
+          "rank": 88,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Male Protagonist",
+          "rank": 83,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Tragedy",
+          "rank": 81,
+          "isGeneralSpoiler": true,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Conspiracy",
+          "rank": 81,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Ships",
+          "rank": 81,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Prophecy",
+          "rank": 80,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Slapstick",
+          "rank": 80,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Politics",
+          "rank": 79,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Time Skip",
+          "rank": 79,
+          "isGeneralSpoiler": true,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Royal Affairs",
+          "rank": 79,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "War",
+          "rank": 77,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Dystopian",
+          "rank": 76,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Slavery",
+          "rank": 76,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Fugitive",
+          "rank": 74,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Gods",
+          "rank": 73,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Crime",
+          "rank": 73,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Lost Civilization",
+          "rank": 70,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Swordplay",
+          "rank": 70,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Henshin",
+          "rank": 67,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Cyborg",
+          "rank": 66,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Monster Boy",
+          "rank": 66,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Anti-Hero",
+          "rank": 65,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Primarily Adult Cast",
+          "rank": 65,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Shapeshifting",
+          "rank": 65,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Philosophy",
+          "rank": 65,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Food",
+          "rank": 65,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Robots",
+          "rank": 64,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Animals",
+          "rank": 64,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Anthropomorphism",
+          "rank": 64,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Skeleton",
+          "rank": 63,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Desert",
+          "rank": 62,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Anachronism",
+          "rank": 62,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Guns",
+          "rank": 62,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Post-Apocalyptic",
+          "rank": 61,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Prison",
+          "rank": 61,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Medicine",
+          "rank": 61,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Samurai",
+          "rank": 61,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Espionage",
+          "rank": 60,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Indigenous Cultures",
+          "rank": 60,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Drugs",
+          "rank": 58,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Artificial Intelligence",
+          "rank": 58,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Marriage",
+          "rank": 58,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Aromantic",
+          "rank": 57,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Revenge",
+          "rank": 57,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Kuudere",
+          "rank": 57,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Fairy",
+          "rank": 57,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Monster Girl",
+          "rank": 57,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Dragons",
+          "rank": 56,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Assassins",
+          "rank": 55,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Battle Royale",
+          "rank": 54,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Demons",
+          "rank": 54,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Adoption",
+          "rank": 52,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Ninja",
+          "rank": 51,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Mermaid",
+          "rank": 51,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Dinosaurs",
+          "rank": 50,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Kabuki",
+          "rank": 50,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Kaiju",
+          "rank": 50,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Angels",
+          "rank": 50,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Time Manipulation",
+          "rank": 50,
+          "isGeneralSpoiler": true,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Clone",
+          "rank": 49,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Zombie",
+          "rank": 48,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Arranged Marriage",
+          "rank": 47,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Blackmail",
+          "rank": 46,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Gender Bending",
+          "rank": 46,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Unrequited Love",
+          "rank": 42,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Trains",
+          "rank": 42,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Human Experimentation",
+          "rank": 40,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Interspecies",
+          "rank": 33,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Fake Relationship",
+          "rank": 20,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Brainwashing",
+          "rank": 20,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        }
+      ],
+      "studios": {
+        "edges": [
+          {
+            "isMain": true,
+            "node": {
+              "name": "Toei Animation"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Funimation"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Fuji TV"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "4Kids Entertainment"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "TAP"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Asatsu DK"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Magic Bus"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Mushi Production"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Studio Guts"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Asahi Production"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Avex Pictures"
+            }
+          }
+        ]
+      },
+      "averageScore": 87,
+      "popularity": 759916,
+      "externalLinks": [
+        {
+          "site": "Crunchyroll",
+          "url": "http://www.crunchyroll.com/one-piece",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Official Site",
+          "url": "https://one-piece.com/",
+          "type": "INFO"
+        },
+        {
+          "site": "Hulu",
+          "url": "http://www.hulu.com/one-piece",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Netflix",
+          "url": "https://www.netflix.com/title/80107103",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Bilibili TV",
+          "url": "https://www.bilibili.tv/media/37976",
+          "type": "STREAMING"
+        },
+        {
+          "site": "iQ",
+          "url": "https://www.iq.com/album/1bk9icvr331",
+          "type": "STREAMING"
+        },
+        {
+          "site": "WeTV",
+          "url": "https://wetv.vip/en/play/tnfk3rniubz3m8o",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Twitter",
+          "url": "https://twitter.com/Eiichiro_Staff/",
+          "type": "SOCIAL"
+        },
+        {
+          "site": "YouTube",
+          "url": "https://www.youtube.com/@onepieceofficial",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Hoopla",
+          "url": "https://www.hoopladigital.com/series/one-piece/14153295320",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Instagram",
+          "url": "https://www.instagram.com/onepiece_staff/",
+          "type": "SOCIAL"
+        },
+        {
+          "site": "YouTube",
+          "url": "https://www.youtube.com/@OnePieceOfficialENG",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Official Site",
+          "url": "https://one-piece.com/op/links_eng/",
+          "type": "INFO"
+        },
+        {
+          "site": "TikTok",
+          "url": "https://www.tiktok.com/@onepiece.staff.official",
+          "type": "SOCIAL"
+        }
+      ],
+      "nextAiringEpisode": {
+        "episode": 1181,
+        "airingAt": 1798985760
+      }
+    }
+  }
+}

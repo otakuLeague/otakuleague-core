@@ -10,3 +10,124 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// --- Anime (OTA-92, ADR 0006) ---------------------------------------------------------
+// One row per anime; every displayed value lives in a per-source snapshot, so switching a
+// source off hides its values without touching the data, and switching it back shows them.
+
+enum AnimeDataSource {
+  ANILIST
+  JIKAN
+
+  @@map("anime_data_source")
+}
+
+enum AnimeIdSource {
+  ANILIST
+  MYANIMELIST
+
+  @@map("anime_id_source")
+}
+
+enum AnimeFormat {
+  TV
+  TV_SHORT
+  MOVIE
+  SPECIAL
+  OVA
+  ONA
+  MUSIC
+
+  @@map("anime_format")
+}
+
+enum AnimeStatus {
+  FINISHED
+  RELEASING
+  NOT_YET_RELEASED
+  CANCELLED
+  HIATUS
+
+  @@map("anime_status")
+}
+
+enum AnimeSeason {
+  WINTER
+  SPRING
+  SUMMER
+  FALL
+
+  @@map("anime_season")
+}
+
+model Anime {
+  id           String                @id @db.Uuid
+  createdAt    DateTime              @map("created_at") @db.Timestamptz(3)
+  // Drives the cache purge: an anime nobody opened for 30 days is deleted (ADR 0006).
+  lastViewedAt DateTime              @map("last_viewed_at") @db.Timestamptz(3)
+  externalIds  AnimeExternalId[]
+  snapshots    AnimeSourceSnapshot[]
+
+  @@index([lastViewedAt])
+  @@map("anime")
+}
+
+// AniList id <-> MAL id <-> ours. One external id belongs to one anime.
+model AnimeExternalId {
+  source     AnimeIdSource
+  externalId Int           @map("external_id")
+  animeId    String        @map("anime_id") @db.Uuid
+  anime      Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@id([source, externalId])
+  @@index([animeId])
+  @@map("anime_external_id")
+}
+
+// What one source said about one anime at fetchedAt. Null: the source has no value.
+model AnimeSourceSnapshot {
+  animeId             String          @map("anime_id") @db.Uuid
+  anime               Anime           @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  source              AnimeDataSource
+  fetchedAt           DateTime        @map("fetched_at") @db.Timestamptz(3)
+  // Link back to the source's page for this anime (attribution).
+  sourceUrl           String          @map("source_url")
+  titleRomaji         String?         @map("title_romaji")
+  titleEnglish        String?         @map("title_english")
+  titleNative         String?         @map("title_native")
+  synonyms            String[]        @default([])
+  format              AnimeFormat?
+  status              AnimeStatus?
+  startYear           Int?            @map("start_year")
+  startMonth          Int?            @map("start_month")
+  startDay            Int?            @map("start_day")
+  endYear             Int?            @map("end_year")
+  endMonth            Int?            @map("end_month")
+  endDay              Int?            @map("end_day")
+  season              AnimeSeason?
+  seasonYear          Int?            @map("season_year")
+  episodes            Int?
+  durationMinutes     Int?            @map("duration_minutes")
+  // Plain text, never HTML.
+  synopsis            String?
+  coverImageUrl       String?         @map("cover_image_url")
+  bannerImageUrl      String?         @map("banner_image_url")
+  trailerSite         String?         @map("trailer_site")
+  trailerId           String?         @map("trailer_id")
+  genres              String[]        @default([])
+  // [{ name, rank, spoiler }]
+  tags                Json            @default("[]")
+  // [{ name, main }]
+  studios             Json            @default("[]")
+  // [{ site, url, kind }]
+  links               Json            @default("[]")
+  score               Float?
+  scoredBy            Int?            @map("scored_by")
+  rank                Int?
+  members             Int?
+  nextEpisode         Int?            @map("next_episode")
+  nextEpisodeAiringAt DateTime?       @map("next_episode_airing_at") @db.Timestamptz(3)
+
+  @@id([animeId, source])
+  @@map("anime_source_snapshot")
+}
