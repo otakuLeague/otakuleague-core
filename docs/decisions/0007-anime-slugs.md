@@ -20,7 +20,9 @@ Constraints from ADR 0006: an anime is a disposable cache row, deleted when nobo
 - Neither table references `anime`, so the purge never touches them. A purged anime keeps its slugs and is re-imported on the next visit, with the same canonical slug.
 - Anime with no AniList id get no slug; they keep `/anime/myanimelist/:id`. The slug is built from the AniList snapshot only (`titleEnglish`, else `titleRomaji`), never from the merged anime, so switching a source off never changes a slug. Resolving a slug goes through the identity, so a switched-off source never breaks it either.
 
-**Lookup rule** (served in PR2): the requested slug is the identity's canonical slug: serve the anime. Any other slug of that identity: redirect to the canonical one. That single rule covers the romaji alias and former canonicals; there is no `kind` column.
+**Lookup rule** (`GET /anime/slugs/:slug`): the requested slug, lowercased for the lookup, is matched; when the request is exactly the identity's canonical slug, the anime is served. Any other slug of that identity, or the canonical one in another letter case: redirect to the canonical one. A removed identity is a 404, with no source call. The route is declared before `/anime/:idSource/:externalId`: both have two segments, and Express takes the first match. That single rule covers the romaji alias and former canonicals; there is no `kind` column. When serving re-imports a purged anime whose title changed meanwhile, the canonical moves during the request, and the answer is a redirect to the new one.
+
+**`canonicalSlug`** is in every anime response: `string | null`, null when the anime has no AniList identity yet (local caches from before OTA-94 until their next AniList refresh; anime known only through Jikan). No slug is claimed during a GET, and an anime that exists is never a 404 for lack of a slug.
 
 **Slug generation**, in this order:
 1. NFKD, then strip combining marks (`é` -> `e`).
@@ -46,6 +48,7 @@ A canonical candidate taken by anything, alias or canonical, moves down the ladd
 **Scope.** OTA-94 PR1: tables, generation, claiming, `removed_at`. PR2: `GET /anime/slugs/:slug` (a union of `anime`, `redirect`; unknown slug is a plain 404 `ANIME_NOT_FOUND`), `canonicalSlug` in the anime responses, the OpenAPI schema. The unknown-slug lookup on AniList and "did you mean" belong to OTA-98; the web 301 that keeps the tab belongs to OTA-97.
 
 ## Consequences
+- A purged anime cannot be served by its slug while AniList is switched off: the identity holds only the AniList id, and no other source can import by it. A cached one keeps being served from the remaining source.
 - Slug rows grow forever, one identity plus about two slugs per anime ever imported. Small next to the snapshots, and nothing to purge.
 - No backfill: no deployment exists yet, only local caches, and an anime gains its slugs the next time its AniList snapshot is stored (daily when airing, after 7 days otherwise, or at re-import).
 - An anime re-imported through Jikan alone (AniList switched off) cannot be checked against `removed_at`: the purge deleted its MAL-to-AniList link. It still has no slug, and AniList is the primary source, so this stays a narrow gap.

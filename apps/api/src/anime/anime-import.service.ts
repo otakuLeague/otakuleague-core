@@ -53,10 +53,12 @@ export function sourceNotAvailable(): ApiException {
   });
 }
 
-export function animeNotFound(): ApiException {
+export function animeNotFound(
+  message = 'No anime with this id.',
+): ApiException {
   return new ApiException(HttpStatus.NOT_FOUND, {
     code: 'ANIME_NOT_FOUND',
-    message: 'No anime with this id.',
+    message,
   });
 }
 
