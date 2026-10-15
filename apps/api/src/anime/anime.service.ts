@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AnimeDetails } from '@otakuleague/shared-types';
+import type { AnimeBySlug, AnimeDetails } from '@otakuleague/shared-types';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -22,13 +22,51 @@ export class AnimeService {
     private readonly importer: AnimeImportService,
   ) {}
 
-  /**
-   * The core anime, from our database. A new anime is imported first (one shared import per
-   * anime); a known one is served at once, stale or not, and refreshed in the background, so
-   * a source outage never breaks a page that has data.
-   */
+  /** The core anime by a source id, when a switched-on source vouches for that id. */
   async getByExternalId(ref: AnimeRef): Promise<AnimeDetails> {
-    let anime = await this.find(ref);
+    const anime = await this.findStored(ref);
+    // With no enabled data at all, keep it: serve() then asks the enabled sources.
+    const vouched =
+      anime !== null &&
+      (visibleIdSources(anime, this.importer.isEnabled).has(ref.source) ||
+        !this.hasEnabledData(anime));
+    return this.serve(vouched ? anime : null, ref);
+  }
+
+  /**
+   * ADR 0007: the canonical slug serves the anime; any other slug of the same anime (alias,
+   * former canonical, other letter case) answers a redirect. Resolved through the AniList
+   * identity, not through a source's ids, so a switched-off source never breaks the slug of a
+   * cached anime.
+   */
+  async getBySlug(requested: string): Promise<AnimeBySlug> {
+    const slug = await this.prisma.animeSlug.findUnique({
+      where: { slug: requested.toLowerCase() },
+      include: { identity: true },
+    });
+    if (!slug || slug.identity.removedAt !== null) {
+      throw animeNotFound('No anime with this slug.');
+    }
+    const { canonicalSlug } = slug.identity;
+    if (requested !== canonicalSlug) return { kind: 'redirect', canonicalSlug };
+    const ref: AnimeRef = { source: 'anilist', externalId: slug.anilistId };
+    const anime = await this.serve(await this.findStored(ref), ref);
+    // A re-import can move the canonical (its title changed while it was purged).
+    return anime.canonicalSlug !== null && anime.canonicalSlug !== requested
+      ? { kind: 'redirect', canonicalSlug: anime.canonicalSlug }
+      : { kind: 'anime', anime };
+  }
+
+  /**
+   * A new anime is imported first (one shared import per anime); a known one is served at
+   * once, stale or not, and refreshed in the background, so a source outage never breaks a
+   * page that has data.
+   */
+  private async serve(
+    stored: StoredAnime | null,
+    ref: AnimeRef,
+  ): Promise<AnimeDetails> {
+    let anime = stored;
     if (!anime) {
       // No enabled source can resolve this kind of id (e.g. AniList switched off).
       if (!this.importer.canLookUp(ref)) throw animeNotFound();
@@ -58,7 +96,22 @@ export class AnimeService {
         data: { lastViewedAt: now },
       });
     }
-    return mergeAnime(anime, this.importer.isEnabled, now);
+    return {
+      ...mergeAnime(anime, this.importer.isEnabled, now),
+      canonicalSlug: await this.canonicalSlugOf(anime),
+    };
+  }
+
+  /** Null for an anime with no AniList identity yet (no slug claimed). */
+  private async canonicalSlugOf(anime: StoredAnime): Promise<string | null> {
+    const anilist = anime.externalIds.find(
+      ({ source }) => source === 'anilist',
+    );
+    if (!anilist) return null;
+    const identity = await this.prisma.animeIdentity.findUnique({
+      where: { anilistId: anilist.externalId },
+    });
+    return identity?.removedAt === null ? identity.canonicalSlug : null;
   }
 
   private hasEnabledData(anime: StoredAnime): boolean {
@@ -67,8 +120,7 @@ export class AnimeService {
     );
   }
 
-  /** The anime this id points to, if a switched-on source vouches for that id. */
-  private async find(ref: AnimeRef): Promise<StoredAnime | null> {
+  private async findStored(ref: AnimeRef): Promise<StoredAnime | null> {
     const row = await this.prisma.anime.findFirst({
       where: {
         externalIds: {
@@ -80,12 +132,6 @@ export class AnimeService {
       },
       include: ANIME_WITH_DATA,
     });
-    if (!row) return null;
-    const anime = fromAnimeRow(row);
-    // With no enabled data at all, keep it: refreshMissing then asks the enabled sources.
-    return visibleIdSources(anime, this.importer.isEnabled).has(ref.source) ||
-      !this.hasEnabledData(anime)
-      ? anime
-      : null;
+    return row ? fromAnimeRow(row) : null;
   }
 }

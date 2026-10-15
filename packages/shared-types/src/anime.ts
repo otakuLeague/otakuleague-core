@@ -6,11 +6,26 @@ export type AnimeDataSource = (typeof ANIME_DATA_SOURCES)[number];
 export const ANIME_ID_SOURCES = ['anilist', 'myanimelist'] as const;
 export type AnimeIdSource = (typeof ANIME_ID_SOURCES)[number];
 
-export type AnimeFormat =
-  'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC';
-export type AnimeStatus =
-  'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
-export type AnimeSeason = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
+export const ANIME_FORMATS = [
+  'TV',
+  'TV_SHORT',
+  'MOVIE',
+  'SPECIAL',
+  'OVA',
+  'ONA',
+  'MUSIC',
+] as const;
+export type AnimeFormat = (typeof ANIME_FORMATS)[number];
+export const ANIME_STATUSES = [
+  'FINISHED',
+  'RELEASING',
+  'NOT_YET_RELEASED',
+  'CANCELLED',
+  'HIATUS',
+] as const;
+export type AnimeStatus = (typeof ANIME_STATUSES)[number];
+export const ANIME_SEASONS = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
+export type AnimeSeason = (typeof ANIME_SEASONS)[number];
 
 /** Sources often know only the year, or the year and month. */
 export interface PartialDate {
@@ -78,6 +93,8 @@ export interface AnimeAttribution {
 /** GET /anime/:idSource/:externalId. A field is null when no enabled source has it. */
 export interface AnimeDetails {
   readonly id: string;
+  /** Its URL slug (ADR 0007); null until the anime has an AniList identity. */
+  readonly canonicalSlug: string | null;
   readonly externalIds: readonly {
     readonly source: AnimeIdSource;
     readonly id: string;
@@ -107,3 +124,12 @@ export interface AnimeDetails {
   readonly scores: readonly AnimeScore[];
   readonly attributions: readonly AnimeAttribution[];
 }
+
+/**
+ * GET /anime/slugs/:slug (ADR 0007). Any slug other than the canonical one (alias, former
+ * canonical, other letter case) answers a redirect as data: the web client refuses HTTP
+ * redirects, so the web app sends the 301 itself.
+ */
+export type AnimeBySlug =
+  | { readonly kind: 'anime'; readonly anime: AnimeDetails }
+  | { readonly kind: 'redirect'; readonly canonicalSlug: string };

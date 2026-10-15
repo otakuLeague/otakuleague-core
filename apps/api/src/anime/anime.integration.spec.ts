@@ -1,7 +1,11 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
-import type { AnimeDataSource, AnimeDetails } from '@otakuleague/shared-types';
+import type {
+  AnimeBySlug,
+  AnimeDataSource,
+  AnimeDetails,
+} from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -588,9 +592,21 @@ describe('GET /anime/:idSource/:externalId', () => {
       canonical: 'the-minami-family',
       all: ['minami-ke', 'the-minami-family'],
     });
+    // The former canonical now redirects through the endpoint.
+    expect((await get('/anime/slugs/minami-ke').expect(200)).body).toEqual({
+      kind: 'redirect',
+      canonicalSlug: 'the-minami-family',
+    } satisfies AnimeBySlug);
 
-    // Back to the old title: its slug is already this anime's, so it is reused, not added.
-    aniListByMalId.set(2963, fixture('anilist-minami-ke'));
+    // A new English title whose slug is already this anime's: reused, never a lower rung.
+    aniListByMalId.set(2963, {
+      data: {
+        Media: {
+          ...record(minamike),
+          title: { ...record(record(minamike).title), english: 'Minami-ke' },
+        },
+      },
+    });
     clock.advance(8 * DAY_MS);
     await get('/anime/myanimelist/2963').expect(200);
     await importer.settle();
@@ -603,9 +619,11 @@ describe('GET /anime/:idSource/:externalId', () => {
 
   it('gives no slug to an anime imported from Jikan alone', async () => {
     settings.enabled.anilist = false;
-    await get('/anime/myanimelist/16498').expect(200);
+    const body = (await get('/anime/myanimelist/16498').expect(200))
+      .body as AnimeDetails;
     await importer.settle();
 
+    expect(body.canonicalSlug).toBeNull();
     expect(await prisma.animeIdentity.count()).toBe(0);
     expect(await prisma.animeSlug.count()).toBe(0);
   });
@@ -626,6 +644,55 @@ describe('GET /anime/:idSource/:externalId', () => {
       (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
         ?.removedAt,
     ).toEqual(clock.now());
+  });
+
+  it('never moves the canonical when the English title disappears, then comes back', async () => {
+    const aot = record(record(fixture('anilist-attack-on-titan')).data).Media;
+    const withEnglish = (english: string | null) => ({
+      data: {
+        Media: {
+          ...record(aot),
+          title: { ...record(record(aot).title), english },
+        },
+      },
+    });
+    const slugTable = async () => ({
+      canonical: (await slugsOf(16498)).canonical,
+      rows: (
+        await prisma.animeSlug.findMany({
+          orderBy: { slug: 'asc' },
+          select: { slug: true, anilistId: true },
+        })
+      ).map(({ slug, anilistId }) => `${slug} -> ${anilistId}`),
+    });
+    const expected = {
+      canonical: 'attack-on-titan',
+      rows: ['attack-on-titan -> 16498', 'shingeki-no-kyojin -> 16498'],
+    };
+    const refreshWith = async (english: string | null) => {
+      aniListByMalId.set(16498, withEnglish(english));
+      clock.advance(8 * DAY_MS);
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+    };
+
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+    expect(await slugTable()).toEqual(expected);
+    await refreshWith(null);
+    expect(await slugTable()).toEqual(expected);
+    // The refresh did store AniList's null title: the canonical stayed on purpose.
+    expect(
+      (
+        await prisma.animeSourceSnapshot.findFirst({
+          where: { source: 'ANILIST' },
+        })
+      )?.titleEnglish,
+    ).toBeNull();
+    await refreshWith(null);
+    expect(await slugTable()).toEqual(expected);
+    await refreshWith('Attack on Titan');
+    expect(await slugTable()).toEqual(expected);
   });
 
   it('keeps the slugs through the purge and reuses them on re-import', async () => {
@@ -689,6 +756,136 @@ describe('GET /anime/:idSource/:externalId', () => {
     await importer.settle();
 
     expect(await counts()).toEqual({ anime: 0, ids: 0, snapshots: 0 });
+  });
+
+  describe('GET /anime/slugs/:slug', () => {
+    const bySlug = (slug: string) => get(`/anime/slugs/${slug}`);
+
+    it('serves the anime by its canonical slug and redirects its other slugs', async () => {
+      const first = (await get('/anime/myanimelist/16498').expect(200))
+        .body as AnimeDetails;
+      await importer.settle();
+
+      expect(first.canonicalSlug).toBe('attack-on-titan');
+      expect((await bySlug('attack-on-titan').expect(200)).body).toMatchObject({
+        kind: 'anime',
+        anime: { id: first.id, canonicalSlug: 'attack-on-titan' },
+      } satisfies { kind: 'anime'; anime: Partial<AnimeDetails> });
+      for (const other of [
+        'shingeki-no-kyojin',
+        'Attack-On-Titan',
+        'SHINGEKI-no-kyojin',
+      ]) {
+        expect((await bySlug(other).expect(200)).body).toEqual({
+          kind: 'redirect',
+          canonicalSlug: 'attack-on-titan',
+        } satisfies AnimeBySlug);
+      }
+    });
+
+    it('answers 404 for an unknown slug and 400 for a malformed one', async () => {
+      const unknown = await bySlug('no-such-anime').expect(404);
+
+      expect(unknown.body).toMatchObject({
+        error: { code: 'ANIME_NOT_FOUND' },
+      });
+      // 80 characters is the longest slug: well-formed, so unknown rather than malformed.
+      await bySlug('a'.repeat(80)).expect(404);
+      for (const malformed of ['a--b', '-a', 'a_b', 'é', 'a'.repeat(81)]) {
+        await bySlug(encodeURIComponent(malformed)).expect(400);
+      }
+    });
+
+    it('serves stale data by slug at once and refreshes it in the background', async () => {
+      const imported = (await get('/anime/myanimelist/16498').expect(200))
+        .body as AnimeDetails;
+      await importer.settle();
+      clock.advance(8 * DAY_MS);
+
+      const stale = (await bySlug('attack-on-titan').expect(200))
+        .body as Extract<AnimeBySlug, { kind: 'anime' }>;
+      await importer.settle();
+
+      const refreshed = (await get('/anime/anilist/16498').expect(200))
+        .body as AnimeDetails;
+
+      expect(stale.anime.titleEnglish).toEqual(imported.titleEnglish);
+      expect(refreshed.titleEnglish?.fetchedAt).toBe(clock.now().toISOString());
+      expect([anilist.calls, jikan.calls]).toEqual([2, 2]);
+    });
+
+    it('re-imports a purged anime from its slug', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+      clock.advance(31 * DAY_MS);
+      expect(await importer.purgeUnviewed()).toBe(1);
+
+      const body = (await bySlug('attack-on-titan').expect(200))
+        .body as AnimeBySlug;
+      await importer.settle();
+
+      expect(body.kind).toBe('anime');
+      expect(await prisma.anime.count()).toBe(1);
+    });
+
+    it('keeps serving a slug with AniList switched off, from the other source', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+      settings.enabled.anilist = false;
+
+      const served = (await bySlug('attack-on-titan').expect(200))
+        .body as Extract<AnimeBySlug, { kind: 'anime' }>;
+
+      expect(served.anime.attributions.map(({ source }) => source)).toEqual([
+        'jikan',
+      ]);
+      expect(served.anime.canonicalSlug).toBe('attack-on-titan');
+      // The AniList id itself is hidden with its source; the slug is ours.
+      await get('/anime/anilist/16498').expect(404);
+    });
+
+    it('redirects when re-importing a purged anime moves its canonical slug', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+      clock.advance(31 * DAY_MS);
+      expect(await importer.purgeUnviewed()).toBe(1);
+      const aot = record(record(fixture('anilist-attack-on-titan')).data).Media;
+      aniListByMalId.set(16498, {
+        data: {
+          Media: {
+            ...record(aot),
+            title: {
+              ...record(record(aot).title),
+              english: 'Attack on Titan Final',
+            },
+          },
+        },
+      });
+
+      expect((await bySlug('attack-on-titan').expect(200)).body).toEqual({
+        kind: 'redirect',
+        canonicalSlug: 'attack-on-titan-final',
+      } satisfies AnimeBySlug);
+      await importer.settle();
+    });
+
+    it('answers 404 for a removed anime without calling any source', async () => {
+      await get('/anime/myanimelist/52991').expect(200);
+      await importer.settle();
+      const frieren = record(record(fixture('anilist-frieren')).data).Media;
+      aniListByMalId.set(52991, {
+        data: { Media: { ...record(frieren), isAdult: true } },
+      });
+      clock.advance(8 * DAY_MS);
+      await get('/anime/myanimelist/52991').expect(200);
+      await importer.settle();
+      anilist.calls = 0;
+      jikan.calls = 0;
+
+      await bySlug('frieren-beyond-journeys-end').expect(404);
+
+      expect(anilist.calls + jikan.calls).toBe(0);
+    });
   });
 
   it('rejects an unknown id source or a non-numeric id', async () => {

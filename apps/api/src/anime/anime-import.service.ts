@@ -22,6 +22,7 @@ import {
   canonicalCandidates,
   romajiAlias,
   type SlugSource,
+  slugify,
 } from './anime.slug';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
@@ -53,10 +54,12 @@ export function sourceNotAvailable(): ApiException {
   });
 }
 
-export function animeNotFound(): ApiException {
+export function animeNotFound(
+  message = 'No anime with this id.',
+): ApiException {
   return new ApiException(HttpStatus.NOT_FOUND, {
     code: 'ANIME_NOT_FOUND',
-    message: 'No anime with this id.',
+    message,
   });
 }
 
@@ -429,9 +432,10 @@ export class AnimeImportService implements OnApplicationShutdown {
   }
 
   /**
-   * ADR 0007: keeps the canonical slug while it is still a candidate, otherwise moves it to the
-   * first candidate that is free or already this anime's (the old one keeps redirecting); then
-   * adds the romaji alias when free. A candidate taken by a concurrent import fails the plain
+   * ADR 0007: keeps the canonical slug while it is still a candidate, or while the snapshot has
+   * no usable English title (a title that disappears never moves it, so a reverted edit claims
+   * nothing). Otherwise moves it to the first candidate that is free or already this anime's
+   * (the old one keeps redirecting); then adds the romaji alias when free. A candidate taken by a concurrent import fails the plain
    * insert (P2002), and store() tries again with fresh data.
    */
   private async claimSlugs(
@@ -452,7 +456,11 @@ export class AnimeImportService implements OnApplicationShutdown {
     });
     if (identity?.removedAt) throw animeNotFound();
     const candidates = canonicalCandidates(source);
-    if (!identity || !candidates.includes(identity.canonicalSlug)) {
+    const moves =
+      identity === null ||
+      (!candidates.includes(identity.canonicalSlug) &&
+        slugify(source.titleEnglish ?? '') !== '');
+    if (moves) {
       const taken = await tx.animeSlug.findMany({
         where: { slug: { in: candidates } },
       });

@@ -55,8 +55,11 @@ const SCORE_SCALE: Readonly<Record<AnimeDataSource, AnimeScore['scale']>> = {
   jikan: 10,
 };
 
+/** Everything but the slug, which is ours, not a source's (ADR 0007). */
+export type MergedAnime = Omit<AnimeDetails, 'canonicalSlug'>;
+
 type MergedField = Exclude<
-  keyof AnimeDetails,
+  keyof MergedAnime,
   'id' | 'externalIds' | 'scores' | 'attributions'
 >;
 
@@ -90,7 +93,7 @@ export function mergeAnime(
   anime: StoredAnime,
   isEnabled: (source: AnimeDataSource) => boolean,
   now: Date,
-): AnimeDetails {
+): MergedAnime {
   const visibleIds = visibleIdSources(anime, isEnabled);
   const snapshots = anime.snapshots
     .filter((stored) => isEnabled(stored.source))
