@@ -598,8 +598,15 @@ describe('GET /anime/:idSource/:externalId', () => {
       canonicalSlug: 'the-minami-family',
     } satisfies AnimeBySlug);
 
-    // Back to the old title: its slug is already this anime's, so it is reused, not added.
-    aniListByMalId.set(2963, fixture('anilist-minami-ke'));
+    // A new English title whose slug is already this anime's: reused, never a lower rung.
+    aniListByMalId.set(2963, {
+      data: {
+        Media: {
+          ...record(minamike),
+          title: { ...record(record(minamike).title), english: 'Minami-ke' },
+        },
+      },
+    });
     clock.advance(8 * DAY_MS);
     await get('/anime/myanimelist/2963').expect(200);
     await importer.settle();
@@ -637,6 +644,55 @@ describe('GET /anime/:idSource/:externalId', () => {
       (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
         ?.removedAt,
     ).toEqual(clock.now());
+  });
+
+  it('never moves the canonical when the English title disappears, then comes back', async () => {
+    const aot = record(record(fixture('anilist-attack-on-titan')).data).Media;
+    const withEnglish = (english: string | null) => ({
+      data: {
+        Media: {
+          ...record(aot),
+          title: { ...record(record(aot).title), english },
+        },
+      },
+    });
+    const slugTable = async () => ({
+      canonical: (await slugsOf(16498)).canonical,
+      rows: (
+        await prisma.animeSlug.findMany({
+          orderBy: { slug: 'asc' },
+          select: { slug: true, anilistId: true },
+        })
+      ).map(({ slug, anilistId }) => `${slug} -> ${anilistId}`),
+    });
+    const expected = {
+      canonical: 'attack-on-titan',
+      rows: ['attack-on-titan -> 16498', 'shingeki-no-kyojin -> 16498'],
+    };
+    const refreshWith = async (english: string | null) => {
+      aniListByMalId.set(16498, withEnglish(english));
+      clock.advance(8 * DAY_MS);
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+    };
+
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+    expect(await slugTable()).toEqual(expected);
+    await refreshWith(null);
+    expect(await slugTable()).toEqual(expected);
+    // The refresh did store AniList's null title: the canonical stayed on purpose.
+    expect(
+      (
+        await prisma.animeSourceSnapshot.findFirst({
+          where: { source: 'ANILIST' },
+        })
+      )?.titleEnglish,
+    ).toBeNull();
+    await refreshWith(null);
+    expect(await slugTable()).toEqual(expected);
+    await refreshWith('Attack on Titan');
+    expect(await slugTable()).toEqual(expected);
   });
 
   it('keeps the slugs through the purge and reuses them on re-import', async () => {
