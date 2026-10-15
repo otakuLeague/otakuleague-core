@@ -6,9 +6,11 @@ export const API_ERROR_CODES = [
   'MALFORMED_REQUEST',
   'BAD_REQUEST',
   'NOT_FOUND',
+  'ANIME_NOT_FOUND',
   'PAYLOAD_TOO_LARGE',
   'CLIENT_ERROR',
   'SERVICE_UNAVAILABLE',
+  'ANIME_SOURCES_UNAVAILABLE',
   'INTERNAL_ERROR',
 ] as const;
 
@@ -95,3 +97,4 @@ export {
   scrubBreadcrumb,
   scrubErrorEvent,
 } from './redaction';
+export * from './anime';

@@ -47,6 +47,11 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 - The web app copies its own variables (`WEB_ENV_VARIABLES` in `next.config.ts`) from the repo-root `.env`, inside the repo only; real env vars win. It needs `API_BASE_URL` (server-only, example value in `.env.example`; an older `.env` needs it added). A missing or invalid value fails the first API call with one message naming the variable.
 - Restart `pnpm dev` after editing the root `.env`, and don't add `apps/web/.env*` files (ADR 0003).
 
+### Anime data (ADR 0006, OTA-92)
+- `GET /anime/:idSource/:externalId` with `anilist` or `myanimelist`, e.g. `curl localhost:3001/anime/myanimelist/16498`. The first request imports from AniList (a few seconds); Jikan fills in MAL data in the background.
+- Kill switches `ANIME_SOURCE_ANILIST_ENABLED` / `ANIME_SOURCE_JIKAN_ENABLED` (default true, read at start): false hides that source's data everywhere without deleting it. Base URLs `ANILIST_API_URL` / `JIKAN_API_URL` are optional.
+- A new source is a new adapter under `apps/api/src/anime/sources` with its own switch and limiter; never read a source's API outside its adapter. Tests use the recorded responses in `sources/fixtures` and local fake servers, never live calls.
+
 ### Logs and error tracking (ADR 0004)
 - API logs are one JSON object per line; lines written during a request carry `requestId`, also returned as the `X-Request-Id` header. Pipe through `jq` to read them.
 - Sentry is off until `SENTRY_DSN` (API) or `NEXT_PUBLIC_SENTRY_DSN` (web) is set in the root `.env`. `SENTRY_ENVIRONMENT` defaults to `NODE_ENV`, `SENTRY_RELEASE` to the git commit.

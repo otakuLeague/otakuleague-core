@@ -51,6 +51,16 @@ export function isSentryDsn(value: unknown): boolean {
   );
 }
 
+export function isHttpUrl(value: unknown): boolean {
+  return (
+    typeof value === 'string' &&
+    URL.canParse(value) &&
+    ['https:', 'http:'].includes(new URL(value).protocol)
+  );
+}
+
+const BOOLEAN_STRINGS = ['true', 'false'] as const;
+
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const;
 
 export class EnvironmentVariables {
@@ -91,6 +101,35 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   readonly SENTRY_RELEASE?: string;
+
+  // Kill switches, one per anime data source (ADR 0006 update). Default on. "false" hides
+  // everything that source ever stored and stops calling it; the data stays in the database.
+  @IsOptional()
+  @IsIn(BOOLEAN_STRINGS, {
+    message: 'ANIME_SOURCE_ANILIST_ENABLED must be true or false',
+  })
+  readonly ANIME_SOURCE_ANILIST_ENABLED?: (typeof BOOLEAN_STRINGS)[number];
+
+  @IsOptional()
+  @IsIn(BOOLEAN_STRINGS, {
+    message: 'ANIME_SOURCE_JIKAN_ENABLED must be true or false',
+  })
+  readonly ANIME_SOURCE_JIKAN_ENABLED?: (typeof BOOLEAN_STRINGS)[number];
+
+  // Base URLs, overridable for a mirror or a self-hosted Jikan; tests use local fakes.
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isHttpUrl', validator: { validate: isHttpUrl } },
+    { message: 'ANILIST_API_URL must be an http(s) URL' },
+  )
+  readonly ANILIST_API_URL?: string;
+
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isHttpUrl', validator: { validate: isHttpUrl } },
+    { message: 'JIKAN_API_URL must be an http(s) URL' },
+  )
+  readonly JIKAN_API_URL?: string;
 }
 
 // Messages name the variable and the rule, never the value: DATABASE_URL holds a password.

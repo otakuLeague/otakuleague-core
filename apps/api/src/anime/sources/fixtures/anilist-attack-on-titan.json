@@ -1,0 +1,336 @@
+{
+  "data": {
+    "Media": {
+      "id": 16498,
+      "idMal": 16498,
+      "siteUrl": "https://anilist.co/anime/16498",
+      "isAdult": false,
+      "title": {
+        "romaji": "Shingeki no Kyojin",
+        "english": "Attack on Titan",
+        "native": "進撃の巨人"
+      },
+      "synonyms": [
+        "SnK",
+        "AoT",
+        "Ataque a los Titanes",
+        "Ataque dos Titãs",
+        "L'Attacco dei Giganti",
+        "מתקפת הטיטאנים",
+        "进击的巨人",
+        "L’Attaque des Titans",
+        "الهجوم على العمالقة",
+        "ผ่าพิภพไททัน",
+        "حمله به تایتان",
+        "Ataque de Titãs",
+        "Atak Tytanów",
+        "Атака титанов",
+        "Đại Chiến Titan"
+      ],
+      "format": "TV",
+      "status": "FINISHED",
+      "startDate": {
+        "year": 2013,
+        "month": 4,
+        "day": 7
+      },
+      "endDate": {
+        "year": 2013,
+        "month": 9,
+        "day": 28
+      },
+      "season": "SPRING",
+      "seasonYear": 2013,
+      "episodes": 25,
+      "duration": 24,
+      "description": "Several hundred years ago, humans were nearly exterminated by titans. Titans are typically several stories tall, seem to have no intelligence, devour human beings and, worst of all, seem to do it for the pleasure rather than as a food source. A small percentage of humanity survived by walling themselves in a city protected by extremely high walls, even taller than the biggest of titans.<br><br>\r\nFlash forward to the present and the city has not seen a titan in over 100 years. Teenage boy Eren and his foster sister Mikasa witness something horrific as the city walls are destroyed by a colossal titan that appears out of thin air. As the smaller titans flood the city, the two kids watch in horror as their mother is eaten alive. Eren vows that he will murder every single titan and take revenge for all of mankind.<br><br>\r\n(Source: MangaHelpers)",
+      "coverImage": {
+        "extraLarge": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-buvcRTBx4NSm.jpg",
+        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-buvcRTBx4NSm.jpg"
+      },
+      "bannerImage": "https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-8jpFCOcDmneX.jpg",
+      "trailer": {
+        "id": "LHtdKWJdif4\t",
+        "site": "youtube"
+      },
+      "genres": ["Action", "Drama", "Fantasy", "Mystery"],
+      "tags": [
+        {
+          "name": "Kaiju",
+          "rank": 93,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Revenge",
+          "rank": 93,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Tragedy",
+          "rank": 89,
+          "isGeneralSpoiler": true,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Military",
+          "rank": 88,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Henshin",
+          "rank": 88,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Male Protagonist",
+          "rank": 86,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Primarily Teen Cast",
+          "rank": 86,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Post-Apocalyptic",
+          "rank": 84,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Survival",
+          "rank": 84,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Super Power",
+          "rank": 81,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Memory Manipulation",
+          "rank": 77,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Gore",
+          "rank": 77,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Steampunk",
+          "rank": 77,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Dystopian",
+          "rank": 77,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Swordplay",
+          "rank": 74,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Ensemble Cast",
+          "rank": 74,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Kuudere",
+          "rank": 70,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Cannibalism",
+          "rank": 69,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Espionage",
+          "rank": 68,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Orphan",
+          "rank": 67,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Shounen",
+          "rank": 63,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Medieval",
+          "rank": 60,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Coming of Age",
+          "rank": 60,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Amnesia",
+          "rank": 60,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Time Skip",
+          "rank": 60,
+          "isGeneralSpoiler": true,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Suicide",
+          "rank": 55,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": true
+        },
+        {
+          "name": "Rural",
+          "rank": 50,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Primarily Male Cast",
+          "rank": 33,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        },
+        {
+          "name": "Adoption",
+          "rank": 31,
+          "isGeneralSpoiler": false,
+          "isMediaSpoiler": false
+        }
+      ],
+      "studios": {
+        "edges": [
+          {
+            "isMain": true,
+            "node": {
+              "name": "WIT STUDIO"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Pony Canyon"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Kodansha"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Production I.G"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Dentsu"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Pony Canyon Enterprise"
+            }
+          },
+          {
+            "isMain": false,
+            "node": {
+              "name": "Mainichi Broadcasting System"
+            }
+          }
+        ]
+      },
+      "averageScore": 85,
+      "popularity": 1066347,
+      "externalLinks": [
+        {
+          "site": "Crunchyroll",
+          "url": "http://www.crunchyroll.com/attack-on-titan",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Official Site",
+          "url": "http://shingeki.tv/",
+          "type": "INFO"
+        },
+        {
+          "site": "Hulu",
+          "url": "http://www.hulu.com/attack-on-titan",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Adult Swim",
+          "url": "https://www.adultswim.com/videos/attack-on-titan",
+          "type": "STREAMING"
+        },
+        {
+          "site": "iQ",
+          "url": "https://www.iq.com/album/xq12ps94l5",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Twitter",
+          "url": "https://twitter.com/anime_shingeki",
+          "type": "SOCIAL"
+        },
+        {
+          "site": "YouTube",
+          "url": "https://youtube.com/@attackontitan_officialchannel",
+          "type": "STREAMING"
+        },
+        {
+          "site": "Facebook",
+          "url": "https://www.facebook.com/AttackOnTitan",
+          "type": "SOCIAL"
+        },
+        {
+          "site": "TikTok",
+          "url": "https://www.tiktok.com/@shingeki_anime_official",
+          "type": "SOCIAL"
+        },
+        {
+          "site": "Instagram",
+          "url": "https://www.instagram.com/anime_shingeki_official?stkn=MWxxeWQ4M2Z4emlocA==",
+          "type": "SOCIAL"
+        }
+      ],
+      "nextAiringEpisode": null
+    }
+  }
+}
