@@ -16,8 +16,14 @@ flowchart LR
     health["GET /health<br/>HealthController"]
     healthSvc["HealthService"]
     debug["GET /debug/error<br/>(not in production)"]
+    animeApi["GET /anime/:idSource/:externalId<br/>AnimeService"]
+    importer["AnimeImportService<br/>on-demand import, refresh, purge"]
+    adapters["Source adapters<br/>AniList, Jikan<br/>(kill switch, rate limiter each)"]
     prisma["PrismaService"]
   end
+
+  anilistApi["AniList GraphQL<br/>(primary)"]
+  jikanApi["Jikan / MyAnimeList<br/>(fills gaps)"]
 
   shared["packages/shared-types<br/>API types, error codes, redaction"]
   db[("PostgreSQL 16<br/>Docker Compose")]
@@ -28,6 +34,11 @@ flowchart LR
   pages --> client
   client -->|"HTTP, server-side only<br/>API_BASE_URL"| health
   health --> healthSvc --> prisma
+  animeApi --> importer --> adapters
+  animeApi --> prisma
+  importer --> prisma
+  adapters -->|"HTTP, 30 req/min"| anilistApi
+  adapters -->|"HTTP, 1 req/s"| jikanApi
   prisma -->|"SQL (Prisma, pg adapter)"| db
 
   shared -.->|imported by| web
@@ -46,6 +57,7 @@ flowchart LR
 
 - **apps/web**: Next.js App Router. Pages are Server Components, except the error boundaries and the client-error debug button; the browser never calls the API. Every network call goes through `src/api/client.ts` (`apiClient()`), which applies timeouts and returns expected failures as an `ApiResult` instead of throwing; ESLint blocks raw `fetch` elsewhere, except in the Sentry tunnel `src/observability/sentry-tunnel.ts` ([ADR 0003](decisions/0003-web-api-client.md) and its OTA-87 addendum). Today the home page shows the API health; there are also error pages and debug pages for testing Sentry.
 - **apps/api**: NestJS. Validated config from the repo-root `.env` (the API refuses to boot on a missing or invalid variable), one error envelope `{ "error": { "code", "message" } }` (except the 503 body of `/health`, a `HealthResponse`), request validation, `GET /health` (200, or 503 while Postgres is down), Swagger at `/docs` outside production ([ADR 0002](decisions/0002-api-validation-and-errors.md)). Logs are one JSON object per line with a `requestId` ([ADR 0004](decisions/0004-error-tracking-and-logging.md)).
+- **Anime data** ([ADR 0006](decisions/0006-anime-data-sources.md) and its OTA-92 update): `GET /anime/:idSource/:externalId` (`anilist` or `myanimelist` id) serves the core anime from our database. An anime we do not have is imported on the request from AniList (one shared import per anime); Jikan fills MAL data in the background. Each source has an adapter, a kill switch (`ANIME_SOURCE_*_ENABLED`) and a rate limiter; each stored value keeps its source and fetch time (`anime_source_snapshot`, one row per anime and source), merged at read time. Stale data is served at once and refreshed in the background (daily while airing, weekly otherwise); anime nobody opened for 30 days are purged daily. Adult entries are never stored.
 - **PostgreSQL**: one container from `docker-compose.yml`, bound to 127.0.0.1, with a dev database and a test database. Prisma 7 owns the schema and migrations (`apps/api/prisma`); there are no tables yet.
 - **packages/shared-types**: built to `dist/` and imported by both apps: the API response types (`HealthResponse`, `ApiError`), error codes and their type guards, and the redaction used before anything reaches a log or Sentry.
 - **Sentry**: the API, the web server and the browser report errors when their DSN is set; with no DSN nothing is sent. Scrubbing runs before sending ([ADR 0004](decisions/0004-error-tracking-and-logging.md)). The browser sends to our own `/hikari` route, which forwards only envelopes for our DSN, so blockers of sentry.io do not drop them ([ADR 0003 addendum](decisions/0003-web-api-client.md)).
