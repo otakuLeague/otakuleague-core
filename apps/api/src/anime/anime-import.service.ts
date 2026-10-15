@@ -18,6 +18,11 @@ import {
   fromAnimeRow,
   toSnapshotRow,
 } from './anime.rows';
+import {
+  canonicalCandidates,
+  romajiAlias,
+  type SlugSource,
+} from './anime.slug';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
   type AnimeRef,
@@ -34,10 +39,12 @@ const AIRING_TTL_MS = DAY_MS;
 const FINISHED_TTL_MS = 7 * DAY_MS;
 const PURGE_AFTER_MS = 30 * DAY_MS;
 const PURGE_BATCH = 1_000;
+/** Concurrent imports racing for the same id or slug: each lost race costs one attempt. */
+const STORE_ATTEMPTS = 3;
 
 /** What one source said when asked to refresh an anime. */
 export type RefreshOutcome =
-  'stored' | 'not_found' | 'adult' | 'unavailable' | 'skipped';
+  'stored' | 'not_found' | 'removed' | 'unavailable' | 'skipped';
 
 export function sourceNotAvailable(): ApiException {
   return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, {
@@ -225,6 +232,8 @@ export class AnimeImportService implements OnApplicationShutdown {
       },
     });
     if (linked) return linked.animeId;
+    // ADR 0007: a removed anime costs no source call, however often its URL is hit.
+    if (await this.isRemoved([ref])) throw animeNotFound();
     const candidates = this.enabledAdapters().filter((adapter) =>
       adapter.lookups.includes(ref.source),
     );
@@ -241,7 +250,10 @@ export class AnimeImportService implements OnApplicationShutdown {
       }
       if (result.kind === 'not_found') continue;
       // Adult entries are neither stored nor shown (ADR 0006 update): same answer as unknown.
-      if (result.snapshot.adult) throw animeNotFound();
+      if (result.snapshot.adult) {
+        await this.remove(null, result.snapshot.ids);
+        throw animeNotFound();
+      }
       const animeId = await this.store(adapter, result.snapshot);
       // Registered before this import ends, so settle() never sees a gap between the two.
       void this.shared(`fill:${animeId}`, () => this.fillFromOthers(animeId));
@@ -289,10 +301,12 @@ export class AnimeImportService implements OnApplicationShutdown {
       });
       return 'not_found';
     }
-    if (result.snapshot.adult) {
-      // Flagged adult by any source: the whole anime goes, ids and snapshots by cascade.
-      await this.prisma.anime.deleteMany({ where: { id: anime.id } });
-      return 'adult';
+    // Flagged adult by any source, or stored through another source after its removal
+    // (ADR 0007): the whole anime goes, ids and snapshots by cascade.
+    const ids = [...anime.externalIds, ...result.snapshot.ids];
+    if (result.snapshot.adult || (await this.isRemoved(ids))) {
+      await this.remove(anime.id, ids);
+      return 'removed';
     }
     try {
       await this.store(adapter, result.snapshot, anime.id);
@@ -309,13 +323,14 @@ export class AnimeImportService implements OnApplicationShutdown {
    * the source's own id points to, or a new one; other ids are linked only when free, and a
    * conflict is flagged, never resolved by moving the id (ADR 0006). Another process importing
    * the same anime at once makes the insert of the own id fail (P2002): the retry then finds
-   * that anime. A purge deleting it mid-way (P2003) also gets one retry.
+   * that anime; so does a slug taken by a concurrent import (ADR 0007). A purge deleting it
+   * mid-way (P2003) is retried too.
    */
   private async store(
     adapter: AnimeSourceAdapter,
     snapshot: AnimeSnapshot,
     animeId?: string,
-    retried = false,
+    attempt = 1,
   ): Promise<string> {
     const now = this.clock.now();
     const [own, ...others] = snapshot.ids;
@@ -362,16 +377,110 @@ export class AnimeImportService implements OnApplicationShutdown {
           update: row,
         });
         await this.warnOnIdConflicts(tx, id, snapshot);
+        if (own.source === 'anilist') {
+          await this.claimSlugs(tx, snapshot, own.externalId, now);
+        }
         return id;
       });
     } catch (error) {
       const retryable =
         isPrismaError(error, 'P2002') ||
         (!animeId && isPrismaError(error, 'P2003'));
-      if (!retried && retryable) {
-        return this.store(adapter, snapshot, animeId, true);
+      if (attempt < STORE_ATTEMPTS && retryable) {
+        return this.store(adapter, snapshot, animeId, attempt + 1);
       }
       throw error;
+    }
+  }
+
+  /** ADR 0007: true when one of these ids is an AniList anime removed for good. */
+  private async isRemoved(ids: readonly AnimeRef[]): Promise<boolean> {
+    const anilist = ids.find((id) => id.source === 'anilist');
+    if (!anilist) return false;
+    const identity = await this.prisma.animeIdentity.findUnique({
+      where: { anilistId: anilist.externalId },
+    });
+    return (identity?.removedAt ?? null) !== null;
+  }
+
+  /**
+   * Deletes the anime (when stored) and marks its identity removed in one transaction, so no
+   * import can store it again in between. Its slugs stay. An anime with no identity yet (never
+   * slugged) cannot be marked: the adult flag is checked again on every import anyway.
+   */
+  private async remove(
+    animeId: string | null,
+    ids: readonly AnimeRef[],
+  ): Promise<void> {
+    const anilist = ids.find((id) => id.source === 'anilist');
+    await this.prisma.$transaction([
+      ...(animeId === null
+        ? []
+        : [this.prisma.anime.deleteMany({ where: { id: animeId } })]),
+      ...(anilist === undefined
+        ? []
+        : [
+            this.prisma.animeIdentity.updateMany({
+              where: { anilistId: anilist.externalId, removedAt: null },
+              data: { removedAt: this.clock.now() },
+            }),
+          ]),
+    ]);
+  }
+
+  /**
+   * ADR 0007: keeps the canonical slug while it is still a candidate, otherwise moves it to the
+   * first candidate that is free or already this anime's (the old one keeps redirecting); then
+   * adds the romaji alias when free. A candidate taken by a concurrent import fails the plain
+   * insert (P2002), and store() tries again with fresh data.
+   */
+  private async claimSlugs(
+    tx: Prisma.TransactionClient,
+    snapshot: AnimeSnapshot,
+    anilistId: number,
+    now: Date,
+  ): Promise<void> {
+    const source: SlugSource = {
+      anilistId,
+      titleEnglish: snapshot.titleEnglish,
+      titleRomaji: snapshot.titleRomaji,
+      year: snapshot.startDate?.year ?? snapshot.seasonYear,
+      format: snapshot.format,
+    };
+    const identity = await tx.animeIdentity.findUnique({
+      where: { anilistId },
+    });
+    if (identity?.removedAt) throw animeNotFound();
+    const candidates = canonicalCandidates(source);
+    if (!identity || !candidates.includes(identity.canonicalSlug)) {
+      const taken = await tx.animeSlug.findMany({
+        where: { slug: { in: candidates } },
+      });
+      const owner = new Map(taken.map((row) => [row.slug, row.anilistId]));
+      const slug = candidates.find((candidate) => {
+        const holder = owner.get(candidate);
+        return holder === undefined || holder === anilistId;
+      });
+      if (slug === undefined) {
+        throw new Error(`No free slug for AniList ${anilistId}`);
+      }
+      await tx.animeIdentity.upsert({
+        where: { anilistId },
+        create: { anilistId, canonicalSlug: slug, createdAt: now },
+        update: { canonicalSlug: slug },
+      });
+      if (!owner.has(slug)) {
+        await tx.animeSlug.create({
+          data: { slug, anilistId, createdAt: now },
+        });
+      }
+    }
+    const alias = romajiAlias(source);
+    if (alias !== null) {
+      await tx.animeSlug.createMany({
+        data: [{ slug: alias, anilistId, createdAt: now }],
+        skipDuplicates: true,
+      });
     }
   }
 

@@ -131,3 +131,30 @@ model AnimeSourceSnapshot {
   @@id([animeId, source])
   @@map("anime_source_snapshot")
 }
+
+// --- Anime slugs (OTA-94, ADR 0007) ----------------------------------------------------
+// Keyed on the AniList id with no relation to Anime: the 30-day purge never deletes a slug.
+
+model AnimeIdentity {
+  anilistId     Int         @id @map("anilist_id")
+  // Always one of this identity's slugs; written in the same transaction as that slug.
+  canonicalSlug String      @unique @map("canonical_slug")
+  // Adult or taken down: never imported again.
+  removedAt     DateTime?   @map("removed_at") @db.Timestamptz(3)
+  createdAt     DateTime    @map("created_at") @db.Timestamptz(3)
+  slugs         AnimeSlug[]
+
+  @@map("anime_identity")
+}
+
+// Every slug ever claimed (current canonical, former canonicals, romaji alias); never reassigned.
+// A CHECK constraint (migration anime_slug_rules) holds the format: never a bad row forever.
+model AnimeSlug {
+  slug      String        @id
+  anilistId Int           @map("anilist_id")
+  identity  AnimeIdentity @relation(fields: [anilistId], references: [anilistId], onDelete: Restrict)
+  createdAt DateTime      @map("created_at") @db.Timestamptz(3)
+
+  @@index([anilistId])
+  @@map("anime_slug")
+}

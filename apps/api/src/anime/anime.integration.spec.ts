@@ -117,6 +117,25 @@ describe('GET /anime/:idSource/:externalId', () => {
     ids: await prisma.animeExternalId.count(),
     snapshots: await prisma.animeSourceSnapshot.count(),
   });
+  const slugsOf = async (anilistId: number) => ({
+    canonical: (await prisma.animeIdentity.findUnique({ where: { anilistId } }))
+      ?.canonicalSlug,
+    all: (
+      await prisma.animeSlug.findMany({
+        where: { anilistId },
+        orderBy: { slug: 'asc' },
+      })
+    ).map(({ slug }) => slug),
+  });
+  /** AniList's Attack on Titan under another id: same titles, so every slug collides. */
+  const aotTwin = (id: number, title?: Record<string, string | null>) => {
+    const aot = record(record(fixture('anilist-attack-on-titan')).data).Media;
+    return {
+      data: {
+        Media: { ...record(aot), id, idMal: null, ...(title && { title }) },
+      },
+    };
+  };
 
   beforeAll(async () => {
     anilist = await startFake((_path, body) => {
@@ -304,6 +323,38 @@ describe('GET /anime/:idSource/:externalId', () => {
         (mine.body as AnimeDetails).id,
       );
       expect(await counts()).toEqual({ anime: 1, ids: 2, snapshots: 2 });
+      expect(await slugsOf(154587)).toEqual({
+        canonical: 'frieren-beyond-journeys-end',
+        all: ['frieren-beyond-journeys-end', 'sousou-no-frieren'],
+      });
+    } finally {
+      await other.close();
+    }
+  });
+
+  it('gives two anime imported at once by two processes two different slugs', async () => {
+    aniListExtra.push(aotTwin(99001));
+    const other = await createTestApp({
+      clock,
+      overrides: [{ provide: AnimeSourceSettings, useValue: settings }],
+    });
+    try {
+      const [mine, theirs] = await Promise.all([
+        get('/anime/anilist/16498'),
+        request(other.getHttpServer()).get('/anime/anilist/99001'),
+      ]);
+      await importer.settle();
+      await other.get(AnimeImportService).settle();
+
+      expect([mine.status, theirs.status]).toEqual([200, 200]);
+      const canonicals = [
+        (await slugsOf(16498)).canonical,
+        (await slugsOf(99001)).canonical,
+      ];
+      expect(canonicals.toSorted()).toEqual([
+        'attack-on-titan',
+        'attack-on-titan-2013',
+      ]);
     } finally {
       await other.close();
     }
@@ -479,6 +530,162 @@ describe('GET /anime/:idSource/:externalId', () => {
     });
 
     await get('/anime/myanimelist/52991').expect(404);
+    await importer.settle();
+
+    expect(await counts()).toEqual({ anime: 0, ids: 0, snapshots: 0 });
+    expect(await prisma.animeIdentity.count()).toBe(0);
+  });
+
+  it('claims the English slug and the romaji alias on import', async () => {
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+
+    expect(await slugsOf(16498)).toEqual({
+      canonical: 'attack-on-titan',
+      all: ['attack-on-titan', 'shingeki-no-kyojin'],
+    });
+  });
+
+  it('gives a later anime with the same title the next free rung, and no alias already taken', async () => {
+    aniListExtra.push(aotTwin(99001));
+    await get('/anime/anilist/16498').expect(200);
+    await get('/anime/anilist/99001').expect(200);
+    await importer.settle();
+
+    expect(await slugsOf(99001)).toEqual({
+      canonical: 'attack-on-titan-2013',
+      all: ['attack-on-titan-2013'],
+    });
+    expect((await slugsOf(16498)).canonical).toBe('attack-on-titan');
+  });
+
+  it('moves the canonical slug when the English title arrives, and keeps the old one', async () => {
+    aniListByMalId.set(2963, fixture('anilist-minami-ke'));
+    await get('/anime/myanimelist/2963').expect(200);
+    await importer.settle();
+    expect(await slugsOf(2963)).toEqual({
+      canonical: 'minami-ke',
+      all: ['minami-ke'],
+    });
+
+    const minamike = record(record(fixture('anilist-minami-ke')).data).Media;
+    aniListByMalId.set(2963, {
+      data: {
+        Media: {
+          ...record(minamike),
+          title: {
+            ...record(record(minamike).title),
+            english: 'The Minami Family',
+          },
+        },
+      },
+    });
+    clock.advance(8 * DAY_MS);
+    await get('/anime/myanimelist/2963').expect(200);
+    await importer.settle();
+
+    expect(await slugsOf(2963)).toEqual({
+      canonical: 'the-minami-family',
+      all: ['minami-ke', 'the-minami-family'],
+    });
+
+    // Back to the old title: its slug is already this anime's, so it is reused, not added.
+    aniListByMalId.set(2963, fixture('anilist-minami-ke'));
+    clock.advance(8 * DAY_MS);
+    await get('/anime/myanimelist/2963').expect(200);
+    await importer.settle();
+
+    expect(await slugsOf(2963)).toEqual({
+      canonical: 'minami-ke',
+      all: ['minami-ke', 'the-minami-family'],
+    });
+  });
+
+  it('gives no slug to an anime imported from Jikan alone', async () => {
+    settings.enabled.anilist = false;
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+
+    expect(await prisma.animeIdentity.count()).toBe(0);
+    expect(await prisma.animeSlug.count()).toBe(0);
+  });
+
+  it('marks a purged anime removed when its re-import comes back adult', async () => {
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    clock.advance(31 * DAY_MS);
+    expect(await importer.purgeUnviewed()).toBe(1);
+    const frieren = record(record(fixture('anilist-frieren')).data).Media;
+    aniListByMalId.set(52991, {
+      data: { Media: { ...record(frieren), isAdult: true } },
+    });
+
+    await get('/anime/myanimelist/52991').expect(404);
+
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
+        ?.removedAt,
+    ).toEqual(clock.now());
+  });
+
+  it('keeps the slugs through the purge and reuses them on re-import', async () => {
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+    clock.advance(31 * DAY_MS);
+    expect(await importer.purgeUnviewed()).toBe(1);
+
+    expect((await slugsOf(16498)).all).toHaveLength(2);
+    await get('/anime/anilist/16498').expect(200);
+    await importer.settle();
+
+    expect(await slugsOf(16498)).toEqual({
+      canonical: 'attack-on-titan',
+      all: ['attack-on-titan', 'shingeki-no-kyojin'],
+    });
+  });
+
+  it('never imports again an anime deleted for being adult, though its slugs stay', async () => {
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    const frieren = record(record(fixture('anilist-frieren')).data).Media;
+    aniListByMalId.set(52991, {
+      data: { Media: { ...record(frieren), isAdult: true } },
+    });
+    clock.advance(8 * DAY_MS);
+    const flaggedAt = clock.now();
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+
+    // Even if the source drops the flag, a removed anime does not come back.
+    aniListByMalId = ANILIST_BY_MAL_ID();
+    await get('/anime/anilist/154587').expect(404);
+    await importer.settle();
+
+    expect(await counts()).toEqual({ anime: 0, ids: 0, snapshots: 0 });
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
+        ?.removedAt,
+    ).toEqual(flaggedAt);
+    expect((await slugsOf(154587)).all).toHaveLength(2);
+  });
+
+  it('deletes a removed anime stored through Jikan while AniList was down, once AniList answers', async () => {
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    const frieren = record(record(fixture('anilist-frieren')).data).Media;
+    aniListByMalId.set(52991, {
+      data: { Media: { ...record(frieren), isAdult: true } },
+    });
+    clock.advance(8 * DAY_MS);
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    aniListByMalId = ANILIST_BY_MAL_ID();
+
+    anilist.up = false;
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    anilist.up = true;
+    await get('/anime/myanimelist/52991').expect(200);
     await importer.settle();
 
     expect(await counts()).toEqual({ anime: 0, ids: 0, snapshots: 0 });
