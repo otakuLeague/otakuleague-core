@@ -1,0 +1,1894 @@
+[
+  {
+    "variables": {
+      "ids": [5081],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 5081,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2009,
+                "month": 7,
+                "day": 3
+              },
+              "title": {
+                "english": "Bakemonogatari",
+                "romaji": "Bakemonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5081-9GocceQ5Z865.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 15689,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Nekomonogatari Black",
+                        "romaji": "Nekomonogatari (Kuro)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15689-1Na3FwWgGk8v.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 11597,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Nisemonogatari",
+                        "romaji": "Nisemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11597-x2vd4KSHcI1S.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 44893,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 11,
+                        "day": 1
+                      },
+                      "title": {
+                        "english": "Bakemonogatari: Monster Tale",
+                        "romaji": "Bakemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx44893-aV0XRP0OfWf7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21520,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Koyomimonogatari",
+                        "romaji": "Koyomimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21520-nZKCr7PZrv7e.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "OTHER",
+                    "node": {
+                      "id": 106495,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 4,
+                        "day": 1
+                      },
+                      "title": {
+                        "english": "Nisekoimonogatari",
+                        "romaji": "Nisekoimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx106495-gEnPvRaS5HoU.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 54499,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 10,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Bakemonogatari Anime Complete Guidebook"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/24499.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 101311,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 3,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Bakemonogatari",
+                        "romaji": "Bakemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx101311-NOQuXK7eRHDm.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 143663,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2022,
+                        "month": 2,
+                        "day": 17
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Bakemonogatari PV"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b143663-uhiYo1Yg6UA5.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [15689, 11597],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 11597,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2012,
+                "month": 1,
+                "day": 8
+              },
+              "title": {
+                "english": "Nisemonogatari",
+                "romaji": "Nisemonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11597-x2vd4KSHcI1S.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 5081,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2009,
+                        "month": 7,
+                        "day": 3
+                      },
+                      "title": {
+                        "english": "Bakemonogatari",
+                        "romaji": "Bakemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5081-9GocceQ5Z865.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 17074,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Monogatari Series Second Season",
+                        "romaji": "Monogatari Series: Second Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx17074-xMhVAZsEDH66.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21520,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Koyomimonogatari",
+                        "romaji": "Koyomimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21520-nZKCr7PZrv7e.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 95265,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 9,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Nisemonogatari Anime Complete Guidebook"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx95265-l8e2xf4W5iUy.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "OTHER",
+                    "node": {
+                      "id": 102859,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MUSIC",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 2,
+                        "day": 1
+                      },
+                      "title": {
+                        "english": "Naisho no Hanashi",
+                        "romaji": "Naisho no Hanashi"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/102859-MSyxWnjaXVrg.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143703,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2008,
+                        "month": 9,
+                        "day": 1
+                      },
+                      "title": {
+                        "english": "Nisemonogatari: Fake Tale",
+                        "romaji": "Nisemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143703-nOs1h4qBtt61.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 15689,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2012,
+                "month": 12,
+                "day": 31
+              },
+              "title": {
+                "english": "Nekomonogatari Black",
+                "romaji": "Nekomonogatari (Kuro)"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15689-1Na3FwWgGk8v.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 5081,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2009,
+                        "month": 7,
+                        "day": 3
+                      },
+                      "title": {
+                        "english": "Bakemonogatari",
+                        "romaji": "Bakemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5081-9GocceQ5Z865.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 21400,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 1,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Kizumonogatari Part 3: Reiketsu",
+                        "romaji": "Kizumonogatari III: Reiketsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21400-38ykNo3j4xXo.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143704,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 7,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Nekomonogatari: Cat Tale (Black)",
+                        "romaji": "Nekomonogatari: Kuro"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143704-K5nKk6xP3tJ1.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [17074, 21400],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 17074,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2013,
+                "month": 7,
+                "day": 7
+              },
+              "title": {
+                "english": "Monogatari Series Second Season",
+                "romaji": "Monogatari Series: Second Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx17074-xMhVAZsEDH66.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 11597,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Nisemonogatari",
+                        "romaji": "Nisemonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11597-x2vd4KSHcI1S.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 53751,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 10,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": "Nekomonogatari: Cat Tale (White)",
+                        "romaji": "Nekomonogatari: Shiro"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx53751-1PHRYYsVP2cE.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21520,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Koyomimonogatari",
+                        "romaji": "Koyomimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21520-nZKCr7PZrv7e.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 104434,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 9,
+                        "day": 22
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Koyomi History"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx104434-6Pbe0XxAZp2S.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21262,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 10,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Owarimonogatari",
+                        "romaji": "Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21262-jfbv9hvjymMW.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143720,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 12,
+                        "day": 24
+                      },
+                      "title": {
+                        "english": "Kabukimonogatari: Dandy Tale",
+                        "romaji": "Kabukimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143720-Q9NpXhNTAbCO.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143722,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 6,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": "Otorimonogatari: Decoy Tale",
+                        "romaji": "Otorimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143722-yR4AjSj6MITF.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143724,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 9,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Onimonogatari: Demon Tale",
+                        "romaji": "Onimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143724-U38uLeLYaU3g.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143726,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 12,
+                        "day": 20
+                      },
+                      "title": {
+                        "english": "Koimonogatari: Love Tale",
+                        "romaji": "Koimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143726-oM6XdI2Ghb8b.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 21400,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2017,
+                "month": 1,
+                "day": 6
+              },
+              "title": {
+                "english": "Kizumonogatari Part 3: Reiketsu",
+                "romaji": "Kizumonogatari III: Reiketsu-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21400-38ykNo3j4xXo.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 21399,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 8,
+                        "day": 19
+                      },
+                      "title": {
+                        "english": "Kizumonogatari Part 2: Nekketsu",
+                        "romaji": "Kizumonogatari II: Nekketsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21399-VTAdAqc8u5AE.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 15689,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Nekomonogatari Black",
+                        "romaji": "Nekomonogatari (Kuro)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15689-1Na3FwWgGk8v.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143701,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2008,
+                        "month": 5,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Kizumonogatari: Wound Tale",
+                        "romaji": "Kizumonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143701-JltoJEa9GLAS.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 181970,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 1,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "KIZUMONOGATARI -Koyomi Vamp-",
+                        "romaji": "Kizumonogatari: Koyomi Vamp"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx181970-dqNqPsJcBk5I.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [21262, 21399],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 21262,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2015,
+                "month": 10,
+                "day": 4
+              },
+              "title": {
+                "english": "Owarimonogatari",
+                "romaji": "Owarimonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21262-jfbv9hvjymMW.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 17074,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Monogatari Series Second Season",
+                        "romaji": "Monogatari Series: Second Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx17074-xMhVAZsEDH66.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20918,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Tsukimonogatari",
+                        "romaji": "Tsukimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20918-8Gp6nJpbjFgr.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143747,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 10,
+                        "day": 21
+                      },
+                      "title": {
+                        "english": "Owarimonogatari: End Tale",
+                        "romaji": "Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143747-dxRIq37Odflm.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 21399,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2016,
+                "month": 8,
+                "day": 19
+              },
+              "title": {
+                "english": "Kizumonogatari Part 2: Nekketsu",
+                "romaji": "Kizumonogatari II: Nekketsu-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21399-VTAdAqc8u5AE.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 9260,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Kizumonogatari Part 1: Tekketsu",
+                        "romaji": "Kizumonogatari I: Tekketsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9260-cl7sczYOpTeW.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21400,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 1,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Kizumonogatari Part 3: Reiketsu",
+                        "romaji": "Kizumonogatari III: Reiketsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21400-38ykNo3j4xXo.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143701,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2008,
+                        "month": 5,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Kizumonogatari: Wound Tale",
+                        "romaji": "Kizumonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143701-JltoJEa9GLAS.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 181970,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 1,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "KIZUMONOGATARI -Koyomi Vamp-",
+                        "romaji": "Kizumonogatari: Koyomi Vamp"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx181970-dqNqPsJcBk5I.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [20918, 9260],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 9260,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2016,
+                "month": 1,
+                "day": 8
+              },
+              "title": {
+                "english": "Kizumonogatari Part 1: Tekketsu",
+                "romaji": "Kizumonogatari I: Tekketsu-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9260-cl7sczYOpTeW.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21399,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 8,
+                        "day": 19
+                      },
+                      "title": {
+                        "english": "Kizumonogatari Part 2: Nekketsu",
+                        "romaji": "Kizumonogatari II: Nekketsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21399-VTAdAqc8u5AE.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143701,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2008,
+                        "month": 5,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Kizumonogatari: Wound Tale",
+                        "romaji": "Kizumonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143701-JltoJEa9GLAS.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 181970,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 1,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "KIZUMONOGATARI -Koyomi Vamp-",
+                        "romaji": "Kizumonogatari: Koyomi Vamp"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx181970-dqNqPsJcBk5I.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 20918,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2014,
+                "month": 12,
+                "day": 31
+              },
+              "title": {
+                "english": "Tsukimonogatari",
+                "romaji": "Tsukimonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20918-8Gp6nJpbjFgr.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 74227,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 9,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": "Tsukimonogatari: Possession Tale",
+                        "romaji": "Tsukimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx74227-mjLz68FCTTKT.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 99678,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Okitegami Kyouko no Bibouroku × Monogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx99678-XzEKfKzm2Gz4.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21520,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Koyomimonogatari",
+                        "romaji": "Koyomimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21520-nZKCr7PZrv7e.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21745,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 8,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Owarimonogatari Second Season",
+                        "romaji": "Owarimonogatari (Ge)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21745-VrhhJjZNdBXV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 21262,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 10,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Owarimonogatari",
+                        "romaji": "Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21262-jfbv9hvjymMW.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [21745],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 21745,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2017,
+                "month": 8,
+                "day": 12
+              },
+              "title": {
+                "english": "Owarimonogatari Second Season",
+                "romaji": "Owarimonogatari (Ge)"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21745-VrhhJjZNdBXV.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 100815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 2,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": "Zoku Owarimonogatari",
+                        "romaji": "Zoku Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100815-cZbnM9Bjth8W.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 20918,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Tsukimonogatari",
+                        "romaji": "Tsukimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20918-8Gp6nJpbjFgr.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143747,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 10,
+                        "day": 21
+                      },
+                      "title": {
+                        "english": "Owarimonogatari: End Tale",
+                        "romaji": "Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143747-dxRIq37Odflm.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [100815],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 100815,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "OVA",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2019,
+                "month": 2,
+                "day": 27
+              },
+              "title": {
+                "english": "Zoku Owarimonogatari",
+                "romaji": "Zoku Owarimonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100815-cZbnM9Bjth8W.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20593,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 8,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Hanamonogatari",
+                        "romaji": "Hanamonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20593-ri6S0Qt3mFkv.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 21745,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 8,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Owarimonogatari Second Season",
+                        "romaji": "Owarimonogatari (Ge)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21745-VrhhJjZNdBXV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143749,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 9,
+                        "day": 17
+                      },
+                      "title": {
+                        "english": "Zoku Owarimonogatari: End Tale (Cont.)",
+                        "romaji": "Zoku Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143749-jflD8YHd3lv4.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 173533,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "MONOGATARI Series: OFF & MONSTER Season",
+                        "romaji": "Monogatari Series: Off & Monster Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx173533-9DN3nHtT2FBm.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [20593, 173533],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 20593,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2014,
+                "month": 8,
+                "day": 16
+              },
+              "title": {
+                "english": "Hanamonogatari",
+                "romaji": "Hanamonogatari"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20593-ri6S0Qt3mFkv.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 100815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 2,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": "Zoku Owarimonogatari",
+                        "romaji": "Zoku Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100815-cZbnM9Bjth8W.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143721,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 3,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": "Hanamonogatari: Flower Tale",
+                        "romaji": "Hanamonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143721-WGmbYhb5HYYM.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 173533,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "ONA",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2024,
+                "month": 7,
+                "day": 6
+              },
+              "title": {
+                "english": "MONOGATARI Series: OFF & MONSTER Season",
+                "romaji": "Monogatari Series: Off & Monster Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx173533-9DN3nHtT2FBm.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 96019,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Orokamonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx96019-YkPag7iKMXiF.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 100815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 2,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": "Zoku Owarimonogatari",
+                        "romaji": "Zoku Owarimonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100815-cZbnM9Bjth8W.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 180332,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 8,
+                        "day": 17
+                      },
+                      "title": {
+                        "english": "MONOGATARI Series: OFF & MONSTER Season - A Cruel Fairy Tale: The Beautiful Princess",
+                        "romaji": "Monogatari Series: Off & Monster Season - Zankoku Douwa: Utsukushi-hime"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b180332-pbtkiF3TjfBQ.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143763,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 7,
+                        "day": 27
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Nademonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143763-irFbWNzeLCGA.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143762,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 13
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Wazamonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143762-zOXyh6Hu597F.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 100355,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 7,
+                        "day": 20
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Shinobumonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx100355-lHbqR36Ux6sU.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 183478,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MUSIC",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 9,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "UNDEAD",
+                        "romaji": "UNDEAD"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b183478-sIXraXhUlase.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 195448,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": null,
+                      "status": "NOT_YET_RELEASED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": null,
+                        "day": null
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Monogatari Series: Off & Monster Season Shin Episode"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195448-4lyZngLgWgbP.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [195448],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 195448,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": null,
+              "status": "NOT_YET_RELEASED",
+              "startDate": {
+                "year": 2026,
+                "month": null,
+                "day": null
+              },
+              "title": {
+                "english": null,
+                "romaji": "Monogatari Series: Off & Monster Season Shin Episode"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195448-4lyZngLgWgbP.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 173533,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "MONOGATARI Series: OFF & MONSTER Season",
+                        "romaji": "Monogatari Series: Off & Monster Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx173533-9DN3nHtT2FBm.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 143762,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 1,
+                        "day": 13
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Wazamonogatari"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx143762-zOXyh6Hu597F.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

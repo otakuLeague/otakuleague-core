@@ -1,0 +1,389 @@
+[
+  {
+    "variables": {
+      "ids": [154587],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 154587,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2023,
+                "month": 9,
+                "day": 29
+              },
+              "title": {
+                "english": "Frieren: Beyond Journey’s End",
+                "romaji": "Sousou no Frieren"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154587-qQTzQnEJJ3oB.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 118586,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 4,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End",
+                        "romaji": "Sousou no Frieren"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx118586-CXKgWikBFQgS.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 169811,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MUSIC",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 9,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": "The Brave",
+                        "romaji": "Yuusha"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx169811-tsuH0SJVJy40.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 170068,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 10,
+                        "day": 11
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Sousou no Frieren: ●● no Mahou"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx170068-ijY3tCP8KoWP.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "OTHER",
+                    "node": {
+                      "id": 175691,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MUSIC",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 3,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Sunny",
+                        "romaji": "Haru"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx175691-lTfPc3P63Uyx.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 182255,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": 1,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End Season 2",
+                        "romaji": "Sousou no Frieren 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx182255-butzrqd4I0aC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 189513,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 4,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Sousou no Frieren: ●● no Mahou Part 2"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx189513-1R9Sryve0K53.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [182255],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 182255,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2026,
+                "month": 1,
+                "day": 16
+              },
+              "title": {
+                "english": "Frieren: Beyond Journey’s End Season 2",
+                "romaji": "Sousou no Frieren 2nd Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx182255-butzrqd4I0aC.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 118586,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 4,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End",
+                        "romaji": "Sousou no Frieren"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx118586-CXKgWikBFQgS.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 154587,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 9,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End",
+                        "romaji": "Sousou no Frieren"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154587-qQTzQnEJJ3oB.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 206425,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": 1,
+                        "day": 19
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Sousou no Frieren: ●● no Mahou Part 3"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b206425-WOwXsfDbHZwb.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 209939,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "NOT_YET_RELEASED",
+                      "startDate": {
+                        "year": 2027,
+                        "month": 10,
+                        "day": null
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Sousou no Frieren 3rd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx209939-g2Njkml1rheG.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [209939],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 209939,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "NOT_YET_RELEASED",
+              "startDate": {
+                "year": 2027,
+                "month": 10,
+                "day": null
+              },
+              "title": {
+                "english": null,
+                "romaji": "Sousou no Frieren 3rd Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx209939-g2Njkml1rheG.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 182255,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": 1,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End Season 2",
+                        "romaji": "Sousou no Frieren 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx182255-butzrqd4I0aC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 118586,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 4,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Frieren: Beyond Journey’s End",
+                        "romaji": "Sousou no Frieren"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx118586-CXKgWikBFQgS.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

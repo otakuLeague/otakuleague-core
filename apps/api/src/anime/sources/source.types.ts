@@ -49,6 +49,60 @@ export interface AnimeSnapshot {
   } | null;
 }
 
+/** AniList MediaRelation, relationType version 2 (ADR 0008). */
+export const MEDIA_RELATIONS = [
+  'ADAPTATION',
+  'PREQUEL',
+  'SEQUEL',
+  'PARENT',
+  'SIDE_STORY',
+  'CHARACTER',
+  'SUMMARY',
+  'ALTERNATIVE',
+  'SPIN_OFF',
+  'OTHER',
+  'SOURCE',
+  'COMPILATION',
+  'CONTAINS',
+] as const;
+export type MediaRelation = (typeof MEDIA_RELATIONS)[number];
+
+/** Formats only manga have: a source-material target of a relation. */
+export const MANGA_FORMATS = ['MANGA', 'NOVEL', 'ONE_SHOT'] as const;
+export type MangaFormat = (typeof MANGA_FORMATS)[number];
+
+interface MediaSummaryFields {
+  readonly anilistId: number;
+  /** AniList has one MediaStatus enum for anime and manga. */
+  readonly status: AnimeStatus | null;
+  readonly startDate: PartialDate | null;
+  readonly titleEnglish: string | null;
+  readonly titleRomaji: string | null;
+  readonly coverImageUrl: string | null;
+}
+
+interface AnimeKind {
+  readonly mediaType: 'ANIME';
+  readonly format: AnimeFormat | null;
+}
+
+/** The few fields the franchise views need about one AniList entry (ADR 0008). */
+export type MediaSummary = MediaSummaryFields &
+  (
+    | AnimeKind
+    | { readonly mediaType: 'MANGA'; readonly format: MangaFormat | null }
+  );
+
+export interface RelationEdge {
+  readonly relation: MediaRelation;
+  readonly target: MediaSummary;
+}
+
+/** One walked anime: its summary and its relations. Adult entries are already dropped. */
+export interface RelationNode extends MediaSummaryFields, AnimeKind {
+  readonly edges: readonly RelationEdge[];
+}
+
 export interface AnimeRef {
   readonly source: AnimeIdSource;
   readonly externalId: number;

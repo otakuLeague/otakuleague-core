@@ -1,0 +1,1645 @@
+[
+  {
+    "variables": {
+      "ids": [918],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 918,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2006,
+                "month": 4,
+                "day": 4
+              },
+              "title": {
+                "english": "Gintama",
+                "romaji": "Gintama"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx918-iOaeBVUn4uK7.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 9969,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 4,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama Season 2",
+                        "romaji": "Gintama'"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9969-0GaRABYVdUcH.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 2951,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2005,
+                        "month": 9,
+                        "day": 24
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Jump Festa 2005 Special"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx2951-rl0US7OuMXbA.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 6945,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2009,
+                        "month": 9,
+                        "day": 30
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Jump Festa 2008 Special"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/6945.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 10643,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 3,
+                        "day": 25
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Dai Hanseikai"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b10643-PhoV9rO51y4v.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 7472,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 4,
+                        "day": 24
+                      },
+                      "title": {
+                        "english": "Gintama - The Movie",
+                        "romaji": "Gintama: Shinyaku Benizakura-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx7472-RveDgQsIZUNG.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 20760,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 8,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Yorinuki Gintama-san on Theater 2D"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20760-6JlxgXfJh92a.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "OTHER",
+                    "node": {
+                      "id": 15335,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Gintama: The Final Chapter - Be Forever Yorozuya",
+                        "romaji": "Gintama: Kanketsu-hen - Yorozuya yo Eien Nare"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15335-QjijwChGTBs0.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 111952,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 8,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Monster Strike-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx111952-9b5f1ojvmgcc.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 98034,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 17
+                      },
+                      "title": {
+                        "english": "The Disastrous Life of Saiki K. Season 2",
+                        "romaji": "Saiki Kusuo no Ψ-nan 2"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx98034-1eQ4F7SKxVas.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 162890,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 10,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "GINTAMA - Mr. Ginpachi's Zany Class",
+                        "romaji": "3-nen Z-gumi Ginpachi-sensei"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx162890-vDRlo1KuRM6W.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 197474,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": 2,
+                        "day": 13
+                      },
+                      "title": {
+                        "english": "Gintama the Movie 2026: Yoshiwara in Flames",
+                        "romaji": "Shin Gintama Movie: Yoshiwara Daienjou"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx197474-jTeY1G9gtD8i.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 207475,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 10,
+                        "day": 3
+                      },
+                      "title": {
+                        "english": "Mahjong Soul X Gintama Collab - Anime Preview",
+                        "romaji": "Jongtama × Gintama Collab Kettei Promotion Anime"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx207475-atE6LAUR7Bfz.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 176636,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2026,
+                        "month": 6,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Shin Keroro Gunsou Movie: Fukkatsushite Sokkou Chikyuu Metsubou no Kiki de Arimasu!"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx176636-zPyFoYfFYZLo.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [9969],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 9969,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2011,
+                "month": 4,
+                "day": 4
+              },
+              "title": {
+                "english": "Gintama Season 2",
+                "romaji": "Gintama'"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9969-0GaRABYVdUcH.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 918,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 4,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx918-iOaeBVUn4uK7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 15417,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 10,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama Season 2 Part 2",
+                        "romaji": "Gintama': Enchousen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15417-Uc2uNdWEixwi.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 9863,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 4,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "SKET Dance",
+                        "romaji": "SKET DANCE"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9863-G6dAvTVsfLRO.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 20760,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 8,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Yorinuki Gintama-san on Theater 2D"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20760-6JlxgXfJh92a.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 169000,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 11,
+                        "day": 10
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama on Theater 2D: Baragaki-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx169000-LR5Cg0WPsZoj.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [15417],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 15417,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2012,
+                "month": 10,
+                "day": 4
+              },
+              "title": {
+                "english": "Gintama Season 2 Part 2",
+                "romaji": "Gintama': Enchousen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15417-Uc2uNdWEixwi.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 9969,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 4,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama Season 2",
+                        "romaji": "Gintama'"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9969-0GaRABYVdUcH.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20996,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama Season 3",
+                        "romaji": "Gintama°"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20996-kBEGEGdeK1r7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 15335,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Gintama: The Final Chapter - Be Forever Yorozuya",
+                        "romaji": "Gintama: Kanketsu-hen - Yorozuya yo Eien Nare"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15335-QjijwChGTBs0.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 20882,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 11,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama': Futon ni Haitte kara Buki Nokoshi ni Kizuite Neru ni Nerenai Toki mo Aru"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20882-uSAlqEptx2ls.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 175573,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 6,
+                        "day": 21
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama on Theater 2D: Ikkoku Keisei-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx175573-jf4woESV4dx9.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SUMMARY",
+                    "node": {
+                      "id": 178436,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 11,
+                        "day": 22
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama on Theater 2D: Kintama-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx178436-oTiX9xY2yEJZ.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [20996, 15335],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 15335,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2013,
+                "month": 7,
+                "day": 6
+              },
+              "title": {
+                "english": "Gintama: The Final Chapter - Be Forever Yorozuya",
+                "romaji": "Gintama: Kanketsu-hen - Yorozuya yo Eien Nare"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15335-QjijwChGTBs0.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PARENT",
+                    "node": {
+                      "id": 918,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 4,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx918-iOaeBVUn4uK7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20996,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama Season 3",
+                        "romaji": "Gintama°"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20996-kBEGEGdeK1r7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 15417,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 10,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama Season 2 Part 2",
+                        "romaji": "Gintama': Enchousen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15417-Uc2uNdWEixwi.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ADAPTATION",
+                    "node": {
+                      "id": 95458,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gekijouban Gintama: Kanketsu-hen - Yorozuya yo Eien Nare"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx95458-7QVshlwNBWMT.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "OTHER",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 20996,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2015,
+                "month": 4,
+                "day": 8
+              },
+              "title": {
+                "english": "Gintama Season 3",
+                "romaji": "Gintama°"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20996-kBEGEGdeK1r7.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 15417,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 10,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama Season 2 Part 2",
+                        "romaji": "Gintama': Enchousen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15417-Uc2uNdWEixwi.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21501,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 11,
+                        "day": 3
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: Jump Festa 2015 Special"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/21501-4fZ2GVRjYCYc.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 21588,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 8,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Gintama: Love Incense Arc",
+                        "romaji": "Gintamaº: Aizome Kaori-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21588-4stDE0RbC9jL.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 97889,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Gintama Season 4",
+                        "romaji": "Gintama."
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97889-ytqHdmus9wQi.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 15335,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Gintama: The Final Chapter - Be Forever Yorozuya",
+                        "romaji": "Gintama: Kanketsu-hen - Yorozuya yo Eien Nare"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx15335-QjijwChGTBs0.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [97889],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 97889,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2017,
+                "month": 1,
+                "day": 9
+              },
+              "title": {
+                "english": "Gintama Season 4",
+                "romaji": "Gintama."
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97889-ytqHdmus9wQi.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 20996,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama Season 3",
+                        "romaji": "Gintama°"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20996-kBEGEGdeK1r7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 99714,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Gintama.: Slip Arc",
+                        "romaji": "Gintama.: Porori-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx99714-0pCKHe4XYIz7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [99714],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 99714,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2017,
+                "month": 10,
+                "day": 2
+              },
+              "title": {
+                "english": "Gintama.: Slip Arc",
+                "romaji": "Gintama.: Porori-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx99714-0pCKHe4XYIz7.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 97889,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 1,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Gintama Season 4",
+                        "romaji": "Gintama."
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97889-ytqHdmus9wQi.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 100784,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama.: Silver Soul Arc",
+                        "romaji": "Gintama.: Shirogane no Tamashii-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100784-7fWdiduBFr95.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [100784],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 100784,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2018,
+                "month": 1,
+                "day": 8
+              },
+              "title": {
+                "english": "Gintama.: Silver Soul Arc",
+                "romaji": "Gintama.: Shirogane no Tamashii-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100784-7fWdiduBFr95.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 99714,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Gintama.: Slip Arc",
+                        "romaji": "Gintama.: Porori-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx99714-0pCKHe4XYIz7.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 101925,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 7,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Gintama.: Silver Soul Arc - Second Half War",
+                        "romaji": "Gintama.: Shirogane no Tamashii-hen - Kouhan-sen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101925-gcA84dgcSj2w.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [101925],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 101925,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2018,
+                "month": 7,
+                "day": 9
+              },
+              "title": {
+                "english": "Gintama.: Silver Soul Arc - Second Half War",
+                "romaji": "Gintama.: Shirogane no Tamashii-hen - Kouhan-sen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101925-gcA84dgcSj2w.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 100784,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama.: Silver Soul Arc",
+                        "romaji": "Gintama.: Shirogane no Tamashii-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100784-7fWdiduBFr95.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 126819,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 1,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: THE SEMI-FINAL"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx126819-KlcARzqDMjvf.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [126819],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 126819,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "SPECIAL",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2021,
+                "month": 1,
+                "day": 15
+              },
+              "title": {
+                "english": null,
+                "romaji": "Gintama: THE SEMI-FINAL"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx126819-KlcARzqDMjvf.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 114129,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 1,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gintama: THE VERY FINAL",
+                        "romaji": "Gintama: THE FINAL"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx114129-RLgSuh6YbeYx.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 101925,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 7,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Gintama.: Silver Soul Arc - Second Half War",
+                        "romaji": "Gintama.: Shirogane no Tamashii-hen - Kouhan-sen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101925-gcA84dgcSj2w.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [114129],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 114129,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2021,
+                "month": 1,
+                "day": 8
+              },
+              "title": {
+                "english": "Gintama: THE VERY FINAL",
+                "romaji": "Gintama: THE FINAL"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx114129-RLgSuh6YbeYx.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 30044,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2003,
+                        "month": 12,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Gin Tama",
+                        "romaji": "Gintama"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx30044-vPmoz3vTPvZs.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 126819,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 1,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Gintama: THE SEMI-FINAL"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx126819-KlcARzqDMjvf.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]
