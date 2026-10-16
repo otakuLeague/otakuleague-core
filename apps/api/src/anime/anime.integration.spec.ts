@@ -489,6 +489,25 @@ describe('GET /anime/:idSource/:externalId', () => {
     await get('/anime/anilist/154587').expect(404);
   });
 
+  it('keeps an anime whose refresh answers without isAdult, and does not remove it', async () => {
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    const frieren = record(record(fixture('anilist-frieren')).data).Media;
+    aniListByMalId.set(52991, {
+      data: { Media: { ...record(frieren), isAdult: null } },
+    });
+    clock.advance(8 * DAY_MS);
+
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+
+    expect(await counts()).toEqual({ anime: 1, ids: 2, snapshots: 2 });
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
+        ?.removedAt,
+    ).toBeNull();
+  });
+
   it('keeps two AniList entries that share a MAL id as two anime', async () => {
     const aot = record(record(fixture('anilist-attack-on-titan')).data).Media;
     aniListExtra.push({

@@ -109,6 +109,16 @@ describe('mapAniListMedia', () => {
     expect(
       mapAniListMedia({ ...media('anilist-frieren'), isAdult: true })?.adult,
     ).toBe(true);
+    expect(mapAniListMedia(media('anilist-frieren'))?.adult).toBe(false);
+  });
+
+  it('refuses an entry not known to be safe, without flagging it adult', () => {
+    expect(
+      mapAniListMedia({ ...media('anilist-frieren'), isAdult: null }),
+    ).toBeNull();
+    expect(
+      mapAniListMedia({ ...media('anilist-frieren'), isAdult: undefined }),
+    ).toBeNull();
   });
 });
 
