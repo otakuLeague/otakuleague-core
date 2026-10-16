@@ -9,12 +9,21 @@ import {
   type TraversalState,
 } from './franchise-graph';
 import { fromRelationRow, toRelationRow } from './relation.rows';
+import { backoffKey, SourceBackoff } from './source-backoff';
 import { AniListAdapter, RELATIONS_PAGE_SIZE } from './sources/anilist.adapter';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
   type RelationNode,
   SourceUnavailableError,
 } from './sources/source.types';
+
+/** The backoff key of an AniList id in relations answers (shared with the read path). */
+export function relationsKey(anilistId: number): string {
+  return backoffKey('relations', 'anilist', {
+    source: 'anilist',
+    externalId: anilistId,
+  });
+}
 
 /** Tries per request when no AniList slot is free: one slot interval apart. */
 const QUEUE_FULL_ATTEMPTS = 5;
@@ -43,6 +52,7 @@ export class FranchiseWalker implements OnModuleDestroy {
     private readonly clock: Clock,
     private readonly settings: AnimeSourceSettings,
     private readonly anilist: AniListAdapter,
+    private readonly backoff: SourceBackoff,
   ) {}
 
   /** Queues a walk from this AniList anime, unless it is already queued or walking. */
@@ -90,7 +100,7 @@ export class FranchiseWalker implements OnModuleDestroy {
   /**
    * One walk: traverseFranchise with a loader that reuses fresh rows and fetches the others.
    * An id missing from AniList's answer ends the walk `missing`; it is not walked through, is
-   * tried again by the next walk, and is never treated as deleted.
+   * backed off (SourceBackoff: 1 h, 6 h, 1 d, then a week) and never treated as deleted.
    */
   async walk(startId: number, nodeCap = NODE_CAP): Promise<TraversalState> {
     const boundaries = new Set(
@@ -153,13 +163,21 @@ export class FranchiseWalker implements OnModuleDestroy {
       )
       .map(fromRelationRow);
     const freshIds = new Set(fresh.map(({ anilistId }) => anilistId));
-    const missing = ids.filter((id) => !freshIds.has(id));
+    // An id AniList left out lately is not asked again before its backoff ends.
+    const missing = ids.filter(
+      (id) => !freshIds.has(id) && !this.backoff.isBackedOff(relationsKey(id)),
+    );
     const fetched: RelationNode[] = [];
     for (let at = 0; at < missing.length; at += RELATIONS_PAGE_SIZE) {
       if (!this.canFetch()) return null;
-      const batch = await this.fetchBatch(
-        missing.slice(at, at + RELATIONS_PAGE_SIZE),
-      );
+      const asked = missing.slice(at, at + RELATIONS_PAGE_SIZE);
+      const batch = await this.fetchBatch(asked);
+      const answered = new Set(batch.map(({ anilistId }) => anilistId));
+      // Left out: one backoff step up; answered: back to the first step.
+      for (const id of asked) {
+        if (answered.has(id)) this.backoff.clear(relationsKey(id));
+        else this.backoff.backOff(relationsKey(id));
+      }
       await this.store(batch, now);
       fetched.push(...batch);
     }

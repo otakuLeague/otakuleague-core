@@ -3,11 +3,13 @@ import { traverseFranchise } from './franchise-graph';
 import {
   buildFranchise,
   type FranchiseOverride,
-  seasonLabelFromTitle,
+  afterBaseTitle,
+  labelFromRemainder,
 } from './franchise-view';
 import { mapAniListRelationNodes } from './sources/anilist.mapper';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
+import type { BackoffStage } from './source-backoff';
 import type { RelationNode } from './sources/source.types';
 
 /** Every walked entry of the recorded franchises (fixtures README), by AniList id. */
@@ -70,7 +72,15 @@ const franchise = async (
     boundaries,
     nodeCap,
   );
-  return buildFranchise({ startId, traversal, boundaries, overrides, removed });
+  return buildFranchise({
+    startId,
+    traversal,
+    // As if every missing id were still to fetch.
+    missingStages: traversal.missingIds.map(() => 'clear'),
+    boundaries,
+    overrides,
+    removed,
+  });
 };
 const labels = async (startId: number, options?: Options) =>
   (await franchise(startId, options)).mainLine.map(({ label }) => label);
@@ -116,13 +126,13 @@ describe('buildFranchise on recorded franchises', () => {
     expect(await labels(16498, { overrides: new Map() })).toHaveLength(6);
   });
 
-  it('Demon Slayer: the movie between seasons is walked through, not listed', async () => {
+  it('Demon Slayer: arcs by name; the movie between seasons is walked through, not listed', async () => {
     expect(await labels(101922)).toEqual([
       'Season 1',
-      'Season 2',
-      'Season 3',
-      'Season 4',
-      'Season 5',
+      'Mugen Train Arc',
+      'Entertainment District Arc',
+      'Swordsmith Village Arc',
+      'Hashira Training Arc',
     ]);
     // Mugen Train, Infinity Castle and its two unaired, dateless sequels, last.
     expect(await group(101922, 'movie')).toEqual([
@@ -166,20 +176,20 @@ describe('buildFranchise on recorded franchises', () => {
     });
   });
 
-  it('Gintama: numbered seasons, then arcs keep their titles', async () => {
+  it('Gintama: numbered seasons keep their number, then arcs by name', async () => {
     expect(await labels(918)).toEqual([
       'Season 1',
       'Season 2',
       'Season 2 Part 2',
       'Season 3',
       'Season 4',
-      'Gintama.: Slip Arc',
-      'Gintama.: Silver Soul Arc',
-      'Gintama.: Silver Soul Arc - Second Half War',
+      'Slip Arc',
+      'Silver Soul Arc',
+      'Silver Soul Arc - Second Half War',
     ]);
   });
 
-  it('Monogatari: non-linear; two "Second Season" titles keep their titles; the ONA season counts', async () => {
+  it('Monogatari: non-linear; titles that do not start with the base title stay whole; the ONA season counts', async () => {
     expect(await labels(5081)).toEqual([
       'Season 1',
       'Nisemonogatari',
@@ -199,7 +209,7 @@ describe('buildFranchise on recorded franchises', () => {
     expect(await group(21, 'ona')).toContain(167404);
     expect(await labels(21, { overrides: new Map() })).toEqual([
       'Season 1',
-      'Season 2',
+      'MONSTERS: 103 Mercies Dragon Damnation',
     ]);
   });
 });
@@ -304,6 +314,42 @@ const synthetic = (
   overrides = new Map<number, FranchiseOverride>(),
 ) => franchise(1, { nodes, overrides });
 
+describe('buildFranchise state with missing ids', () => {
+  const traversal = {
+    state: 'missing' as const,
+    nodes: [NODES.get(16498)!],
+    missingIds: [20958, 20811],
+  };
+  const stateWith = (missingStages: BackoffStage[]) =>
+    buildFranchise({
+      startId: 16498,
+      traversal,
+      missingStages,
+      boundaries: new Set(),
+      overrides: new Map(),
+      removed: new Set(),
+    }).state;
+
+  it('is walking while one is still to fetch, partial while one was just left out, else complete', () => {
+    expect(stateWith(['clear', 'settled'])).toBe('walking');
+    expect(stateWith(['retrying', 'settled'])).toBe('partial');
+    expect(stateWith(['settled', 'settled'])).toBe('complete');
+  });
+
+  it('stays truncated when the node cap cut it', () => {
+    expect(
+      buildFranchise({
+        startId: 16498,
+        traversal: { ...traversal, state: 'truncated' },
+        missingStages: ['retrying', 'clear'],
+        boundaries: new Set(),
+        overrides: new Map(),
+        removed: new Set(),
+      }).state,
+    ).toBe('truncated');
+  });
+});
+
 describe('buildFranchise on synthetic franchises', () => {
   it('suffixes the year, else the AniList id, when clashing titles are equal too', async () => {
     const nodes = chain(
@@ -318,16 +364,52 @@ describe('buildFranchise on synthetic franchises', () => {
   });
 
   it('keeps an override label; the computed label equal to it gives way', async () => {
-    const nodes = chain(tv(1, 'Show', 2019), tv(2, 'Show Season 2', 2020));
-    const overrides = new Map([[1, { role: null, label: 'Season 2' }]]);
+    const nodes = chain(
+      tv(1, 'Show', 2019),
+      tv(2, 'Show Extra', 2020),
+      tv(3, 'Show Season 2', 2021),
+    );
+    const overrides = new Map([[2, { role: null, label: 'Season 2' }]]);
 
     expect(
       (await synthetic(nodes, overrides)).mainLine.map(({ label }) => label),
-    ).toEqual(['Season 2', 'Show Season 2']);
+    ).toEqual(['Season 1', 'Season 2', 'Show Season 2']);
+  });
+
+  it('takes the base title from the first season without an override label', async () => {
+    const nodes = chain(
+      tv(1, 'Show Prologue', 2018),
+      tv(2, 'Show', 2019),
+      tv(3, 'Show Second Arc', 2020),
+    );
+    const overrides = new Map([[1, { role: null, label: 'Prologue' }]]);
+
+    expect(
+      (await synthetic(nodes, overrides)).mainLine.map(({ label }) => label),
+    ).toEqual(['Prologue', 'Season 1', 'Second Arc']);
+  });
+
+  it('labels from the romaji titles when the English ones do not share the base', async () => {
+    const nodes = chain(
+      tv(1, "Frieren: Beyond Journey's End", 2023, {
+        titleRomaji: 'Sousou no Frieren',
+      }),
+      tv(2, 'Frieren II', 2026, {
+        titleRomaji: 'Sousou no Frieren 2nd Season',
+      }),
+    );
+
+    expect((await synthetic(nodes)).mainLine.map(({ label }) => label)).toEqual(
+      ['Season 1', 'Season 2'],
+    );
   });
 
   it('numbers positions around an override label', async () => {
-    const nodes = chain(tv(1, 'A', 2019), tv(2, 'B', 2020), tv(3, 'C', 2021));
+    const nodes = chain(
+      tv(1, 'Show', 2019),
+      tv(2, 'Show Special', 2020),
+      tv(3, 'Show', 2021),
+    );
     const overrides = new Map([[2, { role: null, label: 'Special Arc' }]]);
 
     expect(
@@ -386,18 +468,38 @@ describe('buildFranchise on synthetic franchises', () => {
   });
 });
 
-describe('seasonLabelFromTitle', () => {
+describe('afterBaseTitle', () => {
   it.each([
-    ['Attack on Titan Season 2', 'Season 2'],
-    ['Attack on Titan Season 3 Part 2', 'Season 3 Part 2'],
-    ['Attack on Titan Final Season Part 2', 'Final Season Part 2'],
-    ['Sousou no Frieren 3rd Season', 'Season 3'],
-    ['Monogatari Series Second Season', 'Season 2'],
-    ['Mushoku Tensei III Cour 2', null],
-    ['MONOGATARI Series: OFF & MONSTER Season', null],
-    ['Gintama.: Slip Arc', null],
-    ['Attack on Titan', null],
-  ])('%j -> %j', (title, label) => {
-    expect(seasonLabelFromTitle(title)).toBe(label);
+    [
+      'Demon Slayer: Kimetsu no Yaiba Mugen Train Arc',
+      'Demon Slayer: Kimetsu no Yaiba',
+      'Mugen Train Arc',
+    ],
+    ['Gintama.: Slip Arc', 'Gintama', 'Slip Arc'],
+    ['Attack on Titan Final Season', 'Attack on Titan', 'Final Season'],
+    ['attack on titan season 2', 'Attack on Titan', 'season 2'],
+    ['Attack on Titan', 'Attack on Titan', ''],
+    ['Gintama.', 'Gintama', ''],
+    ['Showdown', 'Show', 'Showdown'],
+    ['Nisemonogatari', 'Bakemonogatari', 'Nisemonogatari'],
+  ])('%j after %j -> %j', (title, base, rest) => {
+    expect(afterBaseTitle(title, base)).toBe(rest);
+  });
+});
+
+describe('labelFromRemainder', () => {
+  it.each([
+    ['', 4, 'Season 4'],
+    ['Season 2', 7, 'Season 2'],
+    ['3rd Season', 7, 'Season 3'],
+    ['Second Season', 7, 'Season 2'],
+    ['2', 7, 'Season 2'],
+    ['Season 3 Part 2', 7, 'Season 3 Part 2'],
+    ['Final Season', 7, 'Final Season'],
+    ['Entertainment District Arc', 7, 'Entertainment District Arc'],
+    ['II', 7, 'Season 2'],
+    ['IV', 7, 'Season 4'],
+  ])('%j at position %j -> %j', (remainder, position, label) => {
+    expect(labelFromRemainder(remainder, position)).toBe(label);
   });
 });

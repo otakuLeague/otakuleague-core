@@ -489,7 +489,7 @@ describe('GET /anime/:idSource/:externalId', () => {
     await get('/anime/anilist/154587').expect(404);
   });
 
-  it('keeps an anime whose refresh answers without isAdult, and does not remove it', async () => {
+  it('keeps an anime whose refresh answers without isAdult, does not remove it, and backs off', async () => {
     await get('/anime/myanimelist/52991').expect(200);
     await importer.settle();
     const frieren = record(record(fixture('anilist-frieren')).data).Media;
@@ -500,6 +500,12 @@ describe('GET /anime/:idSource/:externalId', () => {
 
     await get('/anime/myanimelist/52991').expect(200);
     await importer.settle();
+
+    // Backed off: the next view of the still-stale anime costs no AniList call.
+    const callsAfterRefresh = anilist.calls;
+    await get('/anime/myanimelist/52991').expect(200);
+    await importer.settle();
+    expect(anilist.calls).toBe(callsAfterRefresh);
 
     expect(await counts()).toEqual({ anime: 1, ids: 2, snapshots: 2 });
     expect(

@@ -31,6 +31,8 @@ export interface Traversal {
   readonly state: TraversalState;
   /** In traversal order. */
   readonly nodes: readonly RelationNode[];
+  /** Ids reached that the loader had no node for. */
+  readonly missingIds: readonly number[];
 }
 
 /**
@@ -50,21 +52,23 @@ export async function traverseFranchise(
 ): Promise<Traversal> {
   const seen = new Set<number>();
   const nodes: RelationNode[] = [];
-  let missing = false;
+  const missingIds: number[] = [];
   let frontier = [startId];
   while (frontier.length > 0) {
-    if (seen.size >= nodeCap) return { state: 'truncated', nodes };
+    if (seen.size >= nodeCap) return { state: 'truncated', nodes, missingIds };
     const level = frontier.slice(0, nodeCap - seen.size);
     for (const id of level) seen.add(id);
     const loaded = await loadLevel(level);
-    if (loaded === null) return { state: 'stopped', nodes };
+    if (loaded === null) return { state: 'stopped', nodes, missingIds };
     // Only the ids this level asked for, once each: a loader passes external data on.
     const wanted = new Set(level);
     const kept = loaded.filter(({ anilistId }) => wanted.delete(anilistId));
-    if (wanted.size > 0) missing = true;
+    missingIds.push(...wanted);
     nodes.push(...kept);
     // The cap cut this level: entries are missing even if the next level is empty.
-    if (level.length < frontier.length) return { state: 'truncated', nodes };
+    if (level.length < frontier.length) {
+      return { state: 'truncated', nodes, missingIds };
+    }
     const next = kept.flatMap(({ anilistId, edges }) =>
       edges
         .filter((edge) => isFollowedEdge(anilistId, edge, boundaries))
@@ -73,5 +77,9 @@ export async function traverseFranchise(
     );
     frontier = [...new Set(next)].toSorted((a, b) => a - b);
   }
-  return { state: missing ? 'missing' : 'complete', nodes };
+  return {
+    state: missingIds.length > 0 ? 'missing' : 'complete',
+    nodes,
+    missingIds,
+  };
 }

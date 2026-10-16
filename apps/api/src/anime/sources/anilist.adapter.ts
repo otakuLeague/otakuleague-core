@@ -11,6 +11,7 @@ import {
   type RelationNode,
   type SourceResult,
   SourceUnavailableError,
+  UnusableAnswerError,
 } from './source.types';
 
 /** AniList's `perPage` maximum (larger values are silently capped): ids per walk request. */
@@ -60,10 +61,7 @@ export class AniListAdapter extends AnimeSourceAdapter {
     if (media === null) return { kind: 'not_found' };
     const snapshot = mapAniListMedia(media);
     if (snapshot === null) {
-      throw new SourceUnavailableError(
-        'anilist',
-        'response has no usable Media',
-      );
+      throw new UnusableAnswerError('anilist', 'response has no usable Media');
     }
     return { kind: 'found', snapshot };
   }

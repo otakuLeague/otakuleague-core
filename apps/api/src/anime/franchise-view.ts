@@ -1,5 +1,11 @@
-import type { AnimeStatus, PartialDate } from '@otakuleague/shared-types';
+import {
+  type AnimeStatus,
+  FRANCHISE_RELATED_GROUPS,
+  type FranchiseRelatedGroupName,
+  type PartialDate,
+} from '@otakuleague/shared-types';
 import { isFollowedEdge, type Traversal } from './franchise-graph';
+import type { BackoffStage } from './source-backoff';
 import type {
   MediaRelation,
   MediaSummary,
@@ -20,6 +26,8 @@ export interface FranchiseInput {
   readonly startId: number;
   /** traverseFranchise from startId over the stored rows. */
   readonly traversal: Traversal;
+  /** The backoff stage of each of traversal.missingIds (ADR 0008 item 11). */
+  readonly missingStages: readonly BackoffStage[];
   /** Every BOUNDARY id in the database: the set the traversal used, not only its entries'. */
   readonly boundaries: ReadonlySet<number>;
   /** Overrides of the traversed entries (at least). */
@@ -31,8 +39,8 @@ export interface FranchiseInput {
   readonly removed: ReadonlySet<number>;
 }
 
-/** `walking`: an entry of the franchise has no row yet; `truncated`: the node cap cut it. */
-export type FranchiseState = 'complete' | 'walking' | 'truncated';
+/** See stateOf. */
+export type FranchiseState = 'complete' | 'walking' | 'partial' | 'truncated';
 
 export interface FranchiseEntry {
   readonly anilistId: number;
@@ -50,18 +58,7 @@ export interface MainLineEntry extends FranchiseEntry {
   readonly isCurrent: boolean;
 }
 
-const RELATED_GROUPS = [
-  'movie',
-  'ova',
-  'special',
-  'ona',
-  'tv',
-  'music',
-  'spin_off',
-  'source',
-  'other',
-] as const;
-export type RelatedGroupName = (typeof RELATED_GROUPS)[number];
+type RelatedGroupName = FranchiseRelatedGroupName;
 
 export interface RelatedGroup {
   readonly group: RelatedGroupName;
@@ -102,18 +99,42 @@ const ORDINALS = [
   'ninth',
   'tenth',
 ];
-const ORDINAL_SEASON = new RegExp(
-  `\\b(${ORDINALS.join('|')})\\s+season\\b`,
-  'i',
-);
+const ROMAN_SEASONS = [
+  'I',
+  'II',
+  'III',
+  'IV',
+  'V',
+  'VI',
+  'VII',
+  'VIII',
+  'IX',
+  'X',
+];
+const NUMBERED_SEASON =
+  /^(?:season\s+(\d+)|(\d+)(?:st|nd|rd|th)\s+season|(\d+))$/i;
+const ORDINAL_SEASON = new RegExp(`^(${ORDINALS.join('|')})\\s+season$`, 'i');
 
-const STATES: Readonly<Record<Traversal['state'], FranchiseState>> = {
-  complete: 'complete',
-  truncated: 'truncated',
-  // Stored rows only: an entry without a row is still to be walked.
-  missing: 'walking',
-  stopped: 'walking',
-};
+/**
+ * Missing ids: one still to fetch makes it `walking`; otherwise one AniList just left out
+ * makes it `partial` (the page can say the list may be incomplete); ids left out again and
+ * again (settled backoff) leave it `complete` without them. A cut by the node cap wins.
+ */
+function stateOf(
+  traversal: Traversal,
+  missingStages: readonly BackoffStage[],
+): FranchiseState {
+  switch (traversal.state) {
+    case 'complete':
+    case 'truncated':
+      return traversal.state;
+    case 'stopped':
+      return 'walking';
+    case 'missing':
+      if (missingStages.includes('clear')) return 'walking';
+      return missingStages.includes('retrying') ? 'partial' : 'complete';
+  }
+}
 
 export function buildFranchise(input: FranchiseInput): FranchiseView {
   const members = input.traversal.nodes.filter(
@@ -123,10 +144,7 @@ export function buildFranchise(input: FranchiseInput): FranchiseView {
     .filter((node) => isSeason(node, input.overrides.get(node.anilistId)))
     .toSorted(byAirDate);
   return {
-    state:
-      input.traversal.nodes.length === 0
-        ? 'walking'
-        : STATES[input.traversal.state],
+    state: stateOf(input.traversal, input.missingStages),
     mainLine: labelled(seasons, input),
     related: relatedGroups(members, seasons, input),
   };
@@ -174,32 +192,63 @@ function entryOf(summary: MediaSummary): FranchiseEntry {
 }
 
 /**
- * "Season 2", "Final Season", "Season 3 Part 2"... from a title that says so (numbers,
- * "2nd", "Second"; no Roman numerals: too ambiguous); null when it names no season.
+ * The title with the franchise's base title removed from its start, at a word boundary, and
+ * the separators after it dropped ("Gintama.: Slip Arc" after "Gintama" is "Slip Arc"); the
+ * whole title when it does not start with the base title.
  */
-export function seasonLabelFromTitle(title: string): string | null {
-  const numbered =
-    /\bseason\s+(\d+)\b/i.exec(title)?.[1] ??
-    /\b(\d+)(?:st|nd|rd|th)\s+season\b/i.exec(title)?.[1];
-  const ordinal = ORDINAL_SEASON.exec(title)?.[1]?.toLowerCase();
-  const season =
-    numbered !== undefined
-      ? Number(numbered)
-      : ordinal === undefined
-        ? null
-        : ORDINALS.indexOf(ordinal) + 1;
-  const final = /\bfinal\s+season\b/i.test(title);
-  if (!final && season === null) return null;
-  const part = /\b(?:part|cour)\s+(\d+)\b/i.exec(title)?.[1];
-  const name = final ? 'Final Season' : `Season ${season}`;
-  return part === undefined ? name : `${name} Part ${Number(part)}`;
+export function afterBaseTitle(title: string, base: string): string {
+  const next = title.charAt(base.length);
+  const startsWithBase =
+    title.slice(0, base.length).toLowerCase() === base.toLowerCase() &&
+    !/[\p{L}\p{N}]/u.test(next);
+  return startsWithBase
+    ? title
+        .slice(base.length)
+        .replace(/^[\s\p{P}]+/u, '')
+        .trimEnd()
+    : title;
+}
+
+/** English titles when both have one and they share the base, else romaji, else the title. */
+function remainderOf(node: MediaSummary, base: MediaSummary): string {
+  const pairs = [
+    [node.titleEnglish, base.titleEnglish],
+    [node.titleRomaji, base.titleRomaji],
+  ] as const;
+  for (const [title, baseTitle] of pairs) {
+    if (title === null || baseTitle === null) continue;
+    const rest = afterBaseTitle(title, baseTitle);
+    if (rest !== title) return rest;
+  }
+  return titleOf(node);
 }
 
 /**
- * ADR 0008 item 6. An override label wins. When no season title names a season, labels go
- * by position. Otherwise a title that names one gives its label, the first entry is
- * "Season 1", and any other keeps its title. Two entries with the same label show their
- * titles instead, with the year (or AniList id) if the titles are the same too.
+ * ADR 0008 item 6 for one entry: what its title adds to the base title, unless that is
+ * nothing (then "Season <position>") or only a season number ("Season 2", "2nd Season",
+ * "Second Season", "2", "II": then "Season <that number>", so Gintama Season 3 stays
+ * Season 3).
+ */
+export function labelFromRemainder(
+  remainder: string,
+  position: number,
+): string {
+  if (remainder === '') return `Season ${position}`;
+  const numbered = NUMBERED_SEASON.exec(remainder);
+  const digits = numbered?.slice(1).find((group) => group !== undefined);
+  if (digits !== undefined) return `Season ${Number(digits)}`;
+  const ordinal = ORDINAL_SEASON.exec(remainder)?.[1]?.toLowerCase();
+  if (ordinal !== undefined) return `Season ${ORDINALS.indexOf(ordinal) + 1}`;
+  // A Roman numeral alone is unambiguous after the base title ("Mob Psycho 100 II").
+  const roman = ROMAN_SEASONS.indexOf(remainder.toUpperCase());
+  return roman === -1 ? remainder : `Season ${roman + 1}`;
+}
+
+/**
+ * ADR 0008 item 6. An override label wins and takes no position. Every other entry is
+ * labelled from what its title adds to the base title (the first main-line entry's); see
+ * labelFromRemainder. Two computed labels that clash show their titles instead, then the
+ * year, then the AniList id.
  */
 function labelled(
   seasons: readonly RelationNode[],
@@ -207,11 +256,9 @@ function labelled(
 ): MainLineEntry[] {
   const overrideLabel = (node: RelationNode) =>
     input.overrides.get(node.anilistId)?.label ?? null;
-  const anyMarker = seasons.some(
-    (node) =>
-      overrideLabel(node) === null &&
-      seasonLabelFromTitle(titleOf(node)) !== null,
-  );
+  // The first season without an override label: a special forced in first is no base.
+  const base =
+    seasons.find((node) => overrideLabel(node) === null) ?? seasons[0];
   // An override label is final and takes no position: the others are numbered around it.
   const fixed = seasons.map((node) => overrideLabel(node));
   let position = 0;
@@ -219,9 +266,7 @@ function labelled(
     const fixedLabel = fixed[index];
     if (fixedLabel !== null && fixedLabel !== undefined) return fixedLabel;
     position += 1;
-    const title = titleOf(node);
-    if (!anyMarker) return `Season ${position}`;
-    return seasonLabelFromTitle(title) ?? (position === 1 ? 'Season 1' : title);
+    return labelFromRemainder(remainderOf(node, base ?? node), position);
   });
   const tally = (labels: readonly string[]) => {
     const counts = new Map<string, number>();
@@ -325,7 +370,7 @@ function relatedGroups(
       }
     }
   }
-  return RELATED_GROUPS.flatMap((group) => {
+  return FRANCHISE_RELATED_GROUPS.flatMap((group) => {
     const entries = [...found.values()]
       .filter((candidate) => candidate.group === group)
       .map(({ summary }) => summary)

@@ -123,6 +123,14 @@ export class SourceUnavailableError extends Error {
   }
 }
 
+/** The source answered, but nothing usable (e.g. no isAdult): worth a backoff, not a retry. */
+export class UnusableAnswerError extends SourceUnavailableError {
+  constructor(source: AnimeDataSource, reason: string) {
+    super(source, reason);
+    this.name = 'UnusableAnswerError';
+  }
+}
+
 /** One data source behind the common interface (ADR 0006 update). */
 export abstract class AnimeSourceAdapter {
   abstract readonly source: AnimeDataSource;

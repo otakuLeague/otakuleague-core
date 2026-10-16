@@ -13,6 +13,8 @@ import {
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
+import { AnimeFranchiseService } from './franchise.service';
+import { SourceBackoff } from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { JikanAdapter } from './sources/jikan.adapter';
 import {
@@ -86,6 +88,8 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     AnimeImportService,
     AnimeService,
     FranchiseWalker,
+    SourceBackoff,
+    AnimeFranchiseService,
     AnimePurgeScheduler,
   ],
 })

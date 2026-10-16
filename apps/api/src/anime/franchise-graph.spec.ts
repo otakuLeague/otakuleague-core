@@ -107,6 +107,7 @@ describe('traverseFranchise', () => {
     const result = await traverseFranchise(1, from(partial), new Set());
 
     expect(result.state).toBe('missing');
+    expect(result.missingIds).toEqual([2]);
     expect(result.nodes.map(({ anilistId }) => anilistId)).toEqual([1, 3]);
   });
 
@@ -130,6 +131,6 @@ describe('traverseFranchise', () => {
       new Set(),
     );
 
-    expect(result).toEqual({ state: 'stopped', nodes: [] });
+    expect(result).toEqual({ state: 'stopped', nodes: [], missingIds: [] });
   });
 });
