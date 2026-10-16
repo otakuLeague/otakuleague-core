@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   AnimeFranchise,
   FranchiseEntry as FranchiseEntryResponse,
+  FranchiseSeason,
 } from '@otakuleague/shared-types';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
@@ -146,18 +147,69 @@ export class AnimeFranchiseService {
           ? (slugs.get(entry.anilistId) ?? null)
           : null,
     });
+    // The anime being viewed is always in its own main line (owner decision): with no
+    // relation row yet, from its core record, alone, so the selector hides itself.
+    const startHasRow = traversal.nodes.some(
+      ({ anilistId }) => anilistId === startId,
+    );
+    const mainLine = startHasRow
+      ? view.mainLine.map((season) => ({
+          ...withSlug(season),
+          label: season.label,
+          isCurrent: season.isCurrent,
+        }))
+      : await this.currentFromCore(startId, owner.identity.canonicalSlug);
     return {
       state: view.state,
-      mainLine: view.mainLine.map((season) => ({
-        ...withSlug(season),
-        label: season.label,
-        isCurrent: season.isCurrent,
-      })),
+      mainLine,
       related: view.related.map((group) => ({
         group: group.group,
         entries: group.entries.map(withSlug),
         total: group.total,
       })),
     };
+  }
+
+  /**
+   * The viewed anime as its only season, from its AniList snapshot; nothing when it is not
+   * cached (the page route imports it before the selector asks).
+   */
+  private async currentFromCore(
+    anilistId: number,
+    slug: string,
+  ): Promise<FranchiseSeason[]> {
+    const snapshot = await this.prisma.animeSourceSnapshot.findFirst({
+      where: {
+        source: 'ANILIST',
+        anime: {
+          externalIds: { some: { source: 'ANILIST', externalId: anilistId } },
+        },
+      },
+    });
+    if (!snapshot) return [];
+    return [
+      {
+        anilistId,
+        mediaType: 'ANIME',
+        slug,
+        title:
+          snapshot.titleEnglish ??
+          snapshot.titleRomaji ??
+          `AniList ${anilistId}`,
+        format: snapshot.format,
+        status: snapshot.status,
+        startDate:
+          snapshot.startYear === null
+            ? null
+            : {
+                year: snapshot.startYear,
+                month: snapshot.startMonth,
+                day: snapshot.startDay,
+              },
+        coverImageUrl: snapshot.coverImageUrl,
+        label: 'Season 1',
+        isCurrent: true,
+      },
+    ];
   }
 }

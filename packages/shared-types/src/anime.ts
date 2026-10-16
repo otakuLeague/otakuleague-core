@@ -188,6 +188,7 @@ export interface FranchiseRelatedGroup {
 /** GET /anime/slugs/:slug/franchise (ADR 0008): the season selector and the Related tab. */
 export interface AnimeFranchise {
   readonly state: FranchiseState;
+  /** Always holds the anime being viewed once it is cached (alone while it has no relations). */
   readonly mainLine: readonly FranchiseSeason[];
   readonly related: readonly FranchiseRelatedGroup[];
 }

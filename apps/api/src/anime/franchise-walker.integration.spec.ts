@@ -593,6 +593,63 @@ describe('FranchiseWalker', () => {
       expect(backoff.stage(relationsKey(209939))).toBe('clear');
     });
 
+    it('always lists the viewed anime in its own main line, from its core record', async () => {
+      const animeId = '00000000-0000-4000-8000-000000000121';
+      await identity(121, 'fullmetal-alchemist');
+      await prisma.anime.create({
+        data: {
+          id: animeId,
+          createdAt: clock.now(),
+          lastViewedAt: clock.now(),
+        },
+      });
+      await prisma.animeExternalId.create({
+        data: { source: 'ANILIST', externalId: 121, animeId },
+      });
+      await prisma.animeSourceSnapshot.create({
+        data: {
+          animeId,
+          source: 'ANILIST',
+          fetchedAt: clock.now(),
+          sourceUrl: 'https://anilist.co/anime/121',
+          titleEnglish: 'Fullmetal Alchemist',
+          format: 'TV',
+          status: 'FINISHED',
+          startYear: 2003,
+        },
+      });
+      const current = {
+        anilistId: 121,
+        slug: 'fullmetal-alchemist',
+        title: 'Fullmetal Alchemist',
+        label: 'Season 1',
+        isCurrent: true,
+      };
+      unanswered = new Set([121]);
+
+      expect(await franchise('fullmetal-alchemist')).toMatchObject({
+        state: 'walking',
+        mainLine: [current],
+        related: [],
+      });
+      await walker.settle();
+      expect(await franchise('fullmetal-alchemist')).toMatchObject({
+        state: 'partial',
+        mainLine: [current],
+      });
+
+      // Left out at every retry, up to the week-long step.
+      const backoff = app.get(SourceBackoff);
+      for (let retry = 0; retry < 3; retry += 1) {
+        backoff.backOff(relationsKey(121));
+      }
+      expect(await franchise('fullmetal-alchemist')).toMatchObject({
+        state: 'complete',
+        mainLine: [current],
+        related: [],
+      });
+    });
+
     it('stops walking for a backed-off start or a backed-off stale row', async () => {
       await identity(121, 'fullmetal-alchemist');
       unanswered = new Set([121]);
