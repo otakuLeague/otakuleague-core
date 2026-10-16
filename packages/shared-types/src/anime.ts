@@ -133,3 +133,60 @@ export interface AnimeDetails {
 export type AnimeBySlug =
   | { readonly kind: 'anime'; readonly anime: AnimeDetails }
   | { readonly kind: 'redirect'; readonly canonicalSlug: string };
+
+/** AniList format of a franchise entry: an anime format, or a manga's for source material. */
+export type MediaFormat = AnimeFormat | 'MANGA' | 'NOVEL' | 'ONE_SHOT';
+
+/**
+ * ADR 0008. `walking`: entries are still being fetched, ask again later; `truncated`: the
+ * franchise is larger than the node cap; `unavailable`: AniList is switched off.
+ */
+export type FranchiseState =
+  'complete' | 'walking' | 'truncated' | 'unavailable';
+
+export interface FranchiseEntry {
+  readonly anilistId: number;
+  readonly mediaType: 'ANIME' | 'MANGA';
+  /** Null until the anime is imported (link /anime/anilist/:id then); always null for manga. */
+  readonly slug: string | null;
+  /** English, else romaji. */
+  readonly title: string;
+  readonly format: MediaFormat | null;
+  readonly status: AnimeStatus | null;
+  readonly startDate: PartialDate | null;
+  readonly coverImageUrl: string | null;
+}
+
+export interface FranchiseSeason extends FranchiseEntry {
+  readonly label: string;
+  /** The entry the request named. */
+  readonly isCurrent: boolean;
+}
+
+export const FRANCHISE_RELATED_GROUPS = [
+  'movie',
+  'ova',
+  'special',
+  'ona',
+  'tv',
+  'music',
+  'spin_off',
+  'source',
+  'other',
+] as const;
+export type FranchiseRelatedGroupName =
+  (typeof FRANCHISE_RELATED_GROUPS)[number];
+
+export interface FranchiseRelatedGroup {
+  readonly group: FranchiseRelatedGroupName;
+  /** At most 50, by air date. */
+  readonly entries: readonly FranchiseEntry[];
+  readonly total: number;
+}
+
+/** GET /anime/slugs/:slug/franchise (ADR 0008): the season selector and the Related tab. */
+export interface AnimeFranchise {
+  readonly state: FranchiseState;
+  readonly mainLine: readonly FranchiseSeason[];
+  readonly related: readonly FranchiseRelatedGroup[];
+}

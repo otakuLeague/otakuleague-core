@@ -30,8 +30,11 @@ import {
   type AnimeRef,
   AnimeSourceAdapter,
   type AnimeSnapshot,
+  type SourceResult,
   SourceUnavailableError,
+  UnusableAnswerError,
 } from './sources/source.types';
+import { backoffKey, SourceBackoff } from './source-backoff';
 
 export const ANIME_SOURCE_ADAPTERS = Symbol('ANIME_SOURCE_ADAPTERS');
 
@@ -48,6 +51,17 @@ export function sourceNotAvailable(): ApiException {
     code: 'ANIME_SOURCES_UNAVAILABLE',
     message: 'The anime data sources are unavailable. Try again later.',
   });
+}
+
+/** The source's own id first, so a refresh always asks about the same entry. */
+function refreshRef(
+  anime: StoredAnime,
+  adapter: AnimeSourceAdapter,
+): AnimeRef | undefined {
+  return (
+    anime.externalIds.find((id) => id.source === adapter.idSource) ??
+    anime.externalIds.find((id) => adapter.lookups.includes(id.source))
+  );
 }
 
 export function animeNotFound(
@@ -88,6 +102,7 @@ export class AnimeImportService implements OnModuleDestroy {
     private readonly settings: AnimeSourceSettings,
     @Inject(ANIME_SOURCE_ADAPTERS)
     private readonly adapters: readonly AnimeSourceAdapter[],
+    private readonly backoff: SourceBackoff,
   ) {}
 
   isEnabled = (source: AnimeDataSource): boolean =>
@@ -207,6 +222,13 @@ export class AnimeImportService implements OnModuleDestroy {
       const missedAt = this.notFoundAt.get(`${anime.id}:${adapter.source}`);
       if (missedAt !== undefined && now.getTime() - missedAt < ttl)
         return false;
+      // Backed off after an unusable answer: not even tried (and not logged) until it ends.
+      const ref = refreshRef(anime, adapter);
+      if (
+        ref &&
+        this.backoff.isBackedOff(backoffKey('anime', adapter.source, ref))
+      )
+        return false;
       const stored = anime.snapshots.find(
         (snapshot) => snapshot.source === adapter.source,
       );
@@ -238,7 +260,7 @@ export class AnimeImportService implements OnModuleDestroy {
     for (const adapter of candidates) {
       let result;
       try {
-        result = await adapter.fetchAnime(ref);
+        result = await this.fetchFrom(adapter, ref);
       } catch (error) {
         if (!(error instanceof SourceUnavailableError)) throw error;
         this.logger.warn(error.message);
@@ -259,6 +281,29 @@ export class AnimeImportService implements OnModuleDestroy {
     throw unavailable ? sourceNotAvailable() : animeNotFound();
   }
 
+  /**
+   * One source call, unless this entry is backed off after an unusable answer (ADR 0008): an
+   * entry AniList keeps answering without isAdult costs one request a week, not one per view.
+   */
+  private async fetchFrom(
+    adapter: AnimeSourceAdapter,
+    ref: AnimeRef,
+  ): Promise<SourceResult> {
+    const key = backoffKey('anime', adapter.source, ref);
+    if (this.backoff.isBackedOff(key)) {
+      throw new SourceUnavailableError(
+        adapter.source,
+        'backed off after an unusable answer',
+      );
+    }
+    try {
+      return await adapter.fetchAnime(ref);
+    } catch (error) {
+      if (error instanceof UnusableAnswerError) this.backoff.backOff(key);
+      throw error;
+    }
+  }
+
   private async fillFromOthers(animeId: string): Promise<void> {
     try {
       const anime = await this.loadStored(animeId);
@@ -274,14 +319,11 @@ export class AnimeImportService implements OnModuleDestroy {
     anime: StoredAnime,
     adapter: AnimeSourceAdapter,
   ): Promise<RefreshOutcome> {
-    // The source's own id first, so a refresh always asks about the same entry.
-    const ref =
-      anime.externalIds.find((id) => id.source === adapter.idSource) ??
-      anime.externalIds.find((id) => adapter.lookups.includes(id.source));
+    const ref = refreshRef(anime, adapter);
     if (!ref) return 'skipped';
     let result;
     try {
-      result = await adapter.fetchAnime(ref);
+      result = await this.fetchFrom(adapter, ref);
     } catch (error) {
       if (!(error instanceof SourceUnavailableError)) throw error;
       this.logger.warn(error.message);

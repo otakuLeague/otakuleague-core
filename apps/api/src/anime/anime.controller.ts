@@ -13,6 +13,7 @@ import {
   ANIME_ID_SOURCES,
   type AnimeBySlug,
   type AnimeDetails,
+  type AnimeFranchise,
   type AnimeIdSource,
 } from '@otakuleague/shared-types';
 import { IsIn, Matches, MaxLength } from 'class-validator';
@@ -20,8 +21,10 @@ import {
   AnimeBySlugAnimeSchema,
   AnimeBySlugRedirectSchema,
   AnimeDetailsSchema,
+  AnimeFranchiseSchema,
 } from './anime.openapi';
 import { AnimeService } from './anime.service';
+import { AnimeFranchiseService } from './franchise.service';
 
 const ID_PATTERN = /^[1-9]\d{0,8}$/;
 const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
@@ -59,7 +62,10 @@ class AnimeSlugParams {
 @ApiExtraModels(AnimeBySlugAnimeSchema, AnimeBySlugRedirectSchema)
 @Controller('anime')
 export class AnimeController {
-  constructor(private readonly anime: AnimeService) {}
+  constructor(
+    private readonly anime: AnimeService,
+    private readonly franchises: AnimeFranchiseService,
+  ) {}
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the
   // first route that matches.
@@ -91,6 +97,21 @@ export class AnimeController {
   })
   getBySlug(@Param() params: AnimeSlugParams): Promise<AnimeBySlug> {
     return this.anime.getBySlug(params.slug);
+  }
+
+  // Three segments: cannot clash with the two-segment routes.
+  @Get('slugs/:slug/franchise')
+  @ApiOkResponse({
+    type: AnimeFranchiseSchema,
+    description:
+      'The season selector and Related tab, from stored data only (ADR 0008). Any slug of the anime answers, without a redirect.',
+  })
+  @ApiBadRequestResponse({ description: 'Not a well-formed slug.' })
+  @ApiNotFoundResponse({
+    description: 'No anime has this slug, or it was removed.',
+  })
+  getFranchise(@Param() params: AnimeSlugParams): Promise<AnimeFranchise> {
+    return this.franchises.getBySlug(params.slug);
   }
 
   @Get(':idSource/:externalId')

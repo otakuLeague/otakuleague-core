@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import type { AnimeDetails } from '@otakuleague/shared-types';
+import type { AnimeDetails, FranchiseSeason } from '@otakuleague/shared-types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../testing/test-app';
 
@@ -108,5 +108,33 @@ describe('anime OpenAPI schema', () => {
       'externalId',
       'idSource',
     ]);
+  });
+
+  it('documents the franchise route and every season field', () => {
+    const route = document.paths['/anime/slugs/{slug}/franchise']?.get;
+    const ok = route?.responses['200'] as {
+      content: Record<string, { schema: unknown }>;
+    };
+    const seasonKeys = {
+      anilistId: true,
+      mediaType: true,
+      slug: true,
+      title: true,
+      format: true,
+      status: true,
+      startDate: true,
+      coverImageUrl: true,
+      label: true,
+      isCurrent: true,
+    } satisfies Record<keyof FranchiseSeason, true>;
+    // Swagger copies the inherited entry fields into the season schema.
+    const season = schema('FranchiseSeasonSchema');
+
+    expect(ok.content['application/json']?.schema).toEqual({
+      $ref: '#/components/schemas/AnimeFranchiseSchema',
+    });
+    expect(Object.keys(season.properties ?? {}).toSorted()).toEqual(
+      Object.keys(seasonKeys).toSorted(),
+    );
   });
 });

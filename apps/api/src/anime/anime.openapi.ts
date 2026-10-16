@@ -16,6 +16,12 @@ import {
   type AnimeStudio,
   type AnimeTag,
   type AnimeTrailer,
+  type AnimeFranchise,
+  FRANCHISE_RELATED_GROUPS,
+  type FranchiseEntry,
+  type FranchiseRelatedGroup,
+  type FranchiseSeason,
+  type MediaFormat,
   type PartialDate,
   type Sourced,
 } from '@otakuleague/shared-types';
@@ -173,4 +179,66 @@ export class AnimeBySlugRedirectSchema implements Extract<
   @ApiProperty({ enum: ['redirect'] }) readonly kind!: 'redirect';
   @ApiProperty({ description: 'The web app answers a 301 to this slug' })
   readonly canonicalSlug!: string;
+}
+
+const MEDIA_FORMATS = [
+  ...ANIME_FORMATS,
+  'MANGA',
+  'NOVEL',
+  'ONE_SHOT',
+] satisfies readonly MediaFormat[];
+
+class FranchiseEntrySchema implements FranchiseEntry {
+  @ApiProperty({ type: 'integer' }) readonly anilistId!: number;
+  @ApiProperty({ enum: ['ANIME', 'MANGA'] }) readonly mediaType!:
+    'ANIME' | 'MANGA';
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Null until the anime is imported (link /anime/anilist/{id} then); always null for manga',
+  })
+  readonly slug!: string | null;
+  @ApiProperty({ description: 'English, else romaji' }) readonly title!: string;
+  @ApiProperty({ enum: MEDIA_FORMATS, nullable: true })
+  readonly format!: MediaFormat | null;
+  @ApiProperty({ enum: ANIME_STATUSES, nullable: true })
+  readonly status!: FranchiseEntry['status'];
+  @ApiProperty({ type: PartialDateSchema, nullable: true })
+  readonly startDate!: PartialDate | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly coverImageUrl!: string | null;
+}
+
+class FranchiseSeasonSchema
+  extends FranchiseEntrySchema
+  implements FranchiseSeason
+{
+  @ApiProperty() readonly label!: string;
+  @ApiProperty({ description: 'The entry the request named' })
+  readonly isCurrent!: boolean;
+}
+
+class FranchiseRelatedGroupSchema implements FranchiseRelatedGroup {
+  @ApiProperty({ enum: FRANCHISE_RELATED_GROUPS })
+  readonly group!: FranchiseRelatedGroup['group'];
+  @ApiProperty({
+    type: [FranchiseEntrySchema],
+    description: 'At most 50, by air date',
+  })
+  readonly entries!: readonly FranchiseEntry[];
+  @ApiProperty({ type: 'integer' }) readonly total!: number;
+}
+
+export class AnimeFranchiseSchema implements AnimeFranchise {
+  @ApiProperty({
+    enum: ['complete', 'walking', 'truncated', 'unavailable'],
+    description:
+      'walking: entries still being fetched, ask again later; unavailable: AniList is switched off',
+  })
+  readonly state!: AnimeFranchise['state'];
+  @ApiProperty({ type: [FranchiseSeasonSchema] })
+  readonly mainLine!: readonly FranchiseSeason[];
+  @ApiProperty({ type: [FranchiseRelatedGroupSchema] })
+  readonly related!: readonly FranchiseRelatedGroup[];
 }
