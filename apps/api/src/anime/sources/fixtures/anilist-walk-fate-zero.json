@@ -1,0 +1,1905 @@
+[
+  {
+    "variables": {
+      "ids": [10087],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 10087,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2011,
+                "month": 10,
+                "day": 2
+              },
+              "title": {
+                "english": "Fate/Zero",
+                "romaji": "Fate/Zero"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10087-M4Hd9qrHGrXk.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 11741,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Fate/Zero Season 2",
+                        "romaji": "Fate/Zero 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 33649,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 12,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Zero"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/33649-rA0ZBSbWhPkH.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 13263,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 3,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/Zero: Please! Einzbern Counseling Room",
+                        "romaji": "Fate/Zero: Onegai! Einzbern Soudanshitsu"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/13263-TtCqlSFIpfrM.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 10012,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 8,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Carnival Phantasm"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10012-MNLVctKXaIAf.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 19165,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 13
+                      },
+                      "title": {
+                        "english": "Fate/Zero Cafe",
+                        "romaji": "Fate/Zero Cafe"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/19165.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 55191,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 1,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Fate/Zero",
+                        "romaji": "Fate/Zero"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx55191-S9OMEuCVGo15.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 154966,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 7,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/strange Fake -Whispers of Dawn-",
+                        "romaji": "Fate/strange Fake: Whispers of Dawn"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154966-eQRCmSrCh96j.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [11741],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 11741,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2012,
+                "month": 4,
+                "day": 8
+              },
+              "title": {
+                "english": "Fate/Zero Season 2",
+                "romaji": "Fate/Zero 2nd Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 10087,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 10,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/Zero",
+                        "romaji": "Fate/Zero"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10087-M4Hd9qrHGrXk.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 19603,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works",
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20791,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                        "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 356,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 1,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night",
+                        "romaji": "Fate/stay night"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx356-mTpMvtillumS.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 6922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 1,
+                        "day": 23
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works (Movie)",
+                        "romaji": "Fate/stay night Movie: UNLIMITED BLADE WORKS"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx6922-g3hsIYOWGXL8.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SIDE_STORY",
+                    "node": {
+                      "id": 13263,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 3,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/Zero: Please! Einzbern Counseling Room",
+                        "romaji": "Fate/Zero: Onegai! Einzbern Soudanshitsu"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/13263-TtCqlSFIpfrM.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 33649,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 12,
+                        "day": 29
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Zero"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/33649-rA0ZBSbWhPkH.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 66803,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "NOVEL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2008,
+                        "month": 12,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Heart of Freaks"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/36803-9RxHoOUtgst9.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 55191,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 1,
+                        "day": 4
+                      },
+                      "title": {
+                        "english": "Fate/Zero",
+                        "romaji": "Fate/Zero"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx55191-S9OMEuCVGo15.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 106918,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 7,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Lord El-Melloi II's Case Files {Rail Zeppelin} Grace note",
+                        "romaji": "Lord El-Melloi II-sei no Jikenbo: \"Rail Zeppelin\" Grace note"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx106918-4T0AdnCg8d64.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [19603, 20791, 356, 6922],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 356,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2006,
+                "month": 1,
+                "day": 7
+              },
+              "title": {
+                "english": "Fate/stay night",
+                "romaji": "Fate/stay night"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx356-mTpMvtillumS.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 11741,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Fate/Zero Season 2",
+                        "romaji": "Fate/Zero 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 10012,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 8,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Carnival Phantasm"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10012-MNLVctKXaIAf.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 6922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 1,
+                        "day": 23
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works (Movie)",
+                        "romaji": "Fate/stay night Movie: UNLIMITED BLADE WORKS"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx6922-g3hsIYOWGXL8.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 12565,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Prototype"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx12565-paVJhzp4BrF0.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 19603,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works",
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 20791,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                        "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 14829,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Fate/kaleid liner Prisma☆Illya",
+                        "romaji": "Fate/kaleid liner Prisma☆Illya"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14829-PZVOr1ZxwOJV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 100855,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 25
+                      },
+                      "title": {
+                        "english": "Today's Menu for the Emiya Family",
+                        "romaji": "Emiya-san Chi no Kyou no Gohan"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100855-r8cXwdCschnX.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 30715,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2005,
+                        "month": 12,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": "Fate/stay night",
+                        "romaji": "Fate/stay night"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/nx30715-Y6FYtdEQm0SV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 98035,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 7,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/Apocrypha",
+                        "romaji": "Fate/Apocrypha"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98035-rdkjeqUUsG2j.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21717,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Fate/EXTRA Last Encore",
+                        "romaji": "Fate/EXTRA Last Encore"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21717-2gU0L4IvrUVC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 97815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Fate/Grand Order: First Order",
+                        "romaji": "Fate/Grand Order: First Order"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97815-NnWheNnaKCmS.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 159559,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "16bit Sensation: Another Layer",
+                        "romaji": "16bit Sensation: ANOTHER LAYER"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx159559-4JzfnLGIelRC.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 6922,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2010,
+                "month": 1,
+                "day": 23
+              },
+              "title": {
+                "english": "Fate/stay night: Unlimited Blade Works (Movie)",
+                "romaji": "Fate/stay night Movie: UNLIMITED BLADE WORKS"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx6922-g3hsIYOWGXL8.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 356,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 1,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night",
+                        "romaji": "Fate/stay night"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx356-mTpMvtillumS.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 11741,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Fate/Zero Season 2",
+                        "romaji": "Fate/Zero 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 19603,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works",
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 20791,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                        "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 98035,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 7,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/Apocrypha",
+                        "romaji": "Fate/Apocrypha"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98035-rdkjeqUUsG2j.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 10012,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 8,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Carnival Phantasm"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10012-MNLVctKXaIAf.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 14829,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Fate/kaleid liner Prisma☆Illya",
+                        "romaji": "Fate/kaleid liner Prisma☆Illya"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14829-PZVOr1ZxwOJV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21717,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Fate/EXTRA Last Encore",
+                        "romaji": "Fate/EXTRA Last Encore"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21717-2gU0L4IvrUVC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 12565,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Prototype"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx12565-paVJhzp4BrF0.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 131587,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 25
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx131587-axp0w90Vhbyq.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21318,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 10,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works 2nd Season - sunny day",
+                        "romaji": "Fate/stay night: Unlimited Blade Works 2nd Season - sunny day"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/21318-l441SwTgnl5h.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 97815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Fate/Grand Order: First Order",
+                        "romaji": "Fate/Grand Order: First Order"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97815-NnWheNnaKCmS.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 19603,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2014,
+                "month": 10,
+                "day": 5
+              },
+              "title": {
+                "english": "Fate/stay night: Unlimited Blade Works",
+                "romaji": "Fate/stay night: Unlimited Blade Works"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 356,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 1,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night",
+                        "romaji": "Fate/stay night"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx356-mTpMvtillumS.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 11741,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Fate/Zero Season 2",
+                        "romaji": "Fate/Zero 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 20792,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 4,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works 2nd Season",
+                        "romaji": "Fate/stay night: Unlimited Blade Works 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20792-Q53sZsUAh5FF.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 14829,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Fate/kaleid liner Prisma☆Illya",
+                        "romaji": "Fate/kaleid liner Prisma☆Illya"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14829-PZVOr1ZxwOJV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 6922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 1,
+                        "day": 23
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works (Movie)",
+                        "romaji": "Fate/stay night Movie: UNLIMITED BLADE WORKS"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx6922-g3hsIYOWGXL8.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 20791,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                        "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 10012,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 8,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Carnival Phantasm"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx10012-MNLVctKXaIAf.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 98035,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 7,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/Apocrypha",
+                        "romaji": "Fate/Apocrypha"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98035-rdkjeqUUsG2j.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 131587,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 25
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx131587-axp0w90Vhbyq.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21717,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Fate/EXTRA Last Encore",
+                        "romaji": "Fate/EXTRA Last Encore"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21717-2gU0L4IvrUVC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 12565,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Prototype"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx12565-paVJhzp4BrF0.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 97815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Fate/Grand Order: First Order",
+                        "romaji": "Fate/Grand Order: First Order"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97815-NnWheNnaKCmS.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 20791,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2017,
+                "month": 10,
+                "day": 14
+              },
+              "title": {
+                "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 356,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2006,
+                        "month": 1,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night",
+                        "romaji": "Fate/stay night"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx356-mTpMvtillumS.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 11741,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2012,
+                        "month": 4,
+                        "day": 8
+                      },
+                      "title": {
+                        "english": "Fate/Zero Season 2",
+                        "romaji": "Fate/Zero 2nd Season"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11741-oEy1fJHYm2zJ.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 6922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2010,
+                        "month": 1,
+                        "day": 23
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works (Movie)",
+                        "romaji": "Fate/stay night Movie: UNLIMITED BLADE WORKS"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx6922-g3hsIYOWGXL8.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21718,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 1,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] II. lost butterfly",
+                        "romaji": "Fate/stay night [Heaven's Feel] II. lost butterfly"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21718-Hjj26Sapx1bd.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 19603,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works",
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 86182,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 5,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night [Heaven's Feel]"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx86182-Fh9yKirTQWmF.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 98035,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 7,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": "Fate/Apocrypha",
+                        "romaji": "Fate/Apocrypha"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98035-rdkjeqUUsG2j.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21717,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2018,
+                        "month": 1,
+                        "day": 28
+                      },
+                      "title": {
+                        "english": "Fate/EXTRA Last Encore",
+                        "romaji": "Fate/EXTRA Last Encore"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21717-2gU0L4IvrUVC.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SPIN_OFF",
+                    "node": {
+                      "id": 14829,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2013,
+                        "month": 7,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Fate/kaleid liner Prisma☆Illya",
+                        "romaji": "Fate/kaleid liner Prisma☆Illya"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14829-PZVOr1ZxwOJV.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 12565,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "OVA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2011,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/Prototype"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx12565-paVJhzp4BrF0.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 97815,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 12,
+                        "day": 31
+                      },
+                      "title": {
+                        "english": "Fate/Grand Order: First Order",
+                        "romaji": "Fate/Grand Order: First Order"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx97815-NnWheNnaKCmS.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [20792, 21718],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 20792,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2015,
+                "month": 4,
+                "day": 5
+              },
+              "title": {
+                "english": "Fate/stay night: Unlimited Blade Works 2nd Season",
+                "romaji": "Fate/stay night: Unlimited Blade Works 2nd Season"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20792-Q53sZsUAh5FF.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 19603,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2014,
+                        "month": 10,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works",
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19603-ycT0pyEgDVQu.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 21318,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 10,
+                        "day": 7
+                      },
+                      "title": {
+                        "english": "Fate/stay night: Unlimited Blade Works 2nd Season - sunny day",
+                        "romaji": "Fate/stay night: Unlimited Blade Works 2nd Season - sunny day"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/21318-l441SwTgnl5h.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 131587,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 25
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night: Unlimited Blade Works"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx131587-axp0w90Vhbyq.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 21718,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2019,
+                "month": 1,
+                "day": 12
+              },
+              "title": {
+                "english": "Fate/stay night [Heaven's Feel] II. lost butterfly",
+                "romaji": "Fate/stay night [Heaven's Feel] II. lost butterfly"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21718-Hjj26Sapx1bd.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 20791,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2017,
+                        "month": 10,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] I. presage flower",
+                        "romaji": "Fate/stay night [Heaven's Feel] I. presage flower"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20791-yPCX5GJuMH2k.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 21719,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 8,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven’s Feel] III. spring song",
+                        "romaji": "Fate/stay night [Heaven's Feel] III. spring song"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21719-MSdTlkno0Z0u.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 86182,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 5,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night [Heaven's Feel]"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx86182-Fh9yKirTQWmF.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [21719],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 21719,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2020,
+                "month": 8,
+                "day": 15
+              },
+              "title": {
+                "english": "Fate/stay night [Heaven’s Feel] III. spring song",
+                "romaji": "Fate/stay night [Heaven's Feel] III. spring song"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21719-MSdTlkno0Z0u.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 21718,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 1,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Fate/stay night [Heaven's Feel] II. lost butterfly",
+                        "romaji": "Fate/stay night [Heaven's Feel] II. lost butterfly"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21718-Hjj26Sapx1bd.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 86182,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "RELEASING",
+                      "startDate": {
+                        "year": 2015,
+                        "month": 5,
+                        "day": 2
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Fate/stay night [Heaven's Feel]"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx86182-Fh9yKirTQWmF.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { mapAniListMedia } from './anilist.mapper';
-import { ANILIST_ANIME_QUERY } from './anilist.query';
-import { record } from './parse';
+import { mapAniListMedia, mapAniListRelationNodes } from './anilist.mapper';
+import { ANILIST_ANIME_QUERY, ANILIST_RELATIONS_QUERY } from './anilist.query';
+import { isRecord, record } from './parse';
 import { RateLimiter } from './rate-limiter';
 import { requestJson, type SourceHttpOptions } from './source-http';
 import { AnimeSourceSettings } from './source-settings';
 import {
   AnimeSourceAdapter,
   type AnimeRef,
+  type RelationNode,
   type SourceResult,
   SourceUnavailableError,
 } from './source.types';
+
+/** AniList's `perPage` maximum (larger values are silently capped): ids per walk request. */
+export const RELATIONS_PAGE_SIZE = 50;
 
 /** AniList GraphQL, the primary source. Looks anime up by AniList id or MAL id (idMal). */
 @Injectable()
@@ -62,5 +66,47 @@ export class AniListAdapter extends AnimeSourceAdapter {
       );
     }
     return { kind: 'found', snapshot };
+  }
+
+  /**
+   * ADR 0008: summaries and relations of 1 to 50 AniList anime in one request; the walker
+   * splits a larger level. Unknown or adult ids are simply absent. Background work: it takes
+   * a slot only when one is free right now, so a page request never waits behind it, and
+   * throws "queue full" instead (also right after a 429: the pause holds the next slot); the
+   * caller tries later. Like fetchAnime it does not check the kill switch: the caller does.
+   * A GraphQL error next to a usable Page is accepted; no Page, or a page AniList truncated,
+   * fails like an HTTP error and starts the cool-down.
+   */
+  async fetchRelations(ids: readonly number[]): Promise<RelationNode[]> {
+    if (ids.length === 0 || ids.length > RELATIONS_PAGE_SIZE) {
+      throw new RangeError(
+        `fetchRelations takes 1 to ${RELATIONS_PAGE_SIZE} ids, got ${ids.length}`,
+      );
+    }
+    const variables = { ids, perPage: RELATIONS_PAGE_SIZE };
+    const { status, body } = await requestJson(
+      this.baseUrl,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: ANILIST_RELATIONS_QUERY, variables }),
+      },
+      { ...this.http, maxQueueMs: 0 },
+    );
+    const data = record(body).data;
+    const page = record(data).Page;
+    // 1 to 50 ids with perPage 50 cannot paginate: hasNextPage only reveals a lowered cap.
+    if (
+      status !== 200 ||
+      !isRecord(page) ||
+      record(page.pageInfo).hasNextPage === true
+    ) {
+      this.http.limiter.markDown(this.http.coolDownMs);
+      throw new SourceUnavailableError(
+        'anilist',
+        `relations answered HTTP ${status} without a complete Page`,
+      );
+    }
+    return mapAniListRelationNodes(data);
   }
 }

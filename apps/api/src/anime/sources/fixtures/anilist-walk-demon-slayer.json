@@ -1,0 +1,1057 @@
+[
+  {
+    "variables": {
+      "ids": [101922],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 101922,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2019,
+                "month": 4,
+                "day": 6
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba",
+                "romaji": "Kimetsu no Yaiba"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-WBsBl0ClmgYL.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 112151,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 10,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx112151-1qlQwPB1RrJe.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 129627,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 2,
+                        "day": 14
+                      },
+                      "title": {
+                        "english": "Junior High and High School!! Kimetsu Academy Story: Valentine Edition",
+                        "romaji": "Chuukou Ikkan!! Kimetsu Gakuen Monogatari: Valentine-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx129627-GiVeOqDUAqUC.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 129874,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 10,
+                        "day": 10
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx129874-g6ZKXB94Hui1.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 154541,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "SPECIAL",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 8,
+                        "day": 26
+                      },
+                      "title": {
+                        "english": "Junior High and High School!! Kimetsu Academy Story: Kimetsu no Utage Special Edition",
+                        "romaji": "Chuukou Ikkan!! Kimetsu Gakuen Monogatari: Kimetsu no Utage Tokubetsu-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154541-Q7djLI2ttMp9.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "CHARACTER",
+                    "node": {
+                      "id": 187383,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "ONA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 3,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Kimetsu no Yaiba × MLB Tokyo Series presented by Guggenheim"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx187383-OlAtb2DU7e5A.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [112151, 129874],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 112151,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2020,
+                "month": 10,
+                "day": 16
+              },
+              "title": {
+                "english": "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+                "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx112151-1qlQwPB1RrJe.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 101922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 4,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-WBsBl0ClmgYL.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 129874,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 10,
+                        "day": 10
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx129874-g6ZKXB94Hui1.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 142329,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+                        "romaji": "Kimetsu no Yaiba: Yuukaku-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx142329-kET1PIXJv2eW.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": 129874,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2021,
+                "month": 10,
+                "day": 10
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+                "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx129874-g6ZKXB94Hui1.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 101922,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2019,
+                        "month": 4,
+                        "day": 6
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-WBsBl0ClmgYL.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "ALTERNATIVE",
+                    "node": {
+                      "id": 112151,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 10,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx112151-1qlQwPB1RrJe.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 142329,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+                        "romaji": "Kimetsu no Yaiba: Yuukaku-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx142329-kET1PIXJv2eW.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [142329],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 142329,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2021,
+                "month": 12,
+                "day": 5
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+                "romaji": "Kimetsu no Yaiba: Yuukaku-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx142329-kET1PIXJv2eW.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 129874,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 10,
+                        "day": 10
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx129874-g6ZKXB94Hui1.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 112151,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2020,
+                        "month": 10,
+                        "day": 16
+                      },
+                      "title": {
+                        "english": "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+                        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx112151-1qlQwPB1RrJe.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 145139,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 4,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Swordsmith Village Arc",
+                        "romaji": "Kimetsu no Yaiba: Katanakaji no Sato-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx145139-rRimpHGWLhym.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [145139],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 145139,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2023,
+                "month": 4,
+                "day": 9
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Swordsmith Village Arc",
+                "romaji": "Kimetsu no Yaiba: Katanakaji no Sato-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx145139-rRimpHGWLhym.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 142329,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2021,
+                        "month": 12,
+                        "day": 5
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+                        "romaji": "Kimetsu no Yaiba: Yuukaku-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx142329-kET1PIXJv2eW.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 166240,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 5,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Hashira Training Arc",
+                        "romaji": "Kimetsu no Yaiba: Hashira Geiko-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166240-PBV7zukIHW7V.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [166240],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 166240,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "TV",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2024,
+                "month": 5,
+                "day": 12
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Hashira Training Arc",
+                "romaji": "Kimetsu no Yaiba: Hashira Geiko-hen"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166240-PBV7zukIHW7V.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 145139,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2023,
+                        "month": 4,
+                        "day": 9
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Swordsmith Village Arc",
+                        "romaji": "Kimetsu no Yaiba: Katanakaji no Sato-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx145139-rRimpHGWLhym.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 178788,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 7,
+                        "day": 18
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+                        "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx178788-zm3gtpB9TpRt.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [178788],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 178788,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "FINISHED",
+              "startDate": {
+                "year": 2025,
+                "month": 7,
+                "day": 18
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+                "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx178788-zm3gtpB9TpRt.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 166240,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "TV",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2024,
+                        "month": 5,
+                        "day": 12
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Hashira Training Arc",
+                        "romaji": "Kimetsu no Yaiba: Hashira Geiko-hen"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166240-PBV7zukIHW7V.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 195200,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "NOT_YET_RELEASED",
+                      "startDate": {
+                        "year": null,
+                        "month": null,
+                        "day": null
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle Part 2",
+                        "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 2"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195200-wJaLJ4mDDKGc.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [195200],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 195200,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "NOT_YET_RELEASED",
+              "startDate": {
+                "year": null,
+                "month": null,
+                "day": null
+              },
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle Part 2",
+                "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 2"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195200-wJaLJ4mDDKGc.png"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 178788,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2025,
+                        "month": 7,
+                        "day": 18
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+                        "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx178788-zm3gtpB9TpRt.jpg"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SEQUEL",
+                    "node": {
+                      "id": 195201,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "NOT_YET_RELEASED",
+                      "startDate": {
+                        "year": null,
+                        "month": null,
+                        "day": null
+                      },
+                      "title": {
+                        "english": null,
+                        "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 3"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "variables": {
+      "ids": [195201],
+      "perPage": 50
+    },
+    "response": {
+      "data": {
+        "Page": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "perPage": 50
+          },
+          "media": [
+            {
+              "id": 195201,
+              "type": "ANIME",
+              "isAdult": false,
+              "format": "MOVIE",
+              "status": "NOT_YET_RELEASED",
+              "startDate": {
+                "year": null,
+                "month": null,
+                "day": null
+              },
+              "title": {
+                "english": null,
+                "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 3"
+              },
+              "coverImage": {
+                "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg"
+              },
+              "relations": {
+                "edges": [
+                  {
+                    "relationType": "PREQUEL",
+                    "node": {
+                      "id": 195200,
+                      "type": "ANIME",
+                      "isAdult": false,
+                      "format": "MOVIE",
+                      "status": "NOT_YET_RELEASED",
+                      "startDate": {
+                        "year": null,
+                        "month": null,
+                        "day": null
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba Infinity Castle Part 2",
+                        "romaji": "Kimetsu no Yaiba: Mugenjou-hen Movie 2"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195200-wJaLJ4mDDKGc.png"
+                      }
+                    }
+                  },
+                  {
+                    "relationType": "SOURCE",
+                    "node": {
+                      "id": 87216,
+                      "type": "MANGA",
+                      "isAdult": false,
+                      "format": "MANGA",
+                      "status": "FINISHED",
+                      "startDate": {
+                        "year": 2016,
+                        "month": 2,
+                        "day": 15
+                      },
+                      "title": {
+                        "english": "Demon Slayer: Kimetsu no Yaiba",
+                        "romaji": "Kimetsu no Yaiba"
+                      },
+                      "coverImage": {
+                        "large": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx87216-c9bSNVD10UuD.png"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

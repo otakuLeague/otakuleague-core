@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapAniListMedia } from './anilist.mapper';
+import { mapAniListMedia, mapAniListRelationNodes } from './anilist.mapper';
 import { fixture } from './fixtures';
 import { record } from './parse';
 
@@ -109,5 +109,126 @@ describe('mapAniListMedia', () => {
     expect(
       mapAniListMedia({ ...media('anilist-frieren'), isAdult: true })?.adult,
     ).toBe(true);
+  });
+});
+
+const WALKS = [
+  'attack-on-titan',
+  'demon-slayer',
+  'fate-zero',
+  'frieren',
+  'fullmetal-alchemist-2003',
+  'fullmetal-alchemist-brotherhood',
+  'gintama',
+  'monogatari',
+  'one-piece',
+];
+
+/** The `data` of each recorded walk level (fixtures README). */
+function walkLevels(name: string): Record<string, unknown>[] {
+  const levels = fixture(`anilist-walk-${name}`);
+  return (Array.isArray(levels) ? levels : []).map((level) =>
+    record(record(record(level).response).data),
+  );
+}
+
+describe('mapAniListRelationNodes', () => {
+  it('maps a node, its edges and their targets, manga source included', () => {
+    const [aot] = mapAniListRelationNodes(walkLevels('attack-on-titan')[0]);
+
+    expect(aot).toMatchObject({
+      anilistId: 16498,
+      mediaType: 'ANIME',
+      format: 'TV',
+      status: 'FINISHED',
+      startDate: { year: 2013, month: 4, day: 7 },
+      titleEnglish: 'Attack on Titan',
+      titleRomaji: 'Shingeki no Kyojin',
+    });
+    expect(aot?.coverImageUrl).toMatch(/^https:\/\//);
+    const edge = (targetId: number) =>
+      aot?.edges.find(({ target }) => target.anilistId === targetId);
+    expect(edge(20958)).toMatchObject({
+      relation: 'SEQUEL',
+      target: { format: 'TV', mediaType: 'ANIME' },
+    });
+    expect(edge(53390)).toMatchObject({
+      relation: 'SOURCE',
+      target: { mediaType: 'MANGA', format: 'MANGA' },
+    });
+  });
+
+  it('keeps an unaired entry with no format, or with no start date', () => {
+    const monogatari = walkLevels('monogatari').flatMap(
+      mapAniListRelationNodes,
+    );
+    const demonSlayer = walkLevels('demon-slayer').flatMap(
+      mapAniListRelationNodes,
+    );
+
+    expect(monogatari.find((node) => node.anilistId === 195448)).toMatchObject({
+      status: 'NOT_YET_RELEASED',
+      format: null,
+    });
+    expect(demonSlayer.find((node) => node.anilistId === 195200)).toMatchObject(
+      { status: 'NOT_YET_RELEASED', format: 'MOVIE', startDate: null },
+    );
+  });
+
+  it('maps every recorded walk level without losing a node', () => {
+    for (const name of WALKS) {
+      for (const data of walkLevels(name)) {
+        const raw = record(record(data).Page).media;
+        expect(mapAniListRelationNodes(data)).toHaveLength(
+          Array.isArray(raw) ? raw.length : -1,
+        );
+      }
+    }
+  });
+
+  it('drops adult entries and edges of an unknown relation type, nothing else', () => {
+    const data = walkLevels('attack-on-titan')[0];
+    const [aot] = record(record(data).Page).media as Record<string, unknown>[];
+    const edges = record(aot?.relations).edges as Record<string, unknown>[];
+    const [first, second, ...rest] = edges;
+    const withEdges = (replaced: unknown[]) => ({
+      Page: { media: [{ ...aot, relations: { edges: replaced } }] },
+    });
+
+    const mapped = mapAniListRelationNodes(
+      withEdges([
+        { ...first, node: { ...record(first?.node), isAdult: true } },
+        { ...second, relationType: 'SOMETHING_NEW' },
+        ...rest,
+      ]),
+    );
+
+    expect(mapped[0]?.edges).toHaveLength(edges.length - 2);
+    expect(
+      mapAniListRelationNodes({ Page: { media: [{ ...aot, isAdult: true }] } }),
+    ).toEqual([]);
+    // Not known to be safe is treated as adult.
+    expect(
+      mapAniListRelationNodes({ Page: { media: [{ ...aot, isAdult: null }] } }),
+    ).toEqual([]);
+    expect(mapAniListRelationNodes({ Page: null })).toEqual([]);
+  });
+
+  it('keeps a node with no relations, drops a manga or id-less node', () => {
+    const data = walkLevels('attack-on-titan')[0];
+    const [aot] = record(record(data).Page).media as Record<string, unknown>[];
+
+    const mapped = mapAniListRelationNodes({
+      Page: {
+        media: [
+          { ...aot, relations: undefined },
+          { ...aot, relations: null },
+          { ...aot, type: 'MANGA' },
+          { ...aot, id: '16498' },
+        ],
+      },
+    });
+
+    expect(mapped.map(({ edges }) => edges)).toEqual([[], []]);
   });
 });
