@@ -3,7 +3,11 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS, refreshTtlMs } from './cache-ttl';
-import { isFollowedEdge } from './franchise-graph';
+import {
+  NODE_CAP,
+  traverseFranchise,
+  type TraversalState,
+} from './franchise-graph';
 import { fromRelationRow, toRelationRow } from './relation.rows';
 import { AniListAdapter, RELATIONS_PAGE_SIZE } from './sources/anilist.adapter';
 import { AnimeSourceSettings } from './sources/source-settings';
@@ -12,23 +16,14 @@ import {
   SourceUnavailableError,
 } from './sources/source.types';
 
-/** Entries per franchise walk (ADR 0008; an estimate, the longest recorded walk has 14). */
-export const NODE_CAP = 60;
 /** Tries per request when no AniList slot is free: one slot interval apart. */
 const QUEUE_FULL_ATTEMPTS = 5;
 /** Walks waiting at most; more are dropped (logged) and asked again by a later view. */
 const MAX_PENDING = 100;
 
-/** How a walk ended: all reached, cut at the node cap, or stopped before fetching the rest. */
-export type WalkOutcome = 'complete' | 'truncated' | 'stopped';
-
-type LoadedLevel =
-  | { readonly kind: 'loaded'; readonly nodes: readonly RelationNode[] }
-  | { readonly kind: 'stopped' };
-
 /**
  * Walks franchises in the background (ADR 0008): from one AniList anime along the edges
- * isFollowedEdge allows, through any format, up to NODE_CAP entries, storing each entry's
+ * traverseFranchise follows, through any format, up to NODE_CAP entries, storing each entry's
  * summary and edges in anime_relation_node. Rows still fresh are reused without a request.
  * One walk at a time per process (known limit: no per-franchise single-flight; add it if
  * overlapping walks ever matter). It never runs during a page request, and stops at module
@@ -93,11 +88,11 @@ export class FranchiseWalker implements OnModuleDestroy {
   }
 
   /**
-   * One walk, level by level. The frontier is sorted, so which entries a node cap keeps does
-   * not depend on what is cached. An id missing from AniList's answer is not walked through,
-   * and is tried again by the next walk; it is never treated as deleted.
+   * One walk: traverseFranchise with a loader that reuses fresh rows and fetches the others.
+   * An id missing from AniList's answer ends the walk `missing`; it is not walked through, is
+   * tried again by the next walk, and is never treated as deleted.
    */
-  async walk(startId: number, nodeCap = NODE_CAP): Promise<WalkOutcome> {
+  async walk(startId: number, nodeCap = NODE_CAP): Promise<TraversalState> {
     const boundaries = new Set(
       (
         await this.prisma.animeFranchiseOverride.findMany({
@@ -106,26 +101,13 @@ export class FranchiseWalker implements OnModuleDestroy {
         })
       ).map(({ anilistId }) => anilistId),
     );
-    const seen = new Set<number>();
-    let frontier = [startId];
-    while (frontier.length > 0) {
-      if (this.stopping) return 'stopped';
-      if (seen.size >= nodeCap) return 'truncated';
-      const level = frontier.slice(0, nodeCap - seen.size);
-      for (const id of level) seen.add(id);
-      const loaded = await this.load(level);
-      if (loaded.kind === 'stopped') return 'stopped';
-      // The cap cut this level: entries are missing even if the next level is empty.
-      if (level.length < frontier.length) return 'truncated';
-      const next = loaded.nodes.flatMap(({ anilistId, edges }) =>
-        edges
-          .filter((edge) => isFollowedEdge(anilistId, edge, boundaries))
-          .map(({ target }) => target.anilistId)
-          .filter((id) => !seen.has(id)),
-      );
-      frontier = [...new Set(next)].toSorted((a, b) => a - b);
-    }
-    return 'complete';
+    const { state } = await traverseFranchise(
+      startId,
+      (ids) => (this.stopping ? Promise.resolve(null) : this.load(ids)),
+      boundaries,
+      nodeCap,
+    );
+    return state;
   }
 
   private start(): void {
@@ -159,7 +141,7 @@ export class FranchiseWalker implements OnModuleDestroy {
    * time, so a later failing batch keeps the earlier ones. Stopped when the rest cannot be
    * fetched now (AniList switched off or cooling down, or shutdown).
    */
-  private async load(ids: readonly number[]): Promise<LoadedLevel> {
+  private async load(ids: readonly number[]): Promise<RelationNode[] | null> {
     const now = this.clock.now();
     const rows = await this.prisma.animeRelationNode.findMany({
       where: { anilistId: { in: [...ids] } },
@@ -174,14 +156,14 @@ export class FranchiseWalker implements OnModuleDestroy {
     const missing = ids.filter((id) => !freshIds.has(id));
     const fetched: RelationNode[] = [];
     for (let at = 0; at < missing.length; at += RELATIONS_PAGE_SIZE) {
-      if (!this.canFetch()) return { kind: 'stopped' };
+      if (!this.canFetch()) return null;
       const batch = await this.fetchBatch(
         missing.slice(at, at + RELATIONS_PAGE_SIZE),
       );
       await this.store(batch, now);
       fetched.push(...batch);
     }
-    return { kind: 'loaded', nodes: [...fresh, ...fetched] };
+    return [...fresh, ...fetched];
   }
 
   /** One upsert per row, in id order: these cache rows need no transaction, and a fixed order

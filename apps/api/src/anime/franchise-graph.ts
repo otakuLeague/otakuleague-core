@@ -1,12 +1,14 @@
-import type { RelationEdge } from './sources/source.types';
+import type { RelationEdge, RelationNode } from './sources/source.types';
+
+/** Entries per franchise (ADR 0008; an estimate, the longest recorded walk has 14). */
+export const NODE_CAP = 60;
 
 /**
- * ADR 0008: whether a franchise follows this edge out of the entry `from`. Shared by the
- * walker and the read-time component, so both always agree. SEQUEL and PREQUEL edges to
- * anime only; a BOUNDARY entry starts a franchise, so no edge between it and its prequels is
- * followed, from either side. Known limit: AniList edges are assumed symmetric (A lists B as
- * SEQUEL when B lists A as PREQUEL; all 106 recorded ones are); an edge listed on one side
- * only is followed only from that side.
+ * ADR 0008: whether a franchise follows this edge out of the entry `from`. SEQUEL and PREQUEL
+ * edges to anime only; a BOUNDARY entry means "the franchise starts here", so no edge between
+ * it and its prequels is followed, in either direction. Known limit: AniList edges are
+ * assumed symmetric (A lists B as SEQUEL when B lists A as PREQUEL; all 106 recorded ones
+ * are); an edge listed on one side only is followed only from that side.
  */
 export function isFollowedEdge(
   from: number,
@@ -17,4 +19,59 @@ export function isFollowedEdge(
   if (relation === 'SEQUEL') return !boundaries.has(target.anilistId);
   if (relation === 'PREQUEL') return !boundaries.has(from);
   return false;
+}
+
+/**
+ * How a traversal ended: every entry reached; `missing`, some id had no row or no answer
+ * (not walked through); `truncated` by the node cap; `stopped` by the loader.
+ */
+export type TraversalState = 'complete' | 'missing' | 'truncated' | 'stopped';
+
+export interface Traversal {
+  readonly state: TraversalState;
+  /** In traversal order. */
+  readonly nodes: readonly RelationNode[];
+}
+
+/**
+ * The one franchise traversal, shared by the walker (its loader reuses fresh rows and asks
+ * AniList for the others) and the read path (its loader reads stored rows), so both reach the
+ * same entries by construction. Level by level from the start over isFollowedEdge, with a
+ * sorted frontier, so a node cap keeps the same entries whatever is cached. `loadLevel` gives
+ * the nodes it has for those ids, or null to stop.
+ */
+export async function traverseFranchise(
+  startId: number,
+  loadLevel: (
+    ids: readonly number[],
+  ) => Promise<readonly RelationNode[] | null>,
+  boundaries: ReadonlySet<number>,
+  nodeCap = NODE_CAP,
+): Promise<Traversal> {
+  const seen = new Set<number>();
+  const nodes: RelationNode[] = [];
+  let missing = false;
+  let frontier = [startId];
+  while (frontier.length > 0) {
+    if (seen.size >= nodeCap) return { state: 'truncated', nodes };
+    const level = frontier.slice(0, nodeCap - seen.size);
+    for (const id of level) seen.add(id);
+    const loaded = await loadLevel(level);
+    if (loaded === null) return { state: 'stopped', nodes };
+    // Only the ids this level asked for, once each: a loader passes external data on.
+    const wanted = new Set(level);
+    const kept = loaded.filter(({ anilistId }) => wanted.delete(anilistId));
+    if (wanted.size > 0) missing = true;
+    nodes.push(...kept);
+    // The cap cut this level: entries are missing even if the next level is empty.
+    if (level.length < frontier.length) return { state: 'truncated', nodes };
+    const next = kept.flatMap(({ anilistId, edges }) =>
+      edges
+        .filter((edge) => isFollowedEdge(anilistId, edge, boundaries))
+        .map(({ target }) => target.anilistId)
+        .filter((id) => !seen.has(id)),
+    );
+    frontier = [...new Set(next)].toSorted((a, b) => a - b);
+  }
+  return { state: missing ? 'missing' : 'complete', nodes };
 }

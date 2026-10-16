@@ -239,7 +239,7 @@ describe('FranchiseWalker', () => {
 
   it('neither stores nor walks through an id AniList left out, and tries it next walk', async () => {
     unanswered = new Set([99147]);
-    await walker.walk(16498);
+    expect(await walker.walk(16498)).toBe('missing');
     expect(await storedIds()).toEqual([16498, 20811, 20958]);
 
     unanswered = new Set();
@@ -365,6 +365,21 @@ describe('FranchiseWalker', () => {
     walker.request(5114);
     await walker.settle();
     expect(await storedIds()).toEqual([5114]);
+  });
+
+  it('rejects an override label of only spaces or over 60 characters', async () => {
+    const override = (label: string) =>
+      prisma.animeFranchiseOverride.create({
+        data: { anilistId: 1, label, note: 'test', createdAt: clock.now() },
+      });
+
+    const violation = /anime_franchise_override_label_check/;
+
+    await expect(override('   ')).rejects.toThrow(violation);
+    await expect(override('x'.repeat(61))).rejects.toThrow(violation);
+    await expect(override('x'.repeat(60))).resolves.toMatchObject({
+      anilistId: 1,
+    });
   });
 
   it('purges rows no franchise view used for 30 days', async () => {
