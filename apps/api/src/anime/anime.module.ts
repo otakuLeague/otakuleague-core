@@ -12,6 +12,7 @@ import {
 } from './anime-import.service';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
+import { FranchiseWalker } from './franchise-walker.service';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { JikanAdapter } from './sources/jikan.adapter';
 import {
@@ -31,7 +32,10 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AnimePurgeScheduler.name);
   private timers: NodeJS.Timeout[] = [];
 
-  constructor(private readonly importer: AnimeImportService) {}
+  constructor(
+    private readonly importer: AnimeImportService,
+    private readonly walker: FranchiseWalker,
+  ) {}
 
   onModuleInit(): void {
     this.timers = [
@@ -53,6 +57,14 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
       .catch((error: unknown) =>
         this.logger.warn(`Purge failed: ${String(error)}`),
       );
+    this.walker
+      .purgeUnused()
+      .then((count) =>
+        this.logger.log(`Purged ${count} unused franchise entries`),
+      )
+      .catch((error: unknown) =>
+        this.logger.warn(`Franchise purge failed: ${String(error)}`),
+      );
   }
 }
 
@@ -73,6 +85,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     },
     AnimeImportService,
     AnimeService,
+    FranchiseWalker,
     AnimePurgeScheduler,
   ],
 })

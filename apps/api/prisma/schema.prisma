@@ -158,3 +158,50 @@ model AnimeSlug {
   @@index([anilistId])
   @@map("anime_slug")
 }
+
+// --- Franchise walk (OTA-95, ADR 0008) --------------------------------------------------
+
+enum FranchiseRole {
+  // Forced into the main line.
+  SEASON
+  // Forced out of the main line (still walked).
+  RELATED
+  // Not walked through when reached from another entry: cuts a bad bridge.
+  BOUNDARY
+
+  @@map("franchise_role")
+}
+
+// One walked AniList anime: its summary and all its relation edges (AniList data only).
+// No relation to Anime: expires on its own, 30 days after last_used_at.
+model AnimeRelationNode {
+  anilistId     Int          @id @map("anilist_id")
+  fetchedAt     DateTime     @map("fetched_at") @db.Timestamptz(3)
+  lastUsedAt    DateTime     @map("last_used_at") @db.Timestamptz(3)
+  titleEnglish  String?      @map("title_english")
+  titleRomaji   String?      @map("title_romaji")
+  format        AnimeFormat?
+  status        AnimeStatus?
+  startYear     Int?         @map("start_year")
+  startMonth    Int?         @map("start_month")
+  startDay      Int?         @map("start_day")
+  coverImageUrl String?      @map("cover_image_url")
+  // [{ relation, target: MediaSummary }]; adult targets are never stored.
+  edges         Json         @default("[]")
+
+  @@index([lastUsedAt])
+  @@map("anime_relation_node")
+}
+
+// Manual fixes, one per AniList id, shipped as reviewed data migrations; never purged.
+// CHECK constraints (migration franchise_walk): label 1-60 characters, role or label set,
+// note not blank. Later migrations upsert with ON CONFLICT (ADR 0008).
+model AnimeFranchiseOverride {
+  anilistId Int            @id @map("anilist_id")
+  role      FranchiseRole?
+  label     String?
+  note      String
+  createdAt DateTime       @map("created_at") @db.Timestamptz(3)
+
+  @@map("anime_franchise_override")
+}
