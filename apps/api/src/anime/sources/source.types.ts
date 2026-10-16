@@ -116,7 +116,7 @@ export type SourceResult =
 export class SourceUnavailableError extends Error {
   constructor(
     readonly source: AnimeDataSource,
-    reason: string,
+    readonly reason: string,
   ) {
     super(`${source} unavailable: ${reason}`);
     this.name = 'SourceUnavailableError';

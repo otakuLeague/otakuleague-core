@@ -109,11 +109,16 @@ function nextEpisode(value: unknown): AnimeSnapshot['nextEpisode'] {
     : null;
 }
 
-/** `data.Media` of ANILIST_ANIME_QUERY to our model; null when there is no media object. */
+/**
+ * `data.Media` of ANILIST_ANIME_QUERY to our model; null when there is no media object, or
+ * when isAdult is neither true nor false: an entry not known to be safe is never shown, but
+ * a glitch must not remove it for good either (an adult flag deletes it, ADR 0007), so the
+ * adapter reports it as unavailable and the next refresh asks again.
+ */
 export function mapAniListMedia(value: unknown): AnimeSnapshot | null {
   const media = record(value);
   const id = integer(media.id, 1);
-  if (id === null) return null;
+  if (id === null || typeof media.isAdult !== 'boolean') return null;
   const malId = integer(media.idMal, 1);
   const ids: AnimeRef[] = [{ source: 'anilist', externalId: id }];
   if (malId !== null) ids.push({ source: 'myanimelist', externalId: malId });
@@ -123,7 +128,7 @@ export function mapAniListMedia(value: unknown): AnimeSnapshot | null {
   return {
     ids,
     sourceUrl: httpUrl(media.siteUrl) ?? `https://anilist.co/anime/${id}`,
-    adult: media.isAdult === true,
+    adult: media.isAdult,
     titleRomaji: text(title.romaji),
     titleEnglish: text(title.english),
     titleNative: text(title.native),

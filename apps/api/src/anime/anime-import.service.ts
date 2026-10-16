@@ -3,7 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
-  type OnApplicationShutdown,
+  type OnModuleDestroy,
 } from '@nestjs/common';
 import type { AnimeDataSource } from '@otakuleague/shared-types';
 import { ApiException } from '../common/api.exception';
@@ -11,6 +11,7 @@ import { Clock, Random } from '../common/clock-and-random.module';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { mergeAnime, SOURCE_PRIORITY, type StoredAnime } from './anime.merge';
+import { PURGE_AFTER_MS, refreshTtlMs } from './cache-ttl';
 import {
   ANIME_WITH_DATA,
   DB_DATA_SOURCE,
@@ -34,11 +35,6 @@ import {
 
 export const ANIME_SOURCE_ADAPTERS = Symbol('ANIME_SOURCE_ADAPTERS');
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-/** ADR 0006: airing shows refresh daily, the rest after 7 days. */
-const AIRING_TTL_MS = DAY_MS;
-const FINISHED_TTL_MS = 7 * DAY_MS;
-const PURGE_AFTER_MS = 30 * DAY_MS;
 const PURGE_BATCH = 1_000;
 /** Concurrent imports racing for the same id or slug: each lost race costs one attempt. */
 const STORE_ATTEMPTS = 3;
@@ -75,7 +71,7 @@ function isPrismaError(error: unknown, code: string): boolean {
  * (anime, source) pair never runs twice at once.
  */
 @Injectable()
-export class AnimeImportService implements OnApplicationShutdown {
+export class AnimeImportService implements OnModuleDestroy {
   private readonly logger = new Logger(AnimeImportService.name);
   private readonly inFlight = new Map<string, Promise<unknown>>();
   /**
@@ -105,7 +101,7 @@ export class AnimeImportService implements OnApplicationShutdown {
   }
 
   /** Background work must not outlive the database connection. */
-  async onApplicationShutdown(): Promise<void> {
+  async onModuleDestroy(): Promise<void> {
     await this.settle();
   }
 
@@ -202,11 +198,9 @@ export class AnimeImportService implements OnApplicationShutdown {
 
   private staleAdapters(anime: StoredAnime): AnimeSourceAdapter[] {
     const now = this.clock.now();
-    const status = mergeAnime(anime, this.isEnabled, now).status?.value;
-    const ttl =
-      status === 'RELEASING' || status === 'NOT_YET_RELEASED'
-        ? AIRING_TTL_MS
-        : FINISHED_TTL_MS;
+    const ttl = refreshTtlMs(
+      mergeAnime(anime, this.isEnabled, now).status?.value,
+    );
     return this.enabledAdapters().filter((adapter) => {
       // A source cooling down after a failure is skipped, not retried on every view.
       if (adapter.isDown()) return false;
