@@ -194,8 +194,9 @@ model AnimeRelationNode {
 }
 
 // Manual fixes, one per AniList id, shipped as reviewed data migrations; never purged.
-// CHECK constraints (migration franchise_walk): label 1-60 characters, role or label set,
-// note not blank. Later migrations upsert with ON CONFLICT (ADR 0008).
+// CHECK constraints (migrations franchise_walk, franchise_override_label_trim): label of
+// 1-60 characters and not only spaces, role or label set, note not only spaces. Later
+// migrations upsert with ON CONFLICT (ADR 0008).
 model AnimeFranchiseOverride {
   anilistId Int            @id @map("anilist_id")
   role      FranchiseRole?
