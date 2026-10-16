@@ -21,8 +21,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { DAY_MS, PURGE_AFTER_MS } from './cache-ttl';
-import { FranchiseWalker } from './franchise-walker.service';
-import { BACKOFF_MS, SourceBackoff } from './source-backoff';
+import { FranchiseWalker, relationsKey } from './franchise-walker.service';
+import {
+  BACKOFF_MAX_MS,
+  BACKOFF_STEPS_MS,
+  SourceBackoff,
+} from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
@@ -185,6 +189,10 @@ describe('FranchiseWalker', () => {
     settings.anilistEnabled = true;
     settings.minIntervalMs = 0;
     settings.coolDownMs = 0;
+    // The app's backoff outlives a test, step memory included: start each test clean.
+    for (const id of [121, 5114, 209939]) {
+      app.get(SourceBackoff).clear(relationsKey(id));
+    }
   });
 
   afterAll(async () => {
@@ -259,7 +267,7 @@ describe('FranchiseWalker', () => {
     expect(await leaving.walk(16498)).toBe('missing');
     expect(requests).toEqual([]);
 
-    clock.advance(BACKOFF_MS + 1);
+    clock.advance(BACKOFF_MAX_MS + 1);
     expect(await leaving.walk(16498)).toBe('complete');
     expect(requests.flat()).toContain(99147);
     expect(await storedIds()).toHaveLength(9);
@@ -551,7 +559,40 @@ describe('FranchiseWalker', () => {
       expect(relatedIds).not.toContain(356);
     });
 
-    // The app's backoff outlives the test: the clock is moved past it at the end.
+    it('shows a season again an hour after one truncated answer, partial meanwhile', async () => {
+      await identity(154587, 'frieren-beyond-journeys-end');
+      unanswered = new Set([209939]);
+      await franchise('frieren-beyond-journeys-end');
+      await walker.settle();
+
+      const meanwhile = await franchise('frieren-beyond-journeys-end');
+      expect(meanwhile.state).toBe('partial');
+      expect(meanwhile.mainLine.map(({ label }) => label)).toEqual([
+        'Season 1',
+        'Season 2',
+      ]);
+
+      unanswered = new Set();
+      clock.advance(60 * 60 * 1000);
+      expect((await franchise('frieren-beyond-journeys-end')).state).toBe(
+        'walking',
+      );
+      await walker.settle();
+      const after = await franchise('frieren-beyond-journeys-end');
+
+      expect(after.state).toBe('complete');
+      expect(after.mainLine.map(({ label }) => label)).toEqual([
+        'Season 1',
+        'Season 2',
+        'Season 3',
+      ]);
+      // The answer reset the ladder: a new omission waits one hour again, not six.
+      const backoff = app.get(SourceBackoff);
+      backoff.backOff(relationsKey(209939));
+      clock.advance(60 * 60 * 1000);
+      expect(backoff.stage(relationsKey(209939))).toBe('clear');
+    });
+
     it('stops walking for a backed-off start or a backed-off stale row', async () => {
       await identity(121, 'fullmetal-alchemist');
       unanswered = new Set([121]);
@@ -561,7 +602,7 @@ describe('FranchiseWalker', () => {
       const queued = vi.spyOn(walker, 'request');
 
       expect(await franchise('fullmetal-alchemist')).toEqual({
-        state: 'complete',
+        state: 'partial',
         mainLine: [],
         related: [],
       });
@@ -581,15 +622,22 @@ describe('FranchiseWalker', () => {
       expect(queued).not.toHaveBeenCalled();
 
       queued.mockRestore();
-      clock.advance(BACKOFF_MS + 1);
     });
 
-    // Last: the app's backoff outlives the test, so the clock is moved past it at the end.
-    it('stops waiting for an id AniList keeps leaving out, and stops walking for it', async () => {
+    it('is complete without an id AniList keeps leaving out, once its backoff reaches a week', async () => {
       await identity(154587, 'frieren-beyond-journeys-end');
       unanswered = new Set([209939]);
       await franchise('frieren-beyond-journeys-end');
       await walker.settle();
+      // Left out again at each retry: 1 h, 6 h, 1 d, then the week-long step.
+      for (const wait of BACKOFF_STEPS_MS.slice(0, -1)) {
+        expect((await franchise('frieren-beyond-journeys-end')).state).toBe(
+          'partial',
+        );
+        clock.advance(wait);
+        await franchise('frieren-beyond-journeys-end');
+        await walker.settle();
+      }
 
       const frieren = await franchise('frieren-beyond-journeys-end');
       expect(frieren.state).toBe('complete');
@@ -601,8 +649,6 @@ describe('FranchiseWalker', () => {
       await franchise('frieren-beyond-journeys-end');
       await walker.settle();
       expect(requests).toEqual([]);
-
-      clock.advance(BACKOFF_MS + 1);
     });
   });
 });

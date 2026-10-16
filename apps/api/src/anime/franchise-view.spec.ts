@@ -9,6 +9,7 @@ import {
 import { mapAniListRelationNodes } from './sources/anilist.mapper';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
+import type { BackoffStage } from './source-backoff';
 import type { RelationNode } from './sources/source.types';
 
 /** Every walked entry of the recorded franchises (fixtures README), by AniList id. */
@@ -71,7 +72,15 @@ const franchise = async (
     boundaries,
     nodeCap,
   );
-  return buildFranchise({ startId, traversal, boundaries, overrides, removed });
+  return buildFranchise({
+    startId,
+    traversal,
+    // As if every missing id were still to fetch.
+    missingStages: traversal.missingIds.map(() => 'clear'),
+    boundaries,
+    overrides,
+    removed,
+  });
 };
 const labels = async (startId: number, options?: Options) =>
   (await franchise(startId, options)).mainLine.map(({ label }) => label);
@@ -304,6 +313,42 @@ const synthetic = (
   nodes: Map<number, RelationNode>,
   overrides = new Map<number, FranchiseOverride>(),
 ) => franchise(1, { nodes, overrides });
+
+describe('buildFranchise state with missing ids', () => {
+  const traversal = {
+    state: 'missing' as const,
+    nodes: [NODES.get(16498)!],
+    missingIds: [20958, 20811],
+  };
+  const stateWith = (missingStages: BackoffStage[]) =>
+    buildFranchise({
+      startId: 16498,
+      traversal,
+      missingStages,
+      boundaries: new Set(),
+      overrides: new Map(),
+      removed: new Set(),
+    }).state;
+
+  it('is walking while one is still to fetch, partial while one was just left out, else complete', () => {
+    expect(stateWith(['clear', 'settled'])).toBe('walking');
+    expect(stateWith(['retrying', 'settled'])).toBe('partial');
+    expect(stateWith(['settled', 'settled'])).toBe('complete');
+  });
+
+  it('stays truncated when the node cap cut it', () => {
+    expect(
+      buildFranchise({
+        startId: 16498,
+        traversal: { ...traversal, state: 'truncated' },
+        missingStages: ['retrying', 'clear'],
+        boundaries: new Set(),
+        overrides: new Map(),
+        removed: new Set(),
+      }).state,
+    ).toBe('truncated');
+  });
+});
 
 describe('buildFranchise on synthetic franchises', () => {
   it('suffixes the year, else the AniList id, when clashing titles are equal too', async () => {

@@ -232,9 +232,9 @@ class FranchiseRelatedGroupSchema implements FranchiseRelatedGroup {
 
 export class AnimeFranchiseSchema implements AnimeFranchise {
   @ApiProperty({
-    enum: ['complete', 'walking', 'truncated', 'unavailable'],
+    enum: ['complete', 'walking', 'partial', 'truncated', 'unavailable'],
     description:
-      'walking: entries still being fetched, ask again later; unavailable: AniList is switched off',
+      'walking: entries still being fetched, ask again later; partial: AniList just left an entry out, the list may be incomplete for a while; unavailable: AniList is switched off',
   })
   readonly state!: AnimeFranchise['state'];
   @ApiProperty({ type: [FranchiseSeasonSchema] })

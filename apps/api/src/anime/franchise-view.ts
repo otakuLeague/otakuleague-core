@@ -5,6 +5,7 @@ import {
   type PartialDate,
 } from '@otakuleague/shared-types';
 import { isFollowedEdge, type Traversal } from './franchise-graph';
+import type { BackoffStage } from './source-backoff';
 import type {
   MediaRelation,
   MediaSummary,
@@ -25,6 +26,8 @@ export interface FranchiseInput {
   readonly startId: number;
   /** traverseFranchise from startId over the stored rows. */
   readonly traversal: Traversal;
+  /** The backoff stage of each of traversal.missingIds (ADR 0008 item 11). */
+  readonly missingStages: readonly BackoffStage[];
   /** Every BOUNDARY id in the database: the set the traversal used, not only its entries'. */
   readonly boundaries: ReadonlySet<number>;
   /** Overrides of the traversed entries (at least). */
@@ -36,8 +39,8 @@ export interface FranchiseInput {
   readonly removed: ReadonlySet<number>;
 }
 
-/** `walking`: an entry of the franchise has no row yet; `truncated`: the node cap cut it. */
-export type FranchiseState = 'complete' | 'walking' | 'truncated';
+/** See stateOf. */
+export type FranchiseState = 'complete' | 'walking' | 'partial' | 'truncated';
 
 export interface FranchiseEntry {
   readonly anilistId: number;
@@ -112,13 +115,26 @@ const NUMBERED_SEASON =
   /^(?:season\s+(\d+)|(\d+)(?:st|nd|rd|th)\s+season|(\d+))$/i;
 const ORDINAL_SEASON = new RegExp(`^(${ORDINALS.join('|')})\\s+season$`, 'i');
 
-const STATES: Readonly<Record<Traversal['state'], FranchiseState>> = {
-  complete: 'complete',
-  truncated: 'truncated',
-  // Stored rows only: an entry without a row is still to be walked.
-  missing: 'walking',
-  stopped: 'walking',
-};
+/**
+ * Missing ids: one still to fetch makes it `walking`; otherwise one AniList just left out
+ * makes it `partial` (the page can say the list may be incomplete); ids left out again and
+ * again (settled backoff) leave it `complete` without them. A cut by the node cap wins.
+ */
+function stateOf(
+  traversal: Traversal,
+  missingStages: readonly BackoffStage[],
+): FranchiseState {
+  switch (traversal.state) {
+    case 'complete':
+    case 'truncated':
+      return traversal.state;
+    case 'stopped':
+      return 'walking';
+    case 'missing':
+      if (missingStages.includes('clear')) return 'walking';
+      return missingStages.includes('retrying') ? 'partial' : 'complete';
+  }
+}
 
 export function buildFranchise(input: FranchiseInput): FranchiseView {
   const members = input.traversal.nodes.filter(
@@ -128,7 +144,7 @@ export function buildFranchise(input: FranchiseInput): FranchiseView {
     .filter((node) => isSeason(node, input.overrides.get(node.anilistId)))
     .toSorted(byAirDate);
   return {
-    state: STATES[input.traversal.state],
+    state: stateOf(input.traversal, input.missingStages),
     mainLine: labelled(seasons, input),
     related: relatedGroups(members, seasons, input),
   };

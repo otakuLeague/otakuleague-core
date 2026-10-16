@@ -30,8 +30,9 @@ const UNAVAILABLE: AnimeFranchise = {
 /**
  * GET /anime/slugs/:slug/franchise (ADR 0008 item 9): the franchise from the stored rows,
  * never a source call during the request. A walk is queued when rows are missing or stale;
- * an id AniList keeps leaving out is backed off, so it neither keeps the franchise `walking`
- * nor queues a walk on every view.
+ * an id AniList left out is backed off (1 h, 6 h, 1 d, then a week if it keeps happening), so it
+ * neither keeps the franchise `walking` nor queues a walk on every view; while it is on an
+ * early step the franchise is `partial`.
  */
 @Injectable()
 export class AnimeFranchiseService {
@@ -90,11 +91,12 @@ export class AnimeFranchiseService {
       },
       boundaries,
     );
-    const awaited = traversal.missingIds.filter(
-      (id) => !this.backoff.isBackedOff(relationsKey(id)),
+    const stages = traversal.missingIds.map((id) =>
+      this.backoff.stage(relationsKey(id)),
     );
+    const awaited = stages.includes('clear');
     // The start without a row is in missingIds: awaited, unless backed off.
-    if (stale || awaited.length > 0) {
+    if (stale || awaited) {
       this.walker.request(startId);
     }
 
@@ -123,11 +125,8 @@ export class AnimeFranchiseService {
 
     const view = buildFranchise({
       startId,
-      // Ids left out and backed off are known to be absent for now, not still coming.
-      traversal:
-        traversal.state === 'missing' && awaited.length === 0
-          ? { ...traversal, state: 'complete' }
-          : traversal,
+      traversal,
+      missingStages: stages,
       boundaries,
       overrides,
       removed,

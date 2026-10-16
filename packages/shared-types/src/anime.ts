@@ -138,11 +138,12 @@ export type AnimeBySlug =
 export type MediaFormat = AnimeFormat | 'MANGA' | 'NOVEL' | 'ONE_SHOT';
 
 /**
- * ADR 0008. `walking`: entries are still being fetched, ask again later; `truncated`: the
- * franchise is larger than the node cap; `unavailable`: AniList is switched off.
+ * ADR 0008. `walking`: entries are still being fetched, ask again later; `partial`: AniList
+ * just left an entry out, the list may be incomplete for a while; `truncated`: the franchise
+ * is larger than the node cap; `unavailable`: AniList is switched off.
  */
 export type FranchiseState =
-  'complete' | 'walking' | 'truncated' | 'unavailable';
+  'complete' | 'walking' | 'partial' | 'truncated' | 'unavailable';
 
 export interface FranchiseEntry {
   readonly anilistId: number;

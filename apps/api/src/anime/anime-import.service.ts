@@ -283,7 +283,8 @@ export class AnimeImportService implements OnModuleDestroy {
 
   /**
    * One source call, unless this entry is backed off after an unusable answer (ADR 0008): an
-   * entry AniList keeps answering without isAdult costs one request a week, not one per view.
+   * entry AniList keeps answering without isAdult costs a request after 1 h, 6 h, 1 d, then weekly,
+   * not one per view.
    */
   private async fetchFrom(
     adapter: AnimeSourceAdapter,
@@ -297,7 +298,9 @@ export class AnimeImportService implements OnModuleDestroy {
       );
     }
     try {
-      return await adapter.fetchAnime(ref);
+      const result = await adapter.fetchAnime(ref);
+      this.backoff.clear(key);
+      return result;
     } catch (error) {
       if (error instanceof UnusableAnswerError) this.backoff.backOff(key);
       throw error;

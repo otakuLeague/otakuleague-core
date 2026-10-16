@@ -100,7 +100,7 @@ export class FranchiseWalker implements OnModuleDestroy {
   /**
    * One walk: traverseFranchise with a loader that reuses fresh rows and fetches the others.
    * An id missing from AniList's answer ends the walk `missing`; it is not walked through, is
-   * backed off for a week (SourceBackoff) and never treated as deleted.
+   * backed off (SourceBackoff: 1 h, 6 h, 1 d, then a week) and never treated as deleted.
    */
   async walk(startId: number, nodeCap = NODE_CAP): Promise<TraversalState> {
     const boundaries = new Set(
@@ -173,8 +173,10 @@ export class FranchiseWalker implements OnModuleDestroy {
       const asked = missing.slice(at, at + RELATIONS_PAGE_SIZE);
       const batch = await this.fetchBatch(asked);
       const answered = new Set(batch.map(({ anilistId }) => anilistId));
+      // Left out: one backoff step up; answered: back to the first step.
       for (const id of asked) {
-        if (!answered.has(id)) this.backoff.backOff(relationsKey(id));
+        if (answered.has(id)) this.backoff.clear(relationsKey(id));
+        else this.backoff.backOff(relationsKey(id));
       }
       await this.store(batch, now);
       fetched.push(...batch);
