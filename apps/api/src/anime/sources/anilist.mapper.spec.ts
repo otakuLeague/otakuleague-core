@@ -105,6 +105,112 @@ describe('mapAniListMedia', () => {
     });
   });
 
+  it('maps the header fields: original creators, favourites, all-time ranks, cover colour', () => {
+    expect(mapAniListMedia(media('anilist-attack-on-titan'))).toMatchObject({
+      creators: ['Hajime Isayama'],
+      favourites: 80474,
+      rankRated: 69,
+      rankPopular: 1,
+      coverColor: '#f1a143',
+    });
+    // Writer and artist ("Original Character Design" next to "Original Story"), not assistants.
+    expect(mapAniListMedia(media('anilist-frieren'))?.creators).toEqual([
+      'Kanehito Yamada',
+      'Tsukasa Abe',
+    ]);
+    expect(mapAniListMedia(media('anilist-minami-ke'))).toMatchObject({
+      coverColor: null,
+      rankRated: null,
+      rankPopular: null,
+    });
+  });
+
+  it('drops a malformed colour or rank, keeping the rest', () => {
+    const aot = media('anilist-attack-on-titan');
+    const snapshot = mapAniListMedia({
+      ...aot,
+      coverImage: { ...record(aot.coverImage), color: 'orange' },
+      rankings: [{ rank: 'first', type: 'RATED', allTime: true }],
+      staff: null,
+    });
+
+    expect(snapshot).toMatchObject({
+      coverColor: null,
+      rankRated: null,
+      creators: [],
+      favourites: 80474,
+    });
+  });
+
+  it('keeps Original Creator/Story credits, and Character Design next to a Story credit, once each, in order', () => {
+    const edge = (role: string, full: string) => ({
+      role,
+      node: { name: { full } },
+    });
+    const snapshot = mapAniListMedia({
+      ...media('anilist-attack-on-titan'),
+      staff: {
+        edges: [
+          edge('Original Story (ch. 1-50)', 'A'),
+          edge('Original Character Design', 'B'),
+          edge('Director, Original Creator', 'C'),
+          edge('Original Creator', 'D'),
+          edge('Original Creator', 'A'),
+          edge('Original Creator Assistance', 'E'),
+        ],
+      },
+    });
+
+    expect(snapshot?.creators).toEqual(['A', 'B', 'D']);
+  });
+
+  it('leaves out an Original Character Design credit with no Original Story (an illustrator)', () => {
+    const snapshot = mapAniListMedia({
+      ...media('anilist-attack-on-titan'),
+      staff: {
+        edges: [
+          { role: 'Original Creator', node: { name: { full: 'Author' } } },
+          {
+            role: 'Original Character Design',
+            node: { name: { full: 'Illustrator' } },
+          },
+        ],
+      },
+    });
+
+    expect(snapshot?.creators).toEqual(['Author']);
+  });
+
+  it("keeps only the all-time ranks of the anime's own format", () => {
+    const snapshot = mapAniListMedia({
+      ...media('anilist-attack-on-titan'),
+      rankings: [
+        { rank: 4, type: 'POPULAR', allTime: true, format: 'MOVIE' },
+        { rank: 69, type: 'RATED', allTime: true, format: 'TV' },
+      ],
+    });
+
+    expect(snapshot).toMatchObject({ rankRated: 69, rankPopular: null });
+  });
+
+  it('lowercases an uppercase colour and ignores non all-time ranks', () => {
+    const aot = media('anilist-attack-on-titan');
+    const snapshot = mapAniListMedia({
+      ...aot,
+      coverImage: { ...record(aot.coverImage), color: '#F1A143' },
+      rankings: [
+        { rank: 3, type: 'RATED', allTime: false },
+        { rank: 5, type: 'POPULAR', allTime: false },
+      ],
+    });
+
+    expect(snapshot).toMatchObject({
+      coverColor: '#f1a143',
+      rankRated: null,
+      rankPopular: null,
+    });
+  });
+
   it('flags adult entries', () => {
     expect(
       mapAniListMedia({ ...media('anilist-frieren'), isAdult: true })?.adult,

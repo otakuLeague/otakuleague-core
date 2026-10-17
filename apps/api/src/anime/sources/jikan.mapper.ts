@@ -113,5 +113,11 @@ export function mapJikanAnime(value: unknown): AnimeSnapshot | null {
     rank: integer(anime.rank, 1),
     members: integer(anime.members),
     nextEpisode: null,
+    // AniList-only fields (OTA-97): one primary source per field (ADR 0006).
+    creators: [],
+    favourites: null,
+    rankRated: null,
+    rankPopular: null,
+    coverColor: null,
   };
 }

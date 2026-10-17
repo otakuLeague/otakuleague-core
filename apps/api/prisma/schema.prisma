@@ -127,6 +127,14 @@ model AnimeSourceSnapshot {
   members             Int?
   nextEpisode         Int?            @map("next_episode")
   nextEpisodeAiringAt DateTime?       @map("next_episode_airing_at") @db.Timestamptz(3)
+  // OTA-97, AniList only. Original creators' names, in order (roles: AniList mapper).
+  creators            String[]        @default([])
+  favourites          Int?
+  // AniList's all-time rank among anime of the same format, by score and by popularity.
+  rankRated           Int?            @map("rank_rated")
+  rankPopular         Int?            @map("rank_popular")
+  // "#rrggbb".
+  coverColor          String?         @map("cover_color")
 
   @@id([animeId, source])
   @@map("anime_source_snapshot")

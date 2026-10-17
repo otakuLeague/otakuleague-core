@@ -85,6 +85,7 @@ All terms pages were read on **2026-10-15**. Quotes are verbatim; anything outsi
 | Feature | Source (primary, then fallback) | Notes |
 |---|---|---|
 | Header: titles, synonyms, format, episodes, duration, status, dates, season, source, studios, genres, tags | AniList | MAL API only with MAL's written authorization to combine (3(a)(vii)) |
+| Header extras (OTA-97): original creators, favourites, all-time ranks (per format), cover colour | AniList | AniList only, never filled from MAL: MAL's favourites and rank count a different user base and scope |
 | Scores and rank | AniList `averageScore`, `rankings` | A "MAL score" next to it needs the same MAL authorization; never averaged |
 | Trailer | AniList `trailer` (YouTube id) | AniList's id came with a trailing tab: trim it. Embed the YouTube player, never re-host |
 | Where to watch | AniList `externalLinks`, type `STREAMING` | No per-country availability; TMDB/JustWatch needs a commercial agreement |

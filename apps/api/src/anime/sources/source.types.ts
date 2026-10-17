@@ -47,6 +47,14 @@ export interface AnimeSnapshot {
     readonly episode: number;
     readonly airingAt: Date;
   } | null;
+  /** Original creators, in the source's order (see the AniList mapper for the roles). */
+  readonly creators: readonly string[];
+  readonly favourites: number | null;
+  /** All-time rank among anime of the same format, by score and by popularity. */
+  readonly rankRated: number | null;
+  readonly rankPopular: number | null;
+  /** Dominant colour of the cover, "#rrggbb". */
+  readonly coverColor: string | null;
 }
 
 /** AniList MediaRelation, relationType version 2 (ADR 0008). */

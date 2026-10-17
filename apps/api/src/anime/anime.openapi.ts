@@ -158,6 +158,31 @@ export class AnimeDetailsSchema implements AnimeDetails {
   readonly links!: AnimeDetails['links'];
   @ApiProperty(sourced('NextEpisode', { type: AnimeNextEpisodeSchema }))
   readonly nextEpisode!: AnimeDetails['nextEpisode'];
+  @ApiProperty({
+    ...SOURCED_STRINGS,
+    description:
+      'Original creators ("Original Creator" / "Original Story" staff)',
+  })
+  readonly creators!: AnimeDetails['creators'];
+  @ApiProperty({
+    ...SOURCED_INTEGER,
+    description: 'AniList users who favourited it (not MyAnimeList)',
+  })
+  readonly favourites!: Sourced<number> | null;
+  @ApiProperty({
+    ...SOURCED_INTEGER,
+    description:
+      'AniList all-time rank by score among anime of the same format; unrelated to scores[].rank',
+  })
+  readonly rankRated!: Sourced<number> | null;
+  @ApiProperty({
+    ...SOURCED_INTEGER,
+    description:
+      'AniList all-time rank by popularity among anime of the same format',
+  })
+  readonly rankPopular!: Sourced<number> | null;
+  @ApiProperty({ ...SOURCED_STRING, description: 'Cover colour, "#rrggbb"' })
+  readonly coverColor!: Sourced<string> | null;
   @ApiProperty({ type: [AnimeScoreSchema] })
   readonly scores!: readonly AnimeScore[];
   @ApiProperty({ type: [AnimeAttributionSchema] })

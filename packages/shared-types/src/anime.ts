@@ -121,6 +121,21 @@ export interface AnimeDetails {
   readonly studios: Sourced<readonly AnimeStudio[]> | null;
   readonly links: Sourced<readonly AnimeLink[]> | null;
   readonly nextEpisode: Sourced<AnimeNextEpisode> | null;
+  /**
+   * The work's original creators: "Original Creator" / "Original Story" staff, plus "Original
+   * Character Design" next to an "Original Story" credit (split writer/artist manga).
+   */
+  readonly creators: Sourced<readonly string[]> | null;
+  /** Users who marked it a favourite on the source. */
+  readonly favourites: Sourced<number> | null;
+  /**
+   * AniList's all-time rank among anime of the same `format`, by score ("#12 highest rated
+   * TV anime") and by popularity. Unrelated to `scores[].rank` (MyAnimeList, all formats).
+   */
+  readonly rankRated: Sourced<number> | null;
+  readonly rankPopular: Sourced<number> | null;
+  /** Dominant colour of the cover, "#rrggbb": the page's accent. */
+  readonly coverColor: Sourced<string> | null;
   readonly scores: readonly AnimeScore[];
   readonly attributions: readonly AnimeAttribution[];
 }

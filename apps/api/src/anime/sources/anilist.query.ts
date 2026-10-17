@@ -16,7 +16,7 @@ export const ANILIST_ANIME_QUERY = `query AnimeCore($id: Int, $idMal: Int) {
     episodes
     duration
     description
-    coverImage { extraLarge large }
+    coverImage { extraLarge large color }
     bannerImage
     trailer { id site }
     genres
@@ -24,6 +24,9 @@ export const ANILIST_ANIME_QUERY = `query AnimeCore($id: Int, $idMal: Int) {
     studios { edges { isMain node { name } } }
     averageScore
     popularity
+    favourites
+    rankings { rank type allTime format }
+    staff(sort: [RELEVANCE, ROLE], perPage: 10) { edges { role node { name { full } } } }
     externalLinks { site url type }
     nextAiringEpisode { episode airingAt }
   }
