@@ -82,6 +82,11 @@ export function toSnapshotRow(snapshot: AnimeSnapshot, fetchedAt: Date) {
     members: snapshot.members,
     nextEpisode: snapshot.nextEpisode?.episode ?? null,
     nextEpisodeAiringAt: snapshot.nextEpisode?.airingAt ?? null,
+    creators: [...snapshot.creators],
+    favourites: snapshot.favourites,
+    rankRated: snapshot.rankRated,
+    rankPopular: snapshot.rankPopular,
+    coverColor: snapshot.coverColor,
   } satisfies Omit<
     Prisma.AnimeSourceSnapshotUncheckedCreateInput,
     'animeId' | 'source'
@@ -170,6 +175,11 @@ function fromSnapshotRow(row: SnapshotRow): StoredSnapshot {
         row.nextEpisode === null || row.nextEpisodeAiringAt === null
           ? null
           : { episode: row.nextEpisode, airingAt: row.nextEpisodeAiringAt },
+      creators: row.creators,
+      favourites: row.favourites,
+      rankRated: row.rankRated,
+      rankPopular: row.rankPopular,
+      coverColor: row.coverColor,
     },
   };
 }

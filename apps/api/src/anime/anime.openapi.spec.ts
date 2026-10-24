@@ -30,6 +30,11 @@ const ANIME_DETAILS_KEYS = {
   studios: true,
   links: true,
   nextEpisode: true,
+  creators: true,
+  favourites: true,
+  rankRated: true,
+  rankPopular: true,
+  coverColor: true,
   scores: true,
   attributions: true,
 } satisfies Record<keyof AnimeDetails, true>;

@@ -214,6 +214,13 @@ describe('GET /anime/:idSource/:externalId', () => {
       fetchedAt: '2026-10-15T12:00:00.000Z',
     });
     expect(body.trailer?.value).toEqual({ site: 'youtube', id: 'LHtdKWJdif4' });
+    expect(body).toMatchObject({
+      creators: { value: ['Hajime Isayama'], source: 'anilist' },
+      favourites: { value: 80474, source: 'anilist' },
+      rankRated: { value: 69, source: 'anilist' },
+      rankPopular: { value: 1, source: 'anilist' },
+      coverColor: { value: '#f1a143', source: 'anilist' },
+    });
     expect(body.synopsis?.value).not.toMatch(/[<>]/);
     expect(body.externalIds).toEqual([
       { source: 'anilist', id: '16498' },

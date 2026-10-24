@@ -132,6 +132,11 @@ export function mergeAnime(
             airingAt: s.nextEpisode.airingAt.toISOString(),
           },
     ),
+    creators: pick(snapshots, (s) => s.creators),
+    favourites: pick(snapshots, (s) => s.favourites),
+    rankRated: pick(snapshots, (s) => s.rankRated),
+    rankPopular: pick(snapshots, (s) => s.rankPopular),
+    coverColor: pick(snapshots, (s) => s.coverColor),
   };
   return {
     id: anime.id,

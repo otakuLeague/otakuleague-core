@@ -141,6 +141,22 @@ describe('mergeAnime', () => {
     ]);
   });
 
+  it('hides the AniList-only header fields when AniList is switched off', () => {
+    const merged = mergeAnime(
+      anime(anilist, jikan),
+      (source) => source !== 'anilist',
+      NOW,
+    );
+
+    expect(merged).toMatchObject({
+      creators: null,
+      favourites: null,
+      rankRated: null,
+      rankPopular: null,
+      coverColor: null,
+    });
+  });
+
   it('returns null fields and no scores when no enabled source has data', () => {
     const merged = mergeAnime(anime(anilist), () => false, NOW);
 

@@ -99,6 +99,63 @@ function links(value: unknown): AnimeLink[] {
   });
 }
 
+/** "Original Creator" / "Original Story", optionally with a scope ("Original Story (ch. 1-50)"). */
+const CREATOR_ROLE = /^original (creator|story)(\s*\(.*\))?$/i;
+const STORY_ROLE = /^original story(\s*\(.*\))?$/i;
+const ART_ROLE = /^original character design(\s*\(.*\))?$/i;
+
+/**
+ * The work's original creators, in AniList's order, each once. "Original Character Design"
+ * counts only next to an "Original Story" credit: the split writer/artist manga (Death Note,
+ * Frieren). Without one it is usually a light-novel or game illustrator, not a creator.
+ * ponytail: role heuristic; store { name, role } if the page ever needs to say who did what.
+ */
+function creators(value: unknown): string[] {
+  const edges = record(value).edges;
+  if (!Array.isArray(edges)) return [];
+  const credits = edges.flatMap((item) => {
+    const edge = record(item);
+    const role = text(edge.role);
+    const name = text(record(record(edge.node).name).full);
+    return role === null || name === null ? [] : [{ role, name }];
+  });
+  const hasStory = credits.some(({ role }) => STORY_ROLE.test(role));
+  const names = credits
+    .filter(
+      ({ role }) =>
+        CREATOR_ROLE.test(role) || (hasStory && ART_ROLE.test(role)),
+    )
+    .map(({ name }) => name);
+  return [...new Set(names)];
+}
+
+/**
+ * AniList's all-time rank of this kind ("RATED" or "POPULAR"). AniList ranks per format, so
+ * only the rank among anime of this anime's own format counts ("#14 highest rated movie").
+ */
+function allTimeRank(
+  value: unknown,
+  type: 'RATED' | 'POPULAR',
+  format: unknown,
+): number | null {
+  if (!Array.isArray(value)) return null;
+  const ranking = value
+    .map(record)
+    .find(
+      (item) =>
+        item.type === type && item.allTime === true && item.format === format,
+    );
+  return ranking === undefined ? null : integer(ranking.rank, 1);
+}
+
+/** "#rrggbb", or null. */
+function hexColor(value: unknown): string | null {
+  const color = text(value);
+  return color !== null && /^#[0-9a-f]{6}$/i.test(color)
+    ? color.toLowerCase()
+    : null;
+}
+
 function nextEpisode(value: unknown): AnimeSnapshot['nextEpisode'] {
   const raw = record(value);
   const episode = integer(raw.episode, 1);
@@ -154,6 +211,11 @@ export function mapAniListMedia(value: unknown): AnimeSnapshot | null {
     rank: null,
     members: integer(media.popularity),
     nextEpisode: nextEpisode(media.nextAiringEpisode),
+    creators: creators(media.staff),
+    favourites: integer(media.favourites),
+    rankRated: allTimeRank(media.rankings, 'RATED', media.format),
+    rankPopular: allTimeRank(media.rankings, 'POPULAR', media.format),
+    coverColor: hexColor(cover.color),
   };
 }
 
