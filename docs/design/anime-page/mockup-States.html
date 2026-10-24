@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Anime page header states and edge cases</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ds/otakuleague/tokens.css" />
+    <link rel="stylesheet" href="ds/otakuleague/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Instrument+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+          }
+          a {
+            color: var(--accent-ink);
+          }
+          a:hover {
+            color: var(--ink);
+          }
+        </style>
+      </helmet>
+      <div
+        class="ol-root"
+        data-theme="dark"
+        style="
+          --accent: #f1a143;
+          --accent-ink: #f1a143;
+          width: 1440px;
+          height: 1040px;
+          box-sizing: border-box;
+          padding: 40px;
+          background: var(--ground);
+          color: var(--ink);
+          font-family: var(--font-sans);
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 32px 40px;
+          align-content: start;
+        "
+      >
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            1 · Loading (first visit, import running)
+          </h2>
+          <div
+            style="
+              border-radius: var(--radius-lg);
+              border: 1px solid var(--border);
+              background: var(--ground);
+              overflow: hidden;
+            "
+          >
+            <span class="ol-skel" style="height: 72px; border-radius: 0"></span>
+            <div style="display: flex; gap: 20px; padding: 0 20px 20px">
+              <span
+                class="ol-skel ol-skel--cover"
+                style="width: 96px; margin-top: -40px; flex: none"
+              ></span>
+              <div
+                style="
+                  flex: 1;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  padding-top: 12px;
+                "
+              >
+                <span class="ol-skel" style="height: 12px; width: 30%"></span>
+                <span class="ol-skel" style="height: 32px; width: 70%"></span>
+                <span class="ol-skel" style="height: 24px; width: 50%"></span>
+                <p
+                  style="margin: 4px 0 0; font-size: 13px; color: var(--muted)"
+                >
+                  Fetching this anime for the first time…
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            2 · Not found, with suggestions
+          </h2>
+          <div class="ol-state" style="max-width: none">
+            <div class="ol-state__mark">?</div>
+            <h3 class="ol-state__title">No anime at /anime/attak-on-titan</h3>
+            <p class="ol-state__body">Did you mean one of these?</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <a class="ol-chip ol-chip--accent" href="#">Attack on Titan</a>
+              <a class="ol-chip" href="#">Attack on Titan Season 2</a>
+              <a class="ol-chip" href="#">Attack on Titan: Junior High</a>
+            </div>
+            <a
+              class="ol-btn ol-btn--ghost ol-btn--sm"
+              href="#"
+              style="padding-left: 0"
+              >Search all anime</a
+            >
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            3 · Source down, saved data shown
+          </h2>
+          <div
+            style="
+              border-radius: var(--radius-lg);
+              border: 1px solid var(--border);
+              overflow: hidden;
+            "
+          >
+            <div
+              role="status"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 16px;
+                background: color-mix(
+                  in oklab,
+                  var(--xp-gold) 14%,
+                  var(--surface)
+                );
+                color: var(--ink);
+                font-size: 13px;
+              "
+            >
+              <span
+                class="ol-num"
+                style="color: var(--xp-gold); font-weight: 600"
+                >!</span
+              >
+              Showing saved data from 3 days ago. AniList isn't answering right
+              now; we'll refresh when it's back.
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 20px;
+                padding: 20px;
+                align-items: center;
+              "
+            >
+              <div
+                role="img"
+                aria-label="Cover"
+                style="
+                  flex: none;
+                  width: 72px;
+                  aspect-ratio: 2 / 3;
+                  border-radius: var(--radius-md);
+                  background: color-mix(
+                    in oklab,
+                    var(--accent) 38%,
+                    var(--surface-2)
+                  );
+                "
+              ></div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <p class="ol-label" style="margin: 0; color: var(--accent-ink)">
+                  TV · Spring 2013
+                </p>
+                <p style="margin: 0; font: 700 28px/32px var(--font-display)">
+                  Attack on Titan
+                </p>
+                <span
+                  class="ol-score"
+                  data-band="high"
+                  style="align-self: flex-start"
+                  >8.4</span
+                >
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            4 · No banner, no cover, no colour
+          </h2>
+          <div
+            style="
+              --accent: #4fd1b5;
+              --accent-ink: #4fd1b5;
+              border-radius: var(--radius-lg);
+              border: 1px solid var(--border);
+              overflow: hidden;
+            "
+          >
+            <div
+              aria-hidden="true"
+              style="
+                height: 56px;
+                background-color: var(--surface);
+                background-image: radial-gradient(
+                  var(--surface-2) 1.5px,
+                  transparent 1.6px
+                );
+                background-size: 16px 16px;
+              "
+            ></div>
+            <div
+              style="
+                display: flex;
+                gap: 20px;
+                padding: 0 20px 20px;
+                align-items: flex-end;
+              "
+            >
+              <div
+                role="img"
+                aria-label="No cover available"
+                style="
+                  flex: none;
+                  width: 96px;
+                  aspect-ratio: 2 / 3;
+                  margin-top: -32px;
+                  border-radius: var(--radius-lg);
+                  background: var(--surface-2);
+                  outline: 1px solid var(--border);
+                  display: grid;
+                  place-items: center;
+                  font: 700 28px/1 var(--font-display);
+                  color: var(--faint);
+                "
+              >
+                KN
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                  padding-bottom: 4px;
+                "
+              >
+                <p class="ol-label" style="margin: 0; color: var(--accent-ink)">
+                  OVA · 1998
+                </p>
+                <p style="margin: 0; font: 700 28px/32px var(--font-display)">
+                  [Obscure OVA title]
+                </p>
+                <p style="margin: 0; font-size: 13px; color: var(--muted)">
+                  Fallback teal accent, initials on the cover, dot grid as the
+                  banner.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            5 · Long title, single season (selector hidden)
+          </h2>
+          <div
+            style="
+              --accent: #a1c6e4;
+              --accent-ink: #a1c6e4;
+              border-radius: var(--radius-lg);
+              border: 1px solid var(--border);
+              padding: 20px;
+              display: flex;
+              gap: 20px;
+            "
+          >
+            <div
+              role="img"
+              aria-label="Cover"
+              style="
+                flex: none;
+                width: 96px;
+                aspect-ratio: 2 / 3;
+                border-radius: var(--radius-lg);
+                background: color-mix(
+                  in oklab,
+                  var(--accent) 38%,
+                  var(--surface-2)
+                );
+                outline: 2px solid var(--accent);
+              "
+            ></div>
+            <div
+              style="
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+              "
+            >
+              <p class="ol-label" style="margin: 0; color: var(--accent-ink)">
+                TV · Fall 2019 · 12 episodes
+              </p>
+              <p
+                style="
+                  margin: 0;
+                  font: 700 32px/36px var(--font-display);
+                  letter-spacing: -0.02em;
+                  text-wrap: balance;
+                  overflow-wrap: anywhere;
+                "
+              >
+                [A very long light-novel title that keeps going and wraps onto
+                three lines on a phone]
+              </p>
+              <p style="margin: 0; font-size: 13px; color: var(--muted)">
+                Title wraps, never truncates in the expanded header (it
+                truncates with an ellipsis only in the sticky bar). One season:
+                no selector, no empty control.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section style="display: flex; flex-direction: column; gap: 10px">
+          <h2 class="ol-label" style="margin: 0; color: var(--muted)">
+            6 · Airing: next-episode countdown
+          </h2>
+          <div
+            style="
+              --accent: #e4504d;
+              --accent-ink: #ff8a7a;
+              border-radius: var(--radius-lg);
+              border: 1px solid var(--border);
+              padding: 20px;
+              display: flex;
+              gap: 20px;
+              align-items: center;
+            "
+          >
+            <div
+              role="img"
+              aria-label="Cover"
+              style="
+                flex: none;
+                width: 72px;
+                aspect-ratio: 2 / 3;
+                border-radius: var(--radius-md);
+                background: color-mix(
+                  in oklab,
+                  var(--accent) 38%,
+                  var(--surface-2)
+                );
+                outline: 2px solid var(--accent);
+              "
+            ></div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <p style="margin: 0; font: 700 28px/32px var(--font-display)">
+                [Airing anime]
+              </p>
+              <div
+                style="
+                  display: flex;
+                  gap: 8px;
+                  align-items: center;
+                  flex-wrap: wrap;
+                "
+              >
+                <span class="ol-badge ol-badge--airing">Airing</span>
+                <span
+                  style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    height: 32px;
+                    padding: 0 12px;
+                    border-radius: var(--radius-pill);
+                    background: var(--surface-2);
+                    border: 1px solid
+                      color-mix(in oklab, var(--accent) 45%, transparent);
+                    font-size: 13px;
+                  "
+                  >Episode
+                  <span class="ol-num" style="font-weight: 600">8</span> in
+                  <span
+                    class="ol-num"
+                    style="font-weight: 600; color: var(--accent-ink)"
+                    >2d 14h 05m</span
+                  ></span
+                >
+              </div>
+              <p style="margin: 0; font-size: 13px; color: var(--muted)">
+                Counts down live, in the visitor's time zone; at zero it
+                switches to "Episode 8 aired".
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1040}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

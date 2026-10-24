@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { AnimeBySlug, AnimeDetails } from '@otakuleague/shared-types';
+import type {
+  AnimeBySlug,
+  AnimeDetails,
+  AnimeSlugResolution,
+} from '@otakuleague/shared-types';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -34,12 +38,10 @@ export class AnimeService {
   }
 
   /**
-   * ADR 0007: the canonical slug serves the anime; any other slug of the same anime (alias,
-   * former canonical, other letter case) answers a redirect. Resolved through the AniList
-   * identity, not through a source's ids, so a switched-off source never breaks the slug of a
-   * cached anime.
+   * Which anime a slug names, any letter case, from the database only: never an import or a
+   * source call, so it stays fast for a purged anime too (OTA-97).
    */
-  async getBySlug(requested: string): Promise<AnimeBySlug> {
+  async resolveSlug(requested: string): Promise<AnimeSlugResolution> {
     const slug = await this.prisma.animeSlug.findUnique({
       where: { slug: requested.toLowerCase() },
       include: { identity: true },
@@ -47,9 +49,23 @@ export class AnimeService {
     if (!slug || slug.identity.removedAt !== null) {
       throw animeNotFound('No anime with this slug.');
     }
-    const { canonicalSlug } = slug.identity;
+    return {
+      anilistId: slug.anilistId,
+      canonicalSlug: slug.identity.canonicalSlug,
+    };
+  }
+
+  /**
+   * ADR 0007: the canonical slug serves the anime; any other slug of the same anime (alias,
+   * former canonical, other letter case) answers a redirect. Resolved through the AniList
+   * identity, not through a source's ids, so a switched-off source never breaks the slug of a
+   * cached anime.
+   */
+  async getBySlug(requested: string): Promise<AnimeBySlug> {
+    // One lookup rule for the proxy (resolve) and the page (this).
+    const { anilistId, canonicalSlug } = await this.resolveSlug(requested);
     if (requested !== canonicalSlug) return { kind: 'redirect', canonicalSlug };
-    const ref: AnimeRef = { source: 'anilist', externalId: slug.anilistId };
+    const ref: AnimeRef = { source: 'anilist', externalId: anilistId };
     const anime = await this.serve(await this.findStored(ref), ref);
     // A re-import can move the canonical (its title changed while it was purged).
     return anime.canonicalSlug !== null && anime.canonicalSlug !== requested

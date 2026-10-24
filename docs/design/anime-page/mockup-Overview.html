@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Overview tab</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ds/otakuleague/tokens.css" />
+    <link rel="stylesheet" href="ds/otakuleague/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Instrument+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+          }
+          a {
+            color: var(--accent-ink);
+          }
+          a:hover {
+            color: var(--ink);
+          }
+          .ov-card {
+            border-radius: 18px;
+            background: color-mix(in oklab, var(--surface) 88%, transparent);
+            border: 1px solid var(--border);
+            padding: 22px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+          }
+          .ov-h {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font: 700 18px/24px var(--font-display);
+          }
+          .ov-h svg {
+            color: var(--accent-ink);
+            flex: none;
+          }
+          .ov-sub {
+            margin: 0;
+            font: 600 11px/16px var(--font-sans);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+          }
+          .ov-pill {
+            display: inline-flex;
+            align-items: center;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: var(--radius-pill);
+            font: 600 13px/1 var(--font-sans);
+            text-decoration: none;
+            color: var(--ink);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+          }
+          .ov-pill:hover {
+            border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+          }
+          .ov-row {
+            display: grid;
+            grid-template-columns: 20px minmax(0, 1fr);
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+          }
+          .ov-row:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+          }
+          .ov-row svg {
+            color: var(--muted);
+            margin-top: 14px;
+          }
+          .ov-k {
+            margin: 0;
+            font: 600 11px/16px var(--font-sans);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+          }
+          .ov-v {
+            margin: 2px 0 0;
+            font: 600 15px/22px var(--font-sans);
+          }
+          .ov-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 46px;
+            padding: 0 16px;
+            border-radius: 12px;
+            font: 600 14px/1 var(--font-sans);
+            text-decoration: none;
+          }
+          .st-tab {
+            display: inline-flex;
+            align-items: center;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 10px;
+            font: 500 13px/1 var(--font-sans);
+            color: var(--muted);
+            text-decoration: none;
+          }
+          .st-tab:hover {
+            color: var(--ink);
+          }
+          .st-tab[aria-current='page'] {
+            color: var(--accent-ink);
+            background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+          }
+          .st-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: var(--radius-pill);
+            font: 600 11px/1 var(--font-sans);
+            white-space: nowrap;
+          }
+        </style>
+      </helmet>
+      <div
+        class="ol-root"
+        data-theme="dark"
+        style="--accent: {{accent}}; --accent-ink: {{accent}}; min-height: 1720px; background: radial-gradient(1200px 600px at 85% 10%, color-mix(in oklab, var(--neon-magenta) 8%, transparent), transparent 70%), radial-gradient(900px 500px at 0% 60%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%), var(--ground); color: var(--ink); font-family: var(--font-sans);"
+      >
+        <div
+          style="
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: color-mix(in oklab, var(--surface) 90%, transparent);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+          "
+        >
+          <div
+            aria-hidden="true"
+            style="
+              height: 2px;
+              width: 46%;
+              background: var(--accent);
+              box-shadow: 0 0 10px var(--accent);
+            "
+          ></div>
+          <div
+            style="
+              max-width: 1360px;
+              margin: 0 auto;
+              padding: 8px max(16px, 2vw);
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              flex-wrap: wrap;
+            "
+          >
+            <div
+              role="img"
+              aria-label="Attack on Titan cover"
+              style="
+                flex: none;
+                width: 34px;
+                height: 48px;
+                border-radius: 6px;
+                background: color-mix(
+                  in oklab,
+                  var(--accent) 35%,
+                  var(--surface-2)
+                );
+                outline: 1px solid
+                  color-mix(in oklab, var(--accent) 70%, transparent);
+              "
+            ></div>
+            <div
+              style="
+                flex: 1 1 420px;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+              "
+            >
+              <p
+                style="
+                  margin: 0;
+                  font: 700 16px/20px var(--font-display);
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                "
+              >
+                Attack on Titan
+              </p>
+              <div style="display: flex; gap: 5px; flex-wrap: wrap">
+                <span
+                  class="st-chip"
+                  style="
+                    color: #8fb4ff;
+                    background: color-mix(
+                      in oklab,
+                      #8fb4ff 14%,
+                      var(--surface)
+                    );
+                  "
+                  >Finished</span
+                >
+                <span
+                  class="st-chip"
+                  style="color: var(--ink); background: var(--surface-2)"
+                  >TV</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: #7ee08f;
+                    background: color-mix(
+                      in oklab,
+                      #7ee08f 14%,
+                      var(--surface)
+                    );
+                  "
+                  >Spring 2013</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--ink);
+                    background: var(--surface-2);
+                    font-family: var(--font-mono);
+                  "
+                  >25 eps</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--xp-gold);
+                    background: color-mix(
+                      in oklab,
+                      var(--xp-gold) 14%,
+                      var(--surface)
+                    );
+                    font-family: var(--font-mono);
+                  "
+                  >★ 84</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--muted);
+                    background: var(--surface-2);
+                    font-family: var(--font-mono);
+                  "
+                  >#12 · #5</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--neon-magenta);
+                    background: color-mix(
+                      in oklab,
+                      var(--neon-magenta) 12%,
+                      var(--surface)
+                    );
+                    font-family: var(--font-mono);
+                  "
+                  >♥ 110K</span
+                >
+              </div>
+            </div>
+            <nav
+              aria-label="Anime sections"
+              style="display: flex; gap: 2px; flex-wrap: wrap"
+            >
+              <a class="st-tab" href="#" aria-current="page">Overview</a>
+              <a class="st-tab" href="#">Episodes</a>
+              <a class="st-tab" href="#">Cast &amp; Crew</a>
+              <a class="st-tab" href="#">Music</a>
+              <a class="st-tab" href="#">Related &amp; Media</a>
+              <a class="st-tab" href="#">Stats</a>
+              <a class="st-tab" href="#">Community</a>
+            </nav>
+            <div style="display: flex; gap: 8px">
+              <button
+                class="ol-btn ol-btn--sm"
+                aria-label="Add to Favourites"
+                style="
+                  width: 36px;
+                  padding: 0;
+                  color: var(--neon-magenta);
+                  background: color-mix(
+                    in oklab,
+                    var(--neon-magenta) 10%,
+                    transparent
+                  );
+                  border: 1px solid
+                    color-mix(in oklab, var(--neon-magenta) 45%, transparent);
+                "
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                class="ol-btn ol-btn--sm"
+                aria-label="Add to List"
+                style="
+                  width: 36px;
+                  padding: 0;
+                  color: var(--accent-ink);
+                  background: color-mix(
+                    in oklab,
+                    var(--accent) 10%,
+                    transparent
+                  );
+                  border: 1px solid
+                    color-mix(in oklab, var(--accent) 45%, transparent);
+                "
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <main
+          style="
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 32px max(16px, 3vw) 64px;
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+          "
+        >
+          <div
+            style="
+              flex: 999 1 600px;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 24px;
+            "
+          >
+            <section class="ov-card" aria-labelledby="tr-h">
+              <h2 id="tr-h" class="ov-h">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M7 4.5v15l12-7.5z"></path></svg
+                >Official Trailer
+              </h2>
+              <button
+                aria-label="Play the trailer (YouTube)"
+                style="
+                  position: relative;
+                  width: 100%;
+                  aspect-ratio: 16 / 9;
+                  border: 1px solid var(--border);
+                  border-radius: 14px;
+                  overflow: hidden;
+                  cursor: pointer;
+                  padding: 0;
+                  background:
+                    radial-gradient(
+                      60% 70% at 70% 60%,
+                      color-mix(in oklab, var(--neon-magenta) 18%, transparent),
+                      transparent
+                    ),
+                    #0e0d13;
+                  color: #fff;
+                  display: grid;
+                  place-items: center;
+                "
+              >
+                <span
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 12px;
+                  "
+                >
+                  <span
+                    style="
+                      width: 72px;
+                      height: 72px;
+                      border-radius: 50%;
+                      display: grid;
+                      place-items: center;
+                      background: var(--accent);
+                      color: var(--on-accent);
+                      box-shadow:
+                        0 0 0 8px
+                          color-mix(in oklab, var(--accent) 22%, transparent),
+                        0 0 40px
+                          color-mix(in oklab, var(--accent) 55%, transparent);
+                    "
+                  >
+                    <svg
+                      width="26"
+                      height="26"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M8 5.5v13l11-6.5z"></path>
+                    </svg>
+                  </span>
+                  <span style="font: 600 14px/1 var(--font-sans)"
+                    >Play trailer</span
+                  >
+                </span>
+              </button>
+              <a
+                href="#"
+                style="
+                  font-size: 13px;
+                  color: var(--muted);
+                  text-decoration: none;
+                "
+                >If the player doesn't load, watch on YouTube
+                <span style="color: var(--accent-ink)">→</span></a
+              >
+            </section>
+
+            <section class="ov-card" aria-labelledby="sy-h">
+              <h2 id="sy-h" class="ov-h">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+                  <path d="M8 8h8M8 12h8M8 16h5"></path></svg
+                >Synopsis
+              </h2>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15px;
+                  line-height: 26px;
+                  color: color-mix(in oklab, var(--ink) 88%, var(--muted));
+                "
+              >
+                Humanity has lived behind three giant walls for a century, safe
+                from the Titans that roam outside and eat people.
+              </p>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15px;
+                  line-height: 26px;
+                  color: color-mix(in oklab, var(--ink) 88%, var(--muted));
+                "
+              >
+                When a colossal Titan breaks through the outer wall, young Eren
+                Yeager watches his town fall and swears to wipe every Titan from
+                the earth.
+              </p>
+              <p
+                style="
+                  margin: 0;
+                  font-size: 15px;
+                  line-height: 26px;
+                  color: color-mix(in oklab, var(--ink) 88%, var(--muted));
+                "
+              >
+                He joins the military with his friends Mikasa and Armin, and
+                starts to uncover what the Titans really are.
+              </p>
+            </section>
+
+            <section class="ov-card" aria-labelledby="th-h">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 12px;
+                  flex-wrap: wrap;
+                "
+              >
+                <h2 id="th-h" class="ov-h">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"
+                    ></path></svg
+                  >Themes &amp; Genres
+                </h2>
+                <button
+                  class="ol-btn ol-btn--ghost ol-btn--sm"
+                  aria-pressed="false"
+                  style="color: var(--muted)"
+                >
+                  Show spoiler tags
+                </button>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <p class="ov-sub">Genres</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <sc-for list="{{genres}}" as="g" hint-placeholder-count="4">
+                    <a
+                      href="#"
+                      class="ov-pill"
+                      style="color: {{g.c}}; background: color-mix(in oklab, {{g.c}} 14%, var(--surface)); border-color: color-mix(in oklab, {{g.c}} 45%, transparent);"
+                      >{{g.name}}</a
+                    >
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <p class="ov-sub">Themes</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <sc-for list="{{themes}}" as="t" hint-placeholder-count="8">
+                    <a href="#" class="ov-pill">{{t}}</a>
+                  </sc-for>
+                  <button
+                    class="ol-chip ol-chip--spoiler"
+                    aria-pressed="false"
+                    style="
+                      height: 32px;
+                      min-width: 110px;
+                      border-radius: var(--radius-pill);
+                    "
+                  >
+                    Time Skip
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="ov-card" aria-labelledby="alt-h">
+              <h2 id="alt-h" class="ov-h">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 5h8M8 3v2M10 5c-1 4-3 7-6 9M6 9c1 2 3 4 5 5"
+                  ></path>
+                  <path d="M13 21l4-10 4 10M14.5 17h5"></path></svg
+                >Alternative Titles
+              </h2>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <span class="ov-pill" lang="ja">進撃の巨人</span>
+                <span class="ov-pill">Shingeki no Kyojin</span>
+                <span class="ov-pill" lang="fr">L'Attaque des Titans</span>
+                <span class="ov-pill">AoT</span>
+                <span class="ov-pill">SnK</span>
+              </div>
+            </section>
+          </div>
+
+          <div
+            style="
+              flex: 1 1 340px;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 24px;
+            "
+          >
+            <section class="ov-card" aria-labelledby="in-h">
+              <h2 id="in-h" class="ov-h">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M12 11v6M12 7.5v.5"></path></svg
+                >Information
+              </h2>
+              <div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 20l4-1 11-11-3-3L5 16z"></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Creator</p>
+                    <p class="ov-v">
+                      <a href="#" style="text-decoration: none"
+                        >Hajime Isayama</a
+                      >
+                    </p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="7" width="18" height="13" rx="2"></rect>
+                    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Studio</p>
+                    <p class="ov-v">
+                      <a href="#" style="text-decoration: none">Wit Studio</a>
+                    </p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z"
+                    ></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Source</p>
+                    <p class="ov-v">Manga</p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path
+                      d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"
+                    ></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Country</p>
+                    <p class="ov-v">Japan</p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                    <path d="M3 10h18M8 3v4M16 3v4"></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Aired</p>
+                    <p class="ov-v ol-num">Apr 7 – Sep 29, 2013</p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 7v5l3 2"></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Episodes</p>
+                    <p class="ov-v ol-num">25 × 24 min</p>
+                  </div>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"
+                    ></path>
+                  </svg>
+                  <div>
+                    <p class="ov-k">Database</p>
+                    <p class="ov-v">
+                      <a href="#" style="text-decoration: none"
+                        >View on AniList →</a
+                      >
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="ov-card" aria-labelledby="lk-h">
+              <h2 id="lk-h" class="ov-h">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
+                  ></path></svg
+                >Official Links
+              </h2>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <sc-for list="{{links}}" as="l" hint-placeholder-count="4">
+                  <a
+                    href="#"
+                    class="ov-link"
+                    style="color: {{l.c}}; background: color-mix(in oklab, {{l.c}} 13%, var(--surface)); border: 1px solid color-mix(in oklab, {{l.c}} 45%, transparent);"
+                  >
+                    <span
+                      aria-hidden="true"
+                      style="width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font: 800 12px/1 var(--font-display); color: var(--ground); background: {{l.c}};"
+                      >{{l.i}}</span
+                    >
+                    {{l.name}}
+                    <span aria-hidden="true" style="margin-left: auto">→</span>
+                  </a>
+                </sc-for>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: var(--muted)">
+                Streaming availability depends on your country.
+              </p>
+            </section>
+          </div>
+        </main>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"accent":{"editor":"color","default":"#4fd1b5","options":["#4fd1b5","#f1a143","#a1c6e4","#e4504d"]},"$preview":{"width":1440,"height":1720}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            accent: this.props.accent ?? '#4fd1b5',
+            genres: [
+              { name: 'Action', c: '#ff6fae' },
+              { name: 'Drama', c: '#b49cff' },
+              { name: 'Fantasy', c: '#4fd1b5' },
+              { name: 'Mystery', c: '#f5c84c' }
+            ],
+            themes: ['Military', 'Survival', 'Post-Apocalyptic', 'Tragedy', 'Kaiju', 'Gore', 'Coming of Age', 'War'],
+            links: [
+              { name: 'Watch on Crunchyroll', c: '#ff9a5a', i: 'C' },
+              { name: 'Watch on Netflix', c: '#ff6b6b', i: 'N' },
+              { name: 'Official site', c: '#4fd1b5', i: 'O' },
+              { name: 'Official X account', c: '#a29cb4', i: 'X' }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

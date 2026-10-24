@@ -15,6 +15,7 @@ import {
   type AnimeDetails,
   type AnimeFranchise,
   type AnimeIdSource,
+  type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
 import { IsIn, Matches, MaxLength } from 'class-validator';
 import {
@@ -22,6 +23,7 @@ import {
   AnimeBySlugRedirectSchema,
   AnimeDetailsSchema,
   AnimeFranchiseSchema,
+  AnimeSlugResolutionSchema,
 } from './anime.openapi';
 import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
@@ -100,6 +102,20 @@ export class AnimeController {
   }
 
   // Three segments: cannot clash with the two-segment routes.
+  @Get('slugs/:slug/resolve')
+  @ApiOkResponse({
+    type: AnimeSlugResolutionSchema,
+    description:
+      'Which anime a slug names (any slug of it, any letter case), from the database only: never an import, so it is fast even for a purged anime. The web app redirects to canonicalSlug before rendering.',
+  })
+  @ApiBadRequestResponse({ description: 'Not a well-formed slug.' })
+  @ApiNotFoundResponse({
+    description: 'No anime has this slug, or it was removed.',
+  })
+  resolveSlug(@Param() params: AnimeSlugParams): Promise<AnimeSlugResolution> {
+    return this.anime.resolveSlug(params.slug);
+  }
+
   @Get('slugs/:slug/franchise')
   @ApiOkResponse({
     type: AnimeFranchiseSchema,

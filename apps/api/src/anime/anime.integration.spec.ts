@@ -5,6 +5,7 @@ import type {
   AnimeBySlug,
   AnimeDataSource,
   AnimeDetails,
+  AnimeSlugResolution,
 } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -788,6 +789,57 @@ describe('GET /anime/:idSource/:externalId', () => {
     await importer.settle();
 
     expect(await counts()).toEqual({ anime: 0, ids: 0, snapshots: 0 });
+  });
+
+  describe('GET /anime/slugs/:slug/resolve', () => {
+    const resolve = (slug: string) => get(`/anime/slugs/${slug}/resolve`);
+
+    it('names the anime and its canonical slug for any slug of it, any letter case', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+
+      for (const slug of [
+        'attack-on-titan',
+        'shingeki-no-kyojin',
+        'Attack-On-Titan',
+      ]) {
+        expect((await resolve(slug).expect(200)).body).toEqual({
+          anilistId: 16498,
+          canonicalSlug: 'attack-on-titan',
+        } satisfies AnimeSlugResolution);
+      }
+    });
+
+    it('resolves a purged anime from the database, without any source call', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+      clock.advance(31 * DAY_MS);
+      expect(await importer.purgeUnviewed()).toBe(1);
+      anilist.calls = 0;
+      jikan.calls = 0;
+
+      expect((await resolve('shingeki-no-kyojin').expect(200)).body).toEqual({
+        anilistId: 16498,
+        canonicalSlug: 'attack-on-titan',
+      });
+      await importer.settle();
+      expect(anilist.calls + jikan.calls).toBe(0);
+      expect(await prisma.anime.count()).toBe(0);
+    });
+
+    it('answers 404 for an unknown slug or a removed anime', async () => {
+      await get('/anime/myanimelist/16498').expect(200);
+      await importer.settle();
+      await prisma.animeIdentity.update({
+        where: { anilistId: 16498 },
+        data: { removedAt: clock.now() },
+      });
+
+      await resolve('attack-on-titan').expect(404);
+      expect((await resolve('no-such-anime').expect(404)).body).toMatchObject({
+        error: { code: 'ANIME_NOT_FOUND' },
+      });
+    });
   });
 
   describe('GET /anime/slugs/:slug', () => {

@@ -5,3 +5,6 @@ pnpm-lock.yaml
 
 # Generated code.
 apps/api/src/generated/
+
+# Design-tool exports, committed as the design reference (OTA-97).
+docs/design/

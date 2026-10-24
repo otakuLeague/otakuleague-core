@@ -1,0 +1,61 @@
+/* OtakuLeague — generated from tokens.json */
+:root,
+[data-theme='dark'] {
+  --ground: #12101a;
+  --surface: #1b1826;
+  --surface-2: #232030;
+  --border: rgba(236, 233, 243, 0.1);
+  --ink: #ece9f3;
+  --muted: #a29cb4;
+  --faint: #7a7390;
+  --accent: #4fd1b5;
+  --accent-ink: #4fd1b5;
+  --on-accent: #12101a;
+  --neon-magenta: #ff6fae;
+  --xp-gold: #f5c84c;
+  --score-high: #8fb4ff;
+  --score-mid: #f5c84c;
+  --score-low: #e8743b;
+  --good: #5fd38a;
+  --bad: #ff7a6b;
+  color-scheme: dark;
+}
+[data-theme='light'] {
+  --ground: #f3efe6;
+  --surface: #fbf9f4;
+  --surface-2: #e9e2d4;
+  --border: rgba(33, 28, 43, 0.12);
+  --ink: #211c2b;
+  --muted: #575066;
+  --faint: #7c748a;
+  --accent: #4fd1b5;
+  --accent-ink: #0b6b59;
+  --on-accent: #12101a;
+  --neon-magenta: #b3246a;
+  --xp-gold: #7d5800;
+  --score-high: #2a55bd;
+  --score-mid: #7d5800;
+  --score-low: #b54a12;
+  --good: #1b6e3c;
+  --bad: #b3321f;
+  color-scheme: light;
+}
+:root {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-10: 40px;
+  --space-16: 64px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1100px;
+}

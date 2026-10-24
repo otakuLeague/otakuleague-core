@@ -17,6 +17,7 @@ import {
   type AnimeTag,
   type AnimeTrailer,
   type AnimeFranchise,
+  type AnimeSlugResolution,
   FRANCHISE_RELATED_GROUPS,
   type FranchiseEntry,
   type FranchiseRelatedGroup,
@@ -266,4 +267,9 @@ export class AnimeFranchiseSchema implements AnimeFranchise {
   readonly mainLine!: readonly FranchiseSeason[];
   @ApiProperty({ type: [FranchiseRelatedGroupSchema] })
   readonly related!: readonly FranchiseRelatedGroup[];
+}
+
+export class AnimeSlugResolutionSchema implements AnimeSlugResolution {
+  @ApiProperty({ type: 'integer' }) readonly anilistId!: number;
+  @ApiProperty({ example: 'attack-on-titan' }) readonly canonicalSlug!: string;
 }
