@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { type ReactNode, Suspense } from 'react';
 import { resolveAnimeSlug } from '../../../src/anime/data';
 import { AnimeHeaderLoader, HeaderLoading } from './header';
 import { TabsNav } from './tabs-nav';
@@ -11,7 +11,10 @@ export const instant = false;
 export default async function AnimeLayout({
   children,
   params,
-}: LayoutProps<'/anime/[slug]'>) {
+}: {
+  readonly children: ReactNode;
+  readonly params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const resolution = await resolveAnimeSlug(slug);
   // Unknown slug, another slug of the anime, or the API down: the page answers on its own

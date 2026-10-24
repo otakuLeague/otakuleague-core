@@ -9,6 +9,11 @@ import {
   tabLabel,
 } from '../../../src/anime/tabs';
 
+/** A tab page's props, typed here rather than with the generated PageProps (lint runs without typegen). */
+export interface AnimeTabProps {
+  readonly params: Promise<{ slug: string }>;
+}
+
 function ComingSoon({ segment }: { readonly segment: AnimeTabSegment }) {
   return (
     <div className="ol-state">
