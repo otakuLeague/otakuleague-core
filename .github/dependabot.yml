@@ -18,7 +18,8 @@ updates:
     directory: '/'
     schedule:
       interval: weekly
-    # A release must be a week old before a PR proposes it.
+    # A release must be a week old before a PR proposes it (supply-chain protection). Security
+    # updates skip this cooldown by design, so a fix for an advisory comes at once (OTA-131).
     cooldown:
       default-days: 7
     ignore:
