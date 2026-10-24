@@ -1,7 +1,8 @@
 /*
  * OtakuLeague design tokens: docs/design/anime-page/tokens.css (generated from tokens.json),
- * with two web-app changes: the light theme also follows the visitor's system setting, and the
- * font families come from next/font (app/layout.tsx), which defines the --font-*-face names.
+ * with three web-app changes: the light theme also follows the visitor's system setting, the
+ * font families come from next/font (app/layout.tsx), which defines the --font-*-face names, and
+ * the anime status and season colours (OTA-97; tokens.test.ts checks their contrast).
  */
 :root,
 [data-theme='dark'] {
@@ -22,6 +23,11 @@
   --score-low: #e8743b;
   --good: #5fd38a;
   --bad: #ff7a6b;
+  --status-hiatus: #e8743b;
+  --season-spring: #7ee08f;
+  --season-summer: #ffcf5a;
+  --season-fall: #ff9a5a;
+  --season-winter: #9fd8ff;
   color-scheme: dark;
 }
 [data-theme='light'] {
@@ -42,6 +48,11 @@
   --score-low: #b54a12;
   --good: #1b6e3c;
   --bad: #b3321f;
+  --status-hiatus: #9c3d0e;
+  --season-spring: #1c6b34;
+  --season-summer: #7a5a00;
+  --season-fall: #a3410f;
+  --season-winter: #1d5e8c;
   color-scheme: light;
 }
 /* "Bookstore" when the visitor's system is light, unless a page forces the dark theme. */
@@ -64,8 +75,25 @@
     --score-low: #b54a12;
     --good: #1b6e3c;
     --bad: #b3321f;
+    --status-hiatus: #9c3d0e;
+    --season-spring: #1c6b34;
+    --season-summer: #7a5a00;
+    --season-fall: #a3410f;
+    --season-winter: #1d5e8c;
     color-scheme: light;
   }
+}
+/*
+ * Anime status chips (OTA-97). Aliases of the feedback colours, so each theme's values come from
+ * above; declared on every themed element so a nested theme re-resolves. --status-hiatus has its
+ * own values: the light --score-low is under 4.5:1 on a chip's tinted fill.
+ */
+:root,
+[data-theme] {
+  --status-airing: var(--good);
+  --status-finished: var(--score-high);
+  --status-upcoming: var(--xp-gold);
+  --status-cancelled: var(--bad);
 }
 :root {
   --font-display:
