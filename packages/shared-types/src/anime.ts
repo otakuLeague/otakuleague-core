@@ -207,3 +207,12 @@ export interface AnimeFranchise {
   readonly mainLine: readonly FranchiseSeason[];
   readonly related: readonly FranchiseRelatedGroup[];
 }
+
+/**
+ * GET /anime/slugs/:slug/resolve (OTA-97): which anime a slug names, from the database only,
+ * never a source call, so the web app can redirect before anything renders.
+ */
+export interface AnimeSlugResolution {
+  readonly anilistId: number;
+  readonly canonicalSlug: string;
+}

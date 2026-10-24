@@ -1,0 +1,42 @@
+/* Anime page frame (OTA-97). The header and sticky bar styles come in the next PR. */
+
+.anime-page {
+  min-height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.anime-header {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+}
+
+.anime-header__title {
+  font: 700 clamp(28px, 4vw, 44px) / 1.1 var(--font-display);
+  overflow-wrap: anywhere;
+}
+
+.anime-header__subtitle {
+  color: var(--muted);
+}
+
+/* Route tabs are links: the open one carries aria-current="page", styled like a selected tab. */
+.ol-tab[aria-current='page'] {
+  color: var(--ink);
+}
+.ol-tab[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: -1px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.anime-page__tab {
+  padding: var(--space-6) var(--space-4);
+}

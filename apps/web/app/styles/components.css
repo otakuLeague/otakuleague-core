@@ -1,0 +1,590 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
+
+/* OtakuLeague components. Every colour comes from tokens.css; an anime page overrides --accent
+   (and --accent-ink, --on-accent) on its root element with the cover colour. */
+
+.ol-root {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--ground);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.ol-root *,
+.ol-root *::before,
+.ol-root *::after {
+  box-sizing: border-box;
+}
+.ol-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ol-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---------- Button ---------- */
+.ol-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: 600 15px/1 var(--font-sans);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ol-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ol-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.ol-btn--primary:hover {
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 20px color-mix(in oklab, var(--accent) 45%, transparent);
+  transform: translateY(-1px);
+}
+.ol-btn--secondary {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--border);
+}
+.ol-btn--secondary:hover {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ol-btn--ghost {
+  background: transparent;
+  color: var(--accent-ink);
+}
+.ol-btn--ghost:hover {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.ol-btn--game {
+  background: var(--neon-magenta);
+  color: var(--ground);
+}
+.ol-btn--game:hover {
+  box-shadow: 0 0 20px color-mix(in oklab, var(--neon-magenta) 50%, transparent);
+  transform: translateY(-1px);
+}
+.ol-btn--sm {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: 13px;
+}
+.ol-btn:disabled,
+.ol-btn[aria-disabled='true'] {
+  background: var(--surface-2);
+  color: var(--faint);
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ol-btn {
+    transition: none;
+  }
+  .ol-btn:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Chip, score, badges ---------- */
+.ol-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--muted);
+  font: 500 13px/1 var(--font-sans);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+a.ol-chip:hover,
+button.ol-chip:hover {
+  color: var(--ink);
+  border-color: var(--border);
+  cursor: pointer;
+}
+.ol-chip--accent {
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  color: var(--accent-ink);
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.ol-chip--spoiler {
+  position: relative;
+  color: transparent;
+  text-shadow: 0 0 8px var(--muted);
+  cursor: pointer;
+}
+.ol-chip--spoiler::after {
+  content: 'Spoiler';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-shadow: none;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ol-chip--spoiler[aria-pressed='true'] {
+  color: var(--muted);
+  text-shadow: none;
+}
+.ol-chip--spoiler[aria-pressed='true']::after {
+  content: none;
+}
+
+.ol-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font: 600 14px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--band);
+  background: color-mix(in oklab, var(--band) 16%, var(--surface));
+}
+.ol-score::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--band);
+}
+.ol-score[data-band='high'] {
+  --band: var(--score-high);
+}
+.ol-score[data-band='mid'] {
+  --band: var(--score-mid);
+}
+.ol-score[data-band='low'] {
+  --band: var(--score-low);
+}
+.ol-score--lg {
+  height: 44px;
+  padding: 0 14px;
+  font-size: 28px;
+}
+.ol-score--lg::before {
+  width: 10px;
+  height: 10px;
+}
+
+.ol-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font: 600 11px/1 var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ol-badge--new {
+  background: var(--neon-magenta);
+  color: var(--ground);
+}
+.ol-badge--rank {
+  background: color-mix(in oklab, var(--xp-gold) 18%, var(--surface));
+  color: var(--xp-gold);
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+}
+.ol-badge--airing {
+  background: color-mix(in oklab, var(--good) 16%, var(--surface));
+  color: var(--good);
+}
+.ol-badge--upcoming {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+/* ---------- Tabs ---------- */
+.ol-tabs {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.ol-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ol-tab {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) 14px;
+  color: var(--muted);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: 600 12px/16px var(--font-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ol-tab:hover {
+  color: var(--ink);
+}
+.ol-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+.ol-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.ol-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: -1px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ol-tab__count {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0;
+  color: var(--faint);
+}
+
+/* ---------- Season selector ---------- */
+.ol-season {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-sans);
+}
+.ol-season__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font: 600 15px/1 var(--font-sans);
+  cursor: pointer;
+}
+.ol-season__trigger:hover,
+.ol-season__trigger[aria-expanded='true'] {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ol-season__trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ol-season__year {
+  font: 500 13px/1 var(--font-mono);
+  color: var(--muted);
+}
+.ol-season__chev {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
+}
+.ol-season__list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-1);
+  min-width: 280px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+.ol-season__item {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 15px;
+}
+.ol-season__item:hover {
+  background: var(--surface-2);
+}
+.ol-season__item small {
+  font: 500 12px/1 var(--font-mono);
+  color: var(--muted);
+}
+.ol-season__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ol-season__item[aria-current='true'] {
+  background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+}
+.ol-season__item[aria-current='true'] .ol-season__dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.ol-season__item--upcoming {
+  color: var(--muted);
+}
+
+/* ---------- Anime card ---------- */
+.ol-anime-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 168px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.ol-anime-card__cover {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  max-width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+  transition:
+    outline-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.ol-anime-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ol-anime-card:hover .ol-anime-card__cover,
+.ol-anime-card:focus-visible .ol-anime-card__cover {
+  outline: 2px solid var(--card-accent, var(--accent));
+  box-shadow: 0 0 24px
+    color-mix(in oklab, var(--card-accent, var(--accent)) 40%, transparent);
+  transform: translateY(-2px);
+}
+.ol-anime-card:focus-visible {
+  outline: none;
+}
+.ol-anime-card__badges {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+.ol-anime-card__badges .ol-score {
+  height: 24px;
+  font-size: 13px;
+  background: color-mix(in oklab, var(--ground) 80%, transparent);
+  backdrop-filter: blur(6px);
+}
+.ol-anime-card__title {
+  margin: 0;
+  font: 700 15px/20px var(--font-display);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ol-anime-card__meta {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ol-anime-card__cover {
+    transition: none;
+  }
+  .ol-anime-card:hover .ol-anime-card__cover {
+    transform: none;
+  }
+}
+
+/* ---------- Character card (character + voice actor) ---------- */
+.ol-char-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.ol-char-card__side {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  min-width: 0;
+}
+.ol-char-card__side--va {
+  grid-template-columns: minmax(0, 1fr) 56px;
+  text-align: right;
+  border-left: 1px solid var(--border);
+}
+.ol-char-card__img {
+  width: 56px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  object-fit: cover;
+}
+.ol-char-card__name {
+  margin: 0;
+  font: 700 15px/20px var(--font-display);
+  overflow-wrap: anywhere;
+}
+.ol-char-card__role {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+.ol-char-card__fav {
+  margin: 4px 0 0;
+  font: 500 12px/1 var(--font-mono);
+  color: var(--neon-magenta);
+}
+
+/* ---------- Tooltip ---------- */
+.ol-tooltip {
+  position: relative;
+  display: inline-block;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.ol-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--ink);
+  transform: translateX(-50%) rotate(45deg);
+}
+.ol-tooltip strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* ---------- Skeleton ---------- */
+.ol-skel {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in oklab, var(--surface-2) 60%, var(--ink) 8%) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: ol-shimmer 1.4s ease-in-out infinite;
+}
+.ol-skel--cover {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+}
+@keyframes ol-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ol-skel {
+    animation: none;
+  }
+}
+
+/* ---------- Empty and error states ---------- */
+.ol-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 420px;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+}
+.ol-state__mark {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  font: 600 18px/1 var(--font-mono);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.ol-state--error {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--bad) 40%, transparent);
+}
+.ol-state--error .ol-state__mark {
+  background: color-mix(in oklab, var(--bad) 16%, var(--surface));
+  color: var(--bad);
+}
+.ol-state__title {
+  margin: 0;
+  font: 700 18px/24px var(--font-display);
+}
+.ol-state__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--muted);
+}

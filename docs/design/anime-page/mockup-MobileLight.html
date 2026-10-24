@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Anime page on a phone, season list open, light theme</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ds/otakuleague/tokens.css" />
+    <link rel="stylesheet" href="ds/otakuleague/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Instrument+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+          }
+          a {
+            color: var(--accent-ink);
+          }
+          a:hover {
+            color: var(--ink);
+          }
+        </style>
+      </helmet>
+      <div
+        class="ol-root"
+        data-theme="light"
+        style="--accent: {{accent}}; --accent-ink: {{accentInk}}; position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--font-sans);"
+      >
+        <div
+          style="
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 6px 18px rgba(33, 28, 43, 0.08);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 10px 16px 4px;
+            "
+          >
+            <div
+              role="img"
+              aria-label="Attack on Titan cover"
+              style="
+                flex: none;
+                width: 28px;
+                height: 42px;
+                border-radius: var(--radius-sm);
+                background: color-mix(
+                  in oklab,
+                  var(--accent) 45%,
+                  var(--surface-2)
+                );
+                outline: 1px solid var(--accent);
+              "
+            ></div>
+            <div style="flex: 1; min-width: 0">
+              <p
+                style="
+                  margin: 0;
+                  font: 700 17px/22px var(--font-display);
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                "
+              >
+                Attack on Titan
+              </p>
+              <p style="margin: 0; font-size: 12px; color: var(--muted)">
+                Season 1 · 2013
+              </p>
+            </div>
+            <span class="ol-score" data-band="high">8.4</span>
+          </div>
+          <nav
+            class="ol-tabs"
+            aria-label="Anime sections"
+            style="padding: 0 8px; border-bottom: 0"
+          >
+            <a class="ol-tab" aria-selected="false" href="#">Overview</a>
+            <a class="ol-tab" aria-selected="true" aria-current="page" href="#"
+              >Episodes <span class="ol-tab__count">25</span></a
+            >
+            <a class="ol-tab" aria-selected="false" href="#">Cast &amp; Crew</a>
+            <a class="ol-tab" aria-selected="false" href="#">Music</a>
+          </nav>
+        </div>
+
+        <div
+          style="
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          "
+          aria-hidden="true"
+        >
+          <span class="ol-skel" style="height: 20px; width: 40%"></span>
+          <span
+            class="ol-skel"
+            style="height: 56px; width: 100%; border-radius: var(--radius-md)"
+          ></span>
+          <span
+            class="ol-skel"
+            style="height: 56px; width: 100%; border-radius: var(--radius-md)"
+          ></span>
+          <span
+            class="ol-skel"
+            style="height: 56px; width: 100%; border-radius: var(--radius-md)"
+          ></span>
+        </div>
+
+        <div
+          aria-hidden="true"
+          style="
+            position: absolute;
+            inset: 0;
+            background: rgba(33, 28, 43, 0.45);
+          "
+        ></div>
+
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="season-sheet-title"
+          style="
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            padding: 8px 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 -12px 32px rgba(33, 28, 43, 0.18);
+          "
+        >
+          <span
+            aria-hidden="true"
+            style="
+              align-self: center;
+              width: 40px;
+              height: 4px;
+              border-radius: var(--radius-pill);
+              background: var(--border);
+              margin-bottom: 8px;
+            "
+          ></span>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <h2
+              id="season-sheet-title"
+              style="margin: 0; font: 700 20px/26px var(--font-display)"
+            >
+              Seasons
+            </h2>
+            <button
+              class="ol-btn ol-btn--ghost ol-btn--sm"
+              style="color: var(--muted)"
+            >
+              Close
+            </button>
+          </div>
+          <ul
+            class="ol-season__list"
+            role="listbox"
+            style="
+              margin: 0;
+              min-width: 0;
+              border: 0;
+              box-shadow: none;
+              padding: 0;
+              background: transparent;
+            "
+          >
+            <li>
+              <a
+                class="ol-season__item"
+                href="#"
+                aria-current="true"
+                style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Season 1<small
+                  >2013</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Season 2<small
+                  >2017</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Season 3<small
+                  >2018</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Season 3 Part 2<small
+                  >2019</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Final Season<small
+                  >2020</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>Final Season Part 2<small
+                  >2022</small
+                ></a
+              >
+            </li>
+            <li>
+              <a class="ol-season__item" href="#" style="min-height: 44px"
+                ><span class="ol-season__dot"></span>The Final Chapters<small
+                  >2023</small
+                ></a
+              >
+            </li>
+          </ul>
+          <a
+            href="#"
+            style="font-size: 14px; font-weight: 600; padding: 8px 12px"
+            >Movies, OVAs and specials are in Related &amp; Media</a
+          >
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"accent":{"editor":"color","default":"#f1a143","options":["#f1a143","#a1c6e4","#e4504d","#4fd1b5"]},"$preview":{"width":390,"height":844}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const inks = { '#f1a143': '#9a4f00', '#a1c6e4': '#2d5f86', '#e4504d': '#a8231f', '#4fd1b5': '#0b6b59' };
+          const accent = this.props.accent ?? '#f1a143';
+          return { accent, accentInk: inks[accent] ?? '#0b6b59' };
+        }
+      }
+    </script>
+  </body>
+</html>

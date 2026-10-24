@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Anime page, scrolled with sticky bar</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ds/otakuleague/tokens.css" />
+    <link rel="stylesheet" href="ds/otakuleague/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Instrument+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap"
+        />
+        <style>
+          body {
+            margin: 0;
+          }
+          a {
+            color: var(--accent-ink);
+          }
+          a:hover {
+            color: var(--ink);
+          }
+          .st-tab {
+            display: inline-flex;
+            align-items: center;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 10px;
+            font: 500 13px/1 var(--font-sans);
+            color: var(--muted);
+            text-decoration: none;
+          }
+          .st-tab:hover {
+            color: var(--ink);
+          }
+          .st-tab[aria-current='page'] {
+            color: var(--accent-ink);
+            background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+          }
+          .st-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: var(--radius-pill);
+            font: 600 11px/1 var(--font-sans);
+            white-space: nowrap;
+          }
+        </style>
+      </helmet>
+      <div
+        class="ol-root"
+        data-theme="dark"
+        style="--accent: {{accent}}; --accent-ink: {{accent}}; min-height: 720px; background: var(--ground); color: var(--ink); font-family: var(--font-sans);"
+      >
+        <div
+          style="
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: color-mix(in oklab, var(--surface) 90%, transparent);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+          "
+        >
+          <div
+            aria-hidden="true"
+            style="
+              height: 2px;
+              width: 46%;
+              background: var(--accent);
+              box-shadow: 0 0 10px var(--accent);
+            "
+          ></div>
+          <div
+            style="
+              max-width: 1360px;
+              margin: 0 auto;
+              padding: 8px max(16px, 2vw);
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              flex-wrap: wrap;
+            "
+          >
+            <div
+              role="img"
+              aria-label="Attack on Titan cover"
+              style="
+                flex: none;
+                width: 34px;
+                height: 48px;
+                border-radius: 6px;
+                background: color-mix(
+                  in oklab,
+                  var(--accent) 35%,
+                  var(--surface-2)
+                );
+                outline: 1px solid
+                  color-mix(in oklab, var(--accent) 70%, transparent);
+              "
+            ></div>
+            <div
+              style="
+                flex: 1 1 420px;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+              "
+            >
+              <p
+                style="
+                  margin: 0;
+                  font: 700 16px/20px var(--font-display);
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                "
+              >
+                Attack on Titan
+              </p>
+              <div style="display: flex; gap: 5px; flex-wrap: wrap">
+                <span
+                  class="st-chip"
+                  style="
+                    color: #8fb4ff;
+                    background: color-mix(
+                      in oklab,
+                      #8fb4ff 14%,
+                      var(--surface)
+                    );
+                  "
+                  >Finished</span
+                >
+                <span
+                  class="st-chip"
+                  style="color: var(--ink); background: var(--surface-2)"
+                  >TV</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: #7ee08f;
+                    background: color-mix(
+                      in oklab,
+                      #7ee08f 14%,
+                      var(--surface)
+                    );
+                  "
+                  >Spring 2013</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--ink);
+                    background: var(--surface-2);
+                    font-family: var(--font-mono);
+                  "
+                  >25 eps</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--xp-gold);
+                    background: color-mix(
+                      in oklab,
+                      var(--xp-gold) 14%,
+                      var(--surface)
+                    );
+                    font-family: var(--font-mono);
+                  "
+                  >★ 84</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--muted);
+                    background: var(--surface-2);
+                    font-family: var(--font-mono);
+                  "
+                  >#12 · #5</span
+                >
+                <span
+                  class="st-chip"
+                  style="
+                    color: var(--neon-magenta);
+                    background: color-mix(
+                      in oklab,
+                      var(--neon-magenta) 12%,
+                      var(--surface)
+                    );
+                    font-family: var(--font-mono);
+                  "
+                  >♥ 110K</span
+                >
+              </div>
+            </div>
+            <nav
+              aria-label="Anime sections"
+              style="display: flex; gap: 2px; flex-wrap: wrap"
+            >
+              <a class="st-tab" href="#">Overview</a>
+              <a class="st-tab" href="#" aria-current="page">Episodes</a>
+              <a class="st-tab" href="#">Cast &amp; Crew</a>
+              <a class="st-tab" href="#">Music</a>
+              <a class="st-tab" href="#">Related &amp; Media</a>
+              <a class="st-tab" href="#">Stats</a>
+              <a class="st-tab" href="#">Community</a>
+            </nav>
+            <div style="display: flex; gap: 8px">
+              <button
+                class="ol-btn ol-btn--sm"
+                aria-label="Add to Favourites"
+                style="
+                  width: 36px;
+                  padding: 0;
+                  color: var(--neon-magenta);
+                  background: color-mix(
+                    in oklab,
+                    var(--neon-magenta) 10%,
+                    transparent
+                  );
+                  border: 1px solid
+                    color-mix(in oklab, var(--neon-magenta) 45%, transparent);
+                "
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                class="ol-btn ol-btn--sm"
+                aria-label="Add to List"
+                style="
+                  width: 36px;
+                  padding: 0;
+                  color: var(--accent-ink);
+                  background: color-mix(
+                    in oklab,
+                    var(--accent) 10%,
+                    transparent
+                  );
+                  border: 1px solid
+                    color-mix(in oklab, var(--accent) 45%, transparent);
+                "
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <main
+          style="
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px max(16px, 3vw) 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: baseline;
+              justify-content: space-between;
+              gap: 16px;
+              flex-wrap: wrap;
+            "
+          >
+            <h2 style="margin: 0; font: 700 24px/30px var(--font-display)">
+              Episodes
+            </h2>
+            <p style="margin: 0; font-size: 13px; color: var(--muted)">
+              Tab content designed in OTA-102. Shown loading here to keep the
+              focus on the bar.
+            </p>
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              border-radius: var(--radius-lg);
+              background: var(--surface);
+              border: 1px solid var(--border);
+              overflow: hidden;
+            "
+          >
+            <sc-for list="{{rows}}" as="row" hint-placeholder-count="6">
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 56px minmax(0, 1fr) 120px 72px;
+                  gap: 16px;
+                  align-items: center;
+                  padding: 14px 20px;
+                  border-bottom: 1px solid var(--border);
+                "
+              >
+                <span
+                  class="ol-num"
+                  style="color: var(--muted); font-size: 14px"
+                  >{{row.n}}</span
+                >
+                <span
+                  class="ol-skel"
+                  style="height: 14px; width: {{row.w}};"
+                ></span>
+                <span class="ol-skel" style="height: 12px; width: 88px"></span>
+                <span class="ol-skel" style="height: 24px; width: 56px"></span>
+              </div>
+            </sc-for>
+          </div>
+        </main>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"accent":{"editor":"color","default":"#4fd1b5","options":["#4fd1b5","#f1a143","#a1c6e4","#e4504d"]},"$preview":{"width":1440,"height":720}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const widths = ['72%', '58%', '80%', '64%', '70%', '52%'];
+          return {
+            accent: this.props.accent ?? '#4fd1b5',
+            rows: widths.map((w, i) => ({ n: String(i + 1).padStart(2, '0'), w }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
