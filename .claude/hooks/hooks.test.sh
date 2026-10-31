@@ -186,7 +186,7 @@ expect_configured 0 "Edit|Write|MultiEdit|NotebookEdit" "Edit .env.example" "$(f
 
 # Scripts that lost their executable bit still run (bash <script>), so they still block.
 mkdir -p "$SCRATCH/noexec/.claude/hooks"
-cp "$HOOKS/protect-env.sh" "$HOOKS/block-ai-attribution.sh" "$SCRATCH/noexec/.claude/hooks/"
+cp "$HOOKS/protect-env.sh" "$HOOKS/block-ai-attribution.sh" "$HOOKS/guard-git.sh" "$SCRATCH/noexec/.claude/hooks/"
 chmod -x "$SCRATCH/noexec/.claude/hooks/"*.sh
 expect_configured 2 Bash "not executable: write .env" "$(bash_input 'echo A=1 >> .env')" "$SCRATCH/noexec"
 expect_configured 0 Bash "not executable: plain command" "$(bash_input 'pnpm test')" "$SCRATCH/noexec"
@@ -224,6 +224,35 @@ done
 for command in 'git stash' 'git stash push -m wip' 'git stash list' 'git stash pop' \
   'git stash show -p stash@{0}' 'git stash apply'; do
   expect_denied 0 "$command"
+done
+
+
+# --- guard-git: force-push, push to main, --no-verify (OTA-132) ---
+for command in 'git push -f' 'git push --force origin feat/x' 'git push --force-with-lease' 'git push -uf origin feat/x' \
+  'git push origin +feat/x' 'git push origin main' 'git push origin HEAD:main' 'git push origin HEAD:refs/heads/main' \
+  'git push upstream master' 'git status && git push -f' 'git commit --no-verify -m x' 'git push --no-verify' \
+  'git push origin :feat/x' 'git push --delete origin feat/x' 'git push --mirror'; do
+  expect 2 guard-git.sh "$command" "$(bash_input "$command")"
+done
+for command in 'git push' 'git push -u origin feat/OTA-1-x' 'git push origin feat/maintenance' 'git status' \
+  'git log --oneline main' 'git checkout main' 'git pull origin main' 'echo git push -f is blocked' 'pnpm test'; do
+  expect 0 guard-git.sh "$command" "$(bash_input "$command")"
+done
+expect_configured 2 Bash "force-push through settings" "$(bash_input 'git push --force')" "$HOOKS/../.."
+
+# --- format-on-edit and notify never block ---
+expect 0 format-on-edit.sh "missing file" "$(file_input Edit /repo/does-not-exist.ts)"
+expect 0 format-on-edit.sh "file outside the project" "$(file_input Write /etc/hosts)" CLAUDE_PROJECT_DIR=/nonexistent
+expect 0 notify.sh "Stop event" '{"hook_event_name":"Stop"}' OTAKU_NOTIFY=0
+expect 0 notify.sh "Notification event" '{"hook_event_name":"Notification","message":"hi \"there\""}'
+
+# --- status line and autopilot scripts parse ---
+line=$(printf '%s' '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":72.4},"workspace":{"current_dir":"/tmp"}}' | bash "$HOOKS/../statusline.sh")
+[[ "$line" == "[Opus] ctx 72% → /clear or /compact"* ]]
+record 0 $? "statusline: high context hint"
+for script in "$HOOKS"/../../scripts/autopilot/*.sh; do
+  bash -n "$script"
+  record 0 $? "syntax: ${script##*/}"
 done
 
 echo "hooks: $((count - failures))/$count passed"

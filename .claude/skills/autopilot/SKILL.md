@@ -1,0 +1,21 @@
+---
+name: autopilot
+description: One unattended build run. Picks the next v1 Linear ticket, designs or builds it, ships a PR and, if allowed, merges it when CI is green. Used by the scheduled autopilot task; can also be run by hand.
+disable-model-invocation: true
+---
+You are running unattended: nobody will answer questions. Decide, record the decision, keep going. Follow CLAUDE.md and the token rules strictly; this run has a limited budget.
+
+0. **Config:** read `docs/AUTOPILOT.md`. If `enabled: false`, reply "autopilot disabled" and stop. Read `docs/PROGRESS.md`. `git fetch origin main` and start from an up-to-date `main`.
+1. **Fix before build:** list open PRs with the `autopilot` label (`gh api repos/otakuLeague/otakuleague-core/issues?labels=autopilot&state=open`). If one has red CI or review comments from Farouk, check out its branch, address them, push, and stop after that (one thing per run). If open autopilot PRs ≥ `max_open_prs`, stop with a one-line note.
+2. **Pick one ticket** in Linear project "v1 Launch": label `v1`, none of `skip_labels`, state Backlog/Todo, all `blockedBy` done; earliest milestone first, then priority. With `design_first`, Design tickets block their Build tickets in Linear, so the blockedBy rule already orders them; never start a Build ticket whose Design ticket is not Done. Tickets whose description needs human account steps (Railway, Vercel, DNS): add `needs-human` with a comment listing the exact steps, and pick another.
+3. **Start:** ticket → In Progress, comment "Autopilot run started". Branch `type/OTA-<n>-<short-name>`.
+4. **Do the work:**
+   - "Design:" tickets: follow the `design` skill.
+   - Everything else: plan in ≤ 8 bullets (use the explorer subagent for unknown areas; the architect subagent + an ADR for a new module or data model), then implement with tests. Parity reference: `docs/PARITY.md`; read the old repo (`NasriFarouk/OtakuLeague`, attach read-only if needed) only for a specific file it points to.
+   - Too big for one PR (> ~400 lines)? Ship the first coherent slice, and note the rest on the ticket.
+   - A product or taste question you can't settle from the ticket, PARITY.md, ADRs or mockups: pick the option closest to the old site's behaviour, write it under "Decisions" in the PR body, and add a Linear comment. Only add `needs-human` if both options are irreversible or expensive.
+5. **Ship:** run the `ship` skill steps 1–8. Add the `autopilot` label to the PR (`gh api -X POST repos/otakuLeague/otakuleague-core/issues/<pr>/labels -f 'labels[]=autopilot'`).
+6. **Merge (only if `automerge: true`):** wait for CI (poll `gh pr checks <pr>` every 60 s, up to 20 min). Merge only if every check passed, the review had no unresolved Critical, and the diff touches none of the protected paths in `docs/AUTOPILOT.md`. Squash-merge through the REST API: `gh api -X PUT repos/otakuLeague/otakuleague-core/pulls/<pr>/merge -f merge_method=squash`. Then ticket → Done. Otherwise ticket → In Review.
+7. **Report:** Linear comment on the ticket and a final reply, both ≤ 6 lines: what was done, PR link, merged or waiting, decisions taken, what the next run will pick.
+
+Stop rules: never more than `tickets_per_run` tickets; never push to main directly; if the same step fails twice, stop, comment the failure on the ticket and leave the branch pushed.
