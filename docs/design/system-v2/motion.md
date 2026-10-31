@@ -31,7 +31,7 @@ Tokens live in `apps/web/app/styles/tokens.css`; the glass utility in `component
 ## Glass (`.ol-glass`)
 
 - Solid `--surface` + `--border` by default. Where `backdrop-filter` is supported: surface at `--glass-tint` (72 %) over a `--glass-blur` (16 px) + `--glass-saturate` (1.4) backdrop. `prefers-reduced-transparency: reduce` goes back to solid.
-- Works in both themes because the tint is mixed from the theme's own `--surface`; text on it stays `--ink` / `--muted` (contrast is checked against the solid fallback, the worst case being a bright cover behind it, see the mockup).
+- Works in both themes because the tint is mixed from the theme's own `--surface`; text on it stays `--ink` / `--muted`. Check contrast with a bright backdrop behind it (the mockup's worst case); raise `--glass-tint` before lowering the blur if it fails.
 - Use on small, static, overlaying elements: sticky header, sticky anime bar, menus, score badges on covers. Never animate the blur, never a full-screen glass layer, at most a few on screen (each one repaints what scrolls under it, which costs most in Safari).
 - Safari needs the `-webkit-` prefix, which the utility includes. Frosted only when both `backdrop-filter` and `color-mix()` are supported.
 - Existing exception: the score badge on anime cards keeps its own 6 px blur over a mostly opaque tint (OTA-91); move it to `.ol-glass` only if the Build ticket touches the card.
