@@ -16,7 +16,8 @@ function clearThemeCookie(): void {
 function runBootScript(): void {
   // The script is a static string from our own module (it ships inline in <head>), never input.
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  new Function(THEME_BOOT_SCRIPT)();
+  const boot = new Function(THEME_BOOT_SCRIPT) as () => void;
+  boot();
 }
 
 describe('theme preference', () => {
