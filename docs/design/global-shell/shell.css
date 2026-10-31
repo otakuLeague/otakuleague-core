@@ -343,6 +343,7 @@ body {
 }
 .sh-avatar {
   background: linear-gradient(135deg, #3a2f5c, #1f4f5a);
+  color: #ece9f3;
   font: 700 14px/1 var(--font-display);
   letter-spacing: 0.02em;
 }
@@ -593,6 +594,9 @@ body {
   .sh-main {
     padding: var(--space-6) var(--space-4) var(--space-10);
   }
+  .sh-sug__foot > span {
+    display: none;
+  }
   .sh-err {
     padding: var(--space-10) var(--space-4);
   }
@@ -685,6 +689,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 28px;
   overflow: hidden;
+  color: var(--ink);
+  background: var(--ground);
   position: relative;
 }
 .demo-phone > .sh {

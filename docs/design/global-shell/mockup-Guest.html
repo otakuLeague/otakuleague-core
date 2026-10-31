@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Global shell: guest, header search open</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: guest on /season, typing "mono" in the header search; first suggestion selected with the keyboard. Long title and missing score are the worst cases from the fixtures. -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season" aria-current="page">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search" data-open>
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" value="mono" role="combobox" aria-expanded="true" aria-controls="sug" aria-activedescendant="sug-0" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+              <div class="sh-pop sh-sug ol-glass">
+                <ul role="listbox" id="sug" aria-label="Suggestions">
+                  <li><a class="sh-sug__row" role="option" id="sug-0" aria-selected="true" href="/anime/0">
+                    <span class="sh-sug__cover" style="--c1: #4b3f78; --c2: #1d2b45" aria-hidden="true"></span>
+                    <span class="sh-sug__title">Monogatari Series: Off &amp; Monster Season — the Final Chapter of an Overly Long Title<span class="sh-sug__meta">ONA · 2024 · Finished</span></span>
+                    <span class="ol-score ol-num" data-band="high">84</span>
+                  </a></li>
+                  <li><a class="sh-sug__row" role="option" id="sug-1" aria-selected="false" href="/anime/1">
+                    <span class="sh-sug__cover" style="--c1: #6b2f4f; --c2: #21182a" aria-hidden="true"></span>
+                    <span class="sh-sug__title">Bake<mark>mono</mark>gatari<span class="sh-sug__meta">TV · 2009 · Finished</span></span>
+                    <span class="ol-score ol-num" data-band="high">83</span>
+                  </a></li>
+                  <li><a class="sh-sug__row" role="option" id="sug-2" aria-selected="false" href="/anime/2">
+                    <span class="sh-sug__cover" style="--c1: #2f5b6b; --c2: #1a1f2a" aria-hidden="true"></span>
+                    <span class="sh-sug__title">Nise<mark>mono</mark>gatari<span class="sh-sug__meta">TV · 2012 · Finished</span></span>
+                    <span class="ol-score ol-num" data-band="high">80</span>
+                  </a></li>
+                  <li><a class="sh-sug__row" role="option" id="sug-3" aria-selected="false" href="/anime/3">
+                    <span class="sh-sug__cover" style="--c1: #5b4f2a; --c2: #22201a" aria-hidden="true"></span>
+                    <span class="sh-sug__title"><mark>Mono</mark>gatari Series: Second Season<span class="sh-sug__meta">TV · 2013 · Finished</span></span>
+                    <span class="ol-score ol-num" data-band="high">88</span>
+                  </a></li>
+                  <li><a class="sh-sug__row" role="option" id="sug-4" aria-selected="false" href="/anime/4">
+                    <span class="sh-sug__cover" style="--c1: #3f2a2a; --c2: #1a1414" aria-hidden="true"></span>
+                    <span class="sh-sug__title">Kizu<mark>mono</mark>gatari<span class="sh-sug__meta">Movie · 2016</span></span>
+                    <span class="sh-sug__meta">No score</span>
+                  </a></li>
+                </ul>
+                <div class="sh-sug__foot"><span><kbd class="sh-kbd">↑</kbd> <kbd class="sh-kbd">↓</kbd> to move · <kbd class="sh-kbd">↵</kbd> to open</span><a href="/search?q=mono">All results for “mono” →</a></div>
+              </div>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm" href="/auth?mode=sign-in">Sign in</a>
+            <a class="ol-btn ol-btn--primary ol-btn--sm sh-only-desktop" href="/auth?mode=sign-up">Sign up</a>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-main">
+        <div class="sh-ph">Page content (Seasonal, OTA-137)</div>
+      </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
+
+    </div>
+  </body>
+</html>
