@@ -596,7 +596,8 @@ button.ol-chip:hover {
   background: var(--surface);
   border: 1px solid var(--border);
 }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
+  (color: color-mix(in oklab, red, blue)) {
   .ol-glass {
     background: color-mix(in oklab, var(--surface) var(--glass-tint), transparent);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
