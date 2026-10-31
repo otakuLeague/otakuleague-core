@@ -1,6 +1,6 @@
 # Autopilot settings
 
-Read by the `/autopilot` skill at the start of every unattended build run (cloud scheduled task). Edit and push to change its behaviour; no other setup needed.
+Read by the `/autopilot` skill at the start of every unattended build run. The cloud scheduled task "OtakuLeague autopilot" starts a run every hour; a run that hits the plan's usage limit simply stops, and the next run with quota resumes its ticket from the pushed branch. A Linear lock (ticket In Progress with label `autopilot`, updated < 90 min ago) keeps runs from overlapping. Edit and push to change its behaviour; no other setup needed.
 
 ```yaml
 enabled: true          # false = every run stops immediately

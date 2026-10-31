@@ -9,7 +9,7 @@ Model: `opusplan` (Opus plans, Sonnet executes). The status line shows model · 
 ## What runs without you
 | What | When | Where | Cost |
 |---|---|---|---|
-| **Autopilot builder** (cloud scheduled task "OtakuLeague autopilot") | 02:37 and 13:37 Paris, daily | Anthropic cloud, works with the Mac off | Max plan usage; one ticket per run |
+| **Autopilot builder** (cloud scheduled task "OtakuLeague autopilot") | every hour; stops when plan usage runs out, resumes when it's back | Anthropic cloud, works with the Mac off | Max plan usage; one ticket per run |
 | Nightly digest (`scripts/autopilot/nightly.sh`, launchd) | 06:47 daily (on wake if asleep) | `~/OtakuLeague/digests/YYYY-MM-DD.md` + notification | Checks free; one capped Haiku call |
 | Sunday review (`weekly.sh`, launchd) | Sun 18:13 | `~/OtakuLeague/digests/weekly-YYYY-MM-DD.md` | One capped Sonnet call |
 | CI (GitHub Actions) | every PR and push to main | GitHub | free |
