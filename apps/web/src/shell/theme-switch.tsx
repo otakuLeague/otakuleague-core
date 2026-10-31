@@ -8,6 +8,7 @@ import {
   type ThemePreference,
   adjacentTheme,
   applyThemePreference,
+  parseThemePreference,
   themeFromCookieHeader,
 } from './theme';
 
@@ -46,7 +47,11 @@ export function ThemeSwitch({ label = 'Theme' }: { label?: string }) {
           : 0;
     if (step === 0) return;
     event.preventDefault();
-    const next = adjacentTheme(preference, step);
+    // Move from the focused radio, which can differ from the selection after a mouse focus.
+    const focused = parseThemePreference(
+      event.target instanceof HTMLElement ? event.target.dataset.value : null,
+    );
+    const next = adjacentTheme(focused, step);
     applyThemePreference(next);
     radios.current[next]?.focus();
   }
@@ -70,6 +75,7 @@ export function ThemeSwitch({ label = 'Theme' }: { label?: string }) {
             }}
             type="button"
             role="radio"
+            data-value={option}
             aria-checked={option === preference}
             tabIndex={option === preference ? 0 : -1}
             onClick={() => applyThemePreference(option)}

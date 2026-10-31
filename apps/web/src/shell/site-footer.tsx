@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Logo } from './logo';
 import { ThemeSwitch } from './theme-switch';
 
 // Links and socials from the old site's footer (PARITY.md §1); legal pages land with OTA-147.
@@ -33,19 +34,6 @@ export const SOCIAL_LINKS = [
     mark: 'Fb',
   },
 ] as const;
-
-export function Logo() {
-  return (
-    <Link className="sh-logo" href="/">
-      <span className="sh-logo__mark" aria-hidden="true">
-        O
-      </span>
-      <span>
-        Otaku<b>League</b>
-      </span>
-    </Link>
-  );
-}
 
 export function SiteFooter() {
   return (

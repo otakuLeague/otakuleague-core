@@ -28,9 +28,13 @@ export function themeFromCookieHeader(cookieHeader: string): ThemePreference {
 }
 
 /** The `document.cookie` assignment that stores a preference; System clears the cookie. */
-export function themeCookieAssignment(preference: ThemePreference): string {
+export function themeCookieAssignment(
+  preference: ThemePreference,
+  secure: boolean,
+): string {
   const maxAge = preference === 'system' ? 0 : ONE_YEAR_SECONDS;
-  return `${THEME_COOKIE}=${preference}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+  const cookie = `${THEME_COOKIE}=${preference}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+  return secure ? `${cookie}; Secure` : cookie;
 }
 
 /** The radio that arrow keys move to, wrapping at both ends like native radios. */
@@ -56,6 +60,9 @@ export function applyThemePreference(preference: ThemePreference): void {
   const root = document.documentElement;
   if (preference === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', preference);
-  document.cookie = themeCookieAssignment(preference);
+  document.cookie = themeCookieAssignment(
+    preference,
+    window.location.protocol === 'https:',
+  );
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
 }

@@ -2,20 +2,21 @@
 
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
 
-Updated: 2026-10-31 (evening)
+Updated: 2026-10-31 (night)
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8): OTA-133, OTA-134, OTA-97. W2 design work running ahead via the autopilot.
+W1 Live skeleton (Nov 2–8): OTA-133, OTA-134, OTA-97. W2 design and shell work running ahead via the autopilot.
 
 ## Last session
-Autopilot run, OTA-151 global shell design (branch `design/OTA-151-global-shell`): mockups in `docs/design/global-shell/` (signed-in + Discover menu, guest + header search, light + account menu, mobile header/sheet/full-screen search, 404/500 + search states), `shell.css` with real transitions and reduced-motion rules, `motion.md` (structure, active section, focus order, ARIA patterns, motion table, static background, a11y check), screenshots in `shots/`. Decisions: Search nav link replaced by the header search box; theme toggle (System/Light/Dark) in account menu, sheet and footer; static gradient + masked grid background.
+Autopilot run, OTA-152 global shell, slice 1 (branch `feat/OTA-152-global-shell`): `--brand-a/--brand-b` and `--header-h` in tokens.css, `app/styles/shell.css`, static background layer, `SiteFooter` (old-site links and socials, contact email, AniList credit) and the System/Light/Dark `ThemeSwitch` (cookie `ol-theme`, inline head script applies it before paint so the root layout stays PPR). Decisions: theme applied by a boot script instead of a server-read cookie (keeps Partial Prerendering); social icons stay letter marks until an icon source is chosen (no new dependency, no npm access in the cloud run).
 
 ## In progress
+- OTA-152: slice 1 PR open (see ticket). Next slices: header (nav, Discover/account disclosure menus, header search → `/search`), mobile sheet + full-screen search, shell hidden on `/auth*` and `/onboarding`, 404/500 restyle, official social icons.
 - OTA-97 anime page shell: parts 1–2 merged; part 3 (header + sticky bar) is PR #32, open.
 
 ## Next 3 tasks
-1. Review and merge PR #32 (OTA-97 part 3), then finish OTA-97 (season selector, per-tab titles).
-2. Autopilot: OTA-152 Build: global shell (unblocked once OTA-151 is merged), then OTA-154 / OTA-153 designs.
+1. Autopilot: OTA-152 slice 2 (header and menus), then OTA-154 / OTA-153 designs.
+2. Review and merge PR #32 (OTA-97 part 3), then finish OTA-97 (season selector, per-tab titles).
 3. OTA-133 / OTA-134: Railway and Vercel accounts (Farouk, ~15 min each).
 
 ## Blockers
@@ -23,7 +24,7 @@ Autopilot run, OTA-151 global shell design (branch `design/OTA-151-global-shell`
 - Cloud autopilot has no npm registry access: it can't `pnpm install`, so it relies on CI for lint/typecheck/tests and can't add packages (OTA-160).
 
 ## Known bugs
-- None tracked yet.
+- Footer links to /faq, /contact, /privacy, /terms, /cookies 404 until OTA-147 adds those pages.
 
 ## Notes
 - Dependabot PRs #33 and #18 open: merge when CI is green.

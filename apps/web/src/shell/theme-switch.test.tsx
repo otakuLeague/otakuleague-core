@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ThemeSwitch } from './theme-switch';
 
@@ -52,6 +58,14 @@ describe('ThemeSwitch', () => {
 
     expect(radio('System').getAttribute('aria-checked')).toBe('true');
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+  });
+
+  it('moves from the focused radio, not the selection', () => {
+    render(<ThemeSwitch />);
+
+    fireEvent.keyDown(radio('Light'), { key: 'ArrowRight' });
+
+    expect(radio('Dark').getAttribute('aria-checked')).toBe('true');
   });
 
   it('keeps every instance in sync (footer, account menu, sheet)', () => {

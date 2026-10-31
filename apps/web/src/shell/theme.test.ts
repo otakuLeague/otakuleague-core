@@ -38,11 +38,12 @@ describe('theme preference', () => {
     expect(themeFromCookieHeader('')).toBe('system');
   });
 
-  it('stores light/dark for a year and clears the cookie for system', () => {
-    expect(themeCookieAssignment('dark')).toBe(
+  it('stores light/dark for a year, clears the cookie for system, and is Secure on https', () => {
+    expect(themeCookieAssignment('dark', false)).toBe(
       'ol-theme=dark; Path=/; Max-Age=31536000; SameSite=Lax',
     );
-    expect(themeCookieAssignment('system')).toContain('Max-Age=0');
+    expect(themeCookieAssignment('system', false)).toContain('Max-Age=0');
+    expect(themeCookieAssignment('light', true)).toMatch(/; Secure$/);
   });
 
   it('moves between radios and wraps at both ends', () => {
