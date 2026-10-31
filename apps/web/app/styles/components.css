@@ -42,10 +42,10 @@
   font: 600 15px/1 var(--font-sans);
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    background-color var(--dur-press) var(--ease-enter),
+    border-color var(--dur-press) var(--ease-enter),
+    box-shadow var(--dur-press) var(--ease-enter),
+    transform var(--dur-press) var(--ease-enter);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -383,9 +383,9 @@ button.ol-chip:hover {
   outline: 1px solid var(--border);
   outline-offset: -1px;
   transition:
-    outline-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    outline-color var(--dur-enter) var(--ease-enter),
+    box-shadow var(--dur-enter) var(--ease-enter),
+    transform var(--dur-enter) var(--ease-enter);
 }
 .ol-anime-card__cover img {
   width: 100%;
@@ -587,4 +587,27 @@ button.ol-chip:hover {
   font-size: 14px;
   line-height: 22px;
   color: var(--muted);
+}
+
+/* Glass surface (OTA-150, ADR 0011): solid by default; frosted only where backdrop-filter works
+   and the visitor hasn't asked for less transparency. Keep it to small, static elements (bars,
+   menus, badges): never animate the blur, never on a full-screen layer. */
+.ol-glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) and
+  (color: color-mix(in oklab, red, blue)) {
+  .ol-glass {
+    background: color-mix(in oklab, var(--surface) var(--glass-tint), transparent);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ol-glass {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

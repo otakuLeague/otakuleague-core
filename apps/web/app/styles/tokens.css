@@ -86,4 +86,32 @@
   --bp-sm: 480px;
   --bp-md: 768px;
   --bp-lg: 1100px;
+
+  /* Motion (OTA-150): when to use each is in docs/design/system-v2/motion.md. Transitions use
+     these tokens, never raw values, and animate transform/opacity only (ADR 0011). */
+  --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: linear(
+    0,
+    0.23 7%,
+    0.72 19%,
+    0.98 29%,
+    1.07 37%,
+    1.06 45%,
+    1.01 58%,
+    0.995 72%,
+    1
+  );
+  --dur-press: 120ms;
+  --dur-exit: 150ms;
+  --dur-enter: 200ms;
+  --dur-move: 250ms;
+  --dur-spring: 450ms;
+
+  /* Glass surfaces: used only through .ol-glass (components.css), which falls back to a solid
+     surface without backdrop-filter or with prefers-reduced-transparency. */
+  --glass-tint: 72%;
+  --glass-blur: 16px;
+  --glass-saturate: 1.4;
 }
