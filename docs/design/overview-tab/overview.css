@@ -1,0 +1,553 @@
+/* Overview tab (OTA-99). Builds on tokens.css, components.css and the global shell (shell.css).
+   Prefix ov-. Every value comes from a token except layout widths. */
+
+.ov-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-6) var(--space-16);
+}
+
+/* Anime page shell (OTA-93), compact, shown for context only. */
+.ov-hero {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: end;
+  padding: var(--space-10) 0 var(--space-6);
+}
+.ov-cover {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+  background: var(--cover, linear-gradient(160deg, #3a4a6b, #1b2235));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
+}
+.ov-hero h1 {
+  margin: 0;
+  font: 700 clamp(26px, 3.4vw, 40px) / 1.1 var(--font-display);
+  overflow-wrap: anywhere;
+}
+.ov-hero__sub {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--muted);
+}
+.ov-hero__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.ov-tabs {
+  position: sticky;
+  top: 64px;
+  z-index: 2;
+  background: var(--ground);
+}
+
+/* Two columns: what to decide on the left, facts on the right. */
+.ov-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-10);
+  padding-top: var(--space-6);
+}
+.ov-main,
+.ov-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  min-width: 0;
+}
+.ov-side {
+  gap: var(--space-4);
+}
+
+.ov-sec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.ov-sec h2 {
+  margin: 0;
+  font: 700 20px / 1.3 var(--font-display);
+}
+.ov-card h2 {
+  font-size: 16px;
+}
+.ov-more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent-ink);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ov-more:hover {
+  color: var(--ink);
+}
+.ov-more:focus-visible,
+.ov-link-btn:focus-visible,
+.ov-watch a:focus-visible,
+.ov-switch:focus-visible,
+.ov-trailer:focus-visible,
+.ov-rel a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.ov-card {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.ov-note {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Synopsis: clamped to 5 lines, the fade tells there is more. */
+.ov-syn {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.ov-syn[data-state='collapsed'] {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 60%, transparent);
+}
+.ov-syn + .ov-syn {
+  margin-top: var(--space-3);
+}
+.ov-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: 600 14px / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+/* Trailer: a poster until pressed. Nothing loads from YouTube before the click. */
+.ov-trailer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--cover, linear-gradient(135deg, #2c3b5c, #12161f));
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+}
+.ov-trailer__play {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.35);
+  transition: transform var(--dur-press) var(--ease-enter);
+}
+.ov-trailer:hover .ov-trailer__play {
+  transform: scale(1.06);
+}
+.ov-trailer:active .ov-trailer__play {
+  transform: scale(0.97);
+}
+.ov-trailer__cap {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-3);
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+/* Character, relation and recommendation previews. */
+.ov-chars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.ov-chars .ol-char-card {
+  max-width: none;
+}
+.ov-face {
+  display: block;
+  background: var(--face, linear-gradient(160deg, #46506a, #262c3b));
+}
+.ov-rel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-rel a {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  text-decoration: none;
+}
+.ov-rel a:hover {
+  background: var(--surface-2);
+}
+.ov-rel .ov-cover {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+.ov-rel b {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.ov-rel small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ov-music {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+.ov-music li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 56px;
+  border-bottom: 1px solid var(--border);
+}
+.ov-music b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-music small,
+.ov-music .ol-num {
+  color: var(--muted);
+  font-size: 13px;
+}
+.ov-recs {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: var(--space-1);
+}
+.ov-recs .ol-anime-card {
+  flex: none;
+  width: 148px;
+  scroll-snap-align: start;
+}
+.ov-recs .ol-anime-card__cover {
+  background: var(--cover);
+}
+
+/* Sidebar cards. */
+.ov-next {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.ov-count {
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  font: 600 28px / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ov-count span {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.ov-count small {
+  color: var(--muted);
+  font: 500 14px / 1 var(--font-sans);
+}
+.ov-scoreline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.ov-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+.ov-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.ov-stats dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ov-stats dd {
+  margin: 0;
+  font: 600 16px / 1.3 var(--font-mono);
+}
+.ov-watch {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-watch a {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ov-watch a:hover {
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--ink) 8%);
+}
+.ov-watch i {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--brand, var(--border));
+  color: #fff;
+  font: 700 13px / 1 var(--font-sans);
+  font-style: normal;
+}
+.ov-watch small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.ov-region {
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  font: 500 13px / 1 var(--font-sans);
+  cursor: pointer;
+}
+.ov-facts {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  font-size: 14px;
+}
+.ov-facts dt {
+  color: var(--muted);
+}
+.ov-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ov-facts a {
+  color: var(--ink);
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+.ov-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-chip-rank {
+  color: var(--muted);
+  font: 500 11px / 1 var(--font-mono);
+}
+
+/* Spoiler switch: one preference for the whole anime page. */
+.ov-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 500 13px / 1 var(--font-sans);
+  cursor: pointer;
+}
+.ov-switch__track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: background-color var(--dur-press) var(--ease-enter);
+}
+.ov-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--dur-press) var(--ease-enter);
+}
+.ov-switch[aria-checked='true'] {
+  color: var(--ink);
+}
+.ov-switch[aria-checked='true'] .ov-switch__track {
+  background: var(--accent);
+}
+.ov-switch[aria-checked='true'] .ov-switch__track::after {
+  transform: translateX(16px);
+  background: var(--on-accent);
+}
+.ov-chip-flag {
+  color: var(--bad);
+  font: 600 10px / 1 var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Empty and error states inside a section keep the section height small. */
+.ov-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 14px;
+}
+.ov-empty b {
+  display: block;
+  color: var(--ink);
+}
+.ov-annot {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--neon-magenta) 18%, transparent);
+  color: var(--ink);
+  font: 600 11px / 1.6 var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-trailer__play,
+  .ov-switch__track,
+  .ov-switch__track::after {
+    transition: none;
+  }
+}
+
+/* Mobile: one column, ordered by what decides "do I watch this". */
+@media (max-width: 900px) {
+  .ov-page {
+    padding: 0 var(--space-4) var(--space-10);
+  }
+  .ov-hero {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-4);
+    padding-top: var(--space-6);
+  }
+  .ov-tabs {
+    top: 56px;
+  }
+  .ov-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .ov-main,
+  .ov-side {
+    display: contents;
+  }
+  .ov-grid > * > * {
+    order: 50;
+  }
+  .ov-grid [data-m='1'] {
+    order: 1;
+  }
+  .ov-grid [data-m='2'] {
+    order: 2;
+  }
+  .ov-grid [data-m='3'] {
+    order: 3;
+  }
+  .ov-grid [data-m='4'] {
+    order: 4;
+  }
+  .ov-grid [data-m='5'] {
+    order: 5;
+  }
+  .ov-grid [data-m='6'] {
+    order: 6;
+  }
+  .ov-grid [data-m='7'] {
+    order: 7;
+  }
+  .ov-chars {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .ov-chars .ol-char-card {
+    flex: none;
+    width: 300px;
+    scroll-snap-align: start;
+  }
+  .ov-card {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+  .ov-syn {
+    font-size: 16px;
+  }
+}
+
+.ov-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
