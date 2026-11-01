@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browse: Discover list (Top airing, light theme)</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="browse.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /discover/airing in the light theme, grid view, Genre filter open is not shown. Same template as Seasonal minus the season stepper. Footer omitted: see docs/design/global-shell. -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li class="sh-has-pop"><button class="sh-nav__link" aria-expanded="false" data-active>Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search">
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a>
+            <button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-main">
+        <div class="br-head">
+          <div>
+            <span class="br-crumb"><a href="/discover">Discover</a> /</span>
+            <h1>Top airing</h1>
+            <p>Shows currently on air, most watched first.</p>
+          </div>
+        </div>
+        <div class="br-controls">
+          <div class="br-seg" role="navigation" aria-label="Discover lists">
+            <a href="/discover/airing" aria-current="page">Airing</a>
+            <a href="/discover/upcoming">Upcoming</a>
+            <a href="/discover/completed">Completed</a>
+            <a href="/discover/episodes">Latest episodes</a>
+          </div>
+          <button class="br-filter br-only-mobile" type="button" aria-haspopup="dialog" data-active>Filters <b>2</b></button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false" data-active>Format <b>2</b> <span class="br-chev" aria-hidden="true"></span></button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false">Genre <span class="br-chev" aria-hidden="true"></span></button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false">Status <span class="br-chev" aria-hidden="true"></span></button>
+          <div class="br-controls__end">
+            <div class="br-seg" role="group" aria-label="View">
+              <button type="button" aria-pressed="true">Grid</button>
+              <button type="button" aria-pressed="false">List</button>
+            </div>
+          </div>
+        </div>
+        <div class="br-active" aria-label="Active filters">
+          <button class="ol-chip" type="button" aria-label="Remove Format TV"><span>Format:</span> TV <span aria-hidden="true">×</span></button>
+          <button class="ol-chip" type="button" aria-label="Remove Format ONA"><span>Format:</span> ONA <span aria-hidden="true">×</span></button>
+          <button class="br-clear" type="button">Clear all</button>
+          <span class="br-count" style="margin-left:auto" aria-live="polite">64 anime</span>
+        </div>
+        <ul class="br-grid">
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/one-piece" style="--card-accent: #b23a3a">
+              <div class="ol-anime-card__cover" style="--c1: #b23a3a; --c2: #2a1830">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.7">8.7</span></div>
+                <span class="ol-badge ol-badge--airing br-card__status">Airing</span>
+              </div>
+              <h3 class="ol-anime-card__title">One Piece</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>Fall 1999</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add One Piece to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/frieren-beyond-journey-s-end" style="--card-accent: #3a7d6b">
+              <div class="ol-anime-card__cover" style="--c1: #3a7d6b; --c2: #1d2b3a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 9.1">9.1</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Frieren: Beyond Journey&#39;s End</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>28 eps</span><span>Fall 2023</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Frieren: Beyond Journey&#39;s End to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/demon-slayer-kimetsu-no-yaiba" style="--card-accent: #2f6b5a">
+              <div class="ol-anime-card__cover" style="--c1: #2f6b5a; --c2: #2b1420">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.3">8.3</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Demon Slayer: Kimetsu no Yaiba</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>26 eps</span><span>Spring 2019</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Demon Slayer: Kimetsu no Yaiba to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/attack-on-titan" style="--card-accent: #6b5a45">
+              <div class="ol-anime-card__cover" style="--c1: #6b5a45; --c2: #1a1714">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.4">8.4</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Attack on Titan</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>25 eps</span><span>Spring 2013</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Attack on Titan to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/fate-zero" style="--card-accent: #3b4a8a">
+              <div class="ol-anime-card__cover" style="--c1: #3b4a8a; --c2: #151a2e">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.3">8.3</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Fate/Zero</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>13 eps</span><span>Fall 2011</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Fate/Zero to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/bakemonogatari" style="--card-accent: #8a2b4a">
+              <div class="ol-anime-card__cover" style="--c1: #8a2b4a; --c2: #1c1424">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.2">8.2</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Bakemonogatari</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>15 eps</span><span>Summer 2009</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Bakemonogatari to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/gintama" style="--card-accent: #8a5a2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a5a2b; --c2: #2a1d14">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 9.0">9.0</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Gintama°</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>51 eps</span><span>Spring 2015</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Gintama° to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/that-time-i-got-reincarnated-as-a-slime-season-3-the-labyrinth-of-the-demon-lord-and-the-western-saints" style="--card-accent: #2b6f8a">
+              <div class="ol-anime-card__cover" style="--c1: #2b6f8a; --c2: #13202b">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid" aria-label="Score 7.6">7.6</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">That Time I Got Reincarnated as a Slime Season 3: The Labyrinth of the Demon Lord and the Western Saints</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>24 eps</span><span>Spring 2024</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add That Time I Got Reincarnated as a Slime Season 3: The Labyrinth of the Demon Lord and the Western Saints to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/minami-ke" style="--card-accent: #a0743a">
+              <div class="ol-anime-card__cover" style="--c1: #a0743a; --c2: #2a2216">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid" aria-label="Score 6.9">6.9</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Minami-ke</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>13 eps</span><span>Fall 2007</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Minami-ke to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/gintama-the-final" style="--card-accent: #8a6a2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a6a2b; --c2: #221a12">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high" aria-label="Score 8.6">8.6</span></div>
+                
+              </div>
+              <h3 class="ol-anime-card__title">Gintama: The Final</h3>
+              <p class="ol-anime-card__meta"><span>Movie</span><span>1 ep</span><span>Winter 2021</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Gintama: The Final to My List">+</button>
+          </li>
+        </ul>
+        <div class="br-more-wrap">
+          <a class="ol-btn ol-btn--secondary br-more" href="?page=2">Show more</a>
+          <span>Showing 10 of 64</span>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
