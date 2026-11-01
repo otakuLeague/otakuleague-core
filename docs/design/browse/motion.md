@@ -30,24 +30,27 @@ Every list page shares: page head, control bar (sort or rank-by, Format / Genre 
 | --- | --- | --- | --- |
 | Card cover lift | hover, focus-visible | `transform: translateY(-2px)`, outline, shadow | `--dur-enter` / `--ease-enter` (existing) |
 | Add button reveal | card hover / focus-within | `opacity` 0→1, `transform: scale(.9→1)` | `--dur-enter` / `--ease-enter` |
-| Add button press | `:active` | `transform: scale(.94)` | instant in, `--dur-enter` out |
-| Segmented toggles, filter buttons | click | `color`, `background-color` | `--dur-press` / `--ease-enter` |
-| Row hover border | hover / focus-within | `border-color` | `--dur-enter` |
-| Skeleton shimmer | loading | `background-position` (small elements only) | 1.4 s linear, infinite |
+| Add button press | `:active` | `transform: scale(.94)` | instant in (`transition-duration: 0s`), `--dur-enter` out |
+| Segmented toggles, filter, stepper and genre buttons, add button hover | hover, click | `color`, `background-color`, `border-color` | `--dur-press` / `--ease-enter` |
+| Row hover border | hover | `border-color` | `--dur-enter` |
+| Skeleton shimmer | loading | `transform: translateX` of a `::after` highlight | 1.4 s `--ease-move`, infinite |
+| Filter popover, filter sheet, season list | open / close | `opacity` + `transform` (popover scale .97→1 from its trigger; sheet translateY) | `--dur-enter` in, `--dur-exit` out (same as the shell menus) |
 | New page of results | "Show more" | none: cards appear in place, focus moves to the first new card | n/a |
 
 No layout properties are animated; no auto-advancing carousel (the old SpotlightCarousel and its 1 s countdown are gone). Discover rows scroll natively with `scroll-snap`; no JS arrows on touch, arrow buttons on desktop are optional for the build.
 Reduced motion: no lift, no scale, no shimmer (static skeleton); colour and opacity changes stay.
 
+Not mocked here, specified for the build: the open filter popover and the mobile filter sheet (same disclosure and sheet patterns as `../global-shell/`), the open season list (existing `.ol-season__list`), and the guest add-to-list prompt (OTA-142 / OTA-156).
+
 ## States (mockup-States.html)
-- Loading: skeleton grid for the first page; the head and control bar render from the URL so they stay usable. "Show more" shows a spinner label and `aria-busy` on the list.
+- Loading: skeleton grid for the first page; the head and control bar render from the URL so they stay usable. "Show more" becomes a disabled "Loading more…" and the list gets `aria-busy`.
 - Empty, filters: "No anime match these filters" with "Clear filters" and a nearby season. Empty, season not announced: explains and links back to the current season.
 - Error: whole list failed → retry card (`role="alert"`), filters kept. One Discover section failed → inline error with Retry, other sections render. "Show more" failed → first page stays, button becomes "Retry loading more".
 
 ## Accessibility check
-- Text contrast (WCAG AA): `--muted` on surface 6.6:1 (dark) / 6.7:1 (light); `--accent-ink` links 10:1 / 5.6:1. Rank numbers use `--faint` (3.9:1 dark, 4.2:1 light) only at ≥ 20 px bold (large text, ≥ 3:1) and carry `aria-label="Rank n"`.
-- Focus: every control has a 2 px `--accent` outline; card focus uses the existing cover outline.
-- Hit targets at 390 px: filter, stepper, segmented and add buttons ≥ 44 px (segment items 38 px tall inside a 44 px group); genre chips 44 px.
+- Text contrast (WCAG AA): `--muted` on surface 6.6:1 (dark) / 6.7:1 (light); `--accent-ink` links 10:1 / 5.6:1. Rank numbers use `--faint` (3.9:1 dark, 4.2:1 light) only at ≥ 20 px bold (large text is ≥ 18.66 px bold, needs ≥ 3:1) and are read as "Rank n" through visually hidden text; scores read "Score 9.1" the same way. Top-3 gradient ranks fall back to `CanvasText` in forced colours.
+- Focus: every control has a 2 px `--accent` outline; card focus uses the existing cover outline; a focused list row outlines the whole row (`:has(:focus-visible)`).
+- Hit targets at 390 px: filter, stepper, segment, add, "Clear all", "See all", breadcrumb and genre links ≥ 44 px.
 - Not colour alone: score bands also show the number; Airing / Upcoming are text badges; the active sort is `aria-current`/`aria-pressed` plus a filled segment.
-- Structure: one `h1` per page, Discover sections are `<section aria-labelledby>`, Rankings is an `<ol>`, the result count is `aria-live="polite"`, the four Discover lists switch is a `nav`.
+- Structure: one `h1` per page, card titles are `h2` on list pages and `h3` under the section `h2` on Discover, Discover sections are `<section aria-labelledby>`, Rankings is an `<ol>`, the result count is `aria-live="polite"`, the four Discover lists switch is a `nav`.
 - Long titles: clamp to 2 lines (grid) or ellipsis (list), full title in the link text; the worst case (Slime Season 3 subtitle) is in every mockup.

@@ -7,6 +7,16 @@
   text-decoration: none;
 }
 
+/* Visually hidden text for screen readers ("Rank ", "Score "). */
+.br-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ---------- Page header ---------- */
 .br-head {
   display: flex;
@@ -128,6 +138,9 @@
   color: var(--ink);
   font: 500 14px/1 var(--font-sans);
   cursor: pointer;
+  transition:
+    border-color var(--dur-press) var(--ease-enter),
+    background-color var(--dur-press) var(--ease-enter);
 }
 .br-filter:hover {
   border-color: color-mix(in oklab, var(--accent) 60%, transparent);
@@ -251,7 +264,7 @@
 }
 .br-card:hover .br-add,
 .br-card:focus-within .br-add,
-.br-add[data-demo='visible'] {
+.br-add[data-demo='visible'] /* mockup only: shows the hover state */ {
   opacity: 1;
   transform: scale(1);
 }
@@ -261,6 +274,7 @@
 }
 .br-add:active {
   transform: scale(0.94);
+  transition-duration: 0s;
 }
 .br-add:focus-visible,
 .br-row__link:focus-visible,
@@ -300,9 +314,15 @@
   background: color-mix(in oklab, var(--surface) 70%, transparent);
   transition: border-color var(--dur-enter) var(--ease-enter);
 }
-.br-row:hover,
-.br-row:focus-within {
+.br-row:hover {
   border-color: var(--border);
+}
+.br-row:has(.br-row__link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.br-row__link:focus-visible {
+  outline: none;
 }
 .br-rank {
   justify-self: center;
@@ -319,6 +339,12 @@
   background-clip: text;
   color: transparent;
   font-size: 34px;
+}
+@media (forced-colors: active) {
+  .br-row[data-rank] .br-rank {
+    background: none;
+    color: CanvasText;
+  }
 }
 .br-thumb {
   position: relative;
@@ -416,8 +442,8 @@
   gap: var(--space-2);
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 2px 2px var(--space-2);
-  margin: 0 0 var(--space-10);
+  padding: 6px;
+  margin: -6px -6px var(--space-10);
   list-style: none;
 }
 .br-genres a {
@@ -465,7 +491,9 @@
 .br-row-scroll {
   list-style: none;
   margin: 0;
-  padding: 0 0 var(--space-2);
+  /* Padding keeps the hover lift, glow and focus ring inside the scroll box. */
+  padding: 6px 6px var(--space-2);
+  margin: -6px -6px 0;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 176px;
@@ -484,10 +512,19 @@
 
 /* ---------- Loading, empty, error ---------- */
 .br-skel {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--surface-2) 0%, color-mix(in oklab, var(--surface-2) 60%, var(--ink) 8%) 50%, var(--surface-2) 100%);
-  background-size: 200% 100%;
-  animation: br-shimmer 1.4s linear infinite;
+  background: var(--surface-2);
+}
+.br-skel::after {
+  /* Shimmer moves with transform only (ADR 0011). */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--ink) 7%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: br-shimmer 1.4s var(--ease-move) infinite;
 }
 .br-skel--cover {
   aspect-ratio: 2 / 3;
@@ -502,7 +539,7 @@
 }
 @keyframes br-shimmer {
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 .br-state {
@@ -559,8 +596,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .br-skel {
+  .br-skel::after {
     animation: none;
+    display: none;
   }
   .br-add {
     transition: opacity var(--dur-enter) var(--ease-enter);
@@ -613,7 +651,14 @@
   }
   .br-seg a,
   .br-seg button {
-    min-height: 38px;
+    min-height: 44px;
+  }
+  .br-clear,
+  .br-section__all,
+  .br-crumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
   .br-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

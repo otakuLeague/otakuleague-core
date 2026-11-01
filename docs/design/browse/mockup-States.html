@@ -47,7 +47,25 @@
             <p>Everything airing this season, from the biggest returns to the quiet surprises.</p>
           </div>
         </div>
-        <h2 class="ol-label br-demo-label" style="margin-top:0">Loading (first page; controls stay usable)</h2>
+        <div class="br-controls">
+          <div class="br-seg" role="group" aria-label="Sort">
+            <a href="?sort=popularity" aria-current="page">Popular</a>
+            <a href="?sort=score">Score</a>
+            <a href="?sort=start">Start date</a>
+            <a href="?sort=title">A–Z</a>
+          </div>
+          <button class="br-filter br-only-mobile" type="button" aria-haspopup="dialog">Filters</button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false">Format <span class="br-chev" aria-hidden="true"></span></button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false">Genre <span class="br-chev" aria-hidden="true"></span></button>
+          <button class="br-filter br-only-desktop" type="button" aria-expanded="false">Status <span class="br-chev" aria-hidden="true"></span></button>
+          <div class="br-controls__end">
+            <div class="br-seg" role="group" aria-label="View">
+              <button type="button" aria-pressed="true">Grid</button>
+              <button type="button" aria-pressed="false">List</button>
+            </div>
+          </div>
+        </div>
+        <h2 class="ol-label br-demo-label">Loading (first page; head and controls render from the URL and stay usable)</h2>
         <ul class="br-grid" aria-busy="true" aria-label="Loading anime">
           <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
           <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
@@ -92,6 +110,11 @@
             <button class="ol-btn ol-btn--secondary ol-btn--sm" type="button">Retry</button>
           </div>
         </section>
+
+        <h2 class="ol-label br-demo-label">Loading more (page 2): button disabled, list aria-busy</h2>
+        <div class="br-more-wrap" style="margin-top:0">
+          <button class="ol-btn ol-btn--secondary br-more" type="button" aria-disabled="true">Loading more…</button>
+        </div>
 
         <h2 class="ol-label br-demo-label">Load more failed (page 2): first page stays, button becomes retry</h2>
         <div class="br-more-wrap" style="margin-top:0">
