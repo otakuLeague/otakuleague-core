@@ -1,5 +1,5 @@
 /* Overview tab (OTA-99). Builds on tokens.css, components.css and the global shell (shell.css).
-   Prefix ov-. Every value comes from a token except layout widths. */
+   Prefix ov-. Colours and spacing come from tokens; placeholder gradients stand in for artwork. */
 
 .ov-page {
   max-width: 1200px;
@@ -112,21 +112,20 @@
 }
 
 /* Synopsis: clamped to 5 lines, the fade tells there is more. */
+.ov-syn p {
+  margin: 0 0 var(--space-3);
+}
 .ov-syn {
-  margin: 0;
   max-width: 68ch;
   font-size: 17px;
   line-height: 1.7;
 }
-.ov-syn[data-state='collapsed'] {
+.ov-syn[data-state='collapsed'] p {
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
   mask-image: linear-gradient(180deg, #000 60%, transparent);
-}
-.ov-syn + .ov-syn {
-  margin-top: var(--space-3);
 }
 .ov-link-btn {
   display: inline-flex;
@@ -355,16 +354,6 @@
   color: var(--muted);
   font-weight: 500;
 }
-.ov-region {
-  min-height: 32px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: none;
-  color: var(--muted);
-  font: 500 13px / 1 var(--font-sans);
-  cursor: pointer;
-}
 .ov-facts {
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr);
@@ -492,48 +481,8 @@
     top: 56px;
   }
   .ov-grid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-  }
-  .ov-main,
-  .ov-side {
-    display: contents;
-  }
-  .ov-grid > * > * {
-    order: 50;
-  }
-  .ov-grid [data-m='1'] {
-    order: 1;
-  }
-  .ov-grid [data-m='2'] {
-    order: 2;
-  }
-  .ov-grid [data-m='3'] {
-    order: 3;
-  }
-  .ov-grid [data-m='4'] {
-    order: 4;
-  }
-  .ov-grid [data-m='5'] {
-    order: 5;
-  }
-  .ov-grid [data-m='6'] {
-    order: 6;
-  }
-  .ov-grid [data-m='7'] {
-    order: 7;
-  }
-  .ov-chars {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  .ov-chars .ol-char-card {
-    flex: none;
-    width: 300px;
-    scroll-snap-align: start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-10);
   }
   .ov-card {
     padding: var(--space-3) var(--space-4) var(--space-4);
@@ -544,10 +493,63 @@
 }
 
 .ov-sr {
-  position: absolute;
+  position: fixed;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+a.ol-chip {
+  color: var(--ink);
+  text-decoration: none;
+}
+a.ol-chip:hover {
+  background: var(--surface-2);
+}
+a.ol-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ov-trailer {
+  max-width: 640px;
+}
+.ov-empty a {
+  color: var(--accent-ink);
+}
+
+/* Loading: skeletons keep the final layout so nothing jumps when data lands. */
+.ov-skel-line {
+  height: 14px;
+  margin-bottom: var(--space-2);
+}
+.ov-skel-block {
+  width: 100%;
+  height: 72px;
+  border-radius: var(--radius-lg);
+}
+.ov-sec .ol-state {
+  max-width: none;
+}
+
+@media (max-width: 900px) {
+  .ov-chars {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov-chars .ol-char-card:nth-child(n + 4) {
+    display: none;
+  }
+  .ov-chars .ol-char-card__side {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .ov-chars .ol-char-card__side--va {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+  .ov-chars .ol-char-card__img {
+    width: 44px;
+    height: 56px;
+  }
 }
