@@ -13,6 +13,7 @@ Mockups: `mockup-Main.html` (`/search?q=aot`: nickname query, every hit matched 
 - **Field:** submit on Enter (no instant results on this page: the header popover already does instant suggestions, and re-rendering the grid per keystroke is noisy and costly). Any length ≥ 1 character is accepted here; the header popover keeps its 3-character minimum. Clear (×) empties the field and focuses it, results stay until the next submit. The header search box is hidden on `/search` (OTA-151 rule); `/` focuses this field.
 - **Matching (API, OTA-98):** English, romaji, native and synonyms, case and accent insensitive, so "AoT", "SnK", "進撃" and "shingeki" all work. The API returns, per hit, the title that matched when it is not the display title; the card shows it on one line ("Also known as …", ellipsis, `<mark>` on the matched part). When the display title matched, the match is marked in the title instead and no extra line is shown.
 - **Not imported yet:** search queries the source through its adapter, so anime missing from our database are found too. The card is identical; opening it imports on demand (OTA-92, the anime page's loading state covers the wait). No "not imported" badge: it is our implementation detail.
+- **Pagination:** 24 results per page (fills 2, 3, 4 and 6 columns), API max page size 50; "Show more" requests `page + 1` and appends. The 404 candidates are the top 3 hits of one page-1 request.
 - **Sort:** Best match (default with a query), Popularity, Score, Newest, Oldest, Title A–Z. Anime with no score sort last under Score and show no badge.
 - **Filters:** Format, Year & season, Genre, Status. Same semantics as browse: OR inside a filter, AND across, applied server-side so counts are right. Filters without a query are allowed (`/search?genre=Fantasy`): genre chips on the landing use that.
 - **Did you mean (search):** when a query has zero results and the API has a close title (edit distance on titles and synonyms), the page shows that title's results under a notice: "Showing results for **frieren** · No anime matches “freiren”. Search for “freiren” only". The notice is `role="status"`. The escape link adds `exact=1` and shows the plain empty state. With filters on and zero results, no auto-correct: the empty state says which filters are on and offers "Clear filters" first.
@@ -28,16 +29,18 @@ Mockups: `mockup-Main.html` (`/search?q=aot`: nickname query, every hit matched 
 | Filter buttons, sort, view toggle | hover, press | `color`, `background-color`, `border-color` | `--dur-press` / `--ease-enter` |
 | Card | hover, focus-visible | existing `.ol-anime-card` lift | existing tokens |
 | 404 candidate row | hover | `border-color` | `--dur-enter` / `--ease-enter` |
-| Filter popover (desktop), filter sheet (mobile) | open / close | browse pattern: popover `opacity` + `scale(.97→1)`, sheet `translateY(100%→0)` + scrim `opacity` | `--dur-enter` in, `--dur-exit` out |
+| Filter popover (desktop) | open / close | `opacity` + `transform: scale(.97→1)` from the trigger (shell menus) | `--dur-enter` / `--ease-enter` in, `--dur-exit` / `--ease-exit` out |
+| Filter sheet (mobile) | open / close | `transform: translateY(100%→0)` + scrim `opacity`, same as the shell's mobile sheet | `--dur-move` / `--ease-move` |
 | Results replaced after submit | new results | none: swap in place, focus stays in the field, count announced | n/a |
 | Skeletons | loading | existing `.ol-skel` shimmer | 1.4 s |
 
-Typing never animates anything (ADR 0011). No layout property is animated. `prefers-reduced-motion: reduce` removes the transitions and the shimmer (static skeleton).
+The popover and sheet are shown open and static in the mockups; their transitions are specified here for the build and reuse the shell's `data-state` open/closed pattern (`../global-shell/shell.css`). Typing never animates anything (ADR 0011). No layout property is animated. `prefers-reduced-motion: reduce`: same rule as the shell, transforms and the shimmer go (static skeleton), opacity fades stay.
 
 ## Accessibility check
 - Contrast: body ink and `--muted` on `--surface` pass 4.5:1 in both themes (OTA-91 values, see overview-tab); `<mark>` uses `--accent-ink` (9.2:1 dark, 5.6:1 light) plus bold weight, so the match is not shown by colour alone. The did-you-mean link is underlined.
 - Structure: `h1` "Search" (or the 404 title), the field is a `form role="search"` with a visible-to-AT label "Search anime"; result titles are `h2` in an `ul`; the count line is `aria-live="polite"` ("14 anime for “aot”", "Searching…"); active filter chips have "Remove" in their accessible name; filter buttons announce the number selected ("Format, 2 selected").
 - Focus: 2 px `--accent` outline with offset on the field (`:focus-within`), filters, sort, view toggle, chips, links; a 404 candidate row outlines whole (`:has(:focus-visible)`). After "Show more", focus moves to the first new card. The mobile sheet is `role="dialog"` + `aria-modal`, focus trapped, Esc and × return focus to "Filters".
+- Hit targets on desktop: filter, sort and view buttons are 36 px tall (WCAG 2.2 AA asks 24 px); the build may raise them to the shell's 40 px if they sit in one row with shell controls.
 - Hit targets at 390 px: field 52 px, Filters and sort 44 px, sheet options 44 px, sheet buttons 48 px, landing chips 44 px, clear (×) 44 px, "Clear all" 44 px.
 - Long content: titles clamp to 2 lines in the grid and wrap in 404 candidates; match line ellipsis; a long unknown slug breaks anywhere (`word-break: break-all`).
 - Japanese queries and titles: the native title in candidates and match lines gets `lang="ja"` in the build.
