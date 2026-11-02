@@ -2,6 +2,8 @@
  * OtakuLeague design tokens: docs/design/anime-page/tokens.css (generated from tokens.json),
  * with two web-app changes: the light theme also follows the visitor's system setting, and the
  * font families come from next/font (app/layout.tsx), which defines the --font-*-face names.
+ * The brand gradient pair (--brand-a/--brand-b) and --header-h come from the global shell design
+ * (docs/design/global-shell/shell.css, OTA-151).
  */
 :root,
 [data-theme='dark'] {
@@ -22,6 +24,8 @@
   --score-low: #e8743b;
   --good: #5fd38a;
   --bad: #ff7a6b;
+  --brand-a: #a78bfa;
+  --brand-b: #22d3ee;
   color-scheme: dark;
 }
 [data-theme='light'] {
@@ -42,6 +46,8 @@
   --score-low: #b54a12;
   --good: #1b6e3c;
   --bad: #b3321f;
+  --brand-a: #6d28d9;
+  --brand-b: #0e7490;
   color-scheme: light;
 }
 /* "Bookstore" when the visitor's system is light, unless a page forces the dark theme. */
@@ -64,6 +70,8 @@
     --score-low: #b54a12;
     --good: #1b6e3c;
     --bad: #b3321f;
+    --brand-a: #6d28d9;
+    --brand-b: #0e7490;
     color-scheme: light;
   }
 }
@@ -86,6 +94,8 @@
   --bp-sm: 480px;
   --bp-md: 768px;
   --bp-lg: 1100px;
+  /* Global shell (OTA-151): sticky header height. */
+  --header-h: 64px;
 
   /* Motion (OTA-150): when to use each is in docs/design/system-v2/motion.md. Transitions use
      these tokens, never raw values, and animate transform/opacity only (ADR 0011). */
