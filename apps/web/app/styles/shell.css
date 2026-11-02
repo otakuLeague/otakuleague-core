@@ -1,0 +1,204 @@
+/* Global shell (OTA-152, design docs/design/global-shell/): background, logo, footer, theme switch.
+   The header, menus and mobile sheet land in the next slice of OTA-152. */
+
+/* ---------- Background: painted once, never animated (ADR 0011) ---------- */
+body {
+  position: relative;
+  isolation: isolate;
+}
+.sh-bg {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 720px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 70% at 12% 0%, color-mix(in oklab, var(--brand-a) 22%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 92% 8%, color-mix(in oklab, var(--brand-b) 16%, transparent), transparent 70%);
+}
+.sh-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(70% 80% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(70% 80% at 50% 0%, #000 0%, transparent 75%);
+  opacity: 0.5;
+}
+[data-theme='light'] .sh-bg {
+  opacity: 0.55;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .sh-bg {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- Logo ---------- */
+.sh-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font: 700 19px/1 var(--font-display);
+  letter-spacing: -0.01em;
+  border-radius: var(--radius-sm);
+  flex: none;
+}
+.sh-logo__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  display: grid;
+  place-items: center;
+  color: #12101a;
+  font-size: 15px;
+}
+.sh-logo b {
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:is(.sh-logo, .sh-foot a, .sh-seg button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Theme switch: System / Light / Dark ---------- */
+.sh-theme {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin-top: var(--space-6);
+}
+.sh-theme .ol-label {
+  color: var(--muted);
+}
+.sh-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--ground);
+}
+.sh-seg button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  font: 500 13px/1 var(--font-sans);
+  cursor: pointer;
+  transition:
+    color var(--dur-press) var(--ease-enter),
+    background-color var(--dur-press) var(--ease-enter);
+}
+.sh-seg button[aria-checked='true'] {
+  background: var(--surface-2);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+/* Reduced motion: colour changes only, no transform anywhere, so nothing to remove. */
+
+/* ---------- Footer ---------- */
+.sh-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 60%, var(--ground));
+}
+.sh-foot__in {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-6);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+  gap: var(--space-10);
+}
+.sh-foot h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+}
+.sh-foot ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.sh-foot a {
+  color: var(--muted);
+  border-radius: 4px;
+  transition: color var(--dur-press) var(--ease-enter);
+}
+.sh-foot a:hover {
+  color: var(--ink);
+}
+.sh-foot p {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  max-width: 34ch;
+  font-size: 14px;
+}
+.sh-foot .sh-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sh-social a {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font: 700 12px/1 var(--font-sans);
+}
+.sh-foot__base {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Below --bp-md (768px; custom properties can't be used in media queries) ---------- */
+@media (max-width: 767.98px) {
+  .sh-foot__in {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-4);
+  }
+  .sh-foot__brand {
+    grid-column: 1 / -1;
+  }
+  .sh-foot a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .sh-seg button {
+    min-height: 44px;
+  }
+  .sh-social a {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+  .sh-foot__base {
+    padding: var(--space-4);
+    flex-direction: column;
+  }
+}
