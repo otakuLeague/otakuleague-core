@@ -5,19 +5,25 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-11
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR, #52). API and Postgres live on Railway (OTA-133 docs PR #50 open, green). W2: designs merged; OTA-152 slice 1 merged, slice 2a (guest desktop header) in PR #53.
+W2 designs merged. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR). API and Postgres live on Railway. OTA-152 slice 1 merged; OTA-100 Overview tab is in progress.
 
 ## Last session
-Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Guest desktop header in `apps/web/src/shell/`: `nav.ts` (link data, `activeSection`), `disclosure.tsx` (native `<details name="sh-menu">` enhanced to close on Esc, outside click, focus leaving, link click), `header-nav.tsx` (client, `usePathname` inside `Suspense`), `site-header.tsx` (server: logo, GET search form, Sign in/up). Search box hidden below 1100 px so the header fits at 768 px; below 768 px only logo and Sign in until the mobile sheet. `overflow-x: clip` keeps the header sticky; the anime sticky bar sits under the header and its observer uses `--header-h` as root margin. Discover panel is a solid surface (nested backdrop-filter does not blur). Links to unbuilt routes use `prefetch={false}` and 404 for now. Header adds ~1.1 kB gzipped JS.
+Autopilot on OTA-100 slice 1 (branch `feat/OTA-100-overview-tab`). The Overview tab now renders:
+- Synopsis: plain text from the API. A "(Source: X)" line is pulled into a note via a ReDoS-safe regex on the last 200 chars. Collapses to the first paragraph. 5-line clamp with fade only when the first paragraph is over 350 chars; the noscript style shows all.
+- Details card: Format, Episodes (incl. "N so far × M min"), Aired (or "Premieres" when upcoming), Season, Studio(s).
+- Genre chips: plain text, deduped, max 20.
+
+Pure view model `overviewFacts()` in `apps/web/src/anime/overview-facts.ts`. `OverviewLoader` in `app/anime/[slug]/overview.tsx` reuses the request-cached `loadAnime` (no extra API call). Client island: `synopsis.tsx`. Caps: synopsis 20,000 chars, studios 10.
+Decision: only an AniList synopsis is shown. A Jikan/MAL synopsis shows the empty box until OTA-127 clears MAL terms (ADR 0006).
 
 ## In progress
-- OTA-152: slice 2a PR #53. Remaining slices: 2b member state (`ShellViewer` union, account menu, skip link), mobile sheet + mobile search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding` (route groups), 404/500 restyle, social icons.
-- OTA-133: docs PR #50.
+- OTA-100 slice 1 PR: open, waiting for Farouk. 934 lines, over the 400-line guideline, so no automerge.
+- OTA-172 PR #57: open. OTA-171 PR #56: Farouk's.
 
 ## Next 3 tasks
-1. OTA-152 slice 2b (member state and account menu).
-2. OTA-100 Overview tab (unblocked), or OTA-166 vendored design skills (protected path, Farouk merges). Page reports now use the real CI screenshots (OTA-163).
-3. After PR #50 merges: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
+1. OTA-100 slice 2: tags + site-wide spoiler toggle (cookie `ol-spoilers`, read with `cookies()` inside the tab's Suspense, modelled on `src/shell/theme.ts`).
+2. OTA-100 slices 3–5: trailer click-to-load (youtube-nocookie, validate id `^[A-Za-z0-9_-]{11}$`) + where to watch (links kind 'streaming'); next-episode card (reuse Countdown or drop); tab previews (score, related via `loadFranchise`). Later API slice for source material + age rating (migration + ADR).
+3. OTA-153 Home design once OTA-171 merges. Also OTA-174 (new: cap source text size in the API, quadratic tag-strip regex) and OTA-173.
 
 ## Blockers
 - OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
@@ -27,7 +33,6 @@ Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Gu
 - `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
 
 ## Notes
-- OTA-160 decided (logo "Pierce", hero "Calm night", CSS/SVG only for v1): OTA-153 Home design is unblocked.
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
 - Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
