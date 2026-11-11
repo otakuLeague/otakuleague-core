@@ -9,24 +9,30 @@ import { type ReactNode, useState } from 'react';
  */
 export function CollapsibleSynopsis({
   id,
+  clamp,
   children,
 }: {
   readonly id: string;
+  /** The first paragraph is long: clamp it with a fade while collapsed. */
+  readonly clamp: boolean;
   readonly children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const state = expanded ? 'expanded' : 'collapsed';
   return (
     <>
-      <div className="ov-syn" id={id} data-state={state}>
+      <div
+        className={clamp ? 'ov-syn ov-syn--clamp' : 'ov-syn'}
+        id={id}
+        data-state={state}
+      >
         {children}
       </div>
       <button
         type="button"
-        className="ov-link-btn"
+        className="ov-link-btn ov-syn-toggle"
         aria-expanded={expanded}
         aria-controls={id}
-        data-state={state}
         onClick={() => setExpanded((open) => !open)}
       >
         {expanded ? 'Show less' : 'Read more'}

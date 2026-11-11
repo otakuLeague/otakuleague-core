@@ -1,5 +1,6 @@
 import type { AnimeBySlug, AnimeDetails } from '@otakuleague/shared-types';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from '../../../src/api/client';
 import { loadAnime } from '../../../src/anime/data';
@@ -76,6 +77,7 @@ describe('Overview', () => {
     const text = container.querySelector('.ov-syn');
     const button = screen.getByRole('button', { name: 'Read more' });
     expect(text?.getAttribute('data-state')).toBe('collapsed');
+    expect(text?.classList.contains('ov-syn--clamp')).toBe(true);
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(button.getAttribute('aria-controls')).toBe(text?.id);
     // Every paragraph stays in the DOM (screen readers, find in page); CSS clamps them.
@@ -86,7 +88,6 @@ describe('Overview', () => {
     fireEvent.click(button);
     expect(text?.getAttribute('data-state')).toBe('expanded');
     expect(button.getAttribute('aria-expanded')).toBe('true');
-    expect(button.getAttribute('data-state')).toBe('expanded');
     expect(button.textContent).toBe('Show less');
 
     fireEvent.click(button);
@@ -101,7 +102,7 @@ describe('Overview', () => {
       nextEpisode: sourced({ episode: 1181, airingAt: '2026-11-15T00:00:00Z' }),
       startDate: sourced({ year: 1999, month: 10, day: 20 }),
     });
-    expect(screen.getByText('1180 so far')).toBeTruthy();
+    expect(screen.getByText('1180 so far × 24 min')).toBeTruthy();
     const aired = [...container.querySelectorAll('.ov-facts dd')].find((dd) =>
       dd.textContent?.includes('1999'),
     );
@@ -128,14 +129,50 @@ describe('Overview', () => {
     expect(container.querySelector('.ov-grid--single')).toBeTruthy();
   });
 
-  it('renders a long single-word synopsis and many genres without dropping any', () => {
-    const genres = Array.from({ length: 20 }, (_, i) => `Genre ${i}`);
-    renderOverview({
+  it('keeps a long unbroken synopsis whole in the DOM and shows up to 20 genres', () => {
+    const genres = Array.from({ length: 25 }, (_, i) => `Genre ${i}`);
+    const { container } = renderOverview({
       synopsis: sourced('x'.repeat(2000)),
       genres: sourced(genres),
     });
     expect(screen.getByRole('button', { name: 'Read more' })).toBeTruthy();
+    expect(container.querySelector('.ov-syn')?.textContent).toHaveLength(2000);
     expect(screen.getAllByRole('listitem')).toHaveLength(20);
+  });
+
+  it('collapses a short first paragraph to itself, without the clamp', () => {
+    const { container } = renderOverview({
+      synopsis: sourced('Short opener.\n\nThe rest of the story.'),
+    });
+    const text = container.querySelector('.ov-syn');
+    expect(text?.getAttribute('data-state')).toBe('collapsed');
+    expect(text?.classList.contains('ov-syn--clamp')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Read more' })).toBeTruthy();
+  });
+
+  it('un-collapses the synopsis and hides the toggle without JS', () => {
+    const html = renderToStaticMarkup(
+      <Overview
+        facts={overviewFacts(animeFixture({ synopsis: sourced(LONG) }))}
+      />,
+    );
+    expect(html).toMatch(
+      /<noscript><style>[^<]*\.ov-syn-toggle\{display:none/u,
+    );
+  });
+
+  it('shows the premiere date of a not yet released anime', () => {
+    renderOverview({ status: sourced('NOT_YET_RELEASED'), endDate: null });
+    expect(screen.getByText('Premieres')).toBeTruthy();
+    expect(screen.queryByText('Aired')).toBeNull();
+  });
+
+  it('shows the empty box for a synopsis from MyAnimeList (OTA-127)', () => {
+    renderOverview({
+      synopsis: { ...sourced('From MyAnimeList.'), source: 'jikan' },
+    });
+    expect(screen.getByText('No synopsis yet.')).toBeTruthy();
+    expect(screen.queryByText('From MyAnimeList.')).toBeNull();
   });
 
   it('renders HTML in a synopsis as text, never as elements', () => {

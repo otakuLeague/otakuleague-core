@@ -48,7 +48,8 @@
   line-height: 1.5;
 }
 
-/* Synopsis: collapsed shows the first paragraph clamped to 5 lines; the fade tells there is more. */
+/* Synopsis: collapsed shows the first paragraph only; a long one is clamped to 5 lines with a
+   fade that tells there is more. Without JS a <noscript> style in overview.tsx un-collapses it. */
 .ov-syn {
   max-width: 68ch;
   font-size: 17px;
@@ -59,7 +60,7 @@
   margin: 0 0 var(--space-3);
   white-space: pre-line;
 }
-.ov-syn[data-state='collapsed'] p {
+.ov-syn--clamp[data-state='collapsed'] p:first-child {
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
@@ -118,11 +119,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.ov-chips .ol-chip {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ov-empty {

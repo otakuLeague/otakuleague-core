@@ -10,6 +10,8 @@ import { CollapsibleSynopsis } from './synopsis';
 import './overview.css';
 
 const SYNOPSIS_ID = 'anime-synopsis';
+/** Without JS the toggle can't work: show the whole synopsis and hide the button. */
+const NO_JS_SYNOPSIS = `.ov-syn[data-state] p{display:block!important;-webkit-line-clamp:none!important;overflow:visible!important;mask-image:none!important}.ov-syn-toggle{display:none!important}`;
 
 function Synopsis({
   synopsis,
@@ -30,8 +32,18 @@ function Synopsis({
   ));
   return (
     <>
-      {synopsis.collapsible ? (
-        <CollapsibleSynopsis id={SYNOPSIS_ID}>{paragraphs}</CollapsibleSynopsis>
+      {synopsis.collapse !== 'none' ? (
+        <>
+          <CollapsibleSynopsis
+            id={SYNOPSIS_ID}
+            clamp={synopsis.collapse === 'clamp'}
+          >
+            {paragraphs}
+          </CollapsibleSynopsis>
+          <noscript>
+            <style>{NO_JS_SYNOPSIS}</style>
+          </noscript>
+        </>
       ) : (
         <div className="ov-syn" id={SYNOPSIS_ID}>
           {paragraphs}
@@ -48,7 +60,7 @@ function Aired({ aired }: { readonly aired: OverviewAired }) {
   const start = (
     <time dateTime={aired.start.datetime}>{aired.start.label}</time>
   );
-  if (aired.kind === 'single') return start;
+  if (aired.kind === 'single' || aired.kind === 'upcoming') return start;
   return (
     <>
       {start} –{' '}
@@ -65,7 +77,10 @@ function DetailsCard({ facts }: { readonly facts: OverviewFacts }) {
   const rows = [
     ['Format', facts.format],
     ['Episodes', facts.episodes],
-    ['Aired', facts.aired && <Aired aired={facts.aired} />],
+    [
+      facts.aired?.kind === 'upcoming' ? 'Premieres' : 'Aired',
+      facts.aired && <Aired aired={facts.aired} />,
+    ],
     ['Season', facts.season],
     [
       facts.studios.length > 1 ? 'Studios' : 'Studio',
