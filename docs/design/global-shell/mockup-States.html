@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Global shell: 404, 500 and search states</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body class="ol-root">
+    <!-- Global not-found (guest, full shell), 500 from app/error.tsx (inside the layout, signed in; global-error.tsx, used only when the layout itself fails, is the same block without the shell), and the header-search popover states. -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm" href="/auth?mode=sign-in">Sign in</a>
+            <a class="ol-btn ol-btn--primary ol-btn--sm sh-only-desktop" href="/auth?mode=sign-up">Sign up</a>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-err">
+        <div class="sh-err__code ol-num" aria-hidden="true">404</div>
+        <h1>This page wandered off</h1>
+        <p>The link may be old or mistyped. Search for the anime instead, or start from this season.</p>
+        <div class="sh-search" role="search"><label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" placeholder="Search anime" aria-label="Search anime" /></label></div>
+        <div class="sh-err__actions"><a class="ol-btn ol-btn--primary" href="/season">This season</a><a class="ol-btn ol-btn--secondary" href="/">Home</a></div>
+      </main>
+    </div>
+    <div class="sh demo-sec">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search">
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" value="" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a>
+            <div class="sh-has-pop">
+              <button class="sh-avatar" aria-label="Account menu" aria-controls="account" aria-expanded="false">KA</button>
+            </div>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main class="sh-err">
+        <div class="sh-err__code ol-num" aria-hidden="true">500</div>
+        <h1>Something broke on our side</h1>
+        <p>It’s not you. We’ve logged it; trying again usually works.</p>
+        <div class="sh-err__actions"><button class="ol-btn ol-btn--primary">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Home</a></div>
+        <p class="sh-err__ref">Reference <span class="ol-num">req_7f3a9c21</span> · include it if you <a href="/contact" style="color: var(--accent-ink)">contact us</a></p>
+      </main>
+    </div>
+    <div class="demo-row demo-sec">
+      <div>
+        <p class="ol-label demo-cap">Under 3 characters</p>
+        <div class="sh-search" data-open style="width: 380px; max-width: 100%">
+          <label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" value="mo" aria-label="Search anime" /></label>
+          <div class="sh-pop sh-sug ol-glass" style="position: relative; top: 8px; min-width: 0">
+            <p class="sh-sug__msg">Keep typing: at least 3 characters.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="ol-label demo-cap">Loading (after 150 ms)</p>
+        <div class="sh-search" data-open style="width: 380px; max-width: 100%">
+          <label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" value="frie" aria-label="Search anime" /></label>
+          <div class="sh-pop sh-sug ol-glass" style="position: relative; top: 8px; min-width: 0">
+            <div class="sh-sug__row"><span class="ol-skel sh-sug__cover"></span><span><span class="ol-skel" style="display: block; height: 12px; width: 70%"></span><span class="ol-skel" style="display: block; height: 10px; width: 40%; margin-top: 6px"></span></span></div>
+            <div class="sh-sug__row"><span class="ol-skel sh-sug__cover"></span><span><span class="ol-skel" style="display: block; height: 12px; width: 70%"></span><span class="ol-skel" style="display: block; height: 10px; width: 40%; margin-top: 6px"></span></span></div>
+            <div class="sh-sug__row"><span class="ol-skel sh-sug__cover"></span><span><span class="ol-skel" style="display: block; height: 12px; width: 70%"></span><span class="ol-skel" style="display: block; height: 10px; width: 40%; margin-top: 6px"></span></span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="ol-label demo-cap">Nothing found</p>
+        <div class="sh-search" data-open style="width: 380px; max-width: 100%">
+          <label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" value="freiren" aria-label="Search anime" /></label>
+          <div class="sh-pop sh-sug ol-glass" style="position: relative; top: 8px; min-width: 0">
+            <p class="sh-sug__msg">No anime matches <strong>“freiren”</strong>. Did you mean <a href="/search?q=frieren" style="color: var(--accent-ink); font-weight: 600">Frieren</a>?</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="ol-label demo-cap">Error</p>
+        <div class="sh-search" data-open style="width: 380px; max-width: 100%">
+          <label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" value="frieren" aria-label="Search anime" /></label>
+          <div class="sh-pop sh-sug ol-glass" style="position: relative; top: 8px; min-width: 0">
+            <p class="sh-sug__msg" role="alert">Search is unavailable right now. <button class="ol-btn ol-btn--ghost ol-btn--sm">Retry</button></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
