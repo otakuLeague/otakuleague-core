@@ -5,29 +5,27 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-11
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR, #52). API and Postgres live on Railway (OTA-133 docs PR #50 open, green). W2: designs merged; OTA-152 slice 1 merged, slice 2a (guest desktop header) in PR #53.
+W2 Anime page + search. Done: OTA-97 (anime page shell), OTA-152 (global shell), OTA-133, OTA-134, OTA-163. W1 Live skeleton closed.
 
 ## Last session
-Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Guest desktop header in `apps/web/src/shell/`: `nav.ts` (link data, `activeSection`), `disclosure.tsx` (native `<details name="sh-menu">` enhanced to close on Esc, outside click, focus leaving, link click), `header-nav.tsx` (client, `usePathname` inside `Suspense`), `site-header.tsx` (server: logo, GET search form, Sign in/up). Search box hidden below 1100 px so the header fits at 768 px; below 768 px only logo and Sign in until the mobile sheet. `overflow-x: clip` keeps the header sticky; the anime sticky bar sits under the header and its observer uses `--header-h` as root margin. Discover panel is a solid surface (nested backdrop-filter does not blur). Links to unbuilt routes use `prefetch={false}` and 404 for now. Header adds ~1.1 kB gzipped JS.
+Autopilot on OTA-172 (branch `feat/OTA-172-season-id-route`). Every main-line season in the selector is now a link; the selector shows whenever the main line has 2+ seasons. Seasons without a slug link to the new route `app/anime/anilist/[id]/[[...tab]]` (`rel="nofollow"`, `prefetch={false}`), a thin page over `src/anime/season-redirect.ts`: validates id and tab, `loadAnimeByAnilistId` (15 s), then `redirect()` to the canonical slug on the same tab. Because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh or the not-found UI, never a real 307/404 (documented in `.claude/rules/web.md`). Noindex comes from an `X-Robots-Tag` header rule in `src/seo/indexing.ts` (page-level `robots` is forbidden by `indexing.test.ts`). A malformed slug from the API throws (error page).
 
 ## In progress
-- OTA-152: slice 2a PR #53. Remaining slices: 2b member state (`ShellViewer` union, account menu, skip link), mobile sheet + mobile search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding` (route groups), 404/500 restyle, social icons.
-- OTA-133: docs PR #50.
+- OTA-172: PR open, autopilot-labelled.
+- OTA-171 (design direction): PR #56, Farouk's.
 
 ## Next 3 tasks
-1. OTA-152 slice 2b (member state and account menu).
-2. OTA-100 Overview tab (unblocked), or OTA-166 vendored design skills (protected path, Farouk merges). Page reports now use the real CI screenshots (OTA-163).
-3. After PR #50 merges: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
+1. OTA-153 Design: Home page, or OTA-100 Build: Overview tab (both W2, unblocked).
+2. OTA-166 vendored design skills (protected path, Farouk merges).
+3. OTA-173 (new, W7): API guard against id enumeration triggering imports (negative cache, cold-import cap). Raised by the OTA-172 security review.
 
 ## Blockers
-- OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
-- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked, so the normal web build fails here; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. API checks rely on CI. The proxy also blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked, so API lint/typecheck/tests and the normal web build fail here; API checks rely on CI. The proxy also blocks `*.up.railway.app` and `beta.otakuleague.com`.
 
 ## Known bugs
-- `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
+- `Cover` has no fallback when an image fails to load (visible in CI screenshots). No ticket yet.
 
 ## Notes
-- OTA-160 decided (logo "Pierce", hero "Calm night", CSS/SVG only for v1): OTA-153 Home design is unblocked.
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
 - Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).

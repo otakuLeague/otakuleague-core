@@ -4,6 +4,8 @@ import { tabHref, tabSegmentFromParam } from './tabs';
 
 /** A positive AniList id, no leading zero, at most nine digits (fits an Int). */
 const ANILIST_ID = /^[1-9]\d{0,8}$/;
+/** A canonical slug as the API mints it: lowercase words joined by single hyphens. */
+const CANONICAL_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * The season selector's link to a season not imported yet (OTA-172): imports it through the
@@ -31,5 +33,9 @@ export async function seasonRedirect(
   }
   const slug = result.data.canonicalSlug;
   if (slug === null) notFound();
+  // A drifted body (invalid_response): an outage, not a missing anime.
+  if (typeof slug !== 'string' || !CANONICAL_SLUG.test(slug)) {
+    throw new Error('Unexpected anime slug from the API');
+  }
   redirect(tabHref(slug, segment));
 }

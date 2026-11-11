@@ -77,6 +77,18 @@ describe('seasonRedirect (the season selector link to a season not imported yet)
     expect(await digestOf(seasonRedirect('20958', ['cast']))).toContain('404');
   });
 
+  it('fails (the error page) on a slug the API should never send', async () => {
+    for (const canonicalSlug of ['../x', '', 'Attack-On-Titan', 'a--b']) {
+      call.mockResolvedValueOnce({
+        ok: true,
+        data: animeFixture({ canonicalSlug }),
+      });
+      await expect(seasonRedirect('20958', ['cast'])).rejects.toThrow(
+        'Unexpected anime slug from the API',
+      );
+    }
+  });
+
   it('fails (the error page) when the sources are down or the import is too slow', async () => {
     call.mockResolvedValueOnce(apiError(503));
     await expect(seasonRedirect('20958', undefined)).rejects.toThrow(
