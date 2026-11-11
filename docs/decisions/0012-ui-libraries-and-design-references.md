@@ -45,3 +45,23 @@ Vendor into `.claude/skills/`, only from the official repos and after a license 
 - New pages use Base UI primitives and Motion by default; existing hand-rolled controls (global shell menus, tabs) move to Base UI when their ticket next touches them, not in a rewrite.
 - Each library lands in the PR that first needs it, so `package.json` changes stay small and Farouk reviews each one (protected path).
 - Some facts above (versions, licenses, "stable" APIs) come from research done on 2026-11-11; the architect re-checks them when a library is first added.
+
+## Addendum (2026-11-11): bolder design, motion-first references
+Decision (Farouk): the new site does **not** have to look like the old one. The old purple/cyan palette, the orb background and the existing mockups are a starting point, not a rule. A bolder visual identity with richer animation and more dynamic pages is welcome whenever it makes the product better. PARITY.md still governs **features and behaviour**, never colours or look.
+
+New references, for ambition in motion and art direction (immersive scroll, page transitions, WebGL or shader moments, playful micro-interactions, strong typography). Study the real sites when designing; copy taste, never their branding, assets or exact layouts:
+
+- https://terminal-industries.com
+- https://microsoft.ai
+- https://landonorris.com
+- https://glenncatteeuw.com
+- https://www.1x.tech
+- https://ribbit.dk
+- https://sunmetalon.com
+- https://ponpon-mania.com/fr
+- https://symphonyofvines.unseen.co
+- https://bennos-light.org
+
+Where to spend it: the home hero, landing and marketing moments, page transitions, the anime page header, XP and level-up moments. Data-heavy screens (lists, tabs, rankings) stay fast and readable, with motion as polish rather than spectacle.
+
+What still holds: ADR 0011's performance rules (poster or static first paint, nothing heavy on the LCP path, `prefers-reduced-motion` honoured, pause when hidden) and accessibility. A heavier effect, or a new animation library, is fine when the PR states its cost; a new dependency still needs Farouk's merge.

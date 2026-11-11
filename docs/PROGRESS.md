@@ -31,5 +31,5 @@ Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Gu
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
 - Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
-- Open design question: ticket asks for "purple primary, cyan secondary"; OTA-91's tokens use teal. v2 keeps teal for UI and purple → cyan for the brand gradient.
+- Design direction (ADR 0012 addendum, 2026-11-11): the look need not match the old site. Bolder identity, richer motion and dynamic pages are welcome (motion-first references listed there); PARITY.md covers features only. ADR 0011 performance rules still apply.
 - Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.

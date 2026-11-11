@@ -2,6 +2,8 @@
 
 What this is: a read-only behavioural inventory of the old app (Next.js 15.5 + React 19 + Supabase + Tailwind/shadcn, deployed on Vercel). The new app (NestJS API + Next.js 16 web) must reach parity with better design, fewer bugs and better performance. Tickets are written from this file; autonomous runs read it instead of the old repo. No code is copied; behaviour only.
 
+> Look and feel are **not** parity requirements (ADR 0012 addendum, 2026-11-11): colours (purple/cyan), the background, fonts and layouts below describe the old app, not a target. Keep the features and behaviour; the visual design may change completely.
+
 - Source: old repo commit `103ec65` (Sat Dec 6 2025). Inventory date: 2026-10-31.
 - `old:` paths are relative to `src/` of the old repo. "(site)" is a route group (header and footer shell).
 - Terms: AL = AniList GraphQL (`graphql.anilist.co`), SB = Supabase, RLS = row level security.
