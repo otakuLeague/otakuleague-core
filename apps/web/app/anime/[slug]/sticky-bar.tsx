@@ -25,14 +25,25 @@ export function StickyBar({
   useEffect(() => {
     const hero = document.getElementById(heroId);
     if (hero === null) return undefined;
-    const observer = new IntersectionObserver(([entry]) => {
-      // Only once scrolled past: a header below the viewport (never, today) keeps it hidden.
-      setShown(
-        entry !== undefined &&
-          !entry.isIntersecting &&
-          entry.boundingClientRect.bottom <= 0,
-      );
-    });
+    // The global header covers the top --header-h of the viewport: the hero is out of view once
+    // it has gone under it, so the observed area starts below the header.
+    const headerHeight =
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          '--header-h',
+        ),
+      ) || 0;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Only once scrolled past: a header below the viewport (never, today) keeps it hidden.
+        setShown(
+          entry !== undefined &&
+            !entry.isIntersecting &&
+            entry.boundingClientRect.bottom <= (entry.rootBounds?.top ?? 0),
+        );
+      },
+      { rootMargin: `-${headerHeight}px 0px 0px 0px` },
+    );
     observer.observe(hero);
     return () => observer.disconnect();
   }, [heroId]);

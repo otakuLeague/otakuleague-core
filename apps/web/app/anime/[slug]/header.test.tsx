@@ -28,11 +28,14 @@ vi.mock('next/navigation', () => ({
 /** The sticky bar's observer: tests call `scrollPastHeader` to fire it. */
 let observed: ((entries: Partial<IntersectionObserverEntry>[]) => void) | null =
   null;
+let observedOptions: IntersectionObserverInit | undefined;
 class FakeIntersectionObserver {
   constructor(
     callback: (entries: Partial<IntersectionObserverEntry>[]) => void,
+    options?: IntersectionObserverInit,
   ) {
     observed = callback;
+    observedOptions = options;
   }
   observe() {}
   disconnect() {}
@@ -330,6 +333,25 @@ describe('AnimeHeader', () => {
       ]),
     );
     expect(sticky.className).not.toContain('anime-sticky--shown');
+  });
+
+  it('counts the hero as gone once it is under the global header', () => {
+    document.documentElement.style.setProperty('--header-h', '64px');
+    renderHeader();
+    const sticky = screen.getByTestId('anime-sticky');
+    expect(observedOptions?.rootMargin).toBe('-64px 0px 0px 0px');
+
+    act(() =>
+      observed?.([
+        {
+          isIntersecting: false,
+          boundingClientRect: { bottom: 40 } as DOMRect,
+          rootBounds: { top: 64 } as DOMRect,
+        },
+      ]),
+    );
+    expect(sticky.className).toContain('anime-sticky--shown');
+    document.documentElement.style.removeProperty('--header-h');
   });
 });
 

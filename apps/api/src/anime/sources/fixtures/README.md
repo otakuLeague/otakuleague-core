@@ -25,3 +25,5 @@ Real responses, unedited, used by the mapper tests and the fake sources in the i
 | `anilist-walk-one-piece.json`                       | 21                 | 2 / 2            | One TV series whose SEQUEL/PREQUEL edge leads to an unrelated-looking ONA (MONSTERS)                                  |
 
 `anilist-minami-ke.json` has no English title, no cover colour and no all-time rankings. `anilist-frieren.json` credits "Original Story" (Kanehito Yamada) and "Original Character Design" (Tsukasa Abe), both creators (writer and artist), and three "Original Work Assistance" credits that are not; the others have one "Original Creator". The core files are pretty-printed (`JSON.stringify(response, null, 2)`, then Prettier); their content is unedited. `anilist-one-piece.json` is airing (`nextAiringEpisode` set). `anilist-attack-on-titan.json` has the trailer id with a trailing tab.
+
+The PR screenshot job (OTA-163, ADR 0013) replays these files through `scripts/screenshots/fake-sources.mjs`: a new core, walk or Jikan fixture is served automatically, and a changed query needs both fakes updated.
