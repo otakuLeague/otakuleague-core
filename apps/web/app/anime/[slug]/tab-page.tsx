@@ -8,6 +8,7 @@ import {
   tabHref,
   tabLabel,
 } from '../../../src/anime/tabs';
+import { OverviewLoader } from './overview';
 
 /** A tab page's props, typed here rather than with the generated PageProps (lint runs without typegen). */
 export interface AnimeTabProps {
@@ -41,7 +42,11 @@ export async function TabPage({
     <Suspense
       fallback={<div className="ol-skel" aria-label="Loading" role="status" />}
     >
-      <ComingSoon segment={segment} />
+      {segment === '' ? (
+        <OverviewLoader slug={slug} />
+      ) : (
+        <ComingSoon segment={segment} />
+      )}
     </Suspense>
   );
 }
