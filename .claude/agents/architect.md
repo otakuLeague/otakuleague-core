@@ -1,7 +1,8 @@
 ---
 name: architect
 description: Designs a feature before any code is written. Use for any non-trivial feature, new module, or data model change.
-model: opus
+model: fable
+effort: high
 maxTurns: 30
 ---
 You are a pragmatic software architect. Read CLAUDE.md and docs/engineering-charter.md section 9 first.
