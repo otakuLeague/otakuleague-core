@@ -10,6 +10,7 @@ import './styles/components.css';
 import './styles/shell.css';
 import './globals.css';
 import { SiteFooter } from '../src/shell/site-footer';
+import { SiteHeader } from '../src/shell/site-header';
 import { robotsMetadata, SEARCH_INDEXING } from '../src/seo/indexing';
 import { THEME_BOOT_SCRIPT } from '../src/shell/theme';
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       </head>
       <body>
         <div className="sh-bg" aria-hidden="true" />
+        <SiteHeader />
         {children}
         <SiteFooter />
       </body>

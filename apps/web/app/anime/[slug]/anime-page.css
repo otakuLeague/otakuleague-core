@@ -22,7 +22,7 @@
 }
 /* Keyboard focus never lands under the fixed sticky bar. */
 html:has(.anime-sticky--shown) {
-  scroll-padding-top: 72px;
+  scroll-padding-top: calc(var(--header-h) + 72px);
 }
 
 .anime-sr-only {
@@ -442,15 +442,15 @@ html:has(.anime-sticky--shown) {
   padding: var(--space-6) max(16px, 3vw);
 }
 
-/* Sticky bar (mockup-Scrolled) */
+/* Sticky bar (mockup-Scrolled), right under the global header (z-index 20), hidden behind it. */
 .anime-sticky {
   position: fixed;
-  inset: 0 0 auto;
+  inset: var(--header-h) 0 auto;
   z-index: 10;
   background: color-mix(in oklab, var(--surface) 90%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  transform: translateY(-110%);
+  transform: translateY(calc(-110% - var(--header-h)));
   transition: transform 0.2s ease-out;
 }
 /* The shadow only once shown: hidden, it would spill over the top of the page. */
@@ -704,7 +704,7 @@ html:has(.anime-sticky--shown) {
     margin-top: -6px;
   }
   html:has(.anime-sticky--shown) {
-    scroll-padding-top: 120px;
+    scroll-padding-top: calc(var(--header-h) + 120px);
   }
   .anime-hero__chips a.anime-chip {
     position: relative;
