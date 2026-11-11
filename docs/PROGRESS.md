@@ -5,27 +5,27 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-11
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97. API and Postgres live on Railway (OTA-133 docs PR #50 open). Web live on Vercel at beta.otakuleague.com; OTA-134 finishing PR open. OTA-163 remains. W2 designs merged (OTA-150, 151, 154, 99, 96); OTA-152 slice 1 merged.
+W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134. API and Postgres live on Railway (OTA-133 docs PR #50 open, green). OTA-163 PR open (Farouk merges: protected paths). W2 designs merged (OTA-150, 151, 154, 99, 96); OTA-152 slice 1 merged.
 
 ## Last session
-Autopilot on OTA-134 (branch `chore/OTA-134-vercel-beta`). Beta is kept out of search engines by a code constant `SEARCH_INDEXING = 'blocked'` (`apps/web/src/seo/indexing.ts`), not an env var: beta is the production deploy of main, so no Vercel variable tells it apart, and a new variable would touch `.env.example` (protected). It drives the root `metadata.robots` and an `X-Robots-Tag: noindex, nofollow` header from `next.config.ts` (async `generateMetadata` streams the meta into `<body>`, and global-error has none). No robots.txt `Disallow`, which would hide the noindex. A guard test fails if any other `app/` file sets `robots`. Vercel settings documented in `docs/deploy-vercel.md` (separate file to avoid conflicting with PR #50's `docs/deploy.md`).
+Autopilot on OTA-163 (branch `chore/OTA-163-pr-screenshots`, ADR 0013). New workflow `.github/workflows/screenshots.yml`: `capture` job (read-only token) builds the app, migrates a Postgres 16 service, serves recorded AniList/Jikan fixtures from `scripts/screenshots/fake-sources.mjs` behind the existing `ANILIST_API_URL`/`JIKAN_API_URL`, and screenshots the routes in `scripts/screenshots/routes.json` at 1440/390, dark/light, with Playwright 1.63.0 installed into `$RUNNER_TEMP` (no new dependency). The browser may only reach localhost (ADR 0006: no re-hosted covers). `publish` job (write token, runs no repo code) treats the artifact as hostile: allowlisted PNG names only, pushes an orphan commit to `screenshots/pr-<n>` (with a `vercel.json` disabling deploys), builds the sticky comment itself (marker `<!-- pr-screenshots -->`), prunes branches of closed PRs. Only an app crash fails the job. `autopilot-merge.yml` now also listens to Screenshots.
 
 ## In progress
-- OTA-134: this PR (automerge when green). `NEXT_PUBLIC_SENTRY_DSN` moved to OTA-167.
+- OTA-163: PR open, waits for Farouk (protected paths). First run measures job time (target < 5 min); check Vercel ignores `screenshots/pr-*`.
 - OTA-133: docs PR #50.
 
 ## Next 3 tasks
-1. OTA-163: real-page screenshots in CI (protected path, Farouk merges).
-2. OTA-152 global shell build (Todo), then OTA-100 Overview tab.
-3. After both deploy PRs merge: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md (skipped now to avoid conflicts with #50).
+1. OTA-152 global shell build (Todo), then OTA-100 Overview tab.
+2. After OTA-163 merges: page reports use the real screenshots (skill step 7 already updated).
+3. After both deploy PRs merge: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
 
 ## Blockers
 - OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
 - OTA-153 waits on OTA-160 (needs-human: brand moment decision).
-- Cloud runs have Node 22 (repo wants 24) and Prisma engine downloads are blocked. The egress proxy blocks `*.up.railway.app` and `beta.otakuleague.com`, so the autopilot cannot curl deploys; the OTA-134 test plan (308 alias, robots tag) needs Farouk or CI. Only web and shared-types checks run locally; API checks rely on CI.
+- Cloud runs have Node 22 (repo wants 24), no `node_modules`, Prisma engine downloads blocked: lint/typecheck/API tests rely on CI. The egress proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
 
 ## Known bugs
-- None tracked.
+- `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
 
 ## Notes
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.

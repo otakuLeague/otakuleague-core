@@ -14,6 +14,7 @@ Settings live in the Vercel dashboard (no `vercel.json`). Change the dashboard a
 | Production branch | `main` |
 | Production URLs | `otakuleague-core.vercel.app`, `beta.otakuleague.com` |
 | Preview | every PR gets a preview URL (Vercel bot comment) |
+| Not deployed | `screenshots/pr-*` branches (ADR 0013): they hold only images and an `apps/web/vercel.json` with `git.deploymentEnabled: false` |
 
 DNS is at Namecheap: CNAME `beta` -> `1c6706ddfc32ce8d.vercel-dns-017.com`.
 
