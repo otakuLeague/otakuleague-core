@@ -5,28 +5,31 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-11
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue: OTA-133, OTA-134 (Farouk's accounts), OTA-97, OTA-163. W2 designs are merged (OTA-150, 151, 154, 99, 96); OTA-152 slice 1 merged.
+W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97. API and Postgres live on Railway (OTA-133 docs PR #50 open). Web live on Vercel at beta.otakuleague.com; OTA-134 finishing PR open. OTA-163 remains. W2 designs merged (OTA-150, 151, 154, 99, 96); OTA-152 slice 1 merged.
 
 ## Last session
-Autopilot run on OTA-97 (branch `feat/OTA-97-season-selector`): season selector in the anime page header. Disclosure button + list of links (not the mockup's listbox), keeps the current tab, loads the franchise in its own Suspense so the header never waits. Hidden for one season, on franchise failure, or when no other season is imported yet; seasons without a slug are listed but disabled. New `isAnimeFranchise` guard in shared-types. Per-tab titles, link previews and slug redirects (308, tab kept) were already on main.
+Autopilot on OTA-134 (branch `chore/OTA-134-vercel-beta`). Beta is kept out of search engines by a code constant `SEARCH_INDEXING = 'blocked'` (`apps/web/src/seo/indexing.ts`), not an env var: beta is the production deploy of main, so no Vercel variable tells it apart, and a new variable would touch `.env.example` (protected). It drives the root `metadata.robots` and an `X-Robots-Tag: noindex, nofollow` header from `next.config.ts` (async `generateMetadata` streams the meta into `<body>`, and global-error has none). No robots.txt `Disallow`, which would hide the noindex. A guard test fails if any other `app/` file sets `robots`. Vercel settings documented in `docs/deploy-vercel.md` (separate file to avoid conflicting with PR #50's `docs/deploy.md`).
 
 ## In progress
-- OTA-97: this PR (634 lines, 285 of them tests: over the ~400 budget, so no `automerge`; Farouk reviews).
+- OTA-134: this PR (automerge when green). `NEXT_PUBLIC_SENTRY_DSN` moved to OTA-167.
+- OTA-133: docs PR #50.
 
 ## Next 3 tasks
-1. Review/merge the OTA-97 season selector PR.
-2. OTA-97 later slices (new tickets): `/anime/anilist/[id]/[[...tab]]` redirect so un-imported seasons are clickable; phone bottom sheet; refresh while franchise is `walking`; "saved data" outage banner (needs an API signal); per-anime "View on AniList" attribution.
-3. OTA-163 (real-page screenshots in CI; protected path, Farouk merges), then OTA-100 Overview tab.
+1. OTA-163: real-page screenshots in CI (protected path, Farouk merges).
+2. OTA-152 global shell build (Todo), then OTA-100 Overview tab.
+3. After both deploy PRs merge: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md (skipped now to avoid conflicts with #50).
 
 ## Blockers
-- Railway and Vercel accounts must be created by Farouk (card needed for Railway).
-- OTA-153 (Home design) waits on OTA-160 (needs-human: brand moment decision).
-- Cloud runs have Node 22 (repo wants 24) and Prisma engine downloads are blocked: only web and shared-types checks run locally (`pnpm install --config.engine-strict=false --filter '@otakuleague/web...' --filter .`); API checks rely on CI.
+- OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
+- OTA-153 waits on OTA-160 (needs-human: brand moment decision).
+- Cloud runs have Node 22 (repo wants 24) and Prisma engine downloads are blocked. The egress proxy blocks `*.up.railway.app` and `beta.otakuleague.com`, so the autopilot cannot curl deploys; the OTA-134 test plan (308 alias, robots tag) needs Farouk or CI. Only web and shared-types checks run locally; API checks rely on CI.
 
 ## Known bugs
-- None tracked yet.
+- None tracked.
 
 ## Notes
-- Dependabot PRs #45 and #18 open: merge when CI is green (they touch `package.json`, so never auto-merged).
-- Open design question: the ticket asks for "purple primary, cyan secondary"; OTA-91's tokens use a teal accent. v2 keeps teal for UI and purple → cyan for the brand gradient.
-- Open product question (OTA-99): regional streaming availability needs a source other than AniList (check terms per ADR 0006) or stays out of v1.
+- At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
+- Dependabot PR #18 open: merge when CI is green (touches `package.json`, never auto-merged).
+- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
+- Open design question: ticket asks for "purple primary, cyan secondary"; OTA-91's tokens use teal. v2 keeps teal for UI and purple → cyan for the brand gradient.
+- Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.
