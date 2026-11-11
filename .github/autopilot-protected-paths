@@ -3,21 +3,36 @@
 # The workflow reads this file from main, so a PR cannot loosen the rules it is checked against.
 # docs/AUTOPILOT.md describes the same list in words.
 
-# CI, git hooks and Claude's own guard rails.
+# CI, git hooks, and what steers Claude (only .claude/rules/* stays mergeable: build PRs update it).
 .github/*
 .githooks/*
-.claude/settings.json
+.claude/settings*
 .claude/hooks/*
-.claude/skills/autopilot/*
+.claude/skills/*
+.claude/agents/*
+.claude/commands/*
+*.mcp.json
 CLAUDE.md
 docs/AUTOPILOT.md
 
+# Code that runs at install, clean or build time, and the configs that make CI strict.
+scripts/*
+*.pnpmfile.cjs
+*eslint.config*
+*vitest.config*
+*tsconfig*.json
+*.prettierrc*
+*.prettierignore
+
 # Dependencies (CLAUDE.md: a new dependency needs a reason Farouk accepts).
 *package.json
-pnpm-lock.yaml
-pnpm-workspace.yaml
-.npmrc
-.nvmrc
+*pnpm-lock.yaml
+*pnpm-workspace.yaml
+*.npmrc
+*.nvmrc
+
+# Database schema changes (production data from the launch on).
+*/migrations/*
 
 # Deploy and infrastructure config.
 *vercel.json
@@ -25,8 +40,8 @@ pnpm-workspace.yaml
 *railway.toml
 *Dockerfile*
 *.dockerignore
-docker/*
-docker-compose.yml
+*docker/*
+*docker-compose*
 
-# Secrets template.
-.env*
+# Secrets templates.
+*.env*

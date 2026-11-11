@@ -13,7 +13,7 @@ skip_labels: [needs-human, post-launch]
 
 ## Rules the autopilot never breaks
 - Never merges anything itself. The `Autopilot merge` workflow (`.github/workflows/autopilot-merge.yml`) squash-merges a PR labelled `automerge` once every check on its head commit is green.
-- The workflow never merges a PR that touches a path in `.github/autopilot-protected-paths` (read from main): CI and workflows, git hooks, Claude settings, hooks and the autopilot skill, CLAUDE.md, this file, dependencies (`package.json`, the lockfile), deploy and Docker config, `.env*`. Those wait for Farouk.
+- The workflow never merges a PR that touches a path in `.github/autopilot-protected-paths` (read from main): CI and workflows, git hooks, everything under `.claude/` except `rules/`, CLAUDE.md, this file, `scripts/`, lint/test/TypeScript configs, dependencies (`package.json`, the lockfile), database migrations, deploy and Docker config, `.env*`. Those wait for Farouk. Only labels added by Farouk's account count.
 - To stop merges: remove the `automerge` label, set `automerge: false` here, or disable the workflow in GitHub's Actions tab.
 - Never touches `otakuleague.com` DNS, Vercel/Railway settings or secrets.
 - `main` deploys only to beta.otakuleague.com until the launch cutover (OTA-149), so a bad merge is a revert, not an outage.
