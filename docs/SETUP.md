@@ -36,7 +36,7 @@ To change something: open a session and say what you want ("make the home hero c
 5. Optional: `claude setup-token` and save it as the repo secret `CLAUDE_CODE_OAUTH_TOKEN` to enable the GitHub Action.
 
 ## Human-only tickets
-OTA-133 (Railway account + card) and OTA-134 (Vercel import + DNS record for beta.otakuleague.com). ~15 min each; the autopilot prepares the config files.
+OTA-133: the Railway account and project are done. Left for you: enable daily volume backups and run the failed-migration drill (see docs/deploy.md). OTA-134 (Vercel import + DNS record for beta.otakuleague.com) is still open, ~15 min; the autopilot prepares the config files.
 
 ## Parallel sessions
 For two independent tasks at once: `git worktree add ../ol-OTA-123 -b feat/OTA-123-x` and open a second Claude Code session there. Don't run two `pnpm test:integration` at the same time (they share the test database).
