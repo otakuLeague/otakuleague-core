@@ -69,5 +69,5 @@ Node 24 (`nvm use`), pnpm 12.11.2.
 - Add an MCP server, a paid service or a new dependency without saying why it pays for itself.
 
 ## Security
-A missing root `.env` is an incident, never a starting state: stop, tell me what you saw and when, and do not recreate it, copy `.env.example` over it, or work around it with env vars until I answer (OTA-89).
+A missing root `.env` in Farouk's local checkout is an incident, never a starting state: stop, tell me what you saw and when, and do not recreate it, copy `.env.example` over it, or work around it with env vars until I answer (OTA-89). Exception: a fresh clone in a cloud session (the autopilot) never has `.env` (gitignored); that is expected, so work without it and never create one.
 Secrets only in env vars; keep `.env.example` current. Check license and terms of every third-party data source and image before caching or using it (ADR 0006).

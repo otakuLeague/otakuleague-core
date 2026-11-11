@@ -1,0 +1,32 @@
+# Paths the "Autopilot merge" workflow never merges: a PR touching any of them waits for Farouk.
+# One bash pattern per line, matched against the whole repo-relative path (`*` also matches `/`).
+# The workflow reads this file from main, so a PR cannot loosen the rules it is checked against.
+# docs/AUTOPILOT.md describes the same list in words.
+
+# CI, git hooks and Claude's own guard rails.
+.github/*
+.githooks/*
+.claude/settings.json
+.claude/hooks/*
+.claude/skills/autopilot/*
+CLAUDE.md
+docs/AUTOPILOT.md
+
+# Dependencies (CLAUDE.md: a new dependency needs a reason Farouk accepts).
+*package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.npmrc
+.nvmrc
+
+# Deploy and infrastructure config.
+*vercel.json
+*railway.json
+*railway.toml
+*Dockerfile*
+*.dockerignore
+docker/*
+docker-compose.yml
+
+# Secrets template.
+.env*
