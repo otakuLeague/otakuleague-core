@@ -38,7 +38,7 @@ export const DISCOVER_LINKS: readonly DiscoverLink[] = [
     href: '/discover/episodes',
     label: 'Latest episodes',
     hint: 'Released in the last 48 h',
-    icon: '▶',
+    icon: '▶\uFE0E',
   },
 ];
 
@@ -56,7 +56,7 @@ const SECTION_PREFIXES: readonly (readonly [NavSection, string])[] = [
 ];
 
 /** True for `prefix` itself and any path below it, by whole segments (`/season/x`, not `/seasonx`). */
-export function isWithin(pathname: string | null, prefix: string): boolean {
+export function isPathWithin(pathname: string | null, prefix: string): boolean {
   if (pathname === null) return false;
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -64,7 +64,7 @@ export function isWithin(pathname: string | null, prefix: string): boolean {
 /** The section the path belongs to, or null (home, anime pages, or a prerender without a path). */
 export function activeSection(pathname: string | null): NavSection | null {
   const match = SECTION_PREFIXES.find(([, prefix]) =>
-    isWithin(pathname, prefix),
+    isPathWithin(pathname, prefix),
   );
   return match === undefined ? null : match[0];
 }

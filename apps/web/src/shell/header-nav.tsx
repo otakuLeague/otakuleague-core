@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Disclosure } from './disclosure';
-import { activeSection, DISCOVER_LINKS, isWithin, MAIN_LINKS } from './nav';
+import { activeSection, DISCOVER_LINKS, isPathWithin, MAIN_LINKS } from './nav';
 
 /** Main nav for the current path. Rendered inside a Suspense boundary (see SiteHeader). */
 export function HeaderNav() {
@@ -39,8 +39,9 @@ export function HeaderNavView({
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     aria-current={
-                      isWithin(pathname, link.href) ? 'page' : undefined
+                      isPathWithin(pathname, link.href) ? 'page' : undefined
                     }
                   >
                     <span className="sh-menu__ico" aria-hidden="true">
@@ -61,6 +62,7 @@ export function HeaderNavView({
             <Link
               className="sh-nav__link"
               href={link.href}
+              prefetch={false}
               aria-current={section === link.section ? 'page' : undefined}
             >
               {link.label}

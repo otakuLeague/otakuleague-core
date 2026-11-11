@@ -33,6 +33,8 @@ describe('SiteHeader', () => {
     expect(form.getAttribute('method')).toBe('get');
     const input = within(form).getByRole('searchbox', { name: 'Search anime' });
     expect(input.getAttribute('name')).toBe('q');
+    expect(input.hasAttribute('required')).toBe(true);
+    expect(input.getAttribute('maxlength')).toBe('100');
   });
 
   it('offers a guest Sign in and Sign up', () => {

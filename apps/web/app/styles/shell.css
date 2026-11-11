@@ -179,7 +179,8 @@ details[open] > summary .sh-chev {
 
 /* ---------- Search box (plain GET form until OTA-98) ---------- */
 .sh-search {
-  width: min(340px, 30vw);
+  flex: 0 1 340px;
+  min-width: 0;
 }
 .sh-search__field {
   display: flex;
@@ -198,6 +199,7 @@ details[open] > summary .sh-chev {
 }
 .sh-search input {
   flex: 1;
+  width: 100%;
   min-width: 0;
   border: 0;
   background: none;
@@ -222,13 +224,9 @@ details[open] > summary .sh-chev {
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.45);
   transform-origin: top left;
-  /* Menus hold text over busy content: more opaque than the header's glass. */
-  --glass-tint: 92%;
-}
-.sh-pop--end {
-  left: auto;
-  right: 0;
-  transform-origin: top right;
+  /* Solid, not .ol-glass: a backdrop-filter nested in the header's glass does not blur. */
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 details[open] > .sh-pop {
   animation: sh-pop-in var(--dur-enter) var(--ease-enter);
@@ -259,6 +257,9 @@ details[open] > .sh-pop {
 }
 .sh-menu a:is(:hover, [aria-current='page']) {
   background: color-mix(in oklab, var(--ink) 7%, transparent);
+}
+.sh-menu a[aria-current='page'] {
+  font-weight: 600;
 }
 .sh-menu small {
   display: block;
@@ -397,6 +398,24 @@ details[open] > .sh-pop {
 }
 
 /* ---------- Below --bp-md (768px; custom properties can't be used in media queries) ---------- */
+/* Below --bp-lg (1100px) the nav and the guest actions need the room: the search box goes. */
+@media (max-width: 1099.98px) {
+  .sh-header__in {
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+  }
+  .sh-nav__link {
+    padding: 0 var(--space-2);
+  }
+  .sh-nav__link:is([aria-current='page'], [data-active])::after {
+    left: var(--space-2);
+    right: var(--space-2);
+  }
+  .sh-search {
+    display: none;
+  }
+}
+
 @media (max-width: 767.98px) {
   /* Logo and Sign in only until the mobile sheet slice (ADR 0014). */
   .sh-header__in {

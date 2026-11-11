@@ -41,21 +41,13 @@ describe('Disclosure', () => {
     expect(details.getAttribute('name')).toBe('sh-menu');
     expect(summary.tagName).toBe('SUMMARY');
     expect(summary.hasAttribute('data-active')).toBe(false);
-    expect(
-      details.querySelector('.sh-pop.sh-menu.ol-glass:not(.sh-pop--end)'),
-    ).not.toBeNull();
+    expect(details.querySelector('.sh-pop.sh-menu')).not.toBeNull();
   });
 
-  it('marks the active section, aligns to the end and names an icon-only trigger', () => {
-    const { details, summary } = renderMenu({
-      active: true,
-      align: 'end',
-      summaryLabel: 'Account menu',
-    });
+  it('marks the active section', () => {
+    const { summary } = renderMenu({ active: true });
 
     expect(summary.hasAttribute('data-active')).toBe(true);
-    expect(summary.getAttribute('aria-label')).toBe('Account menu');
-    expect(details.querySelector('.sh-pop--end')).not.toBeNull();
   });
 
   it('opens and closes on its summary', () => {
@@ -71,6 +63,15 @@ describe('Disclosure', () => {
     link.focus();
 
     fireEvent.keyDown(link, { key: 'Escape' });
+
+    expect(details.open).toBe(false);
+    expect(document.activeElement).toBe(summary);
+  });
+
+  it('closes on Esc when focus is outside it (opened with the mouse)', () => {
+    const { details, summary } = openMenu();
+
+    fireEvent.keyDown(document.body, { key: 'Escape' });
 
     expect(details.open).toBe(false);
     expect(document.activeElement).toBe(summary);

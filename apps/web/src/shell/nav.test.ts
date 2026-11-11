@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeSection, isWithin } from './nav';
+import { activeSection, isPathWithin } from './nav';
 
 describe('activeSection', () => {
   it.each([
@@ -33,11 +33,11 @@ describe('activeSection', () => {
   });
 });
 
-describe('isWithin', () => {
+describe('isPathWithin', () => {
   it('matches the prefix and the paths below it only', () => {
-    expect(isWithin('/discover/airing', '/discover/airing')).toBe(true);
-    expect(isWithin('/discover/airing/2', '/discover/airing')).toBe(true);
-    expect(isWithin('/discover/airingx', '/discover/airing')).toBe(false);
-    expect(isWithin(null, '/discover/airing')).toBe(false);
+    expect(isPathWithin('/discover/airing', '/discover/airing')).toBe(true);
+    expect(isPathWithin('/discover/airing/2', '/discover/airing')).toBe(true);
+    expect(isPathWithin('/discover/airingx', '/discover/airing')).toBe(false);
+    expect(isPathWithin(null, '/discover/airing')).toBe(false);
   });
 });
