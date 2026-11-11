@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 8
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: otakuleague
           POSTGRES_PASSWORD: otakuleague_ci_password

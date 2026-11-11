@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:18
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set. Run cp .env.example .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set. Run cp .env.example .env}
@@ -10,7 +10,9 @@ services:
       # Loopback only: the database is never reachable from the local network.
       - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18 images keep data under /var/lib/postgresql/18/docker: mount the parent.
+      # New volume name so an old Postgres 16 volume is never reused (pnpm db:reset starts clean).
+      - pgdata18:/var/lib/postgresql
       # Runs only when the data volume is empty (first start or after db:reset).
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
@@ -23,4 +25,4 @@ services:
       start_period: 10s
 
 volumes:
-  pgdata:
+  pgdata18:

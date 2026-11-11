@@ -5,7 +5,7 @@ All-in-one anime platform: anime data, watchlists, XP and leaderboards, later ga
 **Start every session with docs/PROGRESS.md** (current state, next tasks). Don't re-explore the repo to find out where we are.
 
 ## Stack (confirm with me before changing)
-TypeScript strict, Next.js 16 web (`apps/web`), NestJS + Prisma API (`apps/api`), PostgreSQL 16 (Docker locally, real Postgres in tests), REST, pnpm monorepo, `packages/shared-types`. Modular monolith. Redis, queues or search engines only after a measured need. Free tools unless strictly necessary. Hosting: Vercel (web) + Railway (API, DB), ADR 0009.
+TypeScript strict, Next.js 16 web (`apps/web`), NestJS + Prisma API (`apps/api`), PostgreSQL 18 (Docker locally, real Postgres in tests), REST, pnpm monorepo, `packages/shared-types`. Modular monolith. Redis, queues or search engines only after a measured need. Free tools unless strictly necessary. Hosting: Vercel (web) + Railway (API, DB), ADR 0009.
 
 ## Map
 - `apps/api/src/<module>/`: controller → service → adapters; `sources/` = external anime APIs (one adapter each).

@@ -19,7 +19,7 @@ nvm install                      # installs and uses Node 24 from .nvmrc (later:
 npm install -g pnpm@12.11.2      # the version pinned in package.json
 pnpm install                     # all packages; also builds shared-types and sets up git hooks
 cp .env.example .env             # dev-only placeholder values, no secrets needed
-pnpm db:up                       # PostgreSQL 16 in Docker, waits until healthy
+pnpm db:up                       # PostgreSQL 18 in Docker, waits until healthy
 pnpm db:migrate                  # applies Prisma migrations to the dev database
 pnpm dev                         # API on :3001, web on :3000
 ```
