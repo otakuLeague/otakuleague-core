@@ -32,18 +32,18 @@ With a cached install, the workspace `prepare` step that builds `shared-types` w
 
 ## Search indexing
 
-`beta.otakuleague.com` is the production deploy of `main`, so `VERCEL_ENV` cannot tell the beta from the future real site. Indexing is driven by one constant, `SEARCH_INDEXING` in `apps/web/src/seo/indexing.ts`, currently `'blocked'`. It sets the root `metadata.robots` in `apps/web/app/layout.tsx`, which renders `<meta name="robots" content="noindex, nofollow">` on every page.
+`beta.otakuleague.com` is the production deploy of `main`, so `VERCEL_ENV` cannot tell the beta from the future real site. Indexing is driven by one constant, `SEARCH_INDEXING` in `apps/web/src/seo/indexing.ts`, currently `'blocked'`. It sets the root `metadata.robots` in `apps/web/app/layout.tsx`, which renders `<meta name="robots" content="noindex, nofollow">`. The same constant also sends an `X-Robots-Tag: noindex, nofollow` header on all routes from `headers()` in `apps/web/next.config.ts`, because async `generateMetadata` streams the meta tag into `<body>` on anime pages and `global-error.tsx` has no meta tag.
 
 There is no `Disallow: /` in a robots.txt on purpose: a crawler that cannot fetch a page never sees its noindex.
 
-At the launch cutover (OTA-149): change the constant to `'allowed'`, merge, and check the meta tag is gone from the real domain (`curl -s <url> | grep robots` shows `index, follow` or nothing).
+At the launch cutover (OTA-149): change the constant to `'allowed'`, merge, and check on the real domain, on a page that returns 200: `curl -s <url> | grep -o '<meta name="robots"[^>]*>'` shows `index, follow`, and `curl -sI <url> | grep -i x-robots-tag` prints nothing. 404 pages keep Next's own noindex.
 
 ## Test plan
 
 1. Open a PR preview URL (from the Vercel bot comment).
 2. Load `/anime/attack-on-titan`: the page renders.
 3. Request an alias slug (a slug other than the canonical one, or the same slug in another letter case): `curl -I <preview>/anime/<alias>` returns `308` with `location` pointing to the canonical slug (handled by `apps/web/proxy.ts`).
-4. `curl -s <preview>/anime/attack-on-titan | grep robots` shows `<meta name="robots" content="noindex, nofollow">`.
+4. `curl -s <preview>/anime/attack-on-titan | grep -o '<meta name="robots"[^>]*>'` shows `<meta name="robots" content="noindex, nofollow">`, and `curl -sI <preview>/anime/attack-on-titan | grep -i x-robots-tag` shows `noindex, nofollow`.
 5. An unknown slug returns a real `404`.
 
 Preview URLs may be protected by Vercel authentication; if `curl` gets a login page, use the beta domain after merge instead.
