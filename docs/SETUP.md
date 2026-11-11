@@ -4,7 +4,7 @@
 `/start` → `/next 2h` → say "go" → work with Claude → `/ship` → `/clear`.
 Stopping early: `/wrap` (saves state to `docs/PROGRESS.md`, pushes a WIP branch).
 Also: `/bug <what's wrong>`, `/review` (`--coach` for interview questions), `/roadmap`, `/design <OTA-key>`.
-Model: `opusplan` (Opus plans, Sonnet executes). The status line shows model · context % · 5-hour plan usage · branch; at 50 % think `/compact`, at 70 % `/clear`.
+Model: `opusplan` for your own session; each kind of work goes to its agent with a fixed model and effort (OTA-162, table in `.claude/skills/autopilot/SKILL.md`). The status line shows model · context % · 5-hour plan usage · branch; at 50 % think `/compact`, at 70 % `/clear`.
 
 ## What runs without you
 | What | When | Where | Cost |

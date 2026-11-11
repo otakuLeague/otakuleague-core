@@ -1,6 +1,6 @@
 # 0010: Solo dev workflow with Claude Code, tuned for token cost
 
-Status: accepted (2026-10-31, OTA-132). Supersedes the "Workflow for any task" steps that sent every task through five subagents.
+Status: accepted (2026-10-31, OTA-132). The **Models** bullet is superseded by OTA-162 (2026-11-11): each kind of work goes to its agent with a fixed model and effort, see `.claude/skills/autopilot/SKILL.md`. Supersedes the "Workflow for any task" steps that sent every task through five subagents.
 
 ## Context
 About 10 hours a week until the 2026-12-28 launch, on a Claude Max plan that ran out fast on earlier attempts. The old workflow ran architect → test-writer → code-reviewer → pr-writer → interviewer for every task, all on the main model, each starting from zero and re-reading files. `CLAUDE.md` was ~14 KB and loaded in full every session.

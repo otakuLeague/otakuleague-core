@@ -17,7 +17,10 @@ skip_labels: [needs-human, post-launch]
 - To stop merges: remove the `automerge` label, set `automerge: false` here, or disable the workflow in GitHub's Actions tab.
 - Never touches `otakuleague.com` DNS, Vercel/Railway settings or secrets.
 - `main` deploys only to beta.otakuleague.com until the launch cutover (OTA-149), so a bad merge is a revert, not an outage.
-- When a ticket needs a product or taste decision it can't make, it comments the question on the Linear ticket, adds `needs-human`, and moves to the next ticket.
+- It coordinates and hands each kind of work to its agent, each on its own model and effort (OTA-162, table in the skill). Code is always reviewed by a different model than the one that wrote it.
+- Every PR lists which agent did what and a checklist of every workflow step; a PR with a step "not done" never gets `automerge`.
+- After each page it adds or changes, it sends a page report: desktop and mobile screenshots plus a "how it works" a 5-year-old understands (PR body, Linear comment, push and email).
+- Creative liberty in design and features is fine as long as everything in docs/PARITY.md for that page still works. A decision it can't make and that is irreversible or expensive: it comments the question on the Linear ticket, adds `needs-human`, and moves to the next ticket.
 
 ## Reviewing its work
 Every autopilot PR has the `autopilot` label and a Linear comment. Ask for changes in a normal session: "change X on the home page" → `/next` picks it up as a new ticket.
