@@ -86,3 +86,4 @@ flowchart LR
 - If Vercel still reacts to these branches, switch the ref to `refs/screenshots/pr-<n>` (not a branch: no deploy, not cloned). The URLs do not change because they use the commit SHA.
 
 ## Learnings
+Job time is measured on this PR's first run; the figures above are assumptions until then. Closed PRs' branches are pruned by the next run's publish job, not on close.

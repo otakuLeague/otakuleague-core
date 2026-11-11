@@ -17,7 +17,7 @@ name: Autopilot merge
 # every merged commit already passed CI on the PR head.
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, Screenshots]
     types: [completed]
   pull_request_target:
     types: [labeled]
