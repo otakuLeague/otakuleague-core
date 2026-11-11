@@ -92,9 +92,34 @@ describe('SeasonSelector', () => {
       'ol-season__item--upcoming',
     );
     expect(link(/Final Chapters/).textContent).toContain('Upcoming');
-    expect(screen.queryByRole('link', { name: /Season 3/ })).toBeNull();
-    expect(screen.getByText('Season 3').getAttribute('aria-disabled')).toBe(
-      'true',
-    );
+    const unlinked = link(/^Season 3.*not available yet$/);
+    expect(unlinked.getAttribute('aria-disabled')).toBe('true');
+    expect(unlinked.hasAttribute('href')).toBe(false);
+  });
+
+  it('names the trigger "Seasons" when the current entry is not in the main line', () => {
+    const others = SEASONS.map((season) => ({ ...season, isCurrent: false }));
+    render(<SeasonSelector slug="aot-season-2" seasons={others} />);
+    expect(screen.getByRole('button', { name: 'Seasons' })).toBeTruthy();
+  });
+
+  it('stays open while focus moves inside, and closes once a season is picked', () => {
+    const trigger = openSelector();
+    fireEvent.blur(trigger, { relatedTarget: link(/Season 1/) });
+    fireEvent.pointerDown(link(/Season 1/));
+    fireEvent.blur(trigger, { relatedTarget: null });
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(link(/Season 1/));
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('closes on Escape wherever focus is, and on a blur to nowhere', () => {
+    const trigger = openSelector();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(trigger);
+    fireEvent.click(trigger);
+    fireEvent.blur(trigger, { relatedTarget: null });
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 });

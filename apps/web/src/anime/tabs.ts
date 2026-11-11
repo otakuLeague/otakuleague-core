@@ -50,12 +50,14 @@ export interface SeasonOption {
   readonly upcoming: boolean;
 }
 
-/** The selector's seasons, or null when there is nothing to switch between. */
+/** The selector's seasons, or null when there is no other season to open. */
 export function seasonOptions(
   franchise: AnimeFranchise | null,
 ): readonly SeasonOption[] | null {
   if (franchise === null || franchise.state === 'unavailable') return null;
-  if (franchise.mainLine.length < 2) return null;
+  // Nothing to switch to unless another season has a page (a slug) to open.
+  const others = franchise.mainLine.filter((season) => !season.isCurrent);
+  if (!others.some((season) => season.slug !== null)) return null;
   return franchise.mainLine.map((season) => ({
     anilistId: season.anilistId,
     slug: season.slug,

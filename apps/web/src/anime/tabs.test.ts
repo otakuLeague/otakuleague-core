@@ -18,7 +18,7 @@ describe('seasonOptions', () => {
     franchiseSeason({}),
     franchiseSeason({
       anilistId: 20958,
-      slug: null,
+      slug: 'aot-season-2',
       label: 'Season 2',
       isCurrent: false,
       status: 'NOT_YET_RELEASED',
@@ -38,7 +38,7 @@ describe('seasonOptions', () => {
       },
       {
         anilistId: 20958,
-        slug: null,
+        slug: 'aot-season-2',
         label: 'Season 2',
         year: null,
         isCurrent: false,
@@ -48,6 +48,8 @@ describe('seasonOptions', () => {
   });
 
   it('has nothing to show for one season, none, unavailable or no franchise', () => {
+    const noOtherPage = two.map((season) => ({ ...season, slug: null }));
+    expect(seasonOptions(franchise(noOtherPage))).toBeNull();
     expect(seasonOptions(franchise([franchiseSeason({})]))).toBeNull();
     expect(seasonOptions(franchise([]))).toBeNull();
     expect(seasonOptions(franchise(two, 'unavailable'))).toBeNull();

@@ -1,3 +1,5 @@
+import { ANIME_STATUSES, type AnimeFranchise } from './anime';
+
 export const APP_NAME = 'OtakuLeague';
 
 /** Every ApiErrorCode, at runtime, so isApiError can check the code. */
@@ -87,6 +89,40 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
   return (
     (value.status === 'ok' && database === 'up') ||
     (value.status === 'error' && database === 'down')
+  );
+}
+
+const FRANCHISE_STATES: readonly unknown[] = [
+  'complete',
+  'walking',
+  'partial',
+  'truncated',
+  'unavailable',
+];
+
+/** The main-line fields the season selector reads; the rest is display data. */
+function isFranchiseSeason(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const { anilistId, slug, label, isCurrent, status, startDate } = value;
+  return (
+    Number.isInteger(anilistId) &&
+    (slug === null || typeof slug === 'string') &&
+    typeof label === 'string' &&
+    typeof isCurrent === 'boolean' &&
+    (status === null || ANIME_STATUSES.some((known) => known === status)) &&
+    (startDate === null ||
+      (isRecord(startDate) && Number.isInteger(startDate.year)))
+  );
+}
+
+/** True when `value` is a GET /anime/slugs/:slug/franchise body (ADR 0008). */
+export function isAnimeFranchise(value: unknown): value is AnimeFranchise {
+  return (
+    isRecord(value) &&
+    FRANCHISE_STATES.includes(value.state) &&
+    Array.isArray(value.mainLine) &&
+    value.mainLine.every(isFranchiseSeason) &&
+    Array.isArray(value.related)
   );
 }
 

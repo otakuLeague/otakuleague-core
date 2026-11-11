@@ -2,14 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  type FocusEvent,
-  type KeyboardEvent,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import { type FocusEvent, useEffect, useId, useRef, useState } from 'react';
 import {
   type SeasonOption,
   tabHref,
@@ -47,6 +40,10 @@ export function SeasonSelector({
   const menuId = useId();
   const current = seasons.find((season) => season.isCurrent);
 
+  // Safari never focuses a clicked link: the trigger blurs with no relatedTarget before the
+  // click lands, so a press inside must not count as focus leaving.
+  const pressInsideRef = useRef(false);
+
   useEffect(() => {
     if (!open) return;
     const closeOutside = (event: PointerEvent) => {
@@ -57,25 +54,38 @@ export function SeasonSelector({
         setOpen(false);
       }
     };
+    const endPress = () => {
+      pressInsideRef.current = false;
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
     document.addEventListener('pointerdown', closeOutside);
-    return () => document.removeEventListener('pointerdown', closeOutside);
+    document.addEventListener('pointerup', endPress);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('pointerup', endPress);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
   }, [open]);
 
-  const closeOnEscape = (event: KeyboardEvent) => {
-    if (event.key !== 'Escape' || !open) return;
-    setOpen(false);
-    triggerRef.current?.focus();
-  };
   const closeOnFocusOut = (event: FocusEvent) => {
-    if (!(event.relatedTarget instanceof Node)) return;
-    if (!rootRef.current?.contains(event.relatedTarget)) setOpen(false);
+    const next = event.relatedTarget;
+    if (next instanceof Node && rootRef.current?.contains(next)) return;
+    if (next === null && pressInsideRef.current) return;
+    setOpen(false);
   };
 
   return (
     <div
       ref={rootRef}
       className="ol-season anime-season"
-      onKeyDown={closeOnEscape}
+      onPointerDown={() => {
+        pressInsideRef.current = true;
+      }}
       onBlur={closeOnFocusOut}
     >
       <button
@@ -102,23 +112,26 @@ export function SeasonSelector({
         <ul className="ol-season__list">
           {seasons.map((season) => {
             const className = `ol-season__item${season.upcoming ? ' ol-season__item--upcoming' : ''}`;
+            const note = seasonNote(season);
             const content = (
               <>
                 <span className="ol-season__dot" aria-hidden="true" />
                 {season.label}
-                <small>{seasonNote(season)}</small>
+                {note !== '' && <small>{note}</small>}
               </>
             );
             return (
               <li key={season.anilistId}>
                 {season.slug === null ? (
                   // Not imported yet, so no page to open: listed, not linked.
-                  <span
-                    className={`${className} anime-season__unlinked`}
+                  <a
+                    role="link"
                     aria-disabled="true"
+                    className={`${className} anime-season__unlinked`}
                   >
                     {content}
-                  </span>
+                    <span className="anime-sr-only">, not available yet</span>
+                  </a>
                 ) : (
                   <Link
                     href={tabHref(season.slug, segment)}

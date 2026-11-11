@@ -170,7 +170,8 @@ html:has(.anime-sticky--shown) {
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 20;
+  /* Under the sticky bar (10), over the rest of the hero. */
+  z-index: 5;
 }
 .anime-season__menu[hidden] {
   display: none;
