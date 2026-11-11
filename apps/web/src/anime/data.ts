@@ -1,5 +1,6 @@
 import type {
   AnimeBySlug,
+  AnimeFranchise,
   AnimeSlugResolution,
 } from '@otakuleague/shared-types';
 import { cache } from 'react';
@@ -19,5 +20,13 @@ export const loadAnime = cache(
     apiClient().call(`/anime/slugs/${encodeURIComponent(canonicalSlug)}`, {
       // An import can take longer than the client's default timeout.
       timeoutMs: 15_000,
+    }),
+);
+
+/** The season selector's main line (ADR 0008): stored data only, so a short timeout. */
+export const loadFranchise = cache(
+  (slug: string): Promise<ApiResult<AnimeFranchise>> =>
+    apiClient().call(`/anime/slugs/${encodeURIComponent(slug)}/franchise`, {
+      timeoutMs: 2_000,
     }),
 );

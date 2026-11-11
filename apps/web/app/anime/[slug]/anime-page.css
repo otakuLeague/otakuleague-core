@@ -161,6 +161,30 @@ html:has(.anime-sticky--shown) {
   display: none;
 }
 
+/* Season selector (OTA-97): opens in place under its trigger, no animation. */
+.anime-season .ol-season__trigger,
+.anime-season .ol-season__item {
+  min-height: 44px;
+}
+.anime-season__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+}
+.anime-season__menu[hidden] {
+  display: none;
+}
+.anime-season__unlinked {
+  opacity: 0.6;
+  cursor: default;
+}
+.anime-season .ol-season__list {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* Cover */
 .anime-cover {
   flex: none;
@@ -635,6 +659,22 @@ html:has(.anime-sticky--shown) {
   }
   .anime-hero__fav-short {
     display: inline;
+  }
+  /* Its own full-width row, the list as wide as the trigger. */
+  .anime-season {
+    flex-basis: 100%;
+  }
+  .anime-season .ol-season__trigger {
+    width: 100%;
+  }
+  .anime-season .ol-season__year {
+    margin-left: auto;
+  }
+  .anime-season__menu {
+    right: 0;
+  }
+  .anime-season .ol-season__list {
+    min-width: 0;
   }
   .anime-countdown {
     flex-basis: 100%;

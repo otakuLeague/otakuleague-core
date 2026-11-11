@@ -2,12 +2,17 @@ import type { AnimeDetails } from '@otakuleague/shared-types';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { accentPalette } from '../../../src/anime/accent';
-import { loadAnime } from '../../../src/anime/data';
+import { loadAnime, loadFranchise } from '../../../src/anime/data';
 import { type HeaderFacts, headerFacts } from '../../../src/anime/header-facts';
-import { tabHref } from '../../../src/anime/tabs';
+import {
+  type SeasonOption,
+  seasonOptions,
+  tabHref,
+} from '../../../src/anime/tabs';
 import { SeasonChip, StatusChip } from './chips';
 import { Countdown } from './countdown';
 import { Cover } from './cover';
+import { SeasonSelector } from './season-selector';
 import {
   FormatIcon,
   HeartIcon,
@@ -261,10 +266,13 @@ export function AnimeHeader({
   facts,
   coverColor,
   slug,
+  seasons,
 }: {
   readonly facts: HeaderFacts;
   readonly coverColor: string | null;
   readonly slug: string;
+  /** Null when the anime has a single season or the franchise could not be read. */
+  readonly seasons: readonly SeasonOption[] | null;
 }) {
   return (
     <>
@@ -316,6 +324,7 @@ export function AnimeHeader({
                     airingAt={facts.nextEpisode.airingAt}
                   />
                 )}
+                {seasons && <SeasonSelector slug={slug} seasons={seasons} />}
               </div>
             </div>
             <StatsCard facts={facts} />
@@ -332,7 +341,11 @@ export function AnimeHeader({
  * <Suspense fallback={<HeaderLoading />}>.
  */
 export async function AnimeHeaderLoader({ slug }: { readonly slug: string }) {
-  const result = await loadAnime(slug);
+  // The franchise has a short timeout of its own: a slow one only hides the selector.
+  const [result, franchise] = await Promise.all([
+    loadAnime(slug),
+    loadFranchise(slug),
+  ]);
   if (!result.ok) {
     if (result.failure.kind === 'api_error' && result.failure.status === 404) {
       // Removed in the meantime, or no source can serve it (AniList off, not cached).
@@ -367,6 +380,7 @@ export async function AnimeHeaderLoader({ slug }: { readonly slug: string }) {
       facts={headerFacts(anime)}
       coverColor={anime.coverColor?.value ?? null}
       slug={slug}
+      seasons={seasonOptions(franchise.ok ? franchise.data : null)}
     />
   );
 }

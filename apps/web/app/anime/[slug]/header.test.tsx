@@ -1,14 +1,26 @@
-import type { AnimeBySlug, AnimeDetails } from '@otakuleague/shared-types';
+import type {
+  AnimeBySlug,
+  AnimeDetails,
+  AnimeFranchise,
+} from '@otakuleague/shared-types';
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from '../../../src/api/client';
 import { accentPalette } from '../../../src/anime/accent';
-import { loadAnime } from '../../../src/anime/data';
-import { animeFixture, sourced } from '../../../src/anime/fixtures';
+import { loadAnime, loadFranchise } from '../../../src/anime/data';
+import {
+  animeFixture,
+  franchiseFixture,
+  franchiseSeason,
+  sourced,
+} from '../../../src/anime/fixtures';
 import { headerFacts } from '../../../src/anime/header-facts';
 import { AnimeHeader, AnimeHeaderLoader } from './header';
 
-vi.mock('../../../src/anime/data', () => ({ loadAnime: vi.fn() }));
+vi.mock('../../../src/anime/data', () => ({
+  loadAnime: vi.fn(),
+  loadFranchise: vi.fn(),
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/anime/attack-on-titan',
 }));
@@ -34,6 +46,7 @@ function renderHeader(overrides: Partial<AnimeDetails> = {}) {
         facts={headerFacts(anime)}
         coverColor={anime.coverColor?.value ?? null}
         slug="attack-on-titan"
+        seasons={null}
       />
     </div>,
   );
@@ -328,11 +341,19 @@ describe('AnimeHeaderLoader', () => {
   afterEach(() => {
     cleanup();
     vi.mocked(loadAnime).mockReset();
+    vi.mocked(loadFranchise).mockReset();
     vi.unstubAllGlobals();
   });
 
-  async function renderLoader(result: ApiResult<AnimeBySlug>) {
+  async function renderLoader(
+    result: ApiResult<AnimeBySlug>,
+    franchise: ApiResult<AnimeFranchise> = {
+      ok: false,
+      failure: { kind: 'timeout' },
+    },
+  ) {
     vi.mocked(loadAnime).mockResolvedValueOnce(result);
+    vi.mocked(loadFranchise).mockResolvedValueOnce(franchise);
     render(await AnimeHeaderLoader({ slug: 'attack-on-titan' }));
     return screen.getAllByRole('heading', { level: 1 })[0]?.textContent;
   }
@@ -378,5 +399,39 @@ describe('AnimeHeaderLoader', () => {
         .getByRole('link', { name: 'Go to its new address' })
         .getAttribute('href'),
     ).toBe('/anime/frieren-2');
+  });
+
+  describe('season selector', () => {
+    const loaded: ApiResult<AnimeBySlug> = {
+      ok: true,
+      data: { kind: 'anime', anime: animeFixture() },
+    };
+    const two = franchiseFixture([
+      franchiseSeason({}),
+      franchiseSeason({
+        anilistId: 20958,
+        label: 'Season 2',
+        isCurrent: false,
+      }),
+    ]);
+    const selector = () => hero().queryByRole('button', { name: /^Season: / });
+
+    it('is shown in the hero for two seasons or more', async () => {
+      await renderLoader(loaded, { ok: true, data: two });
+      expect(selector()?.textContent).toContain('Season 1');
+    });
+
+    it('is hidden for a single season, an unavailable franchise or a failure', async () => {
+      const cases: ApiResult<AnimeFranchise>[] = [
+        { ok: true, data: franchiseFixture([franchiseSeason({})]) },
+        { ok: true, data: { ...two, state: 'unavailable' } },
+        { ok: false, failure: { kind: 'network' } },
+      ];
+      for (const franchise of cases) {
+        await renderLoader(loaded, franchise);
+        expect(selector()).toBeNull();
+        cleanup();
+      }
+    });
   });
 });
