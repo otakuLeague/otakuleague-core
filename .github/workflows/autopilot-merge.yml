@@ -11,7 +11,8 @@ name: Autopilot merge
 # The merge is pinned to the head commit that was checked, so a later push is never merged unseen.
 # Remove the `automerge` label, or disable this workflow in the Actions tab, to stop it.
 #
-# It runs after CI finishes on a PR, and when the label is added (CI may already be green).
+# It runs after CI or Screenshots finishes on a PR (whichever ends last retries the merge), and
+# when the label is added (CI may already be green).
 # No step checks out or runs PR code, which is what makes pull_request_target safe here.
 # A merge made with GITHUB_TOKEN does not start the CI workflow on main (GitHub's loop guard);
 # every merged commit already passed CI on the PR head.
@@ -70,13 +71,13 @@ jobs:
           labeler=$(jq -rs '[.[][] | select(.event == "labeled" and .label.name == "automerge")] | last | .actor.login // empty' <<<"$events")
           grep -qxF -- "$labeler" <<<"${ALLOWED_LABELERS// /$'\n'}" || skip "automerge was added by '${labeler:-unknown}', not an allowed account"
           sha=$(jq -r .head.sha <<<"$info")
-          if [ -n "$RUN_SHA" ] && [ "$RUN_SHA" != "$sha" ]; then skip "CI ran on $RUN_SHA, PR head is now $sha"; fi
+          if [ -n "$RUN_SHA" ] && [ "$RUN_SHA" != "$sha" ]; then skip "the triggering run was on $RUN_SHA, PR head is now $sha"; fi
 
           # Every check on the head commit, except this job itself.
           checks=$(gh api --paginate "repos/$REPO/commits/$sha/check-runs?per_page=100" \
             --jq '.check_runs[] | select((.name == "Autopilot merge" and .app.slug == "github-actions") | not) | {name, status, conclusion, app: .app.slug}' | jq -s .)
           pending=$(jq -r '[.[] | select(.status != "completed") | .name] | join(", ")' <<<"$checks")
-          [ -z "$pending" ] || skip "checks still running: $pending (the CI run that finishes will retry)"
+          [ -z "$pending" ] || skip "checks still running: $pending (the CI or Screenshots run that finishes will retry)"
           failed=$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral") | .name] | join(", ")' <<<"$checks")
           [ -z "$failed" ] || skip "checks not green: $failed"
           for job in Lint Typecheck "Unit tests" "Integration tests" Build; do

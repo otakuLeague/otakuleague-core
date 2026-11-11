@@ -11,8 +11,8 @@ Reviewing a UI PR today means pulling the branch or trusting the mockup. The aut
 
 **Non-functional requirements (quantified)**
 1. Capture job under 5 minutes wall-clock (target 4). Runaway guard: `timeout-minutes: 8`; the capture script stops itself after 90 s.
-2. Zero requests from our servers to a live source API: both source base URLs point at `127.0.0.1`.
-3. The job fails only when the app is broken: install, build or migration fails, API `/health` or web `/` does not answer within 30 s, or either is down after the capture. A failed screenshot, seed or publish step never fails the PR.
+2. Zero requests from CI to a live source API or its image CDN: both source base URLs point at `127.0.0.1`, and the browser may only reach `127.0.0.1` / `localhost`.
+3. The job fails only when the app is broken: install, build or migration fails, API `/health` or web `/` does not answer within 30 s, or either is down after the capture. A failed Playwright install, screenshot, seed, artifact upload or publish step never fails the PR.
 4. Storage is bounded: one commit of at most 8 routes x 4 images per open PR, deleted after the PR closes; artifact kept 14 days. No paid service, no secret.
 5. Least privilege: PR code runs with `contents: read` only. The job with a write token runs no code from the repo. Fork and Dependabot PRs get the artifact, no comment.
 
@@ -44,11 +44,11 @@ Reviewing a UI PR today means pulling the branch or trusting the mockup. The aut
 **Entities:** ScreenshotRoute (name, path), SeedAnime (MAL id), Viewport (1440x900, 390x844), ColorScheme (dark, light), Screenshot (route x viewport x scheme: PNG or failure reason), CaptureManifest, StickyComment.
 
 **Interfaces** (no product API changes)
-- `scripts/screenshots/routes.json`: `{ "seedMalIds": [52991, 21, 2963], "routes": [{ "name": "anime-overview", "path": "/anime/frieren-beyond-journeys-end" }] }`. The one file to edit. Max 8 routes. No signed-in routes yet.
+- `scripts/screenshots/routes.json`: `{ "seedMalIds": [52991, 21, 2963], "routes": [{ "name": "anime-overview", "path": "/anime/frieren-beyond-journeys-end" }] }`. The one file to edit. Max 8 routes, names `[a-z0-9-]{1,60}`. No signed-in routes yet. `anime-sparse` (Minami-ke, MAL 2963) has no walk fixture, so its franchise ends `partial`: that route shows the partial state on purpose (no new fixture).
 - Replay server (`fake-sources.mjs`, port 4010): `POST /` answers the AniList queries (`{id}` or `{idMal}`: the core fixture, else the recorded 404; `{ids}`: the recorded walk nodes for those ids, unknown ids left out, as AniList does). `GET /v4/anime/:malId`: the Jikan fixture or 404.
-- Capture (`capture.mjs`): seeds through `GET /anime/myanimelist/:id`, then writes `<name>-<width>-<scheme>.png`, `manifest.json` and `comment.md` (image base URL left as a placeholder).
+- Capture (`capture.mjs`): seeds through `GET /anime/myanimelist/:id`, then writes `<name>-<width>-<scheme>.png` to the artifact and the failures and warnings to the job summary (`$GITHUB_STEP_SUMMARY`, built by `summary.mjs`).
 - Image URL: `https://github.com/<repo>/raw/<commit sha>/<file>`. Pinned to a commit, so no stale cache; this form also works for signed-in viewers if the repo ever turns private (`raw.githubusercontent.com` links would 404 then: camo fetches anonymously).
-- Comment: found by `<!-- pr-screenshots -->` on its first line and author `github-actions[bot]`; PATCH if found, POST otherwise.
+- Comment: built in `publish` from the published file names only: `<!-- pr-screenshots -->` on line 1, a heading, one `<details>` per route (route name taken from the file name) with `<img width="360">` per shot, and a link to the run for missing shots and warnings. With zero images it still says so, with the link. Found by its marker and author `github-actions[bot]`; PATCH if found, POST otherwise.
 
 **Data flow**
 
@@ -73,9 +73,9 @@ flowchart LR
 
 **Deep dives (only the requirements above)**
 - *Time (NFR 1).* Assumed, to be measured on this PR's own run: setup 35 s, build 80 s, Chromium 35 s, migrate 5 s, start 8 s, seed 25 s, capture 45 s, upload 5 s: about 4 min. The AniList limiter allows one request per 2 s, so the seed is three anime with short walks (Frieren 3 requests, One Piece 2, Minami-ke 1), capped at 25 s. If over budget: cache `~/.cache/ms-playwright` first, then install Chromium while building.
-- *Failure policy (NFR 3).* The capture script always exits 0 and records each failure in the manifest; the comment prints it as text. Publish steps are `continue-on-error`. The second health check exists because a page that kills the server would otherwise look like 20 harmless screenshot timeouts.
-- *No live source (NFR 2).* The API never sees the real base URLs. Cover and banner images are still loaded by the headless browser from the CDNs the fixtures name, exactly as a visitor's browser does (OTA-97); the script waits at most 5 s for them.
-- *Privilege and storage (NFR 4, 5).* The comment body is built in the read-only job and only has its image base URL substituted in the write job. The orphan commit carries `apps/web/vercel.json` with `git.deploymentEnabled: false`, so Vercel does not try to deploy a branch that has no app.
+- *Failure policy (NFR 3).* The capture script always exits 0 (config read, unhandled rejections and its 90 s guard included) and lists each failure in the job summary. Installing Playwright, capturing, uploading and every publish step are `continue-on-error`; each publish step runs only if the one it needs has `outcome == 'success'`. The second health check stays strict because a page that kills the server would otherwise look like 24 harmless screenshot timeouts.
+- *No live source (NFR 2).* The API never sees the real base URLs, and each browser context aborts every request whose host is not `127.0.0.1` or `localhost` (`context.route`). So covers and banners render as the browser's empty image: ADR 0006 allows hotlinking images, never re-hosting them, and committing a screenshot of a cover to `screenshots/pr-<n>` would re-host it; it also keeps CI off the CDNs.
+- *Privilege and storage (NFR 4, 5).* The artifact is written by PR code, so `publish` treats it as hostile: a file name printed to the log can be a workflow command (a legacy `##[set-output ...]` once set a step output that reached a shell). It copies only regular, non-symlink files named `^[a-z0-9-]{1,60}-(1440|390)-(dark|light)\.png$`, 1 byte to 5 MB, with a PNG signature, at most 32, with `cp --`; it prints no name from the artifact, only counts. The comment is built there from those names (nothing from `routes.json`, no template, no `sed`), and the commit id is checked against `^[0-9a-f]{40}$` before it goes in a URL. The push token goes in `http.https://github.com/.extraheader`, masked. The orphan commit carries `apps/web/vercel.json` with `git.deploymentEnabled: false`, so Vercel does not try to deploy a branch that has no app. Pruning deletes a branch only when its PR answers `closed`; an API error keeps it.
 
 ## Consequences
 - **Too simple, accepted:** "changes a page" is decided by path, so an API-only PR that changes what a page shows gets the artifact but no comment. A comment is not removed if later pushes stop touching pages. Shots are not pixel-stable (countdown, live covers), which is fine because nothing diffs them.
@@ -83,6 +83,7 @@ flowchart LR
 - The replay server is a second fake of the same fixtures next to the one in `anime.integration.spec.ts`. If the queries change, both must follow; the script test catches the replay side.
 - The `screenshots/pr-<n>` branches are bot-owned and force-updated. That is the one place a forced update is allowed; main and work branches keep the rule.
 - `autopilot-merge.yml` must also listen to this workflow, or a PR whose CI finishes first is never retried.
+- A closed PR's comment loses its images once its branch is pruned (the next publish run after the close).
 - If Vercel still reacts to these branches, switch the ref to `refs/screenshots/pr-<n>` (not a branch: no deploy, not cloned). The URLs do not change because they use the commit SHA.
 
 ## Learnings

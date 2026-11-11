@@ -8,7 +8,10 @@ import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '../../apps/api/src/anime/sources/fixtures');
+const FIXTURES = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../apps/api/src/anime/sources/fixtures',
+);
 const PORT = 4010;
 
 const isRecord = (value) => typeof value === 'object' && value !== null;
@@ -19,7 +22,9 @@ export function loadReplay(fixtures = FIXTURES) {
   const read = (name) => JSON.parse(readFileSync(join(fixtures, name), 'utf8'));
   const coreById = new Map();
   const coreByMalId = new Map();
-  for (const name of names.filter((n) => /^anilist-(?!walk-|not-found)/.test(n))) {
+  for (const name of names.filter((n) =>
+    /^anilist-(?!walk-|not-found)/.test(n),
+  )) {
     const core = read(name);
     coreById.set(core.data.Media.id, core);
     coreByMalId.set(core.data.Media.idMal, core);
@@ -35,7 +40,13 @@ export function loadReplay(fixtures = FIXTURES) {
     const anime = read(name);
     jikanByMalId.set(anime.data.mal_id, anime);
   }
-  return { coreById, coreByMalId, walkNodes, jikanByMalId, notFound: read('anilist-not-found.json') };
+  return {
+    coreById,
+    coreByMalId,
+    walkNodes,
+    jikanByMalId,
+    notFound: read('anilist-not-found.json'),
+  };
 }
 
 /** Answer for one request: { status, body }. Pure, so the test needs no socket. */
@@ -43,16 +54,32 @@ export function answer(replay, method, url, requestBody) {
   const jikan = /^\/v4\/anime\/(\d+)$/.exec(url);
   if (method === 'GET' && jikan) {
     const found = replay.jikanByMalId.get(Number(jikan[1]));
-    return found ? { status: 200, body: found } : { status: 404, body: { status: 404, type: 'BadResponseException' } };
+    return found
+      ? { status: 200, body: found }
+      : { status: 404, body: { status: 404, type: 'BadResponseException' } };
   }
-  if (method !== 'POST' || url !== '/') return { status: 404, body: { error: 'unknown route' } };
-  const variables = isRecord(requestBody) && isRecord(requestBody.variables) ? requestBody.variables : {};
+  if (method !== 'POST' || url !== '/')
+    return { status: 404, body: { error: 'unknown route' } };
+  const variables =
+    isRecord(requestBody) && isRecord(requestBody.variables)
+      ? requestBody.variables
+      : {};
   if (Array.isArray(variables.ids)) {
-    const media = variables.ids.map((id) => replay.walkNodes.get(id)).filter((node) => node !== undefined);
-    return { status: 200, body: { data: { Page: { pageInfo: { hasNextPage: false }, media } } } };
+    const media = variables.ids
+      .map((id) => replay.walkNodes.get(id))
+      .filter((node) => node !== undefined);
+    return {
+      status: 200,
+      body: { data: { Page: { pageInfo: { hasNextPage: false }, media } } },
+    };
   }
-  const found = variables.id !== undefined ? replay.coreById.get(variables.id) : replay.coreByMalId.get(variables.idMal);
-  return found ? { status: 200, body: found } : { status: 404, body: replay.notFound };
+  const found =
+    variables.id !== undefined
+      ? replay.coreById.get(variables.id)
+      : replay.coreByMalId.get(variables.idMal);
+  return found
+    ? { status: 200, body: found }
+    : { status: 404, body: replay.notFound };
 }
 
 export function startReplayServer(port = PORT) {
@@ -67,12 +94,20 @@ export function startReplayServer(port = PORT) {
       } catch {
         parsed = null;
       }
-      const { status, body } = answer(replay, req.method ?? 'GET', req.url ?? '/', parsed);
+      const { status, body } = answer(
+        replay,
+        req.method ?? 'GET',
+        req.url ?? '/',
+        parsed,
+      );
       res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(body));
     });
   });
-  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
+  return new Promise((resolve) =>
+    server.listen(port, '127.0.0.1', () => resolve(server)),
+  );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) await startReplayServer();
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  await startReplayServer();
