@@ -1,0 +1,107 @@
+name: Autopilot merge
+
+# Squash-merges a PR once Farouk's rules are met, so the autopilot never merges anything itself
+# (OTA-161). A PR is merged only if ALL of these hold:
+# - it has the `automerge` label, last added by an account in ALLOWED_LABELERS (the autopilot adds it
+#   after its review found no Critical),
+# - it is open, not a draft, and its branch is in this repo (no forks),
+# - every check run on its head commit completed, and the five CI jobs (GitHub Actions) succeeded;
+#   commit statuses (e.g. deploy previews) are not required,
+# - none of its files matches a pattern in .github/autopilot-protected-paths, read from main.
+# The merge is pinned to the head commit that was checked, so a later push is never merged unseen.
+# Remove the `automerge` label, or disable this workflow in the Actions tab, to stop it.
+#
+# It runs after CI finishes on a PR, and when the label is added (CI may already be green).
+# No step checks out or runs PR code, which is what makes pull_request_target safe here.
+# A merge made with GITHUB_TOKEN does not start the CI workflow on main (GitHub's loop guard);
+# every merged commit already passed CI on the PR head.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  pull_request_target:
+    types: [labeled]
+
+permissions: {}
+
+concurrency:
+  group: autopilot-merge-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: Autopilot merge
+    if: >-
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'automerge') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - name: Check the rules and merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EVENT_PR: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+          ALLOWED_LABELERS: NasriFarouk
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          skip() { echo "Not merging: $1"; exit 0; }
+
+          pr="$EVENT_PR"
+          if [ -z "$pr" ]; then
+            pr=$(gh api "repos/$REPO/commits/$RUN_SHA/pulls" --jq '[.[] | select(.state == "open")][0].number // empty')
+            [ -n "$pr" ] || skip "no open PR for $RUN_SHA"
+          fi
+
+          info=$(gh api "repos/$REPO/pulls/$pr")
+          [ "$(jq -r .state <<<"$info")" = open ] || skip "PR #$pr is not open"
+          [ "$(jq -r .draft <<<"$info")" = false ] || skip "PR #$pr is a draft"
+          [ "$(jq -r .head.repo.full_name <<<"$info")" = "$REPO" ] || skip "PR #$pr comes from a fork"
+          [ "$(jq -r .base.ref <<<"$info")" = "$DEFAULT_BRANCH" ] || skip "PR #$pr does not target $DEFAULT_BRANCH"
+          jq -e '.labels | map(.name) | index("automerge")' <<<"$info" >/dev/null || skip "PR #$pr has no automerge label"
+          events=$(gh api --paginate "repos/$REPO/issues/$pr/events?per_page=100")
+          labeler=$(jq -rs '[.[][] | select(.event == "labeled" and .label.name == "automerge")] | last | .actor.login // empty' <<<"$events")
+          grep -qxF -- "$labeler" <<<"${ALLOWED_LABELERS// /$'\n'}" || skip "automerge was added by '${labeler:-unknown}', not an allowed account"
+          sha=$(jq -r .head.sha <<<"$info")
+          if [ -n "$RUN_SHA" ] && [ "$RUN_SHA" != "$sha" ]; then skip "CI ran on $RUN_SHA, PR head is now $sha"; fi
+
+          # Every check on the head commit, except this job itself.
+          checks=$(gh api --paginate "repos/$REPO/commits/$sha/check-runs?per_page=100" \
+            --jq '.check_runs[] | select((.name == "Autopilot merge" and .app.slug == "github-actions") | not) | {name, status, conclusion, app: .app.slug}' | jq -s .)
+          pending=$(jq -r '[.[] | select(.status != "completed") | .name] | join(", ")' <<<"$checks")
+          [ -z "$pending" ] || skip "checks still running: $pending (the CI run that finishes will retry)"
+          failed=$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral") | .name] | join(", ")' <<<"$checks")
+          [ -z "$failed" ] || skip "checks not green: $failed"
+          for job in Lint Typecheck "Unit tests" "Integration tests" Build; do
+            jq -e --arg j "$job" 'map(select(.name == $j and .app == "github-actions" and .conclusion == "success")) | length > 0' <<<"$checks" >/dev/null \
+              || skip "CI job '$job' has not passed on $sha"
+          done
+
+          # Protected paths, read from the default branch so the PR cannot change its own rules.
+          gh api "repos/$REPO/contents/.github/autopilot-protected-paths?ref=$DEFAULT_BRANCH" \
+            -H 'Accept: application/vnd.github.raw' > "$RUNNER_TEMP/protected"
+          mapfile -t patterns < <(tr -d '\r' < "$RUNNER_TEMP/protected" | sed 's/[[:space:]]*$//' | grep -v '^[[:space:]]*\(#\|$\)')
+          [ "${#patterns[@]}" -gt 0 ] || skip "protected-path list is empty or unreadable"
+          # Fail closed: a failed page aborts the job (set -e), and a short list is caught by the count.
+          files_json=$(gh api --paginate "repos/$REPO/pulls/$pr/files?per_page=100" | jq -s 'add // []')
+          listed=$(jq 'map(.filename) | unique | length' <<<"$files_json")
+          expected=$(jq .changed_files <<<"$info")
+          [ "$listed" -gt 0 ] || skip "PR #$pr changes no files"
+          [ "$listed" -ge "$expected" ] || skip "listed $listed of $expected changed files (the API lists at most 3000)"
+          mapfile -t files < <(jq -r '.[] | .filename, (.previous_filename // empty)' <<<"$files_json")
+          for f in "${files[@]}"; do
+            for p in "${patterns[@]}"; do
+              # shellcheck disable=SC2053 # $p is a glob pattern on purpose
+              [[ "$f" == $p ]] && skip "$(printf '%q' "$f") matches protected pattern '$p', Farouk merges this one"
+            done
+          done
+
+          gh api -X PUT "repos/$REPO/pulls/$pr/merge" -f merge_method=squash -f sha="$sha" --jq .message
+          echo "Merged PR #$pr at $sha"

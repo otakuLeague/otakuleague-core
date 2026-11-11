@@ -4,7 +4,7 @@ Read by the `/autopilot` skill at the start of every unattended build run. The c
 
 ```yaml
 enabled: true          # false = every run stops immediately
-automerge: true        # merge the run's own PR when CI is green and the review has no Critical
+automerge: true        # label the run's PR `automerge` when its review has no Critical; the workflow merges it
 max_open_prs: 3        # stop opening new PRs when this many autopilot PRs are open
 tickets_per_run: 1
 design_first: true     # a "Build:" ticket waits until its "Design:" ticket is merged
@@ -12,7 +12,9 @@ skip_labels: [needs-human, post-launch]
 ```
 
 ## Rules the autopilot never breaks
-- Never merges a PR that changes `.github/workflows/`, `.claude/settings.json`, `.claude/hooks/`, `.githooks/`, `docs/AUTOPILOT.md` or production deploy config: those wait for Farouk.
+- Never merges anything itself. The `Autopilot merge` workflow (`.github/workflows/autopilot-merge.yml`) squash-merges a PR labelled `automerge` once every check on its head commit is green.
+- The workflow never merges a PR that touches a path in `.github/autopilot-protected-paths` (read from main): CI and workflows, git hooks, everything under `.claude/` except `rules/`, CLAUDE.md, this file, `scripts/`, lint/test/TypeScript configs, dependencies (`package.json`, the lockfile), database migrations, deploy and Docker config, `.env*`. Those wait for Farouk. Only labels added by Farouk's account count.
+- To stop merges: remove the `automerge` label, set `automerge: false` here, or disable the workflow in GitHub's Actions tab.
 - Never touches `otakuleague.com` DNS, Vercel/Railway settings or secrets.
 - `main` deploys only to beta.otakuleague.com until the launch cutover (OTA-149), so a bad merge is a revert, not an outage.
 - When a ticket needs a product or taste decision it can't make, it comments the question on the Linear ticket, adds `needs-human`, and moves to the next ticket.
