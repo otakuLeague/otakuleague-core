@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: Writes unit and integration tests for a larger change when asked. Tests for small changes are written in the main session alongside the code.
+description: Writes extra unit and integration tests beyond the ones the builders write alongside their code: coverage gaps, edge-case tables, regression tests.
 model: sonnet
 effort: low
 maxTurns: 40
