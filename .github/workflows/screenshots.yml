@@ -43,7 +43,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://otakuleague:otakuleague_ci_password@127.0.0.1:5432/otakuleague
       API_BASE_URL: http://127.0.0.1:3001
-      SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -83,6 +82,7 @@ jobs:
         continue-on-error: true
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: node scripts/screenshots/capture.mjs
       # Stays strict: a page that kills a server must fail the run, not look like 24 timeouts.
       - name: Health check after capture
