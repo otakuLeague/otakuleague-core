@@ -66,6 +66,7 @@ flowchart LR
 - **packages/shared-types**: built to `dist/` and imported by both apps: the API response types (`HealthResponse`, `ApiError`), error codes and their type guards, and the redaction used before anything reaches a log or Sentry.
 - **Sentry**: the API, the web server and the browser report errors when their DSN is set; with no DSN nothing is sent. Scrubbing runs before sending ([ADR 0004](decisions/0004-error-tracking-and-logging.md)). The browser sends to our own `/hikari` route, which forwards only envelopes for our DSN, so blockers of sentry.io do not drop them ([ADR 0003 addendum](decisions/0003-web-api-client.md)).
 - **CI**: `.github/workflows/ci.yml`, five parallel jobs on every PR and push to main. The unit job has no database; the integration job gets a Postgres service and recreates the test database itself ([ADR 0005](decisions/0005-integration-tests-real-postgres.md)).
+- **Deploy**: Railway runs the API and Postgres in production, Vercel the web app. See [docs/deploy.md](deploy.md) for Railway settings, rollback, backups and restore, and [docs/deploy-vercel.md](deploy-vercel.md) for Vercel.
 - **PR screenshots** ([ADR 0013](decisions/0013-pr-screenshots.md), OTA-163): `.github/workflows/screenshots.yml` builds the API and web against a local replay of the recorded source fixtures (`scripts/screenshots/`), captures the routes in `routes.json` at 1440 px and 390 px, dark and light, and posts them in one sticky PR comment (`<!-- pr-screenshots -->`) when the PR changes a page. Only a crashed app fails the run.
 
 ## Decisions
