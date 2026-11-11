@@ -5,31 +5,31 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-11
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134. API and Postgres live on Railway (OTA-133 docs PR #50 open, green). OTA-163 PR open (Farouk merges: protected paths). W2 designs merged (OTA-150, 151, 154, 99, 96); OTA-152 slice 1 merged.
+W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR, #52). API and Postgres live on Railway (OTA-133 docs PR #50 open, green). W2: designs merged; OTA-152 slice 1 merged, slice 2a (guest desktop header) in PR #53.
 
 ## Last session
-Autopilot on OTA-163 (branch `chore/OTA-163-pr-screenshots`, ADR 0013). New workflow `.github/workflows/screenshots.yml`: `capture` job (read-only token) builds the app, migrates a Postgres 16 service, serves recorded AniList/Jikan fixtures from `scripts/screenshots/fake-sources.mjs` behind the existing `ANILIST_API_URL`/`JIKAN_API_URL`, and screenshots the routes in `scripts/screenshots/routes.json` at 1440/390, dark/light, with Playwright 1.63.0 installed into `$RUNNER_TEMP` (no new dependency). The browser may only reach localhost (ADR 0006: no re-hosted covers). `publish` job (write token, runs no repo code) treats the artifact as hostile: allowlisted PNG names only, pushes an orphan commit to `screenshots/pr-<n>` (with a `vercel.json` disabling deploys), builds the sticky comment itself (marker `<!-- pr-screenshots -->`), prunes branches of closed PRs. Only an app crash fails the job. `autopilot-merge.yml` now also listens to Screenshots.
+Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Guest desktop header in `apps/web/src/shell/`: `nav.ts` (link data, `activeSection`), `disclosure.tsx` (native `<details name="sh-menu">` enhanced to close on Esc, outside click, focus leaving, link click), `header-nav.tsx` (client, `usePathname` inside `Suspense`), `site-header.tsx` (server: logo, GET search form, Sign in/up). Search box hidden below 1100 px so the header fits at 768 px; below 768 px only logo and Sign in until the mobile sheet. `overflow-x: clip` keeps the header sticky; the anime sticky bar sits under the header and its observer uses `--header-h` as root margin. Discover panel is a solid surface (nested backdrop-filter does not blur). Links to unbuilt routes use `prefetch={false}` and 404 for now. Header adds ~1.1 kB gzipped JS.
 
 ## In progress
-- OTA-163: PR open, waits for Farouk (protected paths). First run measures job time (target < 5 min); check Vercel ignores `screenshots/pr-*`.
+- OTA-152: slice 2a PR #53. Remaining slices: 2b member state (`ShellViewer` union, account menu, skip link), mobile sheet + mobile search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding` (route groups), 404/500 restyle, social icons.
 - OTA-133: docs PR #50.
 
 ## Next 3 tasks
-1. OTA-152 global shell build (Todo), then OTA-100 Overview tab.
-2. After OTA-163 merges: page reports use the real screenshots (skill step 7 already updated).
-3. After both deploy PRs merge: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
+1. OTA-152 slice 2b (member state and account menu).
+2. OTA-100 Overview tab (unblocked), or OTA-166 vendored design skills (protected path, Farouk merges). Page reports now use the real CI screenshots (OTA-163).
+3. After PR #50 merges: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
 
 ## Blockers
 - OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
-- OTA-153 waits on OTA-160 (needs-human: brand moment decision).
-- Cloud runs have Node 22 (repo wants 24), no `node_modules`, Prisma engine downloads blocked: lint/typecheck/API tests rely on CI. The egress proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked, so the normal web build fails here; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. API checks rely on CI. The proxy also blocks `*.up.railway.app` and `beta.otakuleague.com`.
 
 ## Known bugs
 - `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
 
 ## Notes
+- OTA-160 decided (logo "Pierce", hero "Calm night", CSS/SVG only for v1): OTA-153 Home design is unblocked.
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
-- Dependabot PR #18 open: merge when CI is green (touches `package.json`, never auto-merged).
+- Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
 - Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
 - Open design question: ticket asks for "purple primary, cyan secondary"; OTA-91's tokens use teal. v2 keeps teal for UI and purple → cyan for the brand gradient.
 - Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.
