@@ -1,4 +1,8 @@
-/* Anime page frame (OTA-97). The header and sticky bar styles come in the next PR. */
+/*
+ * Anime page (OTA-97): docs/design/anime-page/mockup-Main.html (desktop), mockup-Scrolled.html
+ * (sticky bar) and mockup-Mobile.html (phone, under 640px). --accent, --accent-ink and
+ * --on-accent come per anime from the header's <style> (src/anime/accent.ts).
+ */
 
 .anime-page {
   min-height: 100%;
@@ -6,24 +10,394 @@
   color: var(--ink);
 }
 
+.anime-page a {
+  color: var(--accent-ink);
+}
+.anime-page a:hover {
+  color: var(--ink);
+}
+/* The raw accent can vanish on the ground (a near-black or pale cover); the ink never does. */
+.anime-page :focus-visible {
+  outline-color: var(--accent-ink);
+}
+/* Keyboard focus never lands under the fixed sticky bar. */
+html:has(.anime-sticky--shown) {
+  scroll-padding-top: 72px;
+}
+
+.anime-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Loading skeleton (mockup-States 1). */
 .anime-header {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--space-6) max(16px, 3vw);
+}
+.anime-header .ol-skel--cover {
+  width: 216px;
 }
 
-.anime-header__title {
-  font: 700 clamp(28px, 4vw, 44px) / 1.1 var(--font-display);
+/* Hero */
+.anime-hero {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--accent) 7%, var(--ground)) 0%,
+    var(--ground) 100%
+  );
+}
+.anime-hero__band {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 196px;
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--accent) 22%, transparent) 1.2px,
+    transparent 1.3px
+  );
+  background-size: 16px 16px;
+  opacity: 0.6;
+}
+.anime-hero__neon {
+  position: absolute;
+  inset: 196px 0 auto;
+  height: 2px;
+  background: var(--accent);
+  box-shadow:
+    0 0 12px var(--accent),
+    0 0 32px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.anime-hero__inner {
+  position: relative;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 36px max(16px, 3vw) 32px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.anime-hero__top {
+  display: flex;
+  gap: 28px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.anime-hero__titles {
+  flex: 1 1 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+.anime-hero__title {
+  margin: 0;
+  font: 700 clamp(34px, 5vw, 64px) / 1 var(--font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
   overflow-wrap: anywhere;
+  /* Dark on the dark theme, invisible on the light one. */
+  text-shadow: 0 2px 24px color-mix(in oklab, var(--ground) 70%, transparent);
 }
-
-.anime-header__subtitle {
+.anime-hero__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.anime-hero__bar {
+  display: block;
+  width: 56px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--accent), transparent);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.anime-hero__credits {
+  margin: 2px 0 0;
+  font-size: 15px;
   color: var(--muted);
 }
+.anime-hero__credits a {
+  font-weight: 600;
+  text-decoration: none;
+}
+.anime-hero__dot {
+  margin: 0 10px;
+  color: var(--faint);
+}
+.anime-hero__bottom {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.anime-hero__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.anime-hero__chips,
+.anime-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.anime-hero__actions {
+  gap: 10px;
+}
+.anime-hero__phone-score,
+.anime-hero__fav-short {
+  display: none;
+}
 
-/* Route tabs are links: the open one carries aria-current="page", styled like a selected tab. */
-.ol-tab[aria-current='page'] {
+/* Cover */
+.anime-cover {
+  flex: none;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--accent) 30%, var(--surface-2)) 0%,
+    color-mix(in oklab, var(--accent) 10%, var(--surface)) 100%
+  );
+}
+.anime-cover--hero {
+  width: 216px;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  border-radius: 16px;
+  border: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent),
+    0 0 36px color-mix(in oklab, var(--accent) 40%, transparent),
+    0 20px 48px rgba(0, 0, 0, 0.5);
+}
+.anime-cover--mini {
+  width: 34px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  outline: 1px solid color-mix(in oklab, var(--accent) 70%, transparent);
+}
+/* No image: initials on a dot grid (mockup-States 4). */
+.anime-cover--empty {
+  background-color: var(--surface-2);
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--accent) 30%, transparent) 1.2px,
+    transparent 1.3px
+  );
+  background-size: 12px 12px;
+  font: 700 56px/1 var(--font-display);
+  color: var(--faint);
+}
+
+/* Chips */
+.anime-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  text-decoration: none;
   color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.anime-chip--full {
+  height: 32px;
+  padding: 0 14px;
+  font: 600 13px/1 var(--font-sans);
+}
+.anime-chip--full.ol-num {
+  font-family: var(--font-mono);
+}
+.anime-chip--mini {
+  gap: var(--space-1);
+  height: 20px;
+  padding: 0 8px;
+  font: 600 11px/1 var(--font-sans);
+  border: 0;
+  background: var(--surface-2);
+}
+.anime-chip--mini.ol-num {
+  font-family: var(--font-mono);
+}
+/* Status and season: text in the token colour on a 14% tint (tokens.test.ts checks 4.5:1). */
+.anime-chip--tinted,
+.anime-page a.anime-chip--tinted {
+  color: var(--chip-color);
+  background: color-mix(in oklab, var(--chip-color) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--chip-color) 40%, transparent);
+}
+.anime-page a.anime-chip--tinted:hover {
+  border-color: var(--chip-color);
+}
+.anime-chip--heart {
+  color: var(--neon-magenta);
+  background: color-mix(in oklab, var(--neon-magenta) 12%, var(--surface));
+  border-color: color-mix(in oklab, var(--neon-magenta) 40%, transparent);
+}
+.anime-chip--gold {
+  color: var(--xp-gold);
+  background: color-mix(in oklab, var(--xp-gold) 14%, var(--surface));
+}
+.anime-chip--muted {
+  color: var(--muted);
+}
+.anime-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chip-color);
+  box-shadow: 0 0 8px var(--chip-color);
+}
+.anime-chip__dot--pulse {
+  animation: anime-pulse 1.6s ease-in-out infinite;
+}
+@keyframes anime-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Actions */
+.anime-hero__add {
+  min-height: 44px;
+  padding: 0 20px;
+  box-shadow: 0 0 20px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.anime-hero__fav,
+.anime-icon-btn--heart {
+  color: var(--neon-magenta);
+  background: color-mix(in oklab, var(--neon-magenta) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--neon-magenta) 50%, transparent);
+}
+.anime-hero__fav {
+  min-height: 44px;
+  padding: 0 18px;
+}
+.anime-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  margin: 0;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--good) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--good) 40%, transparent);
+}
+.anime-countdown .ol-label {
+  color: var(--good);
+  font-size: 11px;
+}
+.anime-countdown time {
+  font-weight: 600;
+  font-size: 15px;
+}
+.anime-countdown--aired {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Stats card */
+.anime-stats {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  margin: 0;
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 85%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.anime-stats::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--xp-gold),
+    var(--score-high),
+    var(--neon-magenta)
+  );
+}
+.anime-stat {
+  --stat-color: var(--xp-gold);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-4) 22px;
+}
+.anime-stat + .anime-stat {
+  border-left: 1px solid var(--border);
+}
+.anime-stat--members {
+  --stat-color: var(--score-high);
+}
+.anime-stat--favourites {
+  --stat-color: var(--neon-magenta);
+}
+.anime-stat__value {
+  order: -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 600 26px/1 var(--font-mono);
+}
+.anime-stat__value small {
+  font-size: 14px;
+  color: var(--muted);
+}
+.anime-stat__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--stat-color);
+  background: color-mix(in oklab, var(--stat-color) 18%, var(--surface));
+}
+.anime-stat__caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--stat-color);
+}
+
+/* Tabs, styled as in mockup-Main */
+.anime-page .ol-tabs {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 max(16px, 3vw);
+}
+.anime-page .ol-tab {
+  text-transform: none;
+  letter-spacing: 0;
+  font: 500 15px/20px var(--font-sans);
+  padding: 12px 16px 16px;
+  color: var(--muted);
+}
+/* Route tabs are links: the open one carries aria-current="page". */
+.anime-page .ol-tab[aria-current='page'] {
+  color: var(--accent-ink);
 }
 .ol-tab[aria-current='page']::after {
   content: '';
@@ -38,5 +412,289 @@
 }
 
 .anime-page__tab {
-  padding: var(--space-6) var(--space-4);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--space-6) max(16px, 3vw);
+}
+
+/* Sticky bar (mockup-Scrolled) */
+.anime-sticky {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  transform: translateY(-110%);
+  transition: transform 0.2s ease-out;
+}
+/* The shadow only once shown: hidden, it would spill over the top of the page. */
+.anime-sticky--shown {
+  transform: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+.anime-sticky__progress {
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+/* Reading progress straight from the scroll position, no script; without support it stays empty. */
+@supports (animation-timeline: scroll()) {
+  .anime-sticky__progress {
+    animation: anime-progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+@keyframes anime-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+.anime-sticky__inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: var(--space-2) max(16px, 2vw);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.anime-sticky__titles {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.anime-sticky__title {
+  margin: 0;
+  font: 700 16px/20px var(--font-display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.anime-sticky__chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.anime-pills {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.anime-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  font: 500 13px/1 var(--font-sans);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.anime-page a.anime-pill {
+  color: var(--muted);
+}
+.anime-page a.anime-pill:hover {
+  color: var(--ink);
+}
+.anime-page a.anime-pill[aria-current='page'] {
+  color: var(--accent-ink);
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+}
+.anime-sticky__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.anime-icon-btn {
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  color: var(--accent-ink);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anime-chip__dot--pulse {
+    animation: none;
+  }
+  .anime-sticky {
+    transition: none;
+  }
+}
+
+/* Phone (mockup-Mobile) */
+@media (max-width: 639px) {
+  .anime-hero {
+    background: var(--ground);
+  }
+  .anime-hero__band {
+    position: static;
+    height: 120px;
+    opacity: 1;
+    background-color: color-mix(in oklab, var(--accent) 22%, var(--surface));
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--accent) 55%, transparent) 1.5px,
+      transparent 1.6px
+    );
+  }
+  .anime-hero__neon {
+    display: none;
+  }
+  .anime-hero__inner {
+    padding: 0 var(--space-4) var(--space-4);
+    gap: var(--space-3);
+  }
+  .anime-hero__top {
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .anime-cover--hero {
+    width: 112px;
+    margin-top: -72px;
+    border-radius: var(--radius-lg);
+    border: 0;
+    outline: 2px solid var(--accent);
+    box-shadow:
+      0 0 24px color-mix(in oklab, var(--accent) 35%, transparent),
+      0 12px 28px rgba(0, 0, 0, 0.4);
+  }
+  .anime-cover--empty {
+    font-size: 32px;
+  }
+  .anime-hero__phone-score {
+    order: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-self: flex-end;
+    padding-bottom: 4px;
+    min-width: 0;
+  }
+  .anime-hero__phone-value {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font: 600 26px/1 var(--font-mono);
+    color: var(--ink);
+  }
+  .anime-hero__phone-value svg {
+    color: var(--xp-gold);
+  }
+  .anime-hero__phone-value small {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .anime-hero__phone-score .ol-label {
+    color: var(--xp-gold);
+    font-size: 11px;
+  }
+  .anime-hero__titles {
+    order: 2;
+    flex-basis: 100%;
+    gap: 6px;
+  }
+  .anime-hero__title {
+    font-size: 34px;
+    line-height: 38px;
+    letter-spacing: -0.02em;
+  }
+  .anime-hero__subtitle {
+    font-size: 13px;
+  }
+  .anime-hero__bar {
+    display: none;
+  }
+  .anime-hero__credits {
+    font-size: 14px;
+  }
+  .anime-hero__meta {
+    width: 100%;
+  }
+  .anime-hero__chips {
+    gap: 6px;
+  }
+  .anime-chip--full {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  /* Add to List and Favourite share one row; the countdown takes the next. */
+  .anime-hero__actions {
+    gap: var(--space-2);
+  }
+  .anime-hero__add,
+  .anime-hero__fav {
+    flex: 1;
+  }
+  .anime-hero__fav-long {
+    display: none;
+  }
+  .anime-hero__fav-short {
+    display: inline;
+  }
+  .anime-countdown {
+    flex-basis: 100%;
+  }
+  .anime-stats {
+    display: none;
+  }
+  .anime-page .ol-tabs {
+    padding: 0 var(--space-2);
+  }
+  .anime-page .ol-tab {
+    min-height: 44px;
+  }
+  /* mockup-Mobile: "Created by" and "Animated by" on their own lines. */
+  .anime-hero__credits > span:not(.anime-hero__dot) {
+    display: block;
+  }
+  .anime-hero__dot {
+    display: none;
+  }
+  /* 44px touch targets: each credit line is 44px tall. */
+  .anime-hero__credits > span:not(.anime-hero__dot) {
+    line-height: 44px;
+  }
+  .anime-hero__credits {
+    margin-top: -6px;
+  }
+  html:has(.anime-sticky--shown) {
+    scroll-padding-top: 120px;
+  }
+  .anime-hero__chips a.anime-chip {
+    position: relative;
+  }
+  .anime-hero__chips a.anime-chip::after {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+  }
+  .anime-sticky__inner {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+  }
+  .anime-sticky__titles {
+    flex-basis: 0;
+  }
+  .anime-sticky__chips {
+    display: none;
+  }
+  .anime-icon-btn {
+    width: 44px;
+    min-height: 44px;
+  }
+  .anime-pills {
+    order: 1;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .anime-pill {
+    height: 44px;
+  }
 }

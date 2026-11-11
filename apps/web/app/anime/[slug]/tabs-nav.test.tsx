@@ -41,4 +41,34 @@ describe('TabsNav', () => {
         .getAttribute('aria-current'),
     ).toBe('page');
   });
+
+  it('renders the sticky bar pills with their own class names', () => {
+    pathname.mockReturnValueOnce('/anime/frieren/music');
+    render(<TabsNav slug="frieren" variant="pills" />);
+
+    expect(screen.getByRole('navigation').className).toBe('anime-pills');
+    // Its own landmark name: both navs are on the page while the bar shows.
+    expect(
+      screen.getByRole('navigation', { name: 'Anime sections, sticky bar' }),
+    ).toBeTruthy();
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(7);
+    expect(links.every((link) => link.className === 'anime-pill')).toBe(true);
+    expect(
+      links
+        .filter((link) => link.getAttribute('aria-current') === 'page')
+        .map((link) => link.textContent),
+    ).toEqual(['Music']);
+  });
+
+  it('marks no tab on a path that is not one of its tabs', () => {
+    pathname.mockReturnValueOnce('/anime/frieren-2/cast');
+    render(<TabsNav slug="frieren" />);
+
+    expect(
+      screen
+        .getAllByRole('link')
+        .filter((link) => link.hasAttribute('aria-current')),
+    ).toEqual([]);
+  });
 });

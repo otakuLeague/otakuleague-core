@@ -49,6 +49,10 @@ function gitHeadSha(): string | undefined {
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Covers and banners are shown straight from AniList's (or MyAnimeList's) CDN, never fetched,
+  // resized or stored by this server (OTA-97): no third-party image cache, and the optimizer
+  // endpoint (GHSA-2464-fhr4-w9xw, OTA-131) stays unused. Also skips next/image's host check.
+  images: { unoptimized: true },
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {
     SENTRY_ENVIRONMENT:
