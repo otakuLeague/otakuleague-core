@@ -84,7 +84,7 @@ describe('SeasonSelector', () => {
     expect(link(/Season 1/).getAttribute('href')).toBe('/anime/aot');
   });
 
-  it('marks the current and upcoming seasons, and lists one without a slug unlinked', () => {
+  it('marks the current and upcoming seasons', () => {
     openSelector();
     expect(link(/Season 2/).getAttribute('aria-current')).toBe('true');
     expect(link(/Season 1/).hasAttribute('aria-current')).toBe(false);
@@ -92,9 +92,17 @@ describe('SeasonSelector', () => {
       'ol-season__item--upcoming',
     );
     expect(link(/Final Chapters/).textContent).toContain('Upcoming');
-    const unlinked = link(/^Season 3.*not available yet$/);
-    expect(unlinked.getAttribute('aria-disabled')).toBe('true');
-    expect(unlinked.hasAttribute('href')).toBe(false);
+  });
+
+  it('links every season: imported ones to their page, others through their AniList id', () => {
+    openSelector();
+    expect(link(/Season 1/).getAttribute('href')).toBe('/anime/aot/episodes');
+    expect(link(/Season 1/).hasAttribute('rel')).toBe(false);
+    const notImported = link(/^Season 3/);
+    expect(notImported.getAttribute('href')).toBe('/anime/anilist/3/episodes');
+    expect(notImported.getAttribute('rel')).toBe('nofollow');
+    expect(screen.getAllByRole('link')).toHaveLength(SEASONS.length);
+    expect(document.querySelector('[aria-disabled]')).toBeNull();
   });
 
   it('names the trigger "Seasons" when the current entry is not in the main line', () => {

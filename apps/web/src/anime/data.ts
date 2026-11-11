@@ -1,5 +1,6 @@
 import {
   type AnimeBySlug,
+  type AnimeDetails,
   type AnimeFranchise,
   type AnimeSlugResolution,
   isAnimeFranchise,
@@ -22,6 +23,12 @@ export const loadAnime = cache(
       // An import can take longer than the client's default timeout.
       timeoutMs: 15_000,
     }),
+);
+
+/** An anime by its AniList id, imported on a first visit (a few seconds): the season links (OTA-172). */
+export const loadAnimeByAnilistId = cache(
+  (anilistId: number): Promise<ApiResult<AnimeDetails>> =>
+    apiClient().call(`/anime/anilist/${anilistId}`, { timeoutMs: 15_000 }),
 );
 
 /** The season selector's main line (ADR 0008): stored data only, so a short timeout. */
