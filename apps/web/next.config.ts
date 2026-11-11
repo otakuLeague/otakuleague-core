@@ -4,6 +4,7 @@ import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
+import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
 // Next reads .env files from apps/web only; the repo keeps a single .env at its root (ADR 0003).
 // Not @next/env: Next has already called it for apps/web, and its cache makes a second call a no-op.
@@ -53,6 +54,7 @@ const nextConfig: NextConfig = {
   // resized or stored by this server (OTA-97): no third-party image cache, and the optimizer
   // endpoint (GHSA-2464-fhr4-w9xw, OTA-131) stays unused. Also skips next/image's host check.
   images: { unoptimized: true },
+  headers: () => Promise.resolve(robotsHeaders(SEARCH_INDEXING)),
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {
     SENTRY_ENVIRONMENT:

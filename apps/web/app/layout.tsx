@@ -10,6 +10,7 @@ import './styles/components.css';
 import './styles/shell.css';
 import './globals.css';
 import { SiteFooter } from '../src/shell/site-footer';
+import { robotsMetadata, SEARCH_INDEXING } from '../src/seo/indexing';
 import { THEME_BOOT_SCRIPT } from '../src/shell/theme';
 
 // Self-hosted at build time by next/font; tokens.css reads these names (--font-*-face).
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s | ${APP_NAME}` },
   description:
     'Track your anime and manga, explore their data, and play anime quizzes and games.',
+  robots: robotsMetadata(SEARCH_INDEXING),
 };
 
 export const viewport: Viewport = {
