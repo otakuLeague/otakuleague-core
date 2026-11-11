@@ -1,0 +1,240 @@
+name: Screenshots
+
+# Screenshots of the real pages on every web PR (OTA-163, ADR 0013).
+# `capture` runs PR code with a read-only token and no secret. `publish` has a write token, runs no
+# code from the repo, and treats the artifact as hostile (PR code wrote it): it keeps only PNGs whose
+# name it would have written itself, never prints a name from it, and builds the comment from those
+# names. Everything after the first health check is best effort; only a crashed app fails the run.
+on:
+  pull_request:
+    paths:
+      - apps/web/**
+      - apps/api/**
+      - packages/shared-types/**
+      - scripts/screenshots/**
+      - .github/workflows/screenshots.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: otakuleague
+          POSTGRES_PASSWORD: otakuleague_ci_password
+          POSTGRES_DB: otakuleague
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U otakuleague -d otakuleague"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://otakuleague:otakuleague_ci_password@127.0.0.1:5432/otakuleague
+      API_BASE_URL: http://127.0.0.1:3001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm db:migrate
+      # Not a dependency (ADR 0013): installed outside the repo, so no package.json or lockfile change.
+      # A failed install is not an app failure: the capture records it in the job summary.
+      - name: Install Playwright
+        continue-on-error: true
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --ignore-scripts --no-audit --no-fund playwright@1.63.0
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps --only-shell chromium
+      - name: Start replay server, API and web
+        run: |
+          node scripts/screenshots/fake-sources.mjs > "$RUNNER_TEMP/replay.log" 2>&1 &
+          NODE_ENV=production PORT=3001 \
+            ANILIST_API_URL=http://127.0.0.1:4010 JIKAN_API_URL=http://127.0.0.1:4010/v4 \
+            pnpm --filter @otakuleague/api start > "$RUNNER_TEMP/api.log" 2>&1 &
+          PORT=3000 pnpm --filter @otakuleague/web start > "$RUNNER_TEMP/web.log" 2>&1 &
+      - name: Health check
+        run: |
+          for url in http://127.0.0.1:3001/health http://127.0.0.1:3000/; do
+            deadline=$((SECONDS + 30))
+            until curl -fs --max-time 10 -o /dev/null "$url"; do
+              if (( SECONDS >= deadline )); then
+                echo "::error::$url did not answer within 30 s"
+                tail -n 40 "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log" "$RUNNER_TEMP/replay.log"
+                exit 1
+              fi
+              sleep 1
+            done
+          done
+      # Always exits 0: a failed shot is listed in the job summary, not a failed job.
+      - name: Capture
+        continue-on-error: true
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
+        run: node scripts/screenshots/capture.mjs
+      # Stays strict: a page that kills a server must fail the run, not look like 24 timeouts.
+      - name: Health check after capture
+        run: |
+          for url in http://127.0.0.1:3001/health http://127.0.0.1:3000/; do
+            curl -fs --max-time 10 -o /dev/null "$url" && continue
+            echo "::error::$url is down after the capture"
+            tail -n 40 "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log" "$RUNNER_TEMP/replay.log"
+            exit 1
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: pr-screenshots
+          path: ${{ runner.temp }}/screenshots
+          retention-days: 14
+          if-no-files-found: warn
+
+  publish:
+    name: Publish
+    needs: capture
+    # Same-repo PRs not opened by Dependabot: a fork's token cannot write, and Dependabot PRs
+    # change no page and run with a read-only token.
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    # No checkout, and every step is continue-on-error: a missing comment is harmless. Each step
+    # runs only if the one it needs succeeded, so a failure stops the chain (no comment).
+    steps:
+      - name: Does this PR change a page?
+        id: gate
+        continue-on-error: true
+        run: |
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')
+          changed=$(printf '%s\n' "$files" | grep -E '^(apps/web/(app|src)/|scripts/screenshots/|\.github/workflows/screenshots\.yml$)' | grep -Ev '\.test\.tsx?$' || true)
+          if [ -n "$changed" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      # No artifact when no shot was taken: the next step then reports zero images.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        with:
+          name: pr-screenshots
+          path: ${{ runner.temp }}/shots
+      # The only step that reads the artifact. A name it printed could be a workflow command, so
+      # it prints none, and copies only what capture.mjs itself writes (route names come from it).
+      - name: Select the images
+        id: select
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        run: |
+          export LC_ALL=C
+          shopt -s nullglob
+          mkdir -p "$RUNNER_TEMP/site"
+          count=0
+          entries=("$RUNNER_TEMP"/shots/*)
+          for path in "${entries[@]}"; do
+            name=${path##*/}
+            [[ $name =~ ^[a-z0-9-]{1,60}-(1440|390)-(dark|light)\.png$ ]] || continue
+            [[ -f $path && ! -L $path ]] || continue
+            size=$(wc -c < "$path")
+            (( size > 0 && size <= 5242880 )) || continue
+            [[ $(od -An -tx1 -N8 "$path" | tr -d ' \n') == 89504e470d0a1a0a ]] || continue
+            (( count < 32 )) || break
+            cp -- "$path" "$RUNNER_TEMP/site/$name"
+            count=$((count + 1))
+          done
+          if (( ${#entries[@]} > count )); then echo "::warning::published $count of ${#entries[@]} artifact files (name, type, size or count check)"; fi
+          echo "images=$count" >> "$GITHUB_OUTPUT"
+      # One orphan commit per PR, force-pushed: the only place a forced update is allowed (ADR 0013).
+      # The Vercel config keeps Vercel from deploying a branch that has no app.
+      - name: Push the images
+        id: push
+        if: steps.select.outcome == 'success' && steps.select.outputs.images != '0'
+        continue-on-error: true
+        run: |
+          cd "$RUNNER_TEMP/site"
+          mkdir -p apps/web
+          echo '{"git":{"deploymentEnabled":false}}' > apps/web/vercel.json
+          git init -q
+          git checkout -q --orphan "screenshots/pr-$PR"
+          git add .
+          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -q -m "screenshots for PR $PR"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $auth" push -q --force "https://github.com/$REPO.git" "HEAD:refs/heads/screenshots/pr-$PR"
+          sha=$(git rev-parse HEAD)
+          [[ $sha =~ ^[0-9a-f]{40}$ ]] || { echo "::error::unexpected commit id"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      # Built from the selected file names only: nothing from the artifact's content or routes.json.
+      - name: Write the comment
+        id: write
+        if: steps.select.outcome == 'success' && (steps.select.outputs.images == '0' || steps.push.outcome == 'success')
+        continue-on-error: true
+        env:
+          SHA: ${{ steps.push.outputs.sha }}
+        run: |
+          export LC_ALL=C
+          shopt -s nullglob
+          out="$RUNNER_TEMP/comment.md"
+          run_url="$GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID"
+          images=("$RUNNER_TEMP"/site/*.png)
+          printf '%s\n' '<!-- pr-screenshots -->' '## Screenshots of the real pages' '' > "$out"
+          if [ "${#images[@]}" -eq 0 ]; then
+            echo "No screenshots were captured for this push. The reasons are in the [run]($run_url)." >> "$out"
+            exit 0
+          fi
+          [[ $SHA =~ ^[0-9a-f]{40}$ ]] || { echo "::error::no valid commit id"; exit 1; }
+          {
+            echo "Rendered by this PR's API and web builds from the recorded fixtures (ADR 0013), updated on every push. Missing shots and warnings: [run summary]($run_url)."
+            route=''
+            for path in "${images[@]}"; do
+              name=${path##*/}
+              [[ $name =~ ^([a-z0-9-]{1,60})-(1440|390)-(dark|light)\.png$ ]] || continue
+              if [ "${BASH_REMATCH[1]}" != "$route" ]; then
+                [ -z "$route" ] || echo '</details>'
+                route=${BASH_REMATCH[1]}
+                printf '\n<details><summary><code>%s</code></summary>\n\n' "$route"
+              fi
+              echo "<img width=\"360\" alt=\"$route ${BASH_REMATCH[2]} ${BASH_REMATCH[3]}\" src=\"https://github.com/$REPO/raw/$SHA/$name\">"
+            done
+            [ -z "$route" ] || echo '</details>'
+          } >> "$out"
+      - name: Upsert the comment
+        if: steps.write.outcome == 'success'
+        continue-on-error: true
+        run: |
+          ids=$(gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- pr-screenshots -->"))) | .id')
+          id=$(head -n 1 <<<"$ids")
+          if [[ $id =~ ^[0-9]+$ ]]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          fi
+      # Only an answer of `closed` deletes: an API error keeps the branch for the next run.
+      - name: Delete the branches of closed PRs
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        run: |
+          list=$(gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name | select(startswith("screenshots/pr-"))')
+          mapfile -t branches <<<"$list"
+          for branch in "${branches[@]}"; do
+            number=${branch#screenshots/pr-}
+            [[ $number =~ ^[0-9]+$ ]] || continue
+            state=$(gh api "repos/$REPO/pulls/$number" --jq .state 2>/dev/null) || continue
+            if [ "$state" = closed ]; then gh api -X DELETE "repos/$REPO/git/refs/heads/screenshots/pr-$number" > /dev/null || true; fi
+          done

@@ -1,0 +1,14 @@
+{
+  "seedMalIds": [52991, 21, 2963],
+  "routes": [
+    { "name": "home", "path": "/" },
+    { "name": "anime-overview", "path": "/anime/frieren-beyond-journeys-end" },
+    {
+      "name": "anime-episodes",
+      "path": "/anime/frieren-beyond-journeys-end/episodes"
+    },
+    { "name": "anime-airing", "path": "/anime/one-piece" },
+    { "name": "anime-sparse", "path": "/anime/minami-ke" },
+    { "name": "anime-not-found", "path": "/anime/no-such-anime" }
+  ]
+}
