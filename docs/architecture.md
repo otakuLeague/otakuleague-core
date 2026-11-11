@@ -26,7 +26,7 @@ flowchart LR
   jikanApi["Jikan / MyAnimeList<br/>(fills gaps)"]
 
   shared["packages/shared-types<br/>API types, error codes, redaction"]
-  db[("PostgreSQL 16<br/>Docker Compose")]
+  db[("PostgreSQL 18<br/>Docker Compose")]
   sentry["Sentry<br/>(optional, DSN in .env)"]
   ci["GitHub Actions CI<br/>lint, typecheck, unit,<br/>integration, build"]
 

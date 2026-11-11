@@ -93,7 +93,7 @@ A rollback does not undo migrations. Fix forward with a new migration. Never edi
 2. Railway restarts Postgres. `/health` answers 503 during the restart and recovers on its own (expected, to be confirmed by the drills).
 3. Check that `/health` returns 200, then open one anime by slug.
 
-Off-platform copy (untested): temporarily add a TCP proxy on the Postgres service, run `pg_dump -Fc` with a Postgres 18 client against the proxy URL, then remove the proxy. A v18 dump does not restore into the local Postgres 16.
+Off-platform copy (untested): temporarily add a TCP proxy on the Postgres service, run `pg_dump -Fc` with a Postgres 18 client against the proxy URL, then remove the proxy. Local dev runs Postgres 18 too, so the dump restores locally.
 
 ## Deploy test plan
 
