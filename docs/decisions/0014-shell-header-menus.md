@@ -57,5 +57,10 @@ app/layout.tsx
 - Not checked here: `summary` as an inline-flex container in Safari (wrap its content in a `span` if the chevron misaligns), and whether `instant = false` on the anime segment would have exempted the root layout from the `Suspense` requirement.
 - Later: the search box is shown on every page until `/` and `/search` have their own field; then pages mark themselves and CSS hides it (`body:has([data-own-search]) .sh-search`), with no pathname logic.
 
+- Most link targets (`/discover/*`, `/season`, `/top/anime`, `/leaderboard`, `/search`, `/auth`) 404 until their tickets land; those links use `prefetch={false}` so production does not prefetch 404s. Accepted because beta is noindex and pre-launch.
+- Between 768 and 1100 px (`--bp-lg`) the header search box is hidden and gaps shrink so Sign in / Sign up stay on screen; the search page link returns with the mobile sheet slice.
+
 ## Learnings
-(filled in after the header ships)
+- A web build without the `Suspense` boundary also passed here (probably `instant = false` on the anime segment); the boundary stays as cheap insurance for future dynamic routes.
+- A `backdrop-filter` parent is the backdrop root for nested glass, so the Discover panel uses a solid surface instead of `.ol-glass`.
+- The design's container-query widths did not survive a single 768 px breakpoint: measure the header at 768/820/1024 with Playwright after any nav change.
