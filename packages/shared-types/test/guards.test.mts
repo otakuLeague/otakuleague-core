@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isApiError, isHealthResponse } from '@otakuleague/shared-types';
+import {
+  isAnimeFranchise,
+  isApiError,
+  isHealthResponse,
+} from '@otakuleague/shared-types';
 
 // Shapes that no guard may accept, whatever it checks.
 const NOT_OBJECTS: readonly unknown[] = [
@@ -140,5 +144,44 @@ void describe('isHealthResponse', () => {
       }),
       false,
     );
+  });
+});
+
+void describe('isAnimeFranchise', () => {
+  const season = {
+    anilistId: 16498,
+    slug: null,
+    label: 'Season 1',
+    isCurrent: true,
+    status: 'FINISHED',
+    startDate: { year: 2013, month: null, day: null },
+  };
+  const franchise = { state: 'complete', mainLine: [season], related: [] };
+
+  void it('accepts a franchise, with or without seasons, slug or start date', () => {
+    assert.equal(isAnimeFranchise(franchise), true);
+    assert.equal(isAnimeFranchise({ ...franchise, mainLine: [] }), true);
+    assert.equal(
+      isAnimeFranchise({
+        ...franchise,
+        mainLine: [{ ...season, slug: 'aot', startDate: null, status: null }],
+      }),
+      true,
+    );
+  });
+
+  void it('rejects an unknown state, a malformed season or missing lists', () => {
+    for (const value of [
+      ...NOT_OBJECTS,
+      { ...franchise, state: 'done' },
+      { ...franchise, mainLine: [{ ...season, anilistId: '16498' }] },
+      { ...franchise, mainLine: [{ ...season, isCurrent: 'yes' }] },
+      { ...franchise, mainLine: [{ ...season, status: 'AIRING' }] },
+      { ...franchise, mainLine: [{ ...season, startDate: {} }] },
+      { state: 'complete', related: [] },
+      { state: 'complete', mainLine: [] },
+    ]) {
+      assert.equal(isAnimeFranchise(value), false, JSON.stringify(value));
+    }
   });
 });

@@ -1,4 +1,8 @@
-import type { AnimeDetails } from '@otakuleague/shared-types';
+import type {
+  AnimeDetails,
+  AnimeFranchise,
+  FranchiseSeason,
+} from '@otakuleague/shared-types';
 
 /** Test data only: Attack on Titan as the API serves it, every header field set. */
 const sourced = <T>(value: T) => ({
@@ -64,3 +68,29 @@ export function animeFixture(
 }
 
 export { sourced };
+
+/** A main-line season: Attack on Titan's first, unless overridden. */
+export function franchiseSeason(
+  overrides: Partial<FranchiseSeason>,
+): FranchiseSeason {
+  return {
+    anilistId: 16498,
+    mediaType: 'ANIME',
+    slug: 'attack-on-titan',
+    title: 'Attack on Titan',
+    format: 'TV',
+    status: 'FINISHED',
+    startDate: { year: 2013, month: 4, day: 7 },
+    coverImageUrl: null,
+    label: 'Season 1',
+    isCurrent: true,
+    ...overrides,
+  };
+}
+
+export function franchiseFixture(
+  mainLine: readonly FranchiseSeason[],
+  state: AnimeFranchise['state'] = 'complete',
+): AnimeFranchise {
+  return { state, mainLine, related: [] };
+}
