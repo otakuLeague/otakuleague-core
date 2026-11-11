@@ -29,6 +29,6 @@ Prices checked 2026-10-31 (vercel.com/pricing, docs.railway.com/reference/pricin
 Free tiers differ more by licence and sleep behaviour than by quota: check "commercial use" and "does it sleep" first.
 
 ## Addendum (OTA-133, 2026-11-11)
-- Service settings live in the Railway dashboard, because `railway.json` is deprecated and stops 2026-12-01. [docs/deploy.md](../deploy.md) is the source of truth.
-- Production Postgres is 18 (Railway template). Dev and CI use 16.
-- The usage limit on Hobby is $10, hard.
+- Service settings live in the Railway dashboard, because `railway.json` is deprecated and stops 2026-12-01 (per Farouk, OTA-133 comment, 2026-11-11, not re-checked by the autopilot). [docs/deploy.md](../deploy.md) is the source of truth.
+- Production runs Postgres 18 (Railway template default); dev and CI run 16. Farouk decides: bump dev/CI to 18 or pin production to 16 (tracked in Linear).
+- The usage limit on Hobby is $10, hard. When it is reached, Railway stops the services, Postgres included.
