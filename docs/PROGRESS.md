@@ -35,7 +35,6 @@ OTA-176 (merged): `Autopilot merge` also merges a ready PR labelled `autopilot` 
 - OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; `loading.tsx` streams, so a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
 - OTA-153 answers (Farouk, 2026-11-12, also on OTA-136): Pierce mark in the header site-wide; leaderboard per season; Trending reuses Top airing. Home mockups in `docs/design/home/`.
 - OTA-166 vendored design skills (protected path, Farouk merges). At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
-- Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
-- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide.
+- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide. Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
 - Design direction (ADR 0012 addendum): the look need not match the old site; ADR 0011 performance rules still apply.
 - Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.
