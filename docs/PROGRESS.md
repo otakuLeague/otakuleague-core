@@ -5,14 +5,14 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-12
 
 ## Current milestone
-W2 Anime page + search. Done: OTA-152 shell, OTA-97 anime page shell. In review: OTA-100 Overview tab slice 1 (PR #58), OTA-172 season id route (PR #57), OTA-153 Home design (this PR). OTA-171 design-direction docs PR #56 waits for Farouk.
+W2 Anime page + search. Done: OTA-152 shell, OTA-97 anime page shell. Merged: OTA-172 season id route (#57), OTA-153 Home design (#59). In review: OTA-100 Overview tab slice 1 (PR #58, 934 lines, waits for Farouk). OTA-171 design-direction docs PR #56 waits for Farouk.
 
 ## Last session
 Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/design/home/` (Main, Mobile, Light, SignedIn, Poster, Loading, Error) with `motion.md` and `README.md`; Pierce logo SVGs in `apps/web/public/brand/` (full, light-ground, small mark). Hero = "Calm night" with radial-gradient glows (no `filter: blur`) and an opacity sheen instead of a rotating gradient; motion paused until a client island allows it. LCP = hero `h1`, static. Shared row scroller in `docs/design/browse/browse.css` now bleeds to the edge with a gutter-capped fade, desktop ‹ › buttons and one-line card meta. Row and XP slots keep one height across loaded/loading/error/empty (no CLS).
 
 ## In progress
 - OTA-152 remaining slices: 2b member state, mobile sheet + search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding`, 404/500 restyle, social icons.
-- OTA-100: later slices after #58.
+- OTA-100 slice 1 (#58): synopsis, details card, genre chips via `overviewFacts()` in `src/anime/overview-facts.ts`. Only an AniList synopsis is shown until OTA-127 clears MAL terms. Next slices: tags + spoiler toggle, trailer + where to watch, next-episode card, tab previews.
 
 ## Next 3 tasks
 1. OTA-136 Build: Home page (unblocked once this PR merges): Logo component (unique gradient ids), motion island, `--ease-drift` into tokens.css, hide `.sh-bg` on home, browse row changes.
@@ -28,6 +28,7 @@ Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/
 
 ## Notes
 - OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
+- New from the OTA-100 review: OTA-174 (cap source text size in the API).
 - Open questions on OTA-153: Pierce mark site-wide in the header now? Leaderboard per season or all-time? "Trending" sort or reuse Top airing?
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
