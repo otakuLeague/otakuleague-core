@@ -148,7 +148,7 @@ export const ANIME_TITLE_KINDS = [
 ] as const;
 export type AnimeTitleKind = (typeof ANIME_TITLE_KINDS)[number];
 
-/** One anime in GET /anime/search (ADR 0015). */
+/** One anime in GET /anime/search (ADR 0016). */
 export interface AnimeSearchHit {
   /** Canonical slug (ADR 0007); null when the anime has no AniList identity: link by `ref`. */
   readonly slug: string | null;

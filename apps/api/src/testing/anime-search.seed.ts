@@ -1,5 +1,5 @@
 /**
- * Real titles and synonyms as AniList lists them, for the ranking table of ADR 0015.
+ * Real titles and synonyms as AniList lists them, for the ranking table of ADR 0016.
  * Season 2 comes before season 1 on purpose: popularity, not insertion order, must rank them.
  * `slug` null: an anime with no identity row (not yet claimed).
  */

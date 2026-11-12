@@ -139,7 +139,7 @@ export class AnimeController {
   @ApiOkResponse({
     type: AnimeSearchPageSchema,
     description:
-      'Anime we already store, best match first (ADR 0015): by English, romaji or native title or synonym, ignoring case, accents and punctuation, tolerating typos. Never calls a source. A query with no letters or digits is valid and finds nothing.',
+      'Anime we already store, best match first (ADR 0016): by English, romaji or native title or synonym, ignoring case, accents and punctuation, tolerating typos. Never calls a source. A query with no letters or digits is valid and finds nothing.',
   })
   @ApiBadRequestResponse({
     description:

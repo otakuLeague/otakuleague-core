@@ -2,7 +2,7 @@ import type { AnimeTitleKind } from '@otakuleague/shared-types';
 import type { PrismaService } from '../prisma/prisma.service';
 
 export interface AnimeRankRequest {
-  /** The raw query: normalised in SQL, with the same function as the titles (ADR 0015). */
+  /** The raw query: normalised in SQL, with the same function as the titles (ADR 0016). */
   readonly query: string;
   /** Enabled sources in priority order, as database enum values. */
   readonly sources: readonly string[];
@@ -37,7 +37,7 @@ interface RankRow {
 }
 
 /**
- * Slice 1 of ADR 0015: scores every stored title of the enabled sources with pg_trgm
+ * Slice 1 of ADR 0016: scores every stored title of the enabled sources with pg_trgm
  * word_similarity. Exact match first, then similarity, then popularity, then id. A page past
  * the end returns no match but the right total. Parameters only, never string-built SQL.
  */

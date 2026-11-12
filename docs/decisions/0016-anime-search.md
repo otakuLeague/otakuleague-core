@@ -1,4 +1,4 @@
-# 0015: Anime search: trigram matching on stored titles
+# 0016: Anime search: trigram matching on stored titles
 
 Status: accepted (2026-11-12, OTA-98)
 

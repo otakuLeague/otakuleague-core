@@ -29,7 +29,7 @@ const hasSearchableText = (query: string): boolean =>
   /[\p{L}\p{N}]/u.test(query.normalize('NFKD'));
 
 /**
- * Searches the titles we already store (ADR 0015). Never calls a source, and never counts as
+ * Searches the titles we already store (ADR 0016). Never calls a source, and never counts as
  * a view: listing an anime must not postpone its 30-day purge. `total` counts ranked anime;
  * a hit is dropped when its anime vanished between the two queries (purged) or no shown
  * source names an id for it, so a page can hold fewer hits than `total` implies.

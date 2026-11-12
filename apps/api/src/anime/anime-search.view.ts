@@ -3,7 +3,7 @@ import type { MergedAnime } from './anime.merge';
 import type { AnimeRankMatch } from './anime-search.query';
 
 /**
- * One search hit from the merged anime (ADR 0015). Null when no source we show names an id
+ * One search hit from the merged anime (ADR 0016). Null when no source we show names an id
  * for it, which cannot be linked to.
  */
 export function toSearchHit(
