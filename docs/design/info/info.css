@@ -62,6 +62,7 @@
   color: var(--muted);
   font: 600 14px/1 var(--font-mono);
 }
+.in-q:not([open]) .in-q__n { color: var(--muted); background: color-mix(in oklab, var(--surface-2) 80%, var(--ink) 6%); }
 .in-q[open] .in-q__n { background: linear-gradient(110deg, var(--brand-a), var(--brand-b)); color: #12101a; }
 .in-q__t { font: 700 19px/1.3 var(--font-display); transition: color var(--dur-press) var(--ease-enter); }
 .in-q__i { position: relative; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); }
@@ -88,7 +89,8 @@
 }
 .in-cta a:hover { border-color: color-mix(in oklab, var(--accent) 55%, transparent); }
 .in-cta b { display: block; font: 700 18px/1.3 var(--font-display); }
-.in-cta span { color: var(--muted); font-size: 14px; }
+.in-cta b { color: var(--ink); }
+.in-cta b + span { color: var(--muted); font-size: 14px; }
 .in-cta__arrow { color: var(--accent-ink); font-size: 20px; transition: transform var(--dur-enter) var(--ease-enter); }
 @media (hover: hover) { .in-cta a:hover .in-cta__arrow { transform: translateX(3px); } }
 .in-ico {
@@ -129,7 +131,8 @@
 .in-form__foot .ol-btn { min-height: 48px; padding: 0 var(--space-6); }
 .in-form__foot p { margin: 0; flex: 1 1 220px; color: var(--muted); font-size: 13px; }
 .in-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-.in-input-ro { opacity: 0.7; }
+.in-form .au-input[aria-disabled='true'] { opacity: 1; border-style: dashed; background: var(--surface-2); }
+.in-form .au-input[aria-disabled='true'] :is(input, textarea) { color: var(--ink); }
 
 .in-reach { display: grid; gap: var(--space-4); }
 .in-reach h2 { margin: 0; font: 700 18px/1.3 var(--font-display); }
@@ -265,6 +268,7 @@
   .in-form { padding: var(--space-4); }
   .in-form__foot .ol-btn { width: 100%; }
   .in-socials a { min-height: 44px; }
+  .au-after { min-height: 44px; display: inline-flex; align-items: center; }
   .in-sent { padding: var(--space-6) var(--space-4); }
   .in-sent__acts .ol-btn { flex: 1 1 100%; min-height: 44px; }
   .in-board { grid-template-columns: minmax(0, 1fr); }

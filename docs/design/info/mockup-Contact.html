@@ -32,6 +32,7 @@
 <form class="in-form" aria-label="Contact form" novalidate>
   
   
+  
   <div class="in-col">
     <div class="au-field"><label for="n-idle">Name <span class="in-opt">(optional)</span></label>
   <div class="au-input"><input id="n-idle" type="text" value="Kaito" autocomplete="name" /></div>
@@ -76,7 +77,8 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
 <h2>Other states</h2>
 <figure><figcaption>1 · Empty submit (focus moves to the first invalid field)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
   
-  <div class="au-alert" role="alert"><strong>3 fields need a look.</strong><span>Email, subject and message are required.</span></div>
+  
+  <div class="au-alert" role="alert"><strong>3 fields need a look.</strong><span><a href="#e-empty">Email</a>, <a href="#s-empty">subject</a> and <a href="#m-empty">message</a> are required.</span></div>
   <div class="in-col">
     <div class="au-field"><label for="n-empty">Name <span class="in-opt">(optional)</span></label>
   <div class="au-input"><input id="n-empty" type="text" value="" autocomplete="name" /></div>
@@ -99,6 +101,7 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
   <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
 </form></figure>
 <figure><figcaption>2 · Sending (fields read-only, button keeps its width)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  
   
   
   <div class="in-col">
@@ -134,6 +137,7 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
 <figure><figcaption>4 · Server error (5xx): text kept</figcaption><form class="in-form" aria-label="Contact form" novalidate>
   <div class="au-alert" role="alert"><strong>Your message wasn't sent.</strong><span>Something went wrong on our side. Your text is still here: try again, or email contact@otakuleague.com.</span></div>
   
+  
   <div class="in-col">
     <div class="au-field"><label for="n-error">Name <span class="in-opt">(optional)</span></label>
   <div class="au-input"><input id="n-error" type="text" value="Kaito" autocomplete="name" /></div>
@@ -161,6 +165,7 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
 <figure><figcaption>5 · Rate limited (429)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
   <div class="au-alert" data-tone="wait" role="alert"><strong>You've sent a few messages in a short time.</strong><span>Try again in about 10 minutes. Your text is still here.</span></div>
   
+  
   <div class="in-col">
     <div class="au-field"><label for="n-rate">Name <span class="in-opt">(optional)</span></label>
   <div class="au-input"><input id="n-rate" type="text" value="Kaito" autocomplete="name" /></div>
@@ -185,8 +190,9 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
   <div class="in-hp" aria-hidden="true"><label for="hp-rate">Leave this empty</label><input id="hp-rate" tabindex="-1" autocomplete="off" /></div>
   <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
 </form></figure>
-<figure><figcaption>6 · Too long: pasted subject over 200 (message is hard-capped at 5,000)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+<figure><figcaption>6 · Submitted with a 204-character subject: error, focus on the field</figcaption><form class="in-form" aria-label="Contact form" novalidate>
   
+  <div class="au-alert" role="alert"><strong>1 field needs a look.</strong><span><a href="#s-long">Subject</a> is over 200 characters.</span></div>
   
   <div class="in-col">
     <div class="au-field"><label for="n-long">Name <span class="in-opt">(optional)</span></label>
@@ -210,7 +216,7 @@ Phone: Pixel 8, Chrome 131.</textarea></div>
   <div class="in-fieldfoot"><span id="m-long-m"></span><span class="in-count" id="m-long-c">268 / 5,000</span></div>
 </div>
   <div class="in-hp" aria-hidden="true"><label for="hp-long">Leave this empty</label><input id="hp-long" tabindex="-1" autocomplete="off" /></div>
-  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
 </form></figure>
 </section>
   </main>

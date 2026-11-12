@@ -152,7 +152,9 @@
 /* Switch: .pf-switch from profile.css, with the On/Off word so state is never colour alone. */
 .st-row .pf-switch { min-width: 92px; justify-content: flex-end; color: var(--muted); font-size: 13px; font-weight: 600; }
 .st-row .pf-switch[aria-checked='true'] { color: var(--ink); }
-.pf-switch[aria-disabled='true'] { cursor: not-allowed; opacity: 0.55; }
+.pf-switch[aria-disabled='true'] { cursor: not-allowed; }
+.pf-switch[aria-disabled='true'] i { opacity: 0.45; }
+.st-row .pf-switch[aria-disabled='true'] { color: var(--muted); }
 .st-lock { display: inline-flex; gap: 6px; align-items: baseline; }
 .st-lock::before { content: '🔒'; font-size: 11px; filter: grayscale(1); }
 
@@ -293,6 +295,9 @@
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
     scrollbar-width: none;
+    /* Edge fade so the row reads as scrollable; the active chip is scrolled into view. */
+    mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
   }
   .st-nav ul { display: flex; gap: var(--space-2); }
   .st-nav a { min-height: 44px; padding: 0 14px; border-radius: var(--radius-pill); border: 1px solid var(--border); white-space: nowrap; }
@@ -309,7 +314,8 @@
   .st-form__foot .ol-btn { flex: 1; }
   .st-form__foot .st-status { flex-basis: 100%; margin: 0; order: -1; }
   .st-note { margin: 0 var(--space-4) var(--space-4); }
-  .st-note .ol-btn { min-height: 44px; }
+  .st-note .ol-btn, .st-note__acts .ol-btn, .au-after { min-height: 44px; }
+  .au-after { display: inline-flex; align-items: center; }
   .st-soon { padding: var(--space-4); align-items: flex-start; }
   .st-danger { flex-direction: column; align-items: stretch; padding: var(--space-4); gap: var(--space-4); }
   .st-danger .ol-btn { min-height: 44px; }
@@ -319,6 +325,11 @@
   .st-dialog { width: auto; }
   .st-dialog .pf-dialog__foot .ol-btn { flex: 1 1 100%; }
   .st-menu { right: var(--space-4); left: var(--space-4); width: auto; }
+}
+
+@container (max-width: 479px) {
+  .st-who__dot { display: none; }
+  .st-who__mail { flex-basis: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
