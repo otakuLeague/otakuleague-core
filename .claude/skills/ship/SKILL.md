@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Finish the current task. Lint, typecheck, test, one review pass, conventional commit, push, PR, Linear update, rewrite PROGRESS.md. Use when the task's acceptance criteria are met.
+description: Finish the current task. Lint, typecheck, test, one review pass, conventional commit, push, PR, Linear update, progress note. Use when the task's acceptance criteria are met.
 disable-model-invocation: true
 ---
 Ship the current branch. Stop and tell me at the first step you can't fix in two attempts.
@@ -12,5 +12,5 @@ Ship the current branch. Stop and tell me at the first step you can't fix in two
 5. Commit with a Conventional Commit message referencing the key, e.g. `feat(OTA-123): ...`. Message in a file with `git commit -F /abs/path`. No AI attribution (hooks enforce).
 6. `git push -u origin <branch>`, then open the PR (`gh pr create` with a body file locally; GitHub MCP `create_pull_request` in cloud runs, where `gh pr` gets HTTP 403): Summary, Changes, Tests, Edge cases, Linear link. Keep PRs under ~400 lines; split if bigger.
 7. Linear: move the ticket to In Review and link the PR.
-8. Rewrite `docs/PROGRESS.md` from scratch (≤ 40 lines, same sections), commit it on the branch, push.
+8. Handoff (OTA-176, so parallel PRs never conflict): write `docs/progress/OTA-<n>.md` (≤ 15 lines: what changed, decisions, next steps, new blockers or bugs) instead of editing `docs/PROGRESS.md`. Then fold: if no other open PR changes `docs/PROGRESS.md`, rewrite it from scratch (≤ 40 lines, same sections) from the current state and the notes already on main, and delete those folded notes; otherwise leave it. Commit on the branch, push.
 9. Reply in 4 lines (Context, Actions, Results, Learnings), then: "Run `/clear` before the next task."
