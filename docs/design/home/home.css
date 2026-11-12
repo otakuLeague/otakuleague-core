@@ -271,7 +271,7 @@
 /* Signed in: the CTA pair becomes the XP card (PARITY "/ Home": welcome name + XP preview). */
 .hm-xp {
   /* Same height loaded, loading and failed (CLS). */
-  min-height: 150px;
+  min-height: 176px;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -766,7 +766,7 @@
     --hm-row-h: 316px;
   }
   .hm-xp {
-    min-height: 196px;
+    min-height: 232px;
   }
   .hm-blob--a {
     left: -260px;
@@ -803,6 +803,10 @@
   }
   .hm-ctas .ol-btn {
     justify-content: center;
+  }
+  .hm-xp__foot {
+    flex-direction: column;
+    gap: 0;
   }
   .hm-xp__foot a {
     min-height: 44px;

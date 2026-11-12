@@ -35,7 +35,7 @@
             </ul>
           </nav>
           <span class="sh-spacer"></span>
-          <div class="sh-search" role="search">
+          <div class="sh-search" role="search" aria-label="Header search">
             <label class="sh-search__field">
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
               <input type="search" placeholder="Search anime" aria-label="Search anime" />
@@ -50,7 +50,7 @@
           </div>
         </div>
       </header>
-            <main class="sh-main">
+            <main id="main" class="sh-main">
         <section class="hm-hero" aria-labelledby="hm-title" data-motion="on">
           <div class="hm-sky" aria-hidden="true">
             <div class="hm-blob hm-blob--a"></div>
@@ -92,7 +92,7 @@
             <p class="hm-eyebrow">Your anime HQ</p>
             <h1 class="hm-h1" id="hm-title"><span>Track every anime.</span> <span>Earn XP.</span> <span class="hm-grad">Top the season.</span></h1>
             <p class="hm-lede">Anime pages, seasonal charts and rankings, your watchlist, and XP for everything you add, finish and rate. Every season ends with a leaderboard.</p>
-            <form class="hm-search" role="search" action="/search" method="get">
+            <form class="hm-search" role="search" aria-label="Hero search" action="/search" method="get">
               <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
               <input type="search" name="q" placeholder="Search anime, e.g. Frieren" aria-label="Search anime" />
               <button class="ol-btn ol-btn--primary" type="submit">Search</button>
@@ -510,7 +510,7 @@
         <div class="demo-phone hm-phone" data-theme="dark">
           <div class="sh">
             <div class="sh-bg" aria-hidden="true"></div>
-      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#p2-main">Skip to content</a>
       <header class="sh-header ol-glass">
         <div class="sh-header__in">
           <a class="sh-logo" href="/" aria-current="page"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
@@ -523,7 +523,7 @@
             </ul>
           </nav>
           <span class="sh-spacer"></span>
-          <div class="sh-search" role="search">
+          <div class="sh-search" role="search" aria-label="Header search">
             <label class="sh-search__field">
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
               <input type="search" placeholder="Search anime" aria-label="Search anime" />
@@ -538,7 +538,7 @@
           </div>
         </div>
       </header>
-            <main class="sh-main">
+            <main id="p2-main" class="sh-main">
         <section class="hm-hero" aria-labelledby="p2-hm-title" data-motion="on">
           <div class="hm-sky" aria-hidden="true">
             <div class="hm-blob hm-blob--a"></div>
@@ -580,7 +580,7 @@
             <p class="hm-eyebrow">Your anime HQ</p>
             <h1 class="hm-h1" id="p2-hm-title"><span>Track every anime.</span> <span>Earn XP.</span> <span class="hm-grad">Top the season.</span></h1>
             <p class="hm-lede">Anime pages, seasonal charts and rankings, your watchlist, and XP for everything you add, finish and rate. Every season ends with a leaderboard.</p>
-            <form class="hm-search" role="search" action="/search" method="get">
+            <form class="hm-search" role="search" aria-label="Hero search" action="/search" method="get">
               <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
               <input type="search" name="q" placeholder="Search anime, e.g. Frieren" aria-label="Search anime" />
               <button class="ol-btn ol-btn--primary" type="submit">Search</button>
@@ -604,7 +604,7 @@
         <section class="br-section" aria-labelledby="p2-s-continue">
           <div class="br-section__head">
             <div><h2 id="p2-s-continue">Continue watching</h2><p>Pick up where you left off</p></div>
-            <div class="hm-head-end"><a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-continue" aria-label="Scroll Continue watching back" disabled>‹</button><button type="button" aria-controls="r-continue" aria-label="Scroll Continue watching forward">›</button></div></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="p2-r-continue" aria-label="Scroll Continue watching back" disabled>‹</button><button type="button" aria-controls="p2-r-continue" aria-label="Scroll Continue watching forward">›</button></div></div>
           </div>
           <ul class="br-row-scroll" id="p2-r-continue">
           <li class="br-card">
@@ -678,7 +678,7 @@
         <section class="br-section" aria-labelledby="p2-s-trending">
           <div class="br-section__head">
             <div><h2 id="p2-s-trending">Trending now</h2><p>Most added this week</p></div>
-            <div class="hm-head-end"><a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-trending" aria-label="Scroll Trending now back" disabled>‹</button><button type="button" aria-controls="r-trending" aria-label="Scroll Trending now forward">›</button></div></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="p2-r-trending" aria-label="Scroll Trending now back" disabled>‹</button><button type="button" aria-controls="p2-r-trending" aria-label="Scroll Trending now forward">›</button></div></div>
           </div>
           <ul class="br-row-scroll" id="p2-r-trending">
           <li class="br-card">
@@ -775,7 +775,7 @@
         <section class="br-section" aria-labelledby="p2-s-season">
           <div class="br-section__head">
             <div><h2 id="p2-s-season">This season · Fall 2026</h2><p>Airing now, most popular first</p></div>
-            <div class="hm-head-end"><a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-season" aria-label="Scroll This season back" disabled>‹</button><button type="button" aria-controls="r-season" aria-label="Scroll This season forward">›</button></div></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="p2-r-season" aria-label="Scroll This season back" disabled>‹</button><button type="button" aria-controls="p2-r-season" aria-label="Scroll This season forward">›</button></div></div>
           </div>
           <ul class="br-row-scroll" id="p2-r-season">
           <li class="br-card">
@@ -872,7 +872,7 @@
         <section class="br-section" aria-labelledby="p2-s-top">
           <div class="br-section__head">
             <div><h2 id="p2-s-top">Top rated</h2><p>Highest scores of all time</p></div>
-            <div class="hm-head-end"><a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-top" aria-label="Scroll Top rated back" disabled>‹</button><button type="button" aria-controls="r-top" aria-label="Scroll Top rated forward">›</button></div></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="p2-r-top" aria-label="Scroll Top rated back" disabled>‹</button><button type="button" aria-controls="p2-r-top" aria-label="Scroll Top rated forward">›</button></div></div>
           </div>
           <ul class="br-row-scroll" id="p2-r-top">
           <li class="br-card">

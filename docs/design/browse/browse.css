@@ -228,6 +228,12 @@
   right: auto;
   z-index: 1;
 }
+.br-card .ol-anime-card__meta {
+  /* One line, so every row keeps the same height (home row slots, OTA-153). */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .br-card .ol-anime-card__meta span + span::before,
 .br-row__meta span + span::before {
   content: ' · ';
@@ -507,8 +513,9 @@
   scroll-snap-type: x mandatory;
   scrollbar-width: thin;
   /* Right-edge fade says "more this way" when the last visible card is cut. */
-  mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent);
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent);
+  /* Capped at the gutter so a fully scrolled last card is never faded. */
+  mask-image: linear-gradient(90deg, #000 calc(100% - min(64px, var(--br-row-gutter))), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - min(64px, var(--br-row-gutter))), transparent);
 }
 /* Desktop row arrows (section head): only with a fine pointer and room for them. */
 .br-row-nav {
@@ -746,8 +753,6 @@
   .br-row-scroll {
     grid-auto-columns: 148px;
     --br-row-gutter: var(--space-4);
-    mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
   }
   .br-genres {
     margin-inline: calc(-1 * var(--space-4));

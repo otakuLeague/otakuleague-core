@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="t">
   <title id="t">OtakuLeague</title>
   <!-- Concept B "Pierce" (OTA-160): a geometric O pierced by an L that ends in a dragon head and a
-       flame tail. Masks cut the over-under crossing and the eye, so the mark works on any background. -->
+       flame tail, for dark grounds (light grounds: logo-pierce-light.svg). Masks cut the over-under
+       crossing and the eye, so no background colour is baked in. -->
   <defs>
     <linearGradient id="olChroma" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#e9fffa"/>
