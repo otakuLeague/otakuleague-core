@@ -15,8 +15,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp, SequentialRandom } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { AnimeImportService } from './anime-import.service';
+import { ImportLimits } from './import-limits';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
+import type { AnimeRef } from './sources/source.types';
 import {
   AnimeSourceSettings,
   type SourceSettings,
@@ -33,6 +35,32 @@ class MovableClock extends Clock {
 
   advance(ms: number): void {
     this.instant = new Date(this.instant.getTime() + ms);
+  }
+}
+
+/** The app is shared by every test, so each test starts with a full bucket and no memory. */
+class ResettableImportLimits extends ImportLimits {
+  private current: ImportLimits;
+
+  constructor(private readonly testClock: Clock) {
+    super(testClock);
+    this.current = new ImportLimits(testClock);
+  }
+
+  reset(): void {
+    this.current = new ImportLimits(this.testClock);
+  }
+
+  override isKnownMissing(ref: AnimeRef): boolean {
+    return this.current.isKnownMissing(ref);
+  }
+
+  override rememberMissing(ref: AnimeRef): void {
+    this.current.rememberMissing(ref);
+  }
+
+  override takeImportToken(): boolean {
+    return this.current.takeImportToken();
   }
 }
 
@@ -115,6 +143,7 @@ describe('GET /anime/:idSource/:externalId', () => {
   let anilist: FakeSource;
   let jikan: FakeSource;
   let settings: TestSourceSettings;
+  let limits: ResettableImportLimits;
 
   const get = (path: string) => request(app.getHttpServer()).get(path);
   const counts = async () => ({
@@ -174,10 +203,14 @@ describe('GET /anime/:idSource/:externalId', () => {
       jikan: `${jikan.url}/v4`,
     });
     clock = new MovableClock();
+    limits = new ResettableImportLimits(clock);
     app = await createTestApp({
       clock,
       random: new SequentialRandom(),
-      overrides: [{ provide: AnimeSourceSettings, useValue: settings }],
+      overrides: [
+        { provide: AnimeSourceSettings, useValue: settings },
+        { provide: ImportLimits, useValue: limits },
+      ],
     });
     prisma = app.get(PrismaService);
     importer = app.get(AnimeImportService);
@@ -186,6 +219,7 @@ describe('GET /anime/:idSource/:externalId', () => {
   beforeEach(async () => {
     await importer.settle();
     await truncateAllTables(prisma);
+    limits.reset();
     aniListByMalId = ANILIST_BY_MAL_ID();
     aniListExtra = [];
     anilist.up = true;
@@ -985,7 +1019,7 @@ describe('GET /anime/:idSource/:externalId', () => {
     await get('/anime/myanimelist/52991').expect(200);
     await importer.settle();
     clock.advance(20 * DAY_MS);
-    await get('/anime/myanimelist/52991').expect(200);
+    await get('/anime/slugs/frieren-beyond-journeys-end').expect(200);
     await importer.settle();
     clock.advance(11 * DAY_MS);
 
@@ -994,5 +1028,121 @@ describe('GET /anime/:idSource/:externalId', () => {
       await prisma.animeExternalId.findMany({ select: { externalId: true } }),
     ).toEqual(expect.arrayContaining([{ externalId: 52991 }]));
     expect(await counts()).toEqual({ anime: 1, ids: 2, snapshots: 2 });
+  });
+
+  describe('import guard (OTA-173)', () => {
+    const MISSING_ID = 888_001;
+    const HOUR_MS = 60 * 60 * 1000;
+    const body = (response: request.Response) =>
+      response.body as { error: { code: string } };
+
+    it('remembers an unknown id for an hour: no source call, then asks again', async () => {
+      await get(`/anime/anilist/${MISSING_ID}`).expect(404);
+      const asked = anilist.calls;
+
+      await get(`/anime/anilist/${MISSING_ID}`).expect(404);
+      clock.advance(HOUR_MS - 1);
+      await get(`/anime/anilist/${MISSING_ID}`).expect(404);
+      expect(anilist.calls).toBe(asked);
+
+      clock.advance(1);
+      await get(`/anime/anilist/${MISSING_ID}`).expect(404);
+      expect(anilist.calls).toBeGreaterThan(asked);
+    });
+
+    it('remembers an adult id the same way', async () => {
+      const frieren = record(record(fixture('anilist-frieren')).data).Media;
+      aniListByMalId.set(52991, {
+        data: { Media: { ...record(frieren), isAdult: true } },
+      });
+      await get('/anime/anilist/154587').expect(404);
+      const asked = anilist.calls;
+
+      await get('/anime/anilist/154587').expect(404);
+      expect(anilist.calls).toBe(asked);
+
+      clock.advance(HOUR_MS);
+      await get('/anime/anilist/154587').expect(404);
+      expect(anilist.calls).toBeGreaterThan(asked);
+    });
+
+    it('never remembers an outage: the id imports once AniList is back', async () => {
+      anilist.up = false;
+      const down = await get('/anime/anilist/154587').expect(503);
+      expect(body(down).error.code).toBe('ANIME_SOURCES_UNAVAILABLE');
+
+      anilist.up = true;
+      await get('/anime/anilist/154587').expect(200);
+      await importer.settle();
+    });
+
+    it('answers 429 once 10 cold imports are used, but still serves and refreshes stored anime', async () => {
+      await get('/anime/myanimelist/52991').expect(200);
+      await importer.settle();
+      clock.advance(8 * DAY_MS);
+      limits.reset();
+      for (let id = 0; id < 10; id += 1) {
+        await get(`/anime/anilist/${MISSING_ID + id}`).expect(404);
+      }
+
+      const refused = await get(`/anime/anilist/${MISSING_ID + 10}`).expect(
+        429,
+      );
+      expect(refused.body).toEqual({
+        error: {
+          code: 'ANIME_IMPORT_LIMIT_REACHED',
+          message:
+            'Too many new anime are being imported right now. Try again in a minute.',
+        },
+      });
+
+      anilist.calls = 0;
+      await get('/anime/myanimelist/52991').expect(200);
+      await importer.settle();
+      expect(anilist.calls).toBeGreaterThan(0);
+
+      clock.advance(19_999);
+      await get(`/anime/anilist/${MISSING_ID + 10}`).expect(429);
+      clock.advance(1);
+      await get(`/anime/anilist/${MISSING_ID + 10}`).expect(404);
+    });
+
+    it('takes one token per id however many requests ask at once', async () => {
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          get(`/anime/anilist/${MISSING_ID}`).expect(404),
+        ),
+      );
+      for (let id = 1; id < 10; id += 1) {
+        await get(`/anime/anilist/${MISSING_ID + id}`).expect(404);
+      }
+
+      await get(`/anime/anilist/${MISSING_ID + 10}`).expect(429);
+    });
+
+    it('takes no token for an id already remembered as missing', async () => {
+      for (let id = 0; id < 10; id += 1) {
+        await get(`/anime/anilist/${MISSING_ID + id}`).expect(404);
+      }
+      await get(`/anime/anilist/${MISSING_ID + 10}`).expect(429);
+
+      await get(`/anime/anilist/${MISSING_ID}`).expect(404);
+    });
+
+    it('moves lastViewedAt for a slug page view, not for an id lookup', async () => {
+      await get('/anime/myanimelist/52991').expect(200);
+      await importer.settle();
+      const viewedAt = async () =>
+        (await prisma.anime.findFirstOrThrow()).lastViewedAt;
+      const imported = await viewedAt();
+
+      clock.advance(2 * HOUR_MS);
+      await get('/anime/myanimelist/52991').expect(200);
+      await get('/anime/anilist/154587').expect(200);
+      expect(await viewedAt()).toEqual(imported);
+
+      await get('/anime/slugs/frieren-beyond-journeys-end').expect(200);
+      expect(await viewedAt()).toEqual(clock.now());
+    });
   });
 });

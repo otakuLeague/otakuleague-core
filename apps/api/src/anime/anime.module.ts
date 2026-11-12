@@ -15,6 +15,7 @@ import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
 import { AnimeFranchiseService } from './franchise.service';
+import { ImportLimits } from './import-limits';
 import { SourceBackoff } from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { JikanAdapter } from './sources/jikan.adapter';
@@ -98,6 +99,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     AnimeListService,
     FranchiseWalker,
     SourceBackoff,
+    ImportLimits,
     AnimeFranchiseService,
     AnimePurgeScheduler,
   ],

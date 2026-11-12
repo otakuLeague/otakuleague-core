@@ -7,6 +7,7 @@ import {
   ApiProperty,
   ApiPropertyOptional,
   ApiServiceUnavailableResponse,
+  ApiTooManyRequestsResponse,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -168,6 +169,10 @@ export class AnimeController {
     description:
       'The anime is not cached any more and its sources are down or rate-limited.',
   })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
+  })
   getBySlug(@Param() params: AnimeSlugParams): Promise<AnimeBySlug> {
     return this.anime.getBySlug(params.slug);
   }
@@ -213,6 +218,10 @@ export class AnimeController {
   @ApiServiceUnavailableResponse({
     description:
       'We do not have this anime yet and its sources are down or rate-limited.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
   })
   get(@Param() params: AnimeLookupParams): Promise<AnimeDetails> {
     return this.anime.getByExternalId({

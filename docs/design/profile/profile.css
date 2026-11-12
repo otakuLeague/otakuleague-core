@@ -1,0 +1,412 @@
+/* Profile, XP and levels (OTA-157): /u/[username], edit-profile dialog, level-up moment.
+   Also the shared XP primitives (.pf-avatar, .pf-lvl, .pf-meter) used by ../leaderboard/.
+   Builds on tokens.css, components.css, ../global-shell/shell.css and ../browse/browse.css
+   (.br-cover, .br-sr). Breakpoints are container queries on .sh like the other mockups; the build
+   uses media queries (767.98px). Motion lives in motion.md. */
+
+:root,
+[data-theme] {
+  /* Same aliases as my-list.css (the build adds them to tokens.css once, with OTA-142). */
+  --ls-watching: var(--good);
+  --ls-planning: var(--muted);
+  --ls-completed: var(--score-high);
+  --ls-paused: var(--xp-gold);
+  --ls-dropped: var(--bad);
+  --ls-rewatch: var(--neon-magenta);
+}
+[data-s='watching'] { --tone: var(--ls-watching); }
+[data-s='planning'] { --tone: var(--ls-planning); }
+[data-s='completed'] { --tone: var(--ls-completed); }
+[data-s='paused'] { --tone: var(--ls-paused); }
+[data-s='dropped'] { --tone: var(--ls-dropped); }
+[data-s='rewatch'] { --tone: var(--ls-rewatch); }
+
+/* Focus: --accent-ink everywhere on these pages (OTA-156 follow-up: --accent is ~1.65:1 on light). */
+.sh :is(a, button, input, textarea, select, [tabindex]):focus-visible,
+.pf-dialog :is(a, button, input, textarea, label):focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+.pf-tabs .ol-tab:focus-visible { outline-offset: -2px; }
+
+/* ---------- Avatar and level (shared with the leaderboard) ---------- */
+.pf-avatar {
+  --s: 40px;
+  flex: none;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(140deg, var(--c1, var(--brand-a)), var(--c2, var(--brand-b)));
+  color: #fff;
+  font: 700 calc(var(--s) * 0.36) / 1 var(--font-display);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 2px var(--ground);
+}
+.pf-avatar--xl { --s: 136px; box-shadow: 0 0 0 5px var(--ground), 0 12px 32px rgba(0, 0, 0, 0.35); }
+/* Level plate: the angled panel is the page's identity (Persona-style slash, ADR 0012). */
+.pf-lvl {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 12px 3px 10px;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  background: linear-gradient(100deg, var(--brand-a), var(--brand-b));
+  color: #0d0b14;
+  font: 700 12px/1.3 var(--font-sans);
+  white-space: nowrap;
+}
+.pf-lvl b { font: 800 15px/1 var(--font-mono); }
+.pf-lvl--sm { padding: 2px 10px 2px 8px; font-size: 11px; }
+.pf-lvl--sm b { font-size: 12px; }
+[data-theme='light'] .pf-lvl { color: #fff; }
+/* XP meter: the fill is scaleX (transform only). */
+.pf-meter {
+  position: relative;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--ink) 10%, transparent);
+  overflow: hidden;
+}
+.pf-meter i {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--xp-gold), color-mix(in oklab, var(--xp-gold) 55%, var(--neon-magenta)));
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+}
+.pf-meter--thin { height: 6px; }
+
+/* ---------- Hero ---------- */
+.pf-banner {
+  position: relative;
+  height: 232px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 28px, rgba(255, 255, 255, 0.05) 28px 29px),
+    radial-gradient(90% 120% at 80% 0%, color-mix(in oklab, var(--c2) 80%, transparent), transparent 60%),
+    linear-gradient(120deg, var(--c1), var(--c3, #12101a));
+}
+.pf-banner--none { background: repeating-linear-gradient(115deg, transparent 0 28px, var(--border) 28px 29px), var(--surface); }
+.pf-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, color-mix(in oklab, var(--ground) 70%, transparent));
+}
+.pf-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-4) var(--space-6);
+  align-items: end;
+  padding: 0 var(--space-6);
+  margin-top: -64px;
+  position: relative;
+}
+.pf-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  font: 800 34px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.pf-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+}
+.pf-meta a { color: var(--accent-ink); text-decoration: none; font-weight: 600; }
+.pf-actions { display: flex; gap: var(--space-2); padding-bottom: 4px; }
+.pf-bio {
+  max-width: 68ch;
+  margin: var(--space-4) var(--space-6) 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.pf-bio--none { color: var(--muted); }
+
+/* ---------- XP strip and stat tiles ---------- */
+.pf-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+}
+.pf-tile,
+.pf-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: var(--space-4);
+}
+.pf-tile { display: grid; align-content: space-between; gap: var(--space-2); }
+.pf-tile > span:not(.pf-xp__lvl) { color: var(--muted); font-size: 13px; }
+.pf-tile b { font: 700 26px/1 var(--font-mono); letter-spacing: -0.02em; }
+.pf-tile b small { color: var(--muted); font-size: 14px; font-weight: 500; }
+.pf-xp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  background:
+    linear-gradient(100deg, color-mix(in oklab, var(--xp-gold) 10%, transparent), transparent 55%),
+    var(--surface);
+}
+.pf-xp__lvl {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 64px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  background: linear-gradient(100deg, var(--brand-a), var(--brand-b));
+  color: #0d0b14;
+  font: 700 10px/1 var(--font-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+[data-theme='light'] .pf-xp__lvl { color: #fff; }
+.pf-xp__lvl b { display: block; font: 800 30px/1 var(--font-mono); letter-spacing: 0; }
+.pf-xp__nums { display: flex; justify-content: space-between; gap: var(--space-3); font-size: 13px; color: var(--muted); }
+.pf-xp__nums b { color: var(--ink); font-family: var(--font-mono); }
+
+/* ---------- Tabs (links) and overview ---------- */
+.pf-tabs { list-style: none; padding: 0; margin: 0 0 var(--space-6); }
+.pf-tabs .ol-tab { text-decoration: none; }
+.pf-tabs .ol-tab[aria-current='page'] { color: var(--ink); }
+.pf-tabs .ol-tab[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: -1px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-ink);
+}
+.pf-tabs .ol-tab__count { color: var(--muted); }
+.pf-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-4); }
+.pf-card h2 { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 var(--space-4); font: 700 18px/1.2 var(--font-display); }
+.pf-card h2 a { font: 600 14px/1 var(--font-sans); color: var(--accent-ink); text-decoration: none; }
+.pf-wide { grid-column: 1 / -1; }
+/* Status distribution: a segmented bar, every segment repeated as a labelled row (never colour alone). */
+.pf-dist { display: flex; gap: 2px; height: 12px; border-radius: var(--radius-pill); overflow: hidden; margin-bottom: var(--space-4); }
+.pf-dist span { flex: var(--n) 0 0; background: var(--tone); }
+.pf-statlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--space-6); }
+.pf-statlist li { display: flex; align-items: center; gap: var(--space-2); padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.pf-statlist li::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--tone); }
+.pf-statlist b { margin-left: auto; font: 600 14px/1 var(--font-mono); }
+.pf-favs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-3); }
+.pf-favs--page { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); }
+.pf-fav { position: relative; display: block; color: inherit; text-decoration: none; }
+.pf-fav__cover { position: relative; display: block; aspect-ratio: 2 / 3; border-radius: var(--radius-md); overflow: hidden; transition: transform var(--dur-enter) var(--ease-enter); }
+.pf-fav__score { position: absolute; left: 6px; bottom: 6px; padding: 2px 6px; border-radius: var(--radius-sm); background: rgba(10, 8, 16, 0.82); color: #fff; font: 700 12px/1.3 var(--font-mono); }
+.pf-fav__t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; min-height: 2.6em; font-size: 13px; line-height: 1.3; font-weight: 600; overflow-wrap: break-word; }
+@media (hover: hover) { .pf-fav:hover .pf-fav__cover { transform: translateY(-2px); } }
+
+/* Achievements: badge cards (drawn for when definitions exist) and the empty state. */
+.pf-badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
+.pf-badge { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); align-content: start; }
+.pf-badge__icon { grid-row: span 3; width: 52px; height: 52px; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(140deg, #f5c84c, #ff6fae); color: #0d0b14; font: 800 18px/1 var(--font-display); }
+.pf-badge h3 { margin: 0; font: 700 15px/1.25 var(--font-display); overflow-wrap: anywhere; }
+.pf-badge p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.pf-badge small { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); white-space: nowrap; font: 500 12px/1.4 var(--font-mono); color: var(--muted); }
+.pf-badge small b { color: var(--xp-gold); }
+.pf-empty { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--muted); font-size: 14px; }
+.pf-empty .ol-state__mark { flex: none; }
+.pf-empty p { margin: 0; }
+.pf-empty strong { display: block; color: var(--ink); font-family: var(--font-display); font-size: 16px; }
+
+/* Owner-only completion card (5 fields, PARITY 5). Each missing field opens the dialog on it. */
+.pf-complete { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: center; border-color: color-mix(in oklab, var(--accent) 35%, var(--border)); margin-bottom: var(--space-4); }
+.pf-ring { --p: 0.6; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(closest-side, var(--surface) 78%, transparent 80%), conic-gradient(var(--accent-ink) calc(var(--p) * 1turn), color-mix(in oklab, var(--ink) 10%, transparent) 0); font: 700 15px/1 var(--font-mono); }
+.pf-complete h2 { margin: 0 0 var(--space-2); font: 700 17px/1.2 var(--font-display); }
+.pf-checks { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.pf-checks li { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.pf-checks .is-done { color: var(--good); border-color: color-mix(in oklab, var(--good) 35%, transparent); }
+.pf-checks button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--accent-ink); font-weight: 600; }
+
+/* Private profile: identity stays, the rest is one calm panel. */
+.pf-private { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-10) var(--space-6); text-align: center; border: 1px solid var(--border); border-radius: var(--radius-lg); background: repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in oklab, var(--ink) 3%, transparent) 14px 15px), var(--surface); }
+.pf-private h2 { margin: 0; font: 700 20px/1.2 var(--font-display); }
+.pf-private p { margin: 0; max-width: 46ch; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.pf-note { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); border-radius: var(--radius-md); background: color-mix(in oklab, var(--accent) 10%, var(--surface)); font-size: 14px; }
+.pf-note a { color: var(--accent-ink); font-weight: 600; margin-left: auto; white-space: nowrap; }
+
+/* ---------- Edit-profile dialog (Base UI Dialog; a full-screen sheet on phones) ---------- */
+.pf-stage { position: relative; min-height: 1040px; }
+.pf-scrim { position: absolute; inset: 0; background: color-mix(in oklab, #07060b 70%, transparent); }
+.pf-dialog {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  translate: -50% 0;
+  width: min(600px, calc(100% - 32px));
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.pf-dialog__head, .pf-dialog__foot { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-6); }
+.pf-dialog__head { border-bottom: 1px solid var(--border); }
+.pf-dialog__head h2 { margin: 0; font: 700 20px/1.2 var(--font-display); }
+.pf-dialog__foot { border-top: 1px solid var(--border); justify-content: flex-end; }
+.pf-dialog__foot .pf-status { margin-right: auto; font-size: 13px; color: var(--muted); }
+.pf-dialog.pf-dialog--sheet { position: absolute; inset: 0; z-index: 60; translate: none; width: auto; border-radius: 0; border: 0; display: flex; flex-direction: column; }
+.pf-dialog--sheet .pf-dialog__body { flex: 1; overflow: auto; }
+.pf-close { margin-left: auto; width: 40px; height: 40px; border-radius: var(--radius-md); border: 0; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; }
+.pf-dialog__body { display: grid; gap: var(--space-6); padding: var(--space-6); }
+.pf-media { position: relative; height: 170px; }
+.pf-media .pf-banner { height: 132px; }
+.pf-media .pf-avatar { position: absolute; left: var(--space-4); bottom: 0; --s: 88px; box-shadow: 0 0 0 4px var(--surface); }
+.pf-mediabtn { position: absolute; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--radius-pill); border: 0; background: rgba(10, 8, 16, 0.78); color: #fff; font: 600 13px/1 var(--font-sans); cursor: pointer; }
+.pf-mediabtn--banner { right: 10px; top: 10px; }
+.pf-mediabtn--avatar { left: 76px; bottom: 0; width: 36px; padding: 0; justify-content: center; }
+.pf-field { display: grid; gap: 6px; }
+.pf-field > label, .pf-field legend { font: 600 14px/1.2 var(--font-sans); padding: 0; }
+.pf-field fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pf-input { display: flex; align-items: center; min-height: 44px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); font: 400 15px/1.4 var(--font-sans); padding: 0 12px; gap: 8px; }
+.pf-input input, .pf-input textarea { all: unset; flex: 1; min-width: 0; }
+.pf-input textarea { padding: 10px 0; min-height: 96px; white-space: pre-wrap; }
+.pf-input__pre { color: var(--muted); font-family: var(--font-mono); font-size: 14px; }
+.pf-input[data-v='ok'] { border-color: color-mix(in oklab, var(--good) 55%, transparent); }
+.pf-input[data-v='bad'] { border-color: var(--bad); }
+.pf-hint { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px var(--space-3); margin: 0; font-size: 13px; color: var(--muted); }
+.pf-hint[data-v='ok'] { color: var(--good); }
+.pf-hint[data-v='bad'] { color: var(--bad); }
+.pf-hint > span:first-child { flex: 1 1 14em; }
+.pf-hint .ol-num { margin-left: auto; color: var(--muted); }
+.pf-hint .ol-num[data-v='bad'] { color: var(--bad); }
+.pf-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.pf-switch { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: 400 14px/1.3 var(--font-sans); text-align: left; cursor: pointer; }
+.pf-switch i { flex: none; width: 40px; height: 24px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--border); position: relative; }
+.pf-switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform var(--dur-enter) var(--ease-enter); }
+.pf-switch[aria-checked='true'] i { background: var(--accent-ink); border-color: transparent; }
+.pf-switch[aria-checked='true'] i::after { transform: translateX(16px); background: var(--surface); }
+.pf-seg { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.pf-seg label { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; }
+.pf-seg label small { font-weight: 400; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.pf-seg label:has(input:checked) { border-color: var(--accent-ink); background: color-mix(in oklab, var(--accent) 10%, var(--surface)); }
+.pf-seg input { accent-color: var(--accent-ink); margin: 0 6px 0 0; }
+.pf-err { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-3); border-radius: var(--radius-md); background: color-mix(in oklab, var(--bad) 12%, var(--surface)); color: var(--ink); font-size: 13px; line-height: 1.45; }
+.pf-err b { color: var(--bad); }
+/* Avatar crop step (react-easy-crop in the old app; the build picks a small cropper, see README). */
+.pf-crop { display: grid; gap: var(--space-4); justify-items: center; }
+.pf-crop__area { position: relative; width: 100%; height: 300px; border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(140deg, #6b4bd6, #1a8fa8 60%, #0f2a3a); }
+.pf-crop__area::after { content: ''; position: absolute; left: 50%; top: 50%; width: 240px; height: 240px; translate: -50% -50%; border-radius: 50%; box-shadow: 0 0 0 999px rgba(7, 6, 11, 0.6); outline: 2px solid #fff; }
+.pf-zoom { display: flex; align-items: center; gap: var(--space-3); width: 100%; font-size: 13px; color: var(--muted); }
+.pf-zoom input { flex: 1; accent-color: var(--accent-ink); min-height: 44px; }
+
+/* ---------- Level-up moment (GSAP showpiece via next/dynamic, ADR 0012; motion.md) ---------- */
+.pf-lu {
+  position: relative;
+  width: min(420px, 100%);
+  padding: var(--space-10) var(--space-6) var(--space-6);
+  border-radius: 22px;
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in oklab, var(--xp-gold) 22%, transparent), transparent 70%),
+    var(--surface);
+  border: 1px solid color-mix(in oklab, var(--xp-gold) 40%, var(--border));
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  overflow: hidden;
+}
+.pf-lu__k { margin: 0; font: 600 12px/1 var(--font-sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--xp-gold); }
+.pf-lu__num { position: relative; display: grid; place-items: center; width: 200px; height: 132px; clip-path: polygon(22px 0, 100% 0, calc(100% - 22px) 100%, 0 100%); background: linear-gradient(100deg, var(--brand-a), var(--brand-b)); color: #0d0b14; }
+.pf-lu__num b { font: 800 88px/1 var(--font-mono); letter-spacing: -0.04em; }
+.pf-lu__num s { position: absolute; left: 14px; top: 10px; font: 700 14px/1 var(--font-mono); opacity: 0.55; }
+.pf-lu h2 { margin: 0; font: 800 26px/1.15 var(--font-display); }
+.pf-lu p { margin: 0; color: var(--muted); font-size: 14px; }
+.pf-lu .pf-meter { width: 100%; }
+.pf-lu .pf-xp__nums { width: 100%; }
+.pf-lu__acts { display: flex; gap: var(--space-2); width: 100%; }
+.pf-lu__acts > * { flex: 1; min-height: 44px; }
+.pf-burst { position: absolute; left: 50%; top: 118px; width: 0; height: 0; pointer-events: none; }
+.pf-burst i { position: absolute; width: 8px; height: 14px; border-radius: 2px; background: var(--c, var(--xp-gold)); transform: rotate(var(--a)) translateY(calc(-1 * var(--d))); opacity: var(--o, 1); }
+.pf-ray { position: absolute; inset: -40% -20% auto; height: 120%; background: conic-gradient(from 0deg at 50% 50%, transparent 0 8deg, color-mix(in oklab, var(--xp-gold) 14%, transparent) 8deg 14deg, transparent 14deg 30deg); background-size: 100% 100%; mask-image: radial-gradient(closest-side, #000, transparent); pointer-events: none; }
+
+/* ---------- Mockup helpers (not part of the build) ---------- */
+.pf-sec { margin: var(--space-16) 0 var(--space-4); font: 700 24px/1.2 var(--font-display); }
+.pf-sec:first-child { margin-top: 0; }
+.pf-cap { margin: 0 0 var(--space-3); color: var(--muted); font: 600 12px/1.4 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; }
+.pf-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: var(--space-6); align-items: start; }
+.pf-phone { color: var(--ink); width: 100%; max-width: 390px; margin: 0 auto; border: 1px solid var(--border); border-radius: 28px; overflow: hidden; background: var(--ground); position: relative; }
+.pf-board { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; min-height: 560px; padding: var(--space-6); border-radius: var(--radius-lg); border: 1px solid var(--border); background: color-mix(in oklab, #07060b 55%, var(--ground)); position: relative; overflow: hidden; }
+
+/* ---------- Loading ---------- */
+.pf-skel-hero { display: grid; grid-template-columns: auto 1fr; gap: var(--space-6); align-items: end; padding: 0 var(--space-6); margin-top: -64px; position: relative; }
+.pf-anno { margin: var(--space-2) 0 0; padding: 6px 10px; border: 1px dashed color-mix(in oklab, var(--brand-b) 55%, transparent); border-radius: var(--radius-sm); color: var(--muted); font: 500 12px/1.5 var(--font-mono); }
+.pf-anno::before { content: 'Note · '; color: var(--brand-b); font-weight: 700; }
+.pf-skel-hero > .ol-skel:first-child { width: 136px; height: 136px; border-radius: 50%; box-shadow: 0 0 0 5px var(--ground); }
+
+/* ---------- Phones (390) ---------- */
+@container (max-width: 767px) {
+  .pf-banner { height: 128px; border-radius: 0; margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; }
+  .pf-sec + .pf-banner { margin-top: 0; }
+  .pf-hero { grid-template-columns: minmax(0, 1fr); margin-top: -48px; padding: 0; gap: var(--space-3); }
+  .pf-avatar--xl { --s: 96px; box-shadow: 0 0 0 4px var(--ground); }
+  .pf-name { font-size: 26px; }
+  .pf-actions { padding: 0; }
+  .pf-actions .ol-btn { flex: 1; min-height: 44px; }
+  .pf-bio { margin: var(--space-3) 0 0; font-size: 14px; }
+  .pf-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--space-4) 0; gap: var(--space-2); }
+  .pf-strip .pf-xp { grid-column: 1 / -1; }
+  .pf-tile { padding: var(--space-3); }
+  .pf-tile b { font-size: 20px; white-space: nowrap; }
+  .pf-tile b small { font-size: 12px; }
+  .pf-xp { gap: var(--space-2) var(--space-3); }
+  .pf-xp__lvl { width: 60px; height: 56px; }
+  .pf-xp__lvl b { font-size: 26px; }
+  .pf-xp__nums { font-size: 12px; }
+  .pf-tile > span:not(.pf-xp__lvl) { font-size: 12px; }
+  .pf-grid { grid-template-columns: minmax(0, 1fr); }
+  .pf-favs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pf-favs--page { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-statlist { grid-template-columns: minmax(0, 1fr); }
+  .pf-tabs .ol-tab { min-height: 44px; padding-inline: 10px; letter-spacing: 0.03em; gap: 6px; }
+  .pf-tabs .ol-tab[aria-current='page']::after { left: 10px; right: 10px; }
+  .pf-stage > .pf-banner, .pf-stage > .pf-scrim { display: none; }
+  .pf-skel-xp { grid-column: 1 / -1; }
+  .pf-complete { grid-template-columns: minmax(0, 1fr); }
+  .pf-checks li { min-height: 44px; }
+  .pf-skel-hero { grid-template-columns: 1fr; padding: 0; margin-top: -48px; }
+  .pf-anno { margin: var(--space-2) 0 0; padding: 6px 10px; border: 1px dashed color-mix(in oklab, var(--brand-b) 55%, transparent); border-radius: var(--radius-sm); color: var(--muted); font: 500 12px/1.5 var(--font-mono); }
+.pf-anno::before { content: 'Note · '; color: var(--brand-b); font-weight: 700; }
+.pf-skel-hero > .ol-skel:first-child { width: 96px; height: 96px; }
+  .pf-stage { min-height: 0; }
+  .pf-dialog { position: relative; z-index: 1; left: auto; top: auto; translate: none; width: auto; border-radius: 0; border: 0; box-shadow: none; }
+  .pf-dialog__body { padding: var(--space-4); gap: var(--space-4); }
+  .pf-dialog__head, .pf-dialog__foot { padding: var(--space-3) var(--space-4); }
+  .pf-dialog__foot { flex-wrap: wrap; }
+  .pf-dialog__foot .pf-status { flex-basis: 100%; }
+  .pf-dialog__foot .ol-btn { flex: 1; min-height: 44px; }
+  .pf-spacer { display: none; }
+  .pf-close { width: 44px; height: 44px; }
+  .pf-row2, .pf-seg { grid-template-columns: minmax(0, 1fr); }
+  .pf-hint > span:first-child { flex-basis: 100%; }
+  .pf-mediabtn { min-height: 44px; }
+  .pf-mediabtn--avatar { width: 44px; left: 70px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-fav__cover, .pf-switch i::after { transition: none; }
+  .pf-burst, .pf-ray { display: none; }
+}
