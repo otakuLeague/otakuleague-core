@@ -1,0 +1,49 @@
+# Settings design (OTA-158)
+
+Mockups for `/settings` (account, preferences, privacy, import & export, delete account). FAQ, contact and legal pages are in `../info/`. Open the `mockup-*.html` files in a browser (static, no JS); screenshots at 1440 and 390 px are in `shots/`. Motion: `motion.md`. Styles: `settings.css` on top of `tokens.css`, `components.css`, `../global-shell/shell.css`, `../auth/auth.css` (fields, messages, alerts, password rules: the sign-up form language) and `../profile/profile.css` (avatar, switch, dialog).
+
+| File | Shows |
+| --- | --- |
+| `mockup-Main.html` | Signed-in email + password account: profile card, account rows, preferences (adult content just saved), privacy, import placeholder, delete |
+| `mockup-States.html` | Loading, load error (retry card), username (taken, available, rule, saving, 409 race, saved), password (idle, wrong current, saving, 5xx, saved), Google-only "Set a password by email" (+ sent), email change (form, invalid, pending, resent, cooldown), adult content locked (no birthday, under 18), preference save error, language menu, session expired, import |
+| `mockup-Delete.html` | Delete dialog: password typed (main), opened, wrong password, deleting, 429, Google-only before and after re-authentication, signed-out landing toast |
+| `mockup-Mobile.html` | 390 px: chip nav, rows, inline password form, pending email + Google-only, delete as a full-screen sheet, light theme |
+
+## Direction
+- Make "change one thing and leave" easy: one page, sections in the order people need them, each change in place with its own result.
+- Hierarchy: page title + who is signed in → section nav (sticky; chips on phones) → Profile card → Account → Preferences → Privacy → Import & export → Delete account (last, in red).
+- Memorable moment: none on purpose; settings stay calm. The polish is in states: every save says what happened, in words, next to the control.
+- Removed: the title "Parameters" (now "Settings"), the separate `/settings/import-export` page (now a section; the route 308s to `/settings#import`), storing ja/es/fr when picked (the options are disabled "Coming soon": storing a language that changes nothing helps no one), toasts for preference errors (inline text instead).
+
+## Decisions
+- **Birthday and banner live in the edit-profile dialog** (OTA-157), not in Settings. Banner is visual profile content; birthday sits next to its "Show day and month" switch there. Settings keeps a mirror of the "Show my birthday" switch (parity) and the adult-content switch explains its lock with a link "Add your birthday" that opens the dialog on that field (`/settings/edit-profile#birthday`). Onboarding (OTA-155) no longer asks for birthday, so this link is how it gets set.
+- **Username moves to Settings → Account** (OTA-180): it is an account identity with consequences (the profile URL changes, old links break), and the same rules as sign-up apply (3–20 `[A-Za-z0-9_]`, case-insensitive, live check debounced 300 ms, held names count as taken, 409 on a race). The edit-profile dialog should show the username read-only with "Change in Settings" so there is one place to change it (OTA-157 build to adjust; open question 1).
+- **Edit profile is one card with one button** (`/settings/edit-profile`, the OTA-157 dialog; the route renders the same form as a page). Not redesigned here.
+- **Account rows open inline forms** ("Change"; the row button disappears while open, Cancel closes). Explicit Save for account changes; preferences and privacy switches save on change with an inline "Saved" for 2 s; on failure the switch flips back and says so (`role="alert"`).
+- **Password change** asks the current password, then new + confirm with the sign-up rule checklist (≥ 8 characters and a number or symbol). The form states before saving: "You stay signed in here. Every other device is signed out." After saving: "Password changed. Every other device was signed out." Wrong current password is a field error; 5xx keeps the form and says the old password still works.
+- **Google-only accounts** see "Not set" and "Set a password by email": it sends the reset email (same flow as forgot password, 1 h link) to the account address; no form.
+- **Email change** asks the new address and the current password (Google-only accounts confirm with a fresh Google sign-in, like delete). The answer is always the same neutral "Check your inbox at …: if that address can be used, a link is waiting there", whether or not the address belongs to another account (no enumeration, ADR from OTA-155). The old address keeps working until the link (24 h, single use) is opened; the current address also gets a notice email. A pending notice sits under the Email row with Resend (cooldown shown on the button) and Cancel change.
+- **Delete account**: Base UI AlertDialog, confirmed with the current password, or a fresh Google sign-in for passwordless accounts (max 5 minutes old, the dialog re-opens on return). **No type-to-confirm**: re-entering the password is already a deliberate, account-specific step, and the dialog names the account and lists what goes (profile, list with counts, level and XP, every season, every device). The safe button says "Keep my account"; the destructive one "Delete account" is disabled until the password field has a value. Wrong password says "Nothing was deleted"; 429 after repeated tries. Done: signed out, home page, toast "Your account and all its data were deleted."
+- **Session expired** on any save: redirect to `/auth?mode=sign-in&next=/settings` with an info alert; unsaved input is not kept (passwords must not be stored).
+- **Language**: Base UI Select, English only; 日本語, Español, Français disabled with a "Coming soon" tag, each with its `lang` attribute.
+- **Adult content** lock is explained in place, not with a toast: "Locked until we know you are 18 or older" (no birthday; unknown counts as under 18, parity) or "Locked until 3 March 2027, your 18th birthday". The server re-checks the rule.
+- Liberties: profile URL shown in the profile card; "Verified" and "Change pending" tags on Email; danger section in the side nav in red; the 18th-birthday date on the lock; the no-export hint in the delete dialog.
+
+## Worst-case content (break-ui)
+20-character username and a 44-character email in the title line, rows, dialog account chip and status messages (`overflow-wrap: anywhere`, never truncated: the user must see exactly which address); a 204-character username paste is stopped by the rule message; long validation and server messages wrap under the field; language menu with non-Latin labels; every form in idle, invalid, busy, error and saved. Fixes applied: the language select stacks under its label on phones; the passwordless row stacks; the delete sheet uses the full width on phones.
+
+## Accessibility check
+- Contrast: same tokens as the auth and profile mockups (muted 6.6:1 dark / 7.3:1 light; errors 7.4:1; accent-ink links 10:1 / 5.6:1). Danger button: `--ground` on `--bad` 7.5:1 dark, 5.3:1 light. Disabled buttons exempt.
+- Focus: 2 px `--accent-ink` outline (profile.css rule for `.sh`), red outline on the danger button; fields use the auth focus ring.
+- Targets: 44 px on phones (chips, row buttons, select, switches, dialog buttons, close).
+- Not by colour alone: switches print On/Off; statuses start with ✓ or ! and are words; locks use text; password rules tick with hidden "done" text.
+- Semantics: one `<form>` per row with a label; errors linked by `aria-describedby` and `aria-invalid`; username check `aria-live="polite"`; post-submit errors `role="alert"`, successes `role="status"`; section nav `aria-current`; delete is `role="alertdialog"` with `aria-describedby` on the consequences.
+- Reduced motion: `motion.md`.
+
+## Build notes
+- **OTA-180** (settings page, username, password): page is a server component reading `GET /me/settings` (username, email, emailVerified, hasPassword, pendingEmail, birthday known/adult-eligible date, adultContent, birthdayPublic, language, visibility). Client islands per row form and per switch. Endpoints: `PATCH /me/username` (409 `USERNAME_TAKEN`), `POST /me/password` (current + new; 400 `WRONG_PASSWORD`; revokes every other session), `POST /me/password/setup-link` (Google-only, sends the reset email), `PATCH /me/settings` (adultContent, birthdayPublic, language; server enforces 18+ and en only, 422 `ADULT_CONTENT_LOCKED`). 401 anywhere → sign in with `next=/settings`. Revalidate the profile tags on username change (see `../profile/README.md`). `/settings/import-export` → 308 `/settings#import`.
+- **OTA-181** (email change, delete): `POST /me/email-change` (new email + current password or recent Google auth; always 202 with the same body), `POST /me/email-change/resend`, `DELETE /me/email-change`, `GET /auth/email-change/confirm?token=` (exchanged then 303 to a clean URL, like OTA-155). `DELETE /me` with password or a recent-auth proof; deletes rows, files and sessions in one transaction, then clears the cookie. Rate-limit password confirmations per account and IP (429 `TOO_MANY_ATTEMPTS`).
+- Component tests: loading, load error + retry, each row form in idle / invalid / saving / error / saved, Google-only variant, pending email (resend cooldown, cancel), adult locked (no birthday, minor), switch save failure revert, language disabled options, delete dialog (disabled until typed, wrong password, deleting, Google variant), session expired redirect, long username and email.
+
+## Open questions for Farouk
+See `../info/README.md` (one list for the whole ticket).
