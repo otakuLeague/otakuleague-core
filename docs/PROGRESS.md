@@ -29,7 +29,8 @@ Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/
 ## Notes
 - OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
 - New from the OTA-100 review: OTA-174 (cap source text size in the API).
-- Open questions on OTA-153: Pierce mark site-wide in the header now? Leaderboard per season or all-time? "Trending" sort or reuse Top airing?
+- OTA-153 answers (Farouk, 2026-11-12, also on OTA-136): Pierce mark in the header site-wide now; leaderboard per season; Trending reuses Top airing.
+- Merging: the cloud permission check blocks the autopilot from adding `automerge`, so Farouk labels or merges every PR; `max_open_prs` is 6 (OTA-175).
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
 - Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide.
