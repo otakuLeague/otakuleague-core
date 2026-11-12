@@ -357,7 +357,7 @@ describe('mapAniListListBlock', () => {
   const data = (name: string) => record(record(fixture(name)).response).data;
 
   it('maps a page, drops the adult entry and keeps the sparse one with nulls', () => {
-    const block = mapAniListListBlock(data('anilist-list-airing'));
+    const block = mapAniListListBlock(data('lists/anilist-airing'));
 
     expect(block?.hasNextPage).toBe(true);
     expect(block?.entries.map(({ anilistId }) => anilistId)).toEqual([
@@ -392,7 +392,7 @@ describe('mapAniListListBlock', () => {
   });
 
   it('maps another page and keeps its next-page marker', () => {
-    expect(mapAniListListBlock(data('anilist-list-top-page2'))).toMatchObject({
+    expect(mapAniListListBlock(data('lists/anilist-top-page2'))).toMatchObject({
       hasNextPage: true,
       entries: [{ anilistId: 900011 }, { anilistId: 900012 }],
     });

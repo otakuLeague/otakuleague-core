@@ -51,7 +51,7 @@ describe('AniListAdapter.fetchList', () => {
     respond = (res) =>
       void res
         .writeHead(200, { 'Content-Type': 'application/json' })
-        .end(JSON.stringify(record(fixture('anilist-list-airing')).response));
+        .end(JSON.stringify(record(fixture('lists/anilist-airing')).response));
   });
 
   afterAll(() => {
@@ -101,7 +101,7 @@ describe('AniListAdapter.fetchList', () => {
     respond = (res) =>
       void res.writeHead(200, { 'Content-Type': 'application/json' }).end(
         JSON.stringify({
-          ...record(record(fixture('anilist-list-airing')).response),
+          ...record(record(fixture('lists/anilist-airing')).response),
           errors: [{ message: 'partial' }],
         }),
       );

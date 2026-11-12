@@ -28,6 +28,6 @@ Real responses, unedited, used by the mapper tests and the fake sources in the i
 
 The PR screenshot job (OTA-163, ADR 0013) replays these files through `scripts/screenshots/fake-sources.mjs`: a new core, walk or Jikan fixture is served automatically, and a changed query needs both fakes updated.
 
-## Catalog lists (`anilist-list-*.json`, OTA-135, ADR 0016)
+## Catalog lists (`lists/anilist-*.json`, OTA-135, ADR 0016)
 
-**Synthetic, not recorded**: graphql.anilist.co was unreachable from the cloud session that built OTA-135, so these are hand-built from the field shapes of the recorded files (ids 9000xx, cover URLs ending `-synthetic.jpg`). Shape `{ variables, response }` as in the walks. Re-record with `ANILIST_LIST_QUERY` (`anilist.query.ts`) and replace these. `airing` page 1 has an adult entry (must be dropped) and a sparse entry (nulls everywhere); `top-page2` is page 2 of the `top` list.
+**Synthetic, not recorded**: graphql.anilist.co was unreachable from the cloud session that built OTA-135, so these are hand-built from the field shapes of the recorded files (ids 9000xx, cover URLs ending `-synthetic.jpg`). Shape `{ variables, response }` as in the walks. Re-record with `ANILIST_LIST_QUERY` (`anilist.query.ts`) and replace these. `airing` page 1 has an adult entry (must be dropped) and a sparse entry (nulls everywhere); `top-page2` is page 2 of the `top` list. They live in `lists/` because the screenshot replay reads every top-level `anilist-*.json` other than the walks as a core `Media` answer; keep new list fixtures there.

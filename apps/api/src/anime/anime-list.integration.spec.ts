@@ -4,7 +4,15 @@ import type { INestApplication } from '@nestjs/common';
 import type { AnimeDataSource, AnimeListPage } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp } from '../testing/test-app';
@@ -88,7 +96,7 @@ describe('GET /anime/lists/:kind', () => {
   const ids = (page: AnimeListPage) =>
     page.entries.map(({ anilistId }) => anilistId);
   const airingFixture = () => {
-    const data = record(record(fixture('anilist-list-airing')).response).data;
+    const data = record(record(fixture('lists/anilist-airing')).response).data;
     return record(record(data).Page).media as unknown[];
   };
 
@@ -114,6 +122,15 @@ describe('GET /anime/lists/:kind', () => {
     settings = new TestSourceSettings(
       () => `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     );
+  });
+
+  // A new app and clock per test: the service keeps per-block retry delays in memory, so a
+  // block that failed in one test would answer 503 in the next one at the same instant.
+  beforeEach(async () => {
+    requests = [];
+    failing = false;
+    answer = (page) => ({ media: fullPage(page), hasNextPage: true });
+    settings.anilistEnabled = true;
     clock = new MovableClock();
     app = await createTestApp({
       clock,
@@ -121,20 +138,15 @@ describe('GET /anime/lists/:kind', () => {
     });
     prisma = app.get(PrismaService);
     lists = app.get(AnimeListService);
-  });
-
-  beforeEach(async () => {
-    await lists.settle();
     await truncateAllTables(prisma);
-    requests = [];
-    failing = false;
-    answer = (page) => ({ media: fullPage(page), hasNextPage: true });
-    settings.anilistEnabled = true;
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await lists.settle();
     await app.close();
+  });
+
+  afterAll(() => {
     server.close();
   });
 
@@ -300,6 +312,7 @@ describe('GET /anime/lists/:kind', () => {
         message: 'The anime data sources are unavailable. Try again later.',
       },
     });
+    expect(requests).toHaveLength(1);
   });
 
   it('does not ask again for 5 minutes after a failed fetch', async () => {
