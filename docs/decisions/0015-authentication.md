@@ -141,9 +141,9 @@ sequenceDiagram
 ## Follow-up tickets
 - **OTA-139:** first criterion = runtime proof; hard verification; routes, cookies, limits and tests from this ADR; `engines.node >=24.7`; `Random.bytes(n)`. It also writes the **ADR 0003 addendum**: typed `session` and `clientIp` options on `apiClient()` (the client adds the key itself; no free-form headers), `retryAfterSeconds` on the rate-limited failure, and the new error codes `UNAUTHORIZED`, `INVALID_CREDENTIALS`, `AUTH_TOKEN_INVALID`, `TOO_MANY_REQUESTS`, `USERNAME_TAKEN`.
 - **OTA-140:** reset flow as above; avatar storage and Settings are not decided here and should be split out.
-- **New, Farouk:** Brevo account (2FA, tracking off), domain DNS (DKIM, DMARC), env vars on Railway and Vercel, the Vercel checklist.
-- **New:** Build: Google sign-in (plus Farouk's Google Cloud OAuth client).
-- **OTA-149, OTA-148, OTA-152:** cutover steps above; privacy page (Brevo as processor, the session cookie, keyed hashes of IPs and identifiers kept under about 48 h: the longest window plus the daily cleanup); `Viewer` in the header.
+- **OTA-178, Farouk:** Brevo account (2FA, tracking off), domain DNS (DKIM, DMARC), env vars on Railway and Vercel, the Vercel checklist.
+- **OTA-179:** Build: Google sign-in (plus Farouk's Google Cloud OAuth client).
+- **OTA-149, OTA-147, OTA-152:** cutover steps above; privacy page (Brevo as processor, the session cookie, keyed hashes of IPs and identifiers kept under about 48 h: the longest window plus the daily cleanup); `Viewer` in the header.
 
 ## Sources (checked 2026-11-12)
 - npm registry (`registry.npmjs.org`): `better-auth`, `@thallesp/nestjs-better-auth`, `passport`, `passport-local`, `passport-google-oauth20`, `@nestjs/passport`, `lucia`: versions, dates, licences, peers.
