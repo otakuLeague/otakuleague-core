@@ -1107,6 +1107,19 @@ describe('GET /anime/:idSource/:externalId', () => {
       await get(`/anime/anilist/${MISSING_ID + 10}`).expect(404);
     });
 
+    it('takes one token per id however many requests ask at once', async () => {
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          get(`/anime/anilist/${MISSING_ID}`).expect(404),
+        ),
+      );
+      for (let id = 1; id < 10; id += 1) {
+        await get(`/anime/anilist/${MISSING_ID + id}`).expect(404);
+      }
+
+      await get(`/anime/anilist/${MISSING_ID + 10}`).expect(429);
+    });
+
     it('takes no token for an id already remembered as missing', async () => {
       for (let id = 0; id < 10; id += 1) {
         await get(`/anime/anilist/${MISSING_ID + id}`).expect(404);

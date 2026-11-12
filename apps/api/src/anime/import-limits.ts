@@ -51,9 +51,15 @@ export class ImportLimits {
     const steps = Math.floor(
       Math.max(0, now - this.refilledAt) / IMPORT_REFILL_MS,
     );
-    if (steps > 0) {
+    if (this.tokens === IMPORT_BURST) {
+      // Idle time on a full bucket must not bank a partial step towards the next token.
+      this.refilledAt = Math.max(this.refilledAt, now);
+    } else if (steps > 0) {
       this.tokens = Math.min(IMPORT_BURST, this.tokens + steps);
-      this.refilledAt += steps * IMPORT_REFILL_MS;
+      this.refilledAt =
+        this.tokens === IMPORT_BURST
+          ? now
+          : this.refilledAt + steps * IMPORT_REFILL_MS;
     }
     if (this.tokens === 0) return false;
     this.tokens -= 1;

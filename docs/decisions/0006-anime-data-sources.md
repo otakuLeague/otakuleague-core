@@ -192,3 +192,5 @@ Risks we accept:
 - **Too simple on purpose: the bucket does not know who is asking.** While a crawler empties it, a visitor opening a season we do not have, or a purged page, gets the 429 too; cached pages are unaffected. If the warning shows up next to real traffic, the next step is a reserved share for ids we already know (relation nodes, identities) or a firewall rule on Vercel, not a higher cap.
 - A second API instance doubles the cap. During an AniList outage cold requests answer 503 until the bucket is empty, then 429: both mean "try later".
 - A "not found" that stops being true (a new AniList entry, an adult flag lifted) heals within the hour.
+- **Known limits.** The Railway API domain is publicly reachable, so the "API only sees Vercel" premise does not stop direct hits on it (follow-up, separate ticket: a web-to-API shared-secret guard). A crawler that follows the id-to-slug redirect still refreshes `lastViewedAt` through the slug page view.
+- Background refreshes of stale anime take only a free AniList slot (`maxQueueMs: 0`), so they never queue ahead of a cold import.

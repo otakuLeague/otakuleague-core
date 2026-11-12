@@ -30,6 +30,7 @@ import {
   type AnimeRef,
   AnimeSourceAdapter,
   type AnimeSnapshot,
+  type FetchPriority,
   type SourceResult,
   SourceUnavailableError,
   UnusableAnswerError,
@@ -154,7 +155,7 @@ export class AnimeImportService implements OnModuleDestroy {
   refreshStale(anime: StoredAnime): void {
     for (const adapter of this.staleAdapters(anime)) {
       this.shared(`refresh:${anime.id}:${adapter.source}`, () =>
-        this.refreshFrom(anime, adapter),
+        this.refreshFrom(anime, adapter, 'background'),
       ).catch((error: unknown) => {
         this.logger.error(
           `Refresh of anime ${anime.id} from ${adapter.source} failed: ${String(error)}`,
@@ -317,6 +318,7 @@ export class AnimeImportService implements OnModuleDestroy {
   private async fetchFrom(
     adapter: AnimeSourceAdapter,
     ref: AnimeRef,
+    priority: FetchPriority = 'interactive',
   ): Promise<SourceResult> {
     const key = backoffKey('anime', adapter.source, ref);
     if (this.backoff.isBackedOff(key)) {
@@ -326,7 +328,7 @@ export class AnimeImportService implements OnModuleDestroy {
       );
     }
     try {
-      const result = await adapter.fetchAnime(ref);
+      const result = await adapter.fetchAnime(ref, priority);
       this.backoff.clear(key);
       return result;
     } catch (error) {
@@ -349,12 +351,13 @@ export class AnimeImportService implements OnModuleDestroy {
   private async refreshFrom(
     anime: StoredAnime,
     adapter: AnimeSourceAdapter,
+    priority: FetchPriority = 'interactive',
   ): Promise<RefreshOutcome> {
     const ref = refreshRef(anime, adapter);
     if (!ref) return 'skipped';
     let result;
     try {
-      result = await this.fetchFrom(adapter, ref);
+      result = await this.fetchFrom(adapter, ref, priority);
     } catch (error) {
       if (!(error instanceof SourceUnavailableError)) throw error;
       this.logger.warn(error.message);

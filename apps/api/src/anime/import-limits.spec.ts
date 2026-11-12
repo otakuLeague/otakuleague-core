@@ -62,6 +62,18 @@ describe('ImportLimits tokens', () => {
     expect(taken).toHaveLength(IMPORT_BURST);
   });
 
+  it('does not bank idle time on a full bucket', () => {
+    const { clock, limits } = setup();
+    clock.advance(IMPORT_REFILL_MS - 1);
+    drain(limits);
+    expect(limits.takeImportToken()).toBe(false);
+
+    clock.advance(1);
+    expect(limits.takeImportToken()).toBe(false);
+    clock.advance(IMPORT_REFILL_MS - 1);
+    expect(limits.takeImportToken()).toBe(true);
+  });
+
   it('keeps the partial step, so slow takers still get one per 20 s', () => {
     const { clock, limits } = setup();
     drain(limits);

@@ -48,7 +48,7 @@ describe('AniListAdapter.fetchRelations', () => {
       req.on('data', (chunk: Buffer) => (raw += chunk.toString()));
       req.on('end', () => {
         const variables = record(record(JSON.parse(raw) as unknown).variables);
-        const ids = variables.ids as number[];
+        const ids = (variables.ids as number[] | undefined) ?? [];
         requests.push({ ids, perPage: variables.perPage });
         const media = ids.flatMap((id) => AOT_NODES.get(id) ?? []);
         res.writeHead(status, { 'Content-Type': 'application/json' }).end(
@@ -142,6 +142,16 @@ describe('AniListAdapter.fetchRelations', () => {
     await busy.fetchRelations([16498]);
 
     await expect(busy.fetchRelations([20958])).rejects.toThrow('queue full');
+    expect(requests).toHaveLength(1);
+  });
+
+  it('lets a background fetchAnime take only a free slot, never queue', async () => {
+    const busy = adapter(1_000);
+    await busy.fetchRelations([16498]);
+
+    await expect(
+      busy.fetchAnime({ source: 'anilist', externalId: 16498 }, 'background'),
+    ).rejects.toThrow('queue full');
     expect(requests).toHaveLength(1);
   });
 });
