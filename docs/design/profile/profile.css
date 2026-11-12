@@ -183,8 +183,6 @@
 .pf-xp__lvl b { display: block; font: 800 30px/1 var(--font-mono); letter-spacing: 0; }
 .pf-xp__nums { display: flex; justify-content: space-between; gap: var(--space-3); font-size: 13px; color: var(--muted); }
 .pf-xp__nums b { color: var(--ink); font-family: var(--font-mono); }
-.pf-xp__rank { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
-.pf-xp__rank a { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
 
 /* ---------- Tabs (links) and overview ---------- */
 .pf-tabs { list-style: none; padding: 0; margin: 0 0 var(--space-6); }
@@ -350,7 +348,6 @@
 .pf-sec:first-child { margin-top: 0; }
 .pf-cap { margin: 0 0 var(--space-3); color: var(--muted); font: 600 12px/1.4 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; }
 .pf-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: var(--space-6); align-items: start; }
-.pf-frames--4 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .pf-phone { color: var(--ink); width: 100%; max-width: 390px; margin: 0 auto; border: 1px solid var(--border); border-radius: 28px; overflow: hidden; background: var(--ground); position: relative; }
 .pf-board { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; min-height: 560px; padding: var(--space-6); border-radius: var(--radius-lg); border: 1px solid var(--border); background: color-mix(in oklab, #07060b 55%, var(--ground)); position: relative; overflow: hidden; }
 

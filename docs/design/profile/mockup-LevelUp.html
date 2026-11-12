@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="profile.css" />
   </head>
   <body class="ol-root">
-    <!-- State: a My List write returns an XP award that crosses a level (here 7,740 + 80 → 7,820: level 12 → 13, PARITY 5 curve). The moment is a small Base UI Dialog over a light scrim, mounted with next/dynamic only when the award says levelledUp (GSAP timeline, motion.md). Focus goes to "Nice!"; Esc, the scrim and both buttons close it; it never auto-dismisses. Several levels at once show the final level and "+2 levels". Frames A-C are the timeline; the phone frame is the settled state at 390 px. -->
+    <!-- State: a My List write returns an XP award that crosses a level (here 7,740 + 80 → 7,820: level 12 → 13, PARITY 5 curve). The moment is a small Base UI Dialog over a light scrim, mounted with next/dynamic only when the award says levelledUp (GSAP timeline, motion.md). Focus goes to "Nice!"; Esc, the scrim and both buttons close it; it never auto-dismisses. Several levels at once (merged awards) show the final level and "+2 levels". Frames A-C are the timeline; the phone frame is the settled state at 390 px. -->
 <div class="sh">
   <div class="sh-bg" aria-hidden="true"></div>
   <header class="sh-header ol-glass"><div class="sh-header__in">
@@ -28,30 +28,30 @@
     <h1 class="pf-sec">Level-up moment</h1>
     <div class="pf-frames">
       <div><p class="pf-cap">A · 0–450 ms: card rises, bar finishes level 12</p><div class="pf-board">
-        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-121">
+        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-a">
           <p class="pf-lu__k">Level up</p>
           <div class="pf-lu__num" aria-hidden="true"><b>12</b></div>
-          <h2 id="lu-121">+80 XP</h2><p>Completed Frieren: Beyond Journey's End</p>
+          <h2 id="lu-a">+80 XP</h2><p>Completed Frieren: Beyond Journey's End</p>
           <div class="pf-meter" role="progressbar" aria-label="Progress to level 13" aria-valuetext="Level 12, full"><i style="--p: 1"></i></div>
           <div class="pf-xp__nums"><span><b>7,800</b> / 7,800 XP</span><span>level 12 full</span></div>
           
         </div>
       </div></div>
       <div><p class="pf-cap">B · 450–1,100 ms: plate wipes to 13, burst, rays turn once</p><div class="pf-board">
-        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-13120"><span class="pf-ray" aria-hidden="true"></span><span class="pf-burst" aria-hidden="true"><i style="--a: 0deg; --d: 70px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 33deg; --d: 107px; --c: var(--brand-a); --o: 1"></i><i style="--a: 65deg; --d: 84px; --c: var(--brand-b); --o: 1"></i><i style="--a: 77deg; --d: 101px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 110deg; --d: 78px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 143deg; --d: 95px; --c: var(--brand-a); --o: 1"></i><i style="--a: 154deg; --d: 72px; --c: var(--brand-b); --o: 1"></i><i style="--a: 187deg; --d: 89px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 220deg; --d: 66px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 231deg; --d: 83px; --c: var(--brand-a); --o: 1"></i><i style="--a: 264deg; --d: 60px; --c: var(--brand-b); --o: 1"></i><i style="--a: 297deg; --d: 77px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 309deg; --d: 114px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 341deg; --d: 71px; --c: var(--brand-a); --o: 1"></i></span>
+        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-b"><span class="pf-ray" aria-hidden="true"></span><span class="pf-burst" aria-hidden="true"><i style="--a: 0deg; --d: 70px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 33deg; --d: 107px; --c: var(--brand-a); --o: 1"></i><i style="--a: 65deg; --d: 84px; --c: var(--brand-b); --o: 1"></i><i style="--a: 77deg; --d: 101px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 110deg; --d: 78px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 143deg; --d: 95px; --c: var(--brand-a); --o: 1"></i><i style="--a: 154deg; --d: 72px; --c: var(--brand-b); --o: 1"></i><i style="--a: 187deg; --d: 89px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 220deg; --d: 66px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 231deg; --d: 83px; --c: var(--brand-a); --o: 1"></i><i style="--a: 264deg; --d: 60px; --c: var(--brand-b); --o: 1"></i><i style="--a: 297deg; --d: 77px; --c: var(--neon-magenta); --o: 1"></i><i style="--a: 309deg; --d: 114px; --c: var(--xp-gold); --o: 1"></i><i style="--a: 341deg; --d: 71px; --c: var(--brand-a); --o: 1"></i></span>
           <p class="pf-lu__k">Level up</p>
           <div class="pf-lu__num" aria-hidden="true"><s aria-hidden="true">12</s><b>13</b></div>
-          <h2 id="lu-13120">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
-          <div class="pf-meter" role="progressbar" aria-label="Progress to level 14" aria-valuetext=""><i style="--p: 0"></i></div>
+          <h2 id="lu-b">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
+          <div class="pf-meter" role="progressbar" aria-label="Progress to level 14" aria-valuetext="Level 13, 20 of 1,300 XP into the level"><i style="--p: 0"></i></div>
           <div class="pf-xp__nums"><span><b>7,820</b> XP</span><span></span></div>
           
         </div>
       </div></div>
       <div><p class="pf-cap">C · Settled (also the reduced-motion version, faded in)</p><div class="pf-board">
-        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-130.015">
+        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-c">
           <p class="pf-lu__k">Level up</p>
           <div class="pf-lu__num" aria-hidden="true"><b>13</b></div>
-          <h2 id="lu-130.015">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
+          <h2 id="lu-c">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
           <div class="pf-meter" role="progressbar" aria-label="Progress to level 14" aria-valuetext="20 of 1,300 XP into level 13"><i style="--p: 0.015"></i></div>
           <div class="pf-xp__nums"><span><b>20</b> / 1,300 XP into level 13</span><span>1,280 XP to level 14</span></div>
           <div class="pf-lu__acts"><a class="ol-btn ol-btn--secondary" href="/u/kaito_backlog_keeper">See profile</a><button class="ol-btn ol-btn--primary" type="button">Nice!</button></div>
@@ -61,22 +61,22 @@
     <h2 class="pf-sec">Phone (390) and two levels at once</h2>
     <div class="pf-frames">
       <div><p class="pf-cap">Phone, settled</p><div class="pf-phone"><div class="pf-board" style="border: 0; border-radius: 0; min-height: 700px; padding: 16px">
-        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-130.015">
+        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-p">
           <p class="pf-lu__k">Level up</p>
           <div class="pf-lu__num" aria-hidden="true"><b>13</b></div>
-          <h2 id="lu-130.015">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
+          <h2 id="lu-p">You reached level 13</h2><p>+80 XP for completing Frieren: Beyond Journey's End</p>
           <div class="pf-meter" role="progressbar" aria-label="Progress to level 14" aria-valuetext="20 of 1,300 XP into level 13"><i style="--p: 0.015"></i></div>
           <div class="pf-xp__nums"><span><b>20</b> / 1,300 XP</span><span>1,280 to level 14</span></div>
           <div class="pf-lu__acts"><a class="ol-btn ol-btn--secondary" href="/u/kaito_backlog_keeper">See profile</a><button class="ol-btn ol-btn--primary" type="button">Nice!</button></div>
         </div>
       </div></div></div>
-      <div><p class="pf-cap">Big award crosses two levels</p><div class="pf-board">
-        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-13110.015">
+      <div><p class="pf-cap">Merged awards cross two levels</p><div class="pf-board">
+        <div class="pf-lu" role="dialog" aria-modal="true" aria-labelledby="lu-x">
           <p class="pf-lu__k">Level up · +2 levels</p>
-          <div class="pf-lu__num" aria-hidden="true"><s aria-hidden="true">11</s><b>13</b></div>
-          <h2 id="lu-13110.015">Two levels up: level 13</h2><p>+1,250 XP from an achievement reward</p>
-          <div class="pf-meter" role="progressbar" aria-label="Progress to level 14" aria-valuetext="20 of 1,300 XP into level 13"><i style="--p: 0.015"></i></div>
-          <div class="pf-xp__nums"><span><b>20</b> / 1,300 XP</span><span>1,280 to level 14</span></div>
+          <div class="pf-lu__num" aria-hidden="true"><s aria-hidden="true">2</s><b>4</b></div>
+          <h2 id="lu-x">Two levels up: level 4</h2><p>+320 XP: added, finished and rated Frieren</p>
+          <div class="pf-meter" role="progressbar" aria-label="Progress to level 5" aria-valuetext="0 of 400 XP into level 4"><i style="--p: 0"></i></div>
+          <div class="pf-xp__nums"><span><b>0</b> / 400 XP</span><span>400 to level 5</span></div>
           <div class="pf-lu__acts"><a class="ol-btn ol-btn--secondary" href="/u/kaito_backlog_keeper">See profile</a><button class="ol-btn ol-btn--primary" type="button">Nice!</button></div>
         </div>
       </div></div>

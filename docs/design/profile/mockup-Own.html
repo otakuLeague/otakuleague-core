@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="profile.css" />
   </head>
   <body class="ol-root">
-    <!-- State: /u/kaito_backlog_keeper viewed by its owner (also where /profile redirects). Same numbers as My List and the home XP card: 7,140 XP = level 12 (6,600 → 7,800). Profile 3/5 complete: no banner, no birthday, so the owner sees the completion card (hidden at 5/5) and an "Add banner" prompt in the empty banner. Visitors never see either. Edit profile opens the dialog (mockup-Edit). -->
+    <!-- State: /u/kaito_backlog_keeper viewed by its owner (also where /profile redirects). Same numbers as My List and the home XP card: 7,140 XP = level 12 (6,600 → 7,800). Profile 2/5 complete: no avatar photo (initials), no banner, no birthday, so the owner sees the completion card (hidden at 5/5) and an "Add banner" prompt in the empty banner. Visitors never see either. Edit profile opens the dialog (mockup-Edit). -->
 <div class="sh">
   <div class="sh-bg" aria-hidden="true"></div>
   <header class="sh-header ol-glass"><div class="sh-header__in">
@@ -57,11 +57,12 @@
     </ul></nav>
 
     <section class="pf-card pf-complete" aria-labelledby="h-complete">
-      <span class="pf-ring" style="--p: 0.6" role="img" aria-label="60% complete">60%</span>
+      <span class="pf-ring" style="--p: 0.4" role="img" aria-label="40% complete">40%</span>
       <div>
-        <h2 id="h-complete">Finish your profile: 3 of 5 done</h2>
+        <h2 id="h-complete">Finish your profile: 2 of 5 done</h2>
         <ul class="pf-checks">
-          <li class="is-done">✓ Username</li><li class="is-done">✓ Avatar</li><li class="is-done">✓ Bio</li>
+          <li class="is-done">✓ Username</li><li class="is-done">✓ Bio</li>
+          <li><button type="button" aria-haspopup="dialog">+ Add a photo</button></li>
           <li><button type="button" aria-haspopup="dialog">+ Add a banner</button></li>
           <li><button type="button" aria-haspopup="dialog">+ Add your birthday</button></li>
         </ul>
