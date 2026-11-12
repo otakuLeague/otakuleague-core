@@ -216,3 +216,55 @@ export interface AnimeSlugResolution {
   readonly anilistId: number;
   readonly canonicalSlug: string;
 }
+
+// --- Catalog lists (OTA-135, ADR 0016) ---------------------------------------------------
+
+/** The lists GET /anime/lists/:kind serves. */
+export const ANIME_LIST_KINDS = [
+  'trending',
+  'top',
+  'upcoming',
+  'airing',
+] as const;
+export type AnimeListKind = (typeof ANIME_LIST_KINDS)[number];
+
+export const ANIME_LIST_MAX_LIMIT = 50;
+export const ANIME_LIST_DEFAULT_LIMIT = 24;
+
+/** One card of a list: what the card renders, plus where it links. */
+export interface AnimeListEntry {
+  readonly anilistId: number;
+  /** Canonical slug when we know the anime; null: link /anime/anilist/{anilistId}. */
+  readonly slug: string | null;
+  readonly titleEnglish: string | null;
+  readonly titleRomaji: string | null;
+  readonly coverImageUrl: string | null;
+  /** Dominant colour of the cover, "#rrggbb". */
+  readonly coverColor: string | null;
+  readonly format: AnimeFormat | null;
+  readonly status: AnimeStatus | null;
+  readonly episodes: number | null;
+  readonly season: AnimeSeason | null;
+  readonly seasonYear: number | null;
+  readonly startDate: PartialDate | null;
+  readonly genres: readonly string[];
+  /** AniList popularity: users who have it in a list. */
+  readonly members: number | null;
+  /** Keeps its source and scale (ADR 0006); null when unrated. */
+  readonly score: {
+    readonly source: AnimeDataSource;
+    readonly score: number;
+    readonly scale: 10 | 100;
+  } | null;
+}
+
+/** GET /anime/lists/:kind. Only a null nextCursor means the end: a page may hold fewer than the limit. */
+export interface AnimeListPage {
+  readonly kind: AnimeListKind;
+  readonly entries: readonly AnimeListEntry[];
+  readonly nextCursor: string | null;
+  /** stale: older than its lifetime (a refresh may be running, or the source is down). */
+  readonly freshness: 'fresh' | 'stale';
+  /** When the oldest source page behind this answer was fetched. */
+  readonly fetchedAt: string;
+}

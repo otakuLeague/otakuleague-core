@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { mapAniListMedia, mapAniListRelationNodes } from './anilist.mapper';
-import { ANILIST_ANIME_QUERY, ANILIST_RELATIONS_QUERY } from './anilist.query';
+import {
+  mapAniListListBlock,
+  mapAniListMedia,
+  mapAniListRelationNodes,
+} from './anilist.mapper';
+import {
+  ANILIST_ANIME_QUERY,
+  ANILIST_LIST_QUERY,
+  ANILIST_RELATIONS_QUERY,
+} from './anilist.query';
 import { isRecord, record } from './parse';
 import { RateLimiter } from './rate-limiter';
 import { requestJson, type SourceHttpOptions } from './source-http';
@@ -8,6 +16,7 @@ import { AnimeSourceSettings } from './source-settings';
 import {
   AnimeSourceAdapter,
   type AnimeRef,
+  type ListBlock,
   type RelationNode,
   type SourceResult,
   SourceUnavailableError,
@@ -16,6 +25,18 @@ import {
 
 /** AniList's `perPage` maximum (larger values are silently capped): ids per walk request. */
 export const RELATIONS_PAGE_SIZE = 50;
+
+/** What a catalog list asks AniList for (ADR 0016). */
+export interface ListQuery {
+  readonly sort: readonly string[];
+  readonly status?: string;
+}
+
+/**
+ * 'visitor': a request is waiting, so the normal queue budget applies. 'background': only a
+ * slot that is free right now, so a refresh never delays a visitor or an import.
+ */
+export type ListFetchWait = 'visitor' | 'background';
 
 /** AniList GraphQL, the primary source. Looks anime up by AniList id or MAL id (idMal). */
 @Injectable()
@@ -106,5 +127,37 @@ export class AniListAdapter extends AnimeSourceAdapter {
       );
     }
     return mapAniListRelationNodes(data);
+  }
+
+  /**
+   * ADR 0016: block `page` (1-based, 50 entries) of a catalog list. A response without a
+   * usable Page fails like an HTTP error and starts the cool-down. Like the other fetches it
+   * does not check the kill switch: the caller does.
+   */
+  async fetchList(
+    query: ListQuery,
+    page: number,
+    wait: ListFetchWait,
+  ): Promise<ListBlock> {
+    const variables = { page, sort: query.sort, status: query.status };
+    const { status, body } = await requestJson(
+      this.baseUrl,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: ANILIST_LIST_QUERY, variables }),
+      },
+      wait === 'background' ? { ...this.http, maxQueueMs: 0 } : this.http,
+    );
+    const block =
+      status === 200 ? mapAniListListBlock(record(body).data) : null;
+    if (block === null) {
+      this.http.limiter.markDown(this.http.coolDownMs);
+      throw new SourceUnavailableError(
+        'anilist',
+        `list answered HTTP ${status} without a usable Page`,
+      );
+    }
+    return block;
   }
 }

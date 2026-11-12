@@ -1,5 +1,6 @@
 import type {
   AnimeDataSource,
+  AnimeListEntry,
   AnimeFormat,
   AnimeIdSource,
   AnimeLink,
@@ -109,6 +110,15 @@ export interface RelationEdge {
 /** One walked anime: its summary and its relations. Adult entries are already dropped. */
 export interface RelationNode extends MediaSummaryFields, AnimeKind {
   readonly edges: readonly RelationEdge[];
+}
+
+/** A list card as AniList describes it: the shared entry before our slug is joined. */
+export type ListedAnime = Omit<AnimeListEntry, 'slug'>;
+
+/** One block of a catalog list (ADR 0016). Adult entries are already dropped. */
+export interface ListBlock {
+  readonly entries: readonly ListedAnime[];
+  readonly hasNextPage: boolean;
 }
 
 export interface AnimeRef {

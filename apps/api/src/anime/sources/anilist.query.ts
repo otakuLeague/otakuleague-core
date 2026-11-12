@@ -51,3 +51,18 @@ export const ANILIST_RELATIONS_QUERY = `query RelationNodes($ids: [Int], $perPag
     }
   }
 }`;
+
+/**
+ * ADR 0016: one block of up to 50 cards of a catalog list. `isAdult: false` is asked of
+ * AniList and checked again by the mapper. Fields are exactly what a list card renders.
+ */
+export const ANILIST_LIST_QUERY = `query ListPage($page: Int, $sort: [MediaSort], $status: MediaStatus) {
+  Page(page: $page, perPage: 50) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, isAdult: false, sort: $sort, status: $status) {
+      id isAdult title { romaji english } coverImage { large color }
+      format status episodes season seasonYear startDate { year month day }
+      genres popularity averageScore
+    }
+  }
+}`;

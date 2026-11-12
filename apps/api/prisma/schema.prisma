@@ -201,6 +201,24 @@ model AnimeRelationNode {
   @@map("anime_relation_node")
 }
 
+// --- Catalog lists (OTA-135, ADR 0016) ----------------------------------------------------
+
+// One AniList result page (up to 50 cards) of a list, e.g. list_key "airing". The TTL comes
+// from the list kind, not from a column; a row whose JSON no longer validates counts as
+// missing. No relation to Anime: a listing is not a view. Deleted after 30 days unrefreshed.
+model AnimeListPage {
+  listKey     String   @map("list_key")
+  // AniList's page number, from 1.
+  page        Int
+  fetchedAt   DateTime @map("fetched_at") @db.Timestamptz(3)
+  hasNextPage Boolean  @map("has_next_page")
+  // [ListedAnime]: cards without the slug, which is joined from anime_identity when served.
+  entries     Json
+
+  @@id([listKey, page])
+  @@map("anime_list_page")
+}
+
 // Manual fixes, one per AniList id, shipped as reviewed data migrations; never purged.
 // CHECK constraints (migrations franchise_walk, franchise_override_label_trim): label of
 // 1-60 characters and not only spaces, role or label set, note not only spaces. Later

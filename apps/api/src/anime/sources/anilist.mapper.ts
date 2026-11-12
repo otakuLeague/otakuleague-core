@@ -23,6 +23,8 @@ import {
 import {
   type AnimeRef,
   type AnimeSnapshot,
+  type ListBlock,
+  type ListedAnime,
   MANGA_FORMATS,
   MEDIA_RELATIONS,
   type MediaSummary,
@@ -279,4 +281,49 @@ export function mapAniListRelationNodes(value: unknown): RelationNode[] {
       },
     ];
   });
+}
+
+/** One media object of ANILIST_LIST_QUERY; null when unusable or not explicitly non-adult. */
+function listedAnime(value: unknown): ListedAnime | null {
+  const media = record(value);
+  const anilistId = integer(media.id, 1);
+  if (anilistId === null || media.isAdult !== false) return null;
+  const title = record(media.title);
+  const cover = record(media.coverImage);
+  const score = finite(media.averageScore);
+  return {
+    anilistId,
+    titleEnglish: text(title.english),
+    titleRomaji: text(title.romaji),
+    coverImageUrl: httpUrl(cover.large),
+    coverColor: hexColor(cover.color),
+    format: oneOf(media.format, FORMATS),
+    status: oneOf(media.status, STATUSES),
+    episodes: integer(media.episodes, 1),
+    season: oneOf(media.season, SEASONS),
+    seasonYear: integer(media.seasonYear, 1),
+    startDate: partialDate(media.startDate),
+    genres: texts(media.genres),
+    members: integer(media.popularity),
+    score:
+      score !== null && score > 0 && score <= 100
+        ? { source: 'anilist', score, scale: 100 }
+        : null,
+  };
+}
+
+/**
+ * `data` of ANILIST_LIST_QUERY to a block; null when there is no usable Page (the caller
+ * treats that as a failed call). Unusable and adult entries are dropped one by one.
+ */
+export function mapAniListListBlock(value: unknown): ListBlock | null {
+  const page = record(record(value).Page);
+  if (!Array.isArray(page.media)) return null;
+  return {
+    entries: page.media.flatMap((media) => {
+      const entry = listedAnime(media);
+      return entry === null ? [] : [entry];
+    }),
+    hasNextPage: record(page.pageInfo).hasNextPage === true,
+  };
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { mapAniListMedia, mapAniListRelationNodes } from './anilist.mapper';
+import {
+  mapAniListListBlock,
+  mapAniListMedia,
+  mapAniListRelationNodes,
+} from './anilist.mapper';
 import { fixture } from './fixtures';
 import { record } from './parse';
 
@@ -346,5 +350,66 @@ describe('mapAniListRelationNodes', () => {
     });
 
     expect(mapped.map(({ edges }) => edges)).toEqual([[], []]);
+  });
+});
+
+describe('mapAniListListBlock', () => {
+  const data = (name: string) => record(record(fixture(name)).response).data;
+
+  it('maps a page, drops the adult entry and keeps the sparse one with nulls', () => {
+    const block = mapAniListListBlock(data('anilist-list-airing'));
+
+    expect(block?.hasNextPage).toBe(true);
+    expect(block?.entries.map(({ anilistId }) => anilistId)).toEqual([
+      900001, 900002, 900004,
+    ]);
+    expect(block?.entries[0]).toEqual({
+      anilistId: 900001,
+      titleEnglish: 'Synthetic Magic Academy',
+      titleRomaji: 'Synthetic Mahou Gakuen',
+      coverImageUrl:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx900001-synthetic.jpg',
+      coverColor: '#e4a15d',
+      format: 'TV',
+      status: 'RELEASING',
+      episodes: null,
+      season: 'FALL',
+      seasonYear: 2026,
+      startDate: { year: 2026, month: 10, day: 3 },
+      genres: ['Action', 'Fantasy'],
+      members: 52000,
+      score: { source: 'anilist', score: 81, scale: 100 },
+    });
+    expect(block?.entries[1]).toMatchObject({
+      titleEnglish: null,
+      coverImageUrl: null,
+      coverColor: null,
+      format: null,
+      score: null,
+      genres: [],
+      startDate: { year: 2026, month: null, day: null },
+    });
+  });
+
+  it('maps the last-page marker of another page', () => {
+    expect(mapAniListListBlock(data('anilist-list-top-page2'))).toMatchObject({
+      hasNextPage: true,
+      entries: [{ anilistId: 900011 }, { anilistId: 900012 }],
+    });
+  });
+
+  it('treats a missing isAdult as adult, and an empty page as empty', () => {
+    expect(
+      mapAniListListBlock({ Page: { media: [{ id: 5, title: {} }] } }),
+    ).toEqual({ entries: [], hasNextPage: false });
+    expect(mapAniListListBlock({ Page: { media: [] } })).toEqual({
+      entries: [],
+      hasNextPage: false,
+    });
+  });
+
+  it('returns null without a Page', () => {
+    expect(mapAniListListBlock(null)).toBeNull();
+    expect(mapAniListListBlock({ Page: { media: 'x' } })).toBeNull();
   });
 });
