@@ -34,7 +34,7 @@ export class AnimeService {
       anime !== null &&
       (visibleIdSources(anime, this.importer.isEnabled).has(ref.source) ||
         !this.hasEnabledData(anime));
-    return this.serve(vouched ? anime : null, ref);
+    return this.serve(vouched ? anime : null, ref, 'id_lookup');
   }
 
   /**
@@ -66,7 +66,11 @@ export class AnimeService {
     const { anilistId, canonicalSlug } = await this.resolveSlug(requested);
     if (requested !== canonicalSlug) return { kind: 'redirect', canonicalSlug };
     const ref: AnimeRef = { source: 'anilist', externalId: anilistId };
-    const anime = await this.serve(await this.findStored(ref), ref);
+    const anime = await this.serve(
+      await this.findStored(ref),
+      ref,
+      'page_view',
+    );
     // A re-import can move the canonical (its title changed while it was purged).
     return anime.canonicalSlug !== null && anime.canonicalSlug !== requested
       ? { kind: 'redirect', canonicalSlug: anime.canonicalSlug }
@@ -81,6 +85,7 @@ export class AnimeService {
   private async serve(
     stored: StoredAnime | null,
     ref: AnimeRef,
+    access: 'page_view' | 'id_lookup',
   ): Promise<AnimeDetails> {
     let anime = stored;
     if (!anime) {
@@ -103,9 +108,10 @@ export class AnimeService {
       this.importer.refreshStale(anime);
     }
     const now = this.clock.now();
+    // Only a page a person reads keeps an anime alive; walking ids does not (OTA-173).
     if (
-      now.getTime() - anime.lastViewedAt.getTime() >=
-      VIEW_WRITE_INTERVAL_MS
+      access === 'page_view' &&
+      now.getTime() - anime.lastViewedAt.getTime() >= VIEW_WRITE_INTERVAL_MS
     ) {
       await this.prisma.anime.updateMany({
         where: { id: anime.id },

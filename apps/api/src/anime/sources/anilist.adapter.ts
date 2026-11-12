@@ -8,6 +8,7 @@ import { AnimeSourceSettings } from './source-settings';
 import {
   AnimeSourceAdapter,
   type AnimeRef,
+  type FetchPriority,
   type RelationNode,
   type SourceResult,
   SourceUnavailableError,
@@ -41,7 +42,10 @@ export class AniListAdapter extends AnimeSourceAdapter {
     return this.http.limiter.isDown();
   }
 
-  async fetchAnime(ref: AnimeRef): Promise<SourceResult> {
+  async fetchAnime(
+    ref: AnimeRef,
+    priority: FetchPriority = 'interactive',
+  ): Promise<SourceResult> {
     const variables =
       ref.source === 'anilist'
         ? { id: ref.externalId }
@@ -53,7 +57,7 @@ export class AniListAdapter extends AnimeSourceAdapter {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: ANILIST_ANIME_QUERY, variables }),
       },
-      this.http,
+      priority === 'background' ? { ...this.http, maxQueueMs: 0 } : this.http,
     );
     // AniList answers an unknown id with HTTP 404 and { data: { Media: null } }.
     if (status === 404) return { kind: 'not_found' };
