@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth: sign-in prompt</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="auth.css" />
+    <style>
+      .md-page { min-height: 860px; }
+      .md-hero { max-width: 1280px; margin: 0 auto; padding: var(--space-10) var(--space-6); display: flex; gap: var(--space-6); align-items: end; }
+      .md-hero .au-cover { width: 180px; border-radius: var(--radius-lg); }
+      .md-hero h1 { margin: 0 0 var(--space-4); font: 700 40px/1.1 var(--font-display); }
+      @container (max-width: 767px) {
+        .md-hero { flex-direction: column; align-items: start; padding: var(--space-6) var(--space-4); }
+        .md-hero .au-cover { width: 120px; }
+        .md-hero h1 { font-size: 28px; }
+      }
+    </style>
+  </head>
+  <body class="ol-root">
+    <!-- State: guest on /anime/frieren pressed "Add to list". Opening the dialog stores the pending add (anime id, status Plan to watch) in sessionStorage; `next` is a same-origin path. Base UI Dialog (modal, focus trapped, Esc and scrim click close, focus returns to the button). Phones get a bottom sheet. -->
+    <div class="sh md-page">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <header class="sh-header ol-glass" inert>
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/"><span class="sh-logo__mark au-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+          <span class="sh-spacer"></span>
+          <a class="ol-btn ol-btn--primary ol-btn--sm" href="/auth?mode=sign-in">Sign in</a>
+        </div>
+      </header>
+      <main class="md-hero" inert>
+        <span class="au-cover" style="--c1: #2a5f74; --c2: #1b1826" aria-hidden="true"></span>
+        <div>
+          <h1>Frieren: Beyond Journey's End</h1>
+          <button class="ol-btn ol-btn--primary">+ Add to list</button>
+        </div>
+      </main>
+
+      <div class="au-scrim">
+        <div class="au-dialog" role="dialog" aria-modal="true" aria-labelledby="dt" aria-describedby="dd">
+          <button class="au-x" aria-label="Close">×</button>
+          <div class="au-dialog__anime">
+            <span class="au-cover" style="--c1: #2a5f74; --c2: #1b1826" aria-hidden="true"></span>
+            <span class="au-plus" aria-hidden="true">+</span>
+            <span class="ol-label" style="color: var(--accent-ink)">Your list</span>
+          </div>
+          <div class="au-card">
+            <h2 id="dt">Sign in to add Frieren: Beyond Journey's End</h2>
+            <p id="dd">We'll add it to your list as soon as you're in, then bring you back here.</p>
+            <ul class="au-perks">
+              <li>Track episodes on every device</li>
+              <li>Earn XP for everything you watch</li>
+            </ul>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google?next=/anime/frieren" data-demo="focus"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
+            <a class="ol-btn ol-btn--primary au-btn" href="/auth?mode=sign-in&amp;next=/anime/frieren">Sign in with email or username</a>
+            <p class="au-foot">New here? <a href="/auth?mode=sign-up&amp;next=/anime/frieren">Create a free account</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="au-board" aria-label="Other dialog states">
+      <h2>Sign-in prompt: other states</h2>
+      <div class="au-grid">
+        <figure class="au-state">
+          <figcaption>Long title, no cover (title clamps to 3 lines)</figcaption>
+          <div class="au-dialog" role="dialog" aria-labelledby="d2">
+            <button class="au-x" aria-label="Close">×</button>
+            <div class="au-card">
+              <h2 id="d2" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">Sign in to add That Time I Got Reincarnated as a Slime Season 3: The Unexpected Visitors from Another World</h2>
+              <p>We'll add it to your list as soon as you're in.</p>
+              <a class="ol-btn ol-btn--secondary au-btn" href="#"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
+              <a class="ol-btn ol-btn--primary au-btn" href="#">Sign in with email or username</a>
+            </div>
+          </div>
+        </figure>
+        <figure class="au-state">
+          <figcaption>Back on the page after sign-in · pending add done</figcaption>
+          <div class="au-card">
+            <div class="au-alert" data-tone="ok" role="status"><strong>Added to Plan to watch.</strong><span>Frieren: Beyond Journey's End · <a href="/my-list">Open My List</a></span></div>
+            <p class="au-sub">Toast (Sonner, top right). If the add fails, the error toast offers Retry; the button on the page stays "Add to list".</p>
+          </div>
+        </figure>
+        <figure class="au-state">
+          <figcaption>Other gated actions (same dialog, other copy)</figcaption>
+          <div class="au-card">
+            <p class="au-sub"><strong>Rate, favourite, track episode:</strong> "Sign in to rate Frieren".</p>
+            <p class="au-sub"><strong>/my-list, /settings, /profile as guest:</strong> no dialog, redirect to /auth?mode=sign-in&amp;next=… (replaces the old AuthWall).</p>
+          </div>
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>

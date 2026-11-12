@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth: forgot and reset password</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /auth/forgot-password, empty form (email prefilled when the sign-in field held an email). -->
+    <div class="au">
+      <aside class="au-show" aria-label="About OtakuLeague">
+        <a class="au-show__logo" href="/"><img src="../../../apps/web/public/brand/logo-pierce.svg" alt="OtakuLeague home" width="96" height="96" /></a>
+        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">Lv 12</span></div>
+        <p class="au-show__kicker ol-label">Your list is safe</p>
+        <h2 class="au-show__title">Back in <em>two minutes.</em></h2>
+        <p class="au-show__lede">Your list, XP and rank wait right where you left them.</p>
+      </aside>
+      <main class="au-main">
+        <header class="au-top">
+          <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
+        </header>
+        <div class="au-center">
+          <form class="au-card" action="/auth/forgot-password" method="post" novalidate>
+            <h1>Forgot your password?</h1>
+            <p>Enter the email on your account and we'll send a link to choose a new one.</p>
+            <div class="au-field">
+              <label for="fe">Email</label>
+              <div class="au-input" data-demo="focus"><input id="fe" type="email" autocomplete="email" placeholder="you@example.com" /></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Send reset link</button>
+            <p class="au-foot"><a href="/auth?mode=sign-in">← Back to sign in</a></p>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <section class="au-board" aria-label="Other password reset states">
+      <h2>Forgot and reset password: other states</h2>
+      <div class="au-grid">
+        <figure class="au-state">
+          <figcaption>Forgot · sent (always the same, account or not)</figcaption>
+          <div class="au-card">
+            <div class="au-badge" aria-hidden="true">✉</div>
+            <h2 tabindex="-1">Check your inbox</h2>
+            <p>If <strong>kaito@example.com</strong> belongs to an account, a reset link is on its way. It works for 1 hour.</p>
+            <p class="au-steps-list">Nothing after 5 minutes? Check spam, or make sure this is the address you signed up with. Google accounts have no password: use <em>Continue with Google</em>.</p>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/forgot-password">Use a different email</a>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Forgot · rate limited (429, Retry-After 720 s)</figcaption>
+          <form class="au-card">
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many reset requests.</strong><span>You can ask for another link in about 12 minutes. If one already arrived, it still works.</span></div>
+            <div class="au-field">
+              <label for="r1">Email</label>
+              <div class="au-input"><input id="r1" type="email" value="kaito@example.com" /></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Send again in <span class="ol-num">11:58</span></button>
+            <p class="au-sr" role="status"></p><!-- Filled with "You can try again now" when the wait ends. -->
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Forgot · invalid email (inline) and the sending button</figcaption>
+          <form class="au-card">
+            <div class="au-field">
+              <label for="r2">Email</label>
+              <div class="au-input" data-state="error"><input id="r2" type="email" value="kaito@example" aria-invalid="true" aria-describedby="r2m" /></div>
+              <p class="au-msg" data-tone="bad" id="r2m">Enter an email like name@example.com.</p>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-busy="true"><span class="au-spin" aria-hidden="true"></span>Sending…</button>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Reset · /auth/reset-password (token exchanged, clean URL)</figcaption>
+          <form class="au-card">
+            <h2>Choose a new password</h2>
+            <p>For <strong>@kaito_23</strong>. You'll be signed out on other devices.</p>
+            <div class="au-field">
+              <label for="n1">New password</label>
+              <div class="au-input" data-state="ok"><input id="n1" type="password" value="otaku2026" autocomplete="new-password" /><button class="au-reveal" type="button">Show</button></div>
+              <ul class="au-rules"><li data-met>At least 8 characters</li><li data-met>A number or symbol</li></ul>
+            </div>
+            <div class="au-field">
+              <label for="n2">Confirm new password</label>
+              <div class="au-input" data-demo="focus"><input id="n2" type="password" value="otaku20" autocomplete="new-password" /><button class="au-reveal" type="button">Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Save new password</button>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Reset · expired, used or invalid link</figcaption>
+          <!-- One screen for all three: the token is checked server-side before the form renders. -->
+          <div class="au-card">
+            <div class="au-badge" data-tone="wait" aria-hidden="true">◷</div>
+            <h2 tabindex="-1">This link doesn't work anymore</h2>
+            <p>It has expired, was already used or is incomplete. Ask for a new one and use the most recent email.</p>
+            <a class="ol-btn ol-btn--primary au-btn" href="/auth/forgot-password">Send a new link</a>
+            <p class="au-foot"><a href="/auth?mode=sign-in">Back to sign in</a></p>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Reset · saving, then saved</figcaption>
+          <div class="au-card">
+            <button class="ol-btn ol-btn--primary au-btn" aria-busy="true"><span class="au-spin" aria-hidden="true"></span>Saving…</button>
+            <div class="au-alert" data-tone="ok" role="status"><strong>Password updated.</strong><span>Taking you to sign in…</span><!-- The sign-in page repeats this message: mockup-SignIn, light card. --></div>
+            <div class="au-alert" role="alert"><strong>Couldn't save your password.</strong><span>The link is still valid. Try again.</span></div>
+          </div>
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>

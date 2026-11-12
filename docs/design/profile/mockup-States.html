@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profile: states</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../browse/browse.css" />
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body class="ol-root">
+    <!-- Loading (skeleton matches the hero, strip and overview; shimmer off with reduced motion), Empty (a new user on their own profile: level 1, 0 XP, completion 1/5, list empty CTA), Private (visitor view, plus the one-line notice the owner sees on their own private profile), Errors (load failure with Retry, unknown username 404, /profile as a guest). -->
+<div class="sh">
+  <div class="sh-bg" aria-hidden="true"></div>
+  <header class="sh-header ol-glass"><div class="sh-header__in">
+    <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+    <nav aria-label="Main"><ul class="sh-nav">
+      <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+      <li><a class="sh-nav__link" href="/season">Seasonal</a></li><li><a class="sh-nav__link" href="/top/anime">Rankings</a></li><li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+    </ul></nav>
+    <span class="sh-spacer"></span>
+    <div class="sh-search" role="search"><label class="sh-search__field"><input type="search" placeholder="Search anime" aria-label="Search anime" /><kbd class="sh-kbd">/</kbd></label></div>
+    <div class="sh-right"><a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a><button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button><button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></div>
+  </div></header>
+  <main id="main" class="sh-main">
+    <h1 class="pf-sec">Loading</h1>
+    <div class="pf-banner pf-banner--none" aria-hidden="true"></div>
+    <div class="pf-skel-hero" aria-busy="true" aria-label="Loading profile"><span class="ol-skel" style="height:136px;width:136px"></span><div style="display:grid;gap:10px"><span class="ol-skel"  style="height:30px;width:320px"></span><span class="ol-skel" style="height:14px;width:260px"></span></div></div>
+    <div class="pf-strip" aria-hidden="true"><span class="ol-skel pf-skel-xp" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span></div>
+    <div class="pf-grid" aria-hidden="true"><span class="ol-skel" style="height:240px;width:100%"></span><span class="ol-skel" style="height:240px;width:100%"></span></div>
+    <h2 class="pf-sec">Empty: new user, own profile</h2>
+    <div class="pf-banner pf-banner--none"><button class="pf-mediabtn pf-mediabtn--banner" type="button" aria-haspopup="dialog">+ Add banner</button></div>
+    <div class="pf-hero">
+      <span class="pf-avatar pf-avatar--xl" style="--c1: #5a5470; --c2: #2a2638" role="img" aria-label="Your avatar (initials, no photo yet)">N0</span>
+      <div><h1 class="pf-name">n0vice_ai <span class="pf-lvl"><span>Lv</span><b>1</b></span></h1>
+      <ul class="pf-meta"><li>Joined today</li><li>Not ranked in Spring 2027 yet</li></ul></div>
+      <div class="pf-actions"><button class="ol-btn ol-btn--primary" type="button" aria-haspopup="dialog">Edit profile</button></div>
+    </div>
+    <p class="pf-bio pf-bio--none">No bio yet.</p>
+    <section class="pf-strip" aria-label="Level and stats">
+      <div class="pf-tile pf-xp"><span class="pf-xp__lvl" aria-hidden="true">Level<b>1</b></span>
+        <div class="pf-xp__nums"><span><b>0</b> XP</span><span>100 XP to level 2</span></div>
+        <div class="pf-meter" role="progressbar" aria-label="Progress to level 2" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="--p: 0"></i></div></div>
+      <div class="pf-tile"><span>Anime</span><b>0</b></div><div class="pf-tile"><span>Episodes watched</span><b>0</b></div><div class="pf-tile"><span>Mean score</span><b>–</b></div>
+    </section>
+    <nav aria-label="Profile sections"><ul class="ol-tabs pf-tabs"><li><a class="ol-tab" href="/u/n0vice_ai" aria-current="page">Overview</a></li><li><a class="ol-tab" href="/u/n0vice_ai/favourites">Favourites <span class="ol-tab__count">0</span></a></li><li><a class="ol-tab" href="/u/n0vice_ai/achievements">Achievements <span class="ol-tab__count">0</span></a></li></ul></nav>
+    <section class="pf-card pf-complete" aria-labelledby="h-c2"><span class="pf-ring" style="--p: 0.2" role="img" aria-label="20% complete">20%</span>
+      <div><h2 id="h-c2">Finish your profile: 1 of 5 done</h2><ul class="pf-checks"><li class="is-done">✓ Username</li><li><button type="button">+ Add an avatar</button></li><li><button type="button">+ Add a banner</button></li><li><button type="button">+ Write a bio</button></li><li><button type="button">+ Add your birthday</button></li></ul></div></section>
+    <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">+</span><p class="ol-state__title">Your stats start with your first anime</p>
+      <p class="ol-state__body">Add a show to My List: every add, finish and rating earns XP, and your watch stats and favourites fill in here.</p>
+      <a class="ol-btn ol-btn--primary" href="/season">Browse this season</a></div>
+    <p class="pf-anno">Visitors to an empty profile see the same tiles at 0 and "Nothing here yet" instead of this card.</p>
+    <h2 class="pf-sec">Private profile: visitor, and the owner's notice</h2>
+
+    <div class="pf-banner" style="--c1: #2a5a3a; --c2: #8ad06a; --c3: #10180f" aria-hidden="true"></div>
+    <div class="pf-hero">
+      <span class="pf-avatar pf-avatar--xl" style="--c1: #6ad08a; --c2: #2a6a8a" role="img" aria-label="quiet_ren's avatar">QU</span>
+      <div><h1 class="pf-name">quiet_ren <span class="pf-lvl"><span>Lv</span><b>7</b></span></h1>
+      <ul class="pf-meta"><li>Joined June 2025</li><li><a href="/leaderboard?season=spring-2027">#61 in Spring 2027</a></li></ul></div>
+      <div class="pf-actions"><button class="ol-btn ol-btn--secondary" type="button">Copy link</button></div>
+    </div>
+    <section class="pf-private" style="margin-top: 32px" aria-labelledby="h-priv">
+      <span class="ol-state__mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16"><path d="M4 7V5a4 4 0 0 1 8 0v2M3 7h10v7H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+      <h2 id="h-priv">This profile is private</h2>
+      <p>quiet_ren keeps their bio, stats, favourites and achievements to themselves. Their level, rank and season XP stay on the leaderboard.</p>
+      <a class="ol-btn ol-btn--secondary" href="/leaderboard">See the leaderboard</a>
+    </section>
+    <p class="pf-note" style="margin-top: 24px" role="note"><span class="ol-state__mark" aria-hidden="true" style="width:32px;height:32px;flex:none"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 7V5a4 4 0 0 1 8 0v2M3 7h10v7H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span><b>Your profile is private.</b> Visitors see your name, avatar, level and rank only. You still see everything below.</span><a href="#edit">Change</a></p>
+    <h2 class="pf-sec">Errors and redirects</h2>
+    <div class="pf-frames">
+      <div class="ol-state ol-state--error" role="alert" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">!</span><p class="ol-state__title">Couldn't load this profile</p><p class="ol-state__body">Something went wrong on our side. Your list and XP are safe. <span class="ol-num">PROFILE_UNAVAILABLE</span></p><button class="ol-btn ol-btn--secondary" type="button">Try again</button></div>
+      <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">?</span><p class="ol-state__title">No user called "mirai_no_kaz"</p><p class="ol-state__body">The name may be misspelled, or the player changed it. Try finding them on the leaderboard.</p><a class="ol-btn ol-btn--secondary" href="/leaderboard?season=all&amp;q=mirai_no_kaz">Search players</a><p class="pf-anno">Served with a real 404 status.</p></div>
+      <p class="pf-anno">/profile has no UI of its own: a server redirect to /u/{username}, or for a guest to /auth?mode=sign-in&amp;next=/profile.</p>
+    </div>
+  </main>
+</div>
+  </body>
+</html>
