@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="t">
+  <title id="t">OtakuLeague</title>
+  <!-- Pierce, small sizes (favicon, 16 to 32 px): O and L only, one colour, heavier strokes (OTA-160). -->
+  <circle cx="100" cy="100" r="56" fill="none" stroke="#4fd1b5" stroke-width="28"/>
+  <path d="M80 48 L80 176 L152 176" fill="none" stroke="#4fd1b5" stroke-width="28"/>
+</svg>
