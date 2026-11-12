@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home: signed in</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../browse/browse.css" />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: signed in. The CTA pair becomes the XP card (welcome, level, XP to next level, season rank); the Continue watching row (My List, status Watching) comes first; the closing sign-up band is gone. Worst cases: 20-character username (the maximum), One Piece with 1,122 episodes and no total. -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/" aria-current="page"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search" aria-label="Header search">
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a>
+            <button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-main">
+        <section class="hm-hero" aria-labelledby="hm-title" data-motion="on">
+          <div class="hm-sky" aria-hidden="true">
+            <div class="hm-blob hm-blob--a"></div>
+            <div class="hm-blob hm-blob--b"></div>
+          </div>
+          <div class="hm-logo">
+            <svg viewBox="0 0 200 200" role="img" aria-label="OtakuLeague logo: a dragon L piercing the O">
+              <defs>
+                <linearGradient id="hmChroma" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChroma-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChroma-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChroma)" stroke-width="20" mask="url(#hmChroma-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChroma)" mask="url(#hmChroma-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChroma)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChroma)" />
+            </svg>
+            <svg viewBox="0 0 200 200" class="hm-logo__sheen" aria-hidden="true">
+              <defs>
+                <linearGradient id="hmChromaSheen" x1="1" y1="1" x2="0" y2="0">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChromaSheen-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChromaSheen-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChromaSheen)" stroke-width="20" mask="url(#hmChromaSheen-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChromaSheen)" mask="url(#hmChromaSheen-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChromaSheen)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChromaSheen)" />
+            </svg>
+          </div>
+          <div class="hm-copy">
+            <p class="hm-eyebrow">Your anime HQ</p>
+            <h1 class="hm-h1" id="hm-title"><span>Track every anime.</span> <span>Earn XP.</span> <span class="hm-grad">Top the season.</span></h1>
+            <p class="hm-lede">Anime pages, seasonal charts and rankings, your watchlist, and XP for everything you add, finish and rate. Every season ends with a leaderboard.</p>
+            <form class="hm-search" role="search" aria-label="Hero search" action="/search" method="get">
+              <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" name="q" placeholder="Search anime, e.g. Frieren" aria-label="Search anime" />
+              <button class="ol-btn ol-btn--primary" type="submit">Search</button>
+            </form>
+            <div class="hm-xp">
+              <span class="hm-xp__avatar" aria-hidden="true">KA</span>
+              <p class="hm-xp__hi"><span>Welcome back</span>kaito_backlog_keeper</p>
+              <span class="ol-badge ol-badge--rank hm-xp__lvl">Lv 12</span>
+              <div class="hm-xp__bar">
+                <div class="hm-meter" role="progressbar" aria-label="Progress to level 13" aria-valuemin="6600" aria-valuemax="7800" aria-valuenow="7140" aria-valuetext="7,140 of 7,800 XP"><i style="--pct: 45%"></i></div>
+                <div class="hm-xp__nums"><span><b>7,140</b> / 7,800 XP</span><span>660 to level 13</span></div>
+              </div>
+              <div class="hm-xp__foot">
+                <a href="/leaderboard">#148 on the Fall 2026 leaderboard <span aria-hidden="true">→</span></a>
+                <a href="/u/kaito_backlog_keeper">Your profile <span aria-hidden="true">→</span></a>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div class="hm-rows">
+        <section class="br-section" aria-labelledby="s-continue">
+          <div class="br-section__head">
+            <div><h2 id="s-continue">Continue watching</h2><p>Pick up where you left off</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-continue" aria-label="Scroll Continue watching back" disabled>‹</button><button type="button" aria-controls="r-continue" aria-label="Scroll Continue watching forward">›</button></div></div>
+          </div>
+          <ul class="br-row-scroll" id="r-continue">
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/frieren-beyond-journey-s-end" style="--card-accent: #3a7d6b">
+              <div class="ol-anime-card__cover" style="--c1: #3a7d6b; --c2: #1d2b3a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 64%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">Frieren: Beyond Journey&#39;s End</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 18 / 28<span class="br-sr"> watched</span></span></p>
+            </a>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/one-piece" style="--card-accent: #b23a3a">
+              <div class="ol-anime-card__cover" style="--c1: #b23a3a; --c2: #2a1830">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 96%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">One Piece</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 1,122<span class="br-sr"> watched, still airing</span> · airing</span></p>
+            </a>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/that-time-i-got-reincarnated-as-a-slime-season-3" style="--card-accent: #2b6f8a">
+              <div class="ol-anime-card__cover" style="--c1: #2b6f8a; --c2: #13202b">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 29%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">That Time I Got Reincarnated as a Slime Season 3: The Labyrinth of the Demon Lord and the Western Saints</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 7 / 24<span class="br-sr"> watched</span></span></p>
+            </a>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/bakemonogatari" style="--card-accent: #8a2b4a">
+              <div class="ol-anime-card__cover" style="--c1: #8a2b4a; --c2: #1c1424">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 20%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">Bakemonogatari</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 3 / 15<span class="br-sr"> watched</span></span></p>
+            </a>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/fullmetal-alchemist" style="--card-accent: #6b3a2b">
+              <div class="ol-anime-card__cover" style="--c1: #6b3a2b; --c2: #1f1614">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 78%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">Fullmetal Alchemist</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 40 / 51<span class="br-sr"> watched</span></span></p>
+            </a>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/minami-ke" style="--card-accent: #a0743a">
+              <div class="ol-anime-card__cover" style="--c1: #a0743a; --c2: #2a2216">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="hm-card-progress" aria-hidden="true"><i style="--pct: 15%"></i></span>
+              </div>
+              <h3 class="ol-anime-card__title">Minami-ke</h3>
+              <p class="ol-anime-card__meta"><span class="hm-ep"><span class="br-sr">Episode </span>Ep 2 / 13<span class="br-sr"> watched</span></span></p>
+            </a>
+          </li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-trending">
+          <div class="br-section__head">
+            <div><h2 id="s-trending">Trending now</h2><p>Most added this week</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-trending" aria-label="Scroll Trending now back" disabled>‹</button><button type="button" aria-controls="r-trending" aria-label="Scroll Trending now forward">›</button></div></div>
+          </div>
+          <ul class="br-row-scroll" id="r-trending">
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/frieren-beyond-journey-s-end" style="--card-accent: #3a7d6b">
+              <div class="ol-anime-card__cover" style="--c1: #3a7d6b; --c2: #1d2b3a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>9.1</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Frieren: Beyond Journey&#39;s End</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>28 eps</span><span>Fall 2023</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Frieren: Beyond Journey&#39;s End to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/one-piece" style="--card-accent: #b23a3a">
+              <div class="ol-anime-card__cover" style="--c1: #b23a3a; --c2: #2a1830">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.7</span></div>
+                <span class="ol-badge ol-badge--airing br-card__status">Airing</span>
+              </div>
+              <h3 class="ol-anime-card__title">One Piece</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>Fall 1999</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add One Piece to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/that-time-i-got-reincarnated-as-a-slime-season-3" style="--card-accent: #2b6f8a">
+              <div class="ol-anime-card__cover" style="--c1: #2b6f8a; --c2: #13202b">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid"><span class="br-sr">Score </span>7.6</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">That Time I Got Reincarnated as a Slime Season 3: The Labyrinth of the Demon Lord and the Western Saints</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>24 eps</span><span>Spring 2024</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add That Time I Got Reincarnated as a Slime Season 3: The Labyrinth of the Demon Lord and the Western Saints to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/demon-slayer-kimetsu-no-yaiba" style="--card-accent: #2f6b5a">
+              <div class="ol-anime-card__cover" style="--c1: #2f6b5a; --c2: #2b1420">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.3</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Demon Slayer: Kimetsu no Yaiba</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>26 eps</span><span>Spring 2019</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Demon Slayer: Kimetsu no Yaiba to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/attack-on-titan" style="--card-accent: #6b5a45">
+              <div class="ol-anime-card__cover" style="--c1: #6b5a45; --c2: #1a1714">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.4</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Attack on Titan</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>25 eps</span><span>Spring 2013</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Attack on Titan to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/minami-ke" style="--card-accent: #a0743a">
+              <div class="ol-anime-card__cover" style="--c1: #a0743a; --c2: #2a2216">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+              </div>
+              <h3 class="ol-anime-card__title">Minami-ke</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>Fall 2007</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Minami-ke to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/gintama" style="--card-accent: #8a5a2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a5a2b; --c2: #2a1d14">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>9.0</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Gintama°</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>51 eps</span><span>Spring 2015</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Gintama° to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/bakemonogatari" style="--card-accent: #8a2b4a">
+              <div class="ol-anime-card__cover" style="--c1: #8a2b4a; --c2: #1c1424">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.2</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Bakemonogatari</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>15 eps</span><span>Summer 2009</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Bakemonogatari to My List">+</button>
+          </li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-season">
+          <div class="br-section__head">
+            <div><h2 id="s-season">This season · Fall 2026</h2><p>Airing now, most popular first</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-season" aria-label="Scroll This season back" disabled>‹</button><button type="button" aria-controls="r-season" aria-label="Scroll This season forward">›</button></div></div>
+          </div>
+          <ul class="br-row-scroll" id="r-season">
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/lantern-rail-express" style="--card-accent: #2f5f8a">
+              <div class="ol-anime-card__cover" style="--c1: #2f5f8a; --c2: #141c2b">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.4</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Lantern Rail Express</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>12 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Lantern Rail Express to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/kite-season" style="--card-accent: #8a3a4f">
+              <div class="ol-anime-card__cover" style="--c1: #8a3a4f; --c2: #24131a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.0</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Kite Season</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>12 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Kite Season to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/ninth-assistant-librarian" style="--card-accent: #7a4a8a">
+              <div class="ol-anime-card__cover" style="--c1: #7a4a8a; --c2: #1d1426">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid"><span class="br-sr">Score </span>7.1</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">My Reincarnation as the Ninth Assistant Librarian of the Floating Academy Was Not Part of the Plan</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>24 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add My Reincarnation as the Ninth Assistant Librarian of the Floating Academy Was Not Part of the Plan to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/the-quiet-swordsmith-of-hollow-pine" style="--card-accent: #4f6b3a">
+              <div class="ol-anime-card__cover" style="--c1: #4f6b3a; --c2: #161d14">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+              </div>
+              <h3 class="ol-anime-card__title">The Quiet Swordsmith of Hollow Pine</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>13 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add The Quiet Swordsmith of Hollow Pine to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/orbit-cafe-diaries" style="--card-accent: #8a6a3a">
+              <div class="ol-anime-card__cover" style="--c1: #8a6a3a; --c2: #231b12">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid"><span class="br-sr">Score </span>7.8</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Orbit Café Diaries</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>12 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Orbit Café Diaries to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/steel-garden" style="--card-accent: #4a5a6b">
+              <div class="ol-anime-card__cover" style="--c1: #4a5a6b; --c2: #15191f">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"></div>
+                <span class="ol-badge ol-badge--airing br-card__status">Airing</span>
+              </div>
+              <h3 class="ol-anime-card__title">Steel Garden</h3>
+              <p class="ol-anime-card__meta"><span>TV</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Steel Garden to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/paper-moon-relay" style="--card-accent: #3a7a7a">
+              <div class="ol-anime-card__cover" style="--c1: #3a7a7a; --c2: #122222">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid"><span class="br-sr">Score </span>7.5</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Paper Moon Relay</h3>
+              <p class="ol-anime-card__meta"><span>ONA</span><span>10 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Paper Moon Relay to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/night-shift-exorcists" style="--card-accent: #3a3f8a">
+              <div class="ol-anime-card__cover" style="--c1: #3a3f8a; --c2: #131528">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="mid"><span class="br-sr">Score </span>6.8</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Night Shift Exorcists</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>12 eps</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Night Shift Exorcists to My List">+</button>
+          </li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-top">
+          <div class="br-section__head">
+            <div><h2 id="s-top">Top rated</h2><p>Highest scores of all time</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-top" aria-label="Scroll Top rated back" disabled>‹</button><button type="button" aria-controls="r-top" aria-label="Scroll Top rated forward">›</button></div></div>
+          </div>
+          <ul class="br-row-scroll" id="r-top">
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/fullmetal-alchemist-brotherhood" style="--card-accent: #8a3b2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a3b2b; --c2: #24151a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>9.1</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Fullmetal Alchemist: Brotherhood</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>64 eps</span><span>Spring 2009</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Fullmetal Alchemist: Brotherhood to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/frieren-beyond-journey-s-end" style="--card-accent: #3a7d6b">
+              <div class="ol-anime-card__cover" style="--c1: #3a7d6b; --c2: #1d2b3a">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>9.1</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Frieren: Beyond Journey&#39;s End</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>28 eps</span><span>Fall 2023</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Frieren: Beyond Journey&#39;s End to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/gintama" style="--card-accent: #8a5a2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a5a2b; --c2: #2a1d14">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>9.0</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Gintama°</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>51 eps</span><span>Spring 2015</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Gintama° to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/gintama-the-final" style="--card-accent: #8a6a2b">
+              <div class="ol-anime-card__cover" style="--c1: #8a6a2b; --c2: #221a12">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.6</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Gintama: The Final</h3>
+              <p class="ol-anime-card__meta"><span>Movie</span><span>1 ep</span><span>Winter 2021</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Gintama: The Final to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/one-piece" style="--card-accent: #b23a3a">
+              <div class="ol-anime-card__cover" style="--c1: #b23a3a; --c2: #2a1830">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.7</span></div>
+                <span class="ol-badge ol-badge--airing br-card__status">Airing</span>
+              </div>
+              <h3 class="ol-anime-card__title">One Piece</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>Fall 1999</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add One Piece to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/attack-on-titan" style="--card-accent: #6b5a45">
+              <div class="ol-anime-card__cover" style="--c1: #6b5a45; --c2: #1a1714">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.4</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Attack on Titan</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>25 eps</span><span>Spring 2013</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Attack on Titan to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/fate-zero" style="--card-accent: #3b4a8a">
+              <div class="ol-anime-card__cover" style="--c1: #3b4a8a; --c2: #151a2e">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.3</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Fate/Zero</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>13 eps</span><span>Fall 2011</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Fate/Zero to My List">+</button>
+          </li>
+          <li class="br-card">
+            <a class="ol-anime-card" href="/anime/demon-slayer-kimetsu-no-yaiba" style="--card-accent: #2f6b5a">
+              <div class="ol-anime-card__cover" style="--c1: #2f6b5a; --c2: #2b1420">
+                <div class="br-cover" aria-hidden="true"></div>
+                <div class="ol-anime-card__badges"><span class="ol-score" data-band="high"><span class="br-sr">Score </span>8.3</span></div>
+              </div>
+              <h3 class="ol-anime-card__title">Demon Slayer: Kimetsu no Yaiba</h3>
+              <p class="ol-anime-card__meta"><span>TV</span><span>26 eps</span><span>Spring 2019</span></p>
+            </a>
+            <button class="br-add" type="button" aria-label="Add Demon Slayer: Kimetsu no Yaiba to My List">+</button>
+          </li>
+          </ul>
+        </section>
+        </div>
+        <section class="hm-features" aria-labelledby="hm-feat">
+          <div class="br-section__head">
+            <div><h2 id="hm-feat">Everything you need from day one</h2><p>Free to use. Anime data from AniList.</p></div>
+          </div>
+          <ul class="hm-feat-grid">
+            <li class="hm-feat">
+              <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="2.5" width="14" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
+              <h3>Every anime, one page</h3>
+              <p>Score, synopsis, studios and every season of a franchise.</p>
+            </li>
+            <li class="hm-feat">
+              <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
+              <h3>Find it fast</h3>
+              <p>Typo-proof search, plus <a href="/season">Seasonal</a>, <a href="/top/anime">Rankings</a> and <a href="/discover">Discover</a>.</p>
+            </li>
+            <li class="hm-feat">
+              <span class="hm-feat__ico hm-feat__ico--violet" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5.5l1.5 1.5L8 4.5M4 11l1.5 1.5L8 10M10.5 6h6M10.5 11.5h6M4.5 16h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+              <h3>My List</h3>
+              <p>Episodes and scores in one tap.</p>
+              <ul class="hm-statuses" aria-label="List statuses"><li>Watching</li><li>Completed</li><li>On hold</li><li>Dropped</li><li>Plan to watch</li></ul>
+            </li>
+            <li class="hm-feat hm-feat--wide">
+              <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 7.7l5-.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
+              <h3>XP, levels and your profile</h3>
+              <p>Adding, finishing and rating earns XP. Your level, stats and favourites live on your profile.</p>
+              <div class="hm-meter" aria-hidden="true"><i style="--pct: 62%"></i></div>
+            </li>
+            <li class="hm-feat hm-feat--wide">
+              <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3h8v4a4 4 0 0 1-8 0zM6 5H3.5a2.5 2.5 0 0 0 3 3M14 5h2.5a2.5 2.5 0 0 1-3 3M10 11v3M7 17h6M8 14h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
+              <h3>A leaderboard every season</h3>
+              <p>Climb the <a href="/leaderboard">season leaderboard</a>.</p>
+              <ol class="hm-podium" aria-label="Example leaderboard">
+                <li><b>1</b><span>yuki.exe</span><span>18,420 XP</span></li>
+                <li><b>2</b><span>shonen_jump_sensei</span><span>17,905 XP</span></li>
+                <li><b>3</b><span>mai</span><span>16,330 XP</span></li>
+              </ol>
+            </li>
+          </ul>
+        </section>
+        <section class="hm-road" aria-labelledby="hm-road">
+          <div class="br-section__head">
+            <div><h2 id="hm-road">Coming after launch</h2><p>Next up, roughly in order.</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="https://roadmap.example" rel="noopener">Full roadmap <span aria-hidden="true">↗</span></a></div>
+          </div>
+          <ol class="hm-road__list">
+            <li class="hm-road__first"><span class="ol-badge hm-badge-next">Next</span><h3>Games and quizzes</h3><p>Anime trivia and quick games that pay out XP.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>Friends and notifications</h3><p>Follow friends and hear when a new episode lands.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>List comparator</h3><p>Put two lists side by side and find what to watch together.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>Manga</h3><p>Track chapters next to your anime.</p></li>
+          </ol>
+        </section>
+      </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

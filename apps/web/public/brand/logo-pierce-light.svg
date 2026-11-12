@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="t">
+  <title id="t">OtakuLeague</title>
+  <!-- Concept B "Pierce" (OTA-160): a geometric O pierced by an L that ends in a dragon head and a
+       flame tail, for light grounds: darker stops from the light theme (the hm-chroma variables in docs/design/home/home.css). Masks cut the over-under
+       crossing and the eye, so no background colour is baked in. -->
+  <defs>
+    <linearGradient id="olChroma" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b6b59"/>
+      <stop offset="0.25" stop-color="#0e7490"/>
+      <stop offset="0.45" stop-color="#3b2f63"/>
+      <stop offset="0.62" stop-color="#6d28d9"/>
+      <stop offset="0.82" stop-color="#8f6ae8"/>
+      <stop offset="1" stop-color="#0b6b59"/>
+    </linearGradient>
+    <mask id="olCross" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+      <rect width="200" height="200" fill="#fff"/>
+      <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34"/>
+    </mask>
+    <mask id="olEye" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+      <rect width="200" height="200" fill="#fff"/>
+      <circle cx="91" cy="30" r="2.8" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="100" cy="100" r="56" fill="none" stroke="url(#olChroma)" stroke-width="22"/>
+  <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#olChroma)" stroke-width="20" stroke-linejoin="miter" mask="url(#olCross)"/>
+  <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#olChroma)" stroke-width="22"/>
+  <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#olChroma)" mask="url(#olEye)"/>
+  <path d="M80 22 L71 5 L89 15 Z" fill="url(#olChroma)"/>
+  <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#olChroma)"/>
+</svg>
