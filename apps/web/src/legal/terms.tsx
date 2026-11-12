@@ -118,9 +118,10 @@ export const TERMS_OF_USE: LegalDocument = {
       title: 'Ending your account',
       body: (
         <p>
-          You can delete your account at any time. We may suspend or close an
-          account that seriously or repeatedly breaks these terms; unless the
-          law or safety prevents it, we tell you why first.
+          You can ask us to delete your account at any time by writing to us. We
+          may suspend or close an account that seriously or repeatedly breaks
+          these terms; unless the law or safety prevents it, we tell you why
+          first.
         </p>
       ),
     },
@@ -130,7 +131,7 @@ export const TERMS_OF_USE: LegalDocument = {
       body: (
         <p>
           If we change these terms in a way that matters, we update the date at
-          the top and tell signed-in members on the site before it applies.
+          the top of this page and say what changed.
         </p>
       ),
     },

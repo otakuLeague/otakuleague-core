@@ -1,18 +1,27 @@
 import type { ReactNode } from 'react';
 import {
   CONTACT_EMAIL,
+  CONTACT_HREF,
   DISCORD_URL,
   ROADMAP_URL,
 } from '../../src/shell/site-footer';
 
 // The five questions of the old /faq (PARITY.md), founder voice.
-// The contact form (/contact) ships in the next OTA-147 slice; until then mail avoids a 404.
-export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
 
 export const EXTERNAL_LINK = {
   target: '_blank',
   rel: 'noopener noreferrer',
 } as const;
+
+/** The ↗ mark for sighted users, the same warning in words for screen readers. */
+export function NewTabMark() {
+  return (
+    <>
+      <span aria-hidden="true"> ↗</span>
+      <span className="in-sr"> (opens in a new tab)</span>
+    </>
+  );
+}
 
 export interface FaqEntry {
   readonly id: string;
@@ -48,7 +57,8 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
         <p>
           Next: quizzes, games and more ways to play with other fans. The{' '}
           <a href={ROADMAP_URL} {...EXTERNAL_LINK}>
-            public roadmap ↗
+            public roadmap
+            <NewTabMark />
           </a>{' '}
           shows what I’m building.
         </p>
@@ -79,7 +89,8 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
         screenshot helps) at <a href={CONTACT_HREF}>{CONTACT_EMAIL}</a>, or post
         it on our{' '}
         <a href={DISCORD_URL} {...EXTERNAL_LINK}>
-          Discord ↗
+          Discord
+          <NewTabMark />
         </a>
         . I read every report.
       </p>

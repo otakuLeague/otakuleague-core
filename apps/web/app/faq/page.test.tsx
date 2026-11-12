@@ -59,6 +59,24 @@ describe('FAQ page', () => {
     expect(discord.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
+  it('titles each question with a heading and announces new-tab links in words', () => {
+    const { container } = render(<FaqPage />);
+
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
+    ).toEqual(FAQ_ENTRIES.map((entry) => entry.question));
+    const newTab = [...container.querySelectorAll('a[target="_blank"]')];
+    expect(newTab).toHaveLength(3);
+    for (const link of newTab) {
+      expect(link.textContent).toContain('(opens in a new tab)');
+      expect(
+        [...link.querySelectorAll('[aria-hidden="true"]')].map(
+          (mark) => mark.textContent,
+        ),
+      ).toContain(' ↗');
+    }
+  });
+
   it('opens the answer named by the hash, on load and on a hash change', () => {
     window.history.replaceState(null, '', '/faq#q4');
     const { container } = render(<FaqPage />);

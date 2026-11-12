@@ -12,7 +12,7 @@ export const DATA_SOURCES: LegalDocument = {
   lastUpdated: '2026-11-12',
   summary: [
     'Anime information on OtakuLeague comes from AniList.',
-    'Covers and banners belong to their rights holders and load from AniList’s servers.',
+    'Cover images belong to their rights holders and load from AniList’s servers.',
     'Your list, scores and XP stay on OtakuLeague and are never sent to AniList.',
   ],
   sections: [
@@ -23,7 +23,7 @@ export const DATA_SOURCES: LegalDocument = {
         <>
           <p>
             We do not write anime information ourselves. It comes from the
-            source below, through its public API, under its terms of use.
+            source below, through its public API.
           </p>
           <LegalTable
             caption="Sources"
@@ -33,7 +33,7 @@ export const DATA_SOURCES: LegalDocument = {
                 <a key="n" href="https://anilist.co">
                   AniList
                 </a>,
-                'Titles, synopses, dates, studios, genres, tags, scores and popularity, characters and staff, related anime, covers and banners',
+                'Titles, synopses, format, episodes, dates, season, status, studios, genres, scores, rankings, popularity, favourites, airing times, seasons of a series and cover images',
                 <a key="t" href="https://docs.anilist.co/guide/terms-of-use">
                   AniList API terms
                 </a>,
@@ -48,10 +48,10 @@ export const DATA_SOURCES: LegalDocument = {
       title: 'Images',
       body: (
         <p>
-          Covers, banners and character pictures are the property of the anime’s
-          studios, publishers and other rights holders. We do not copy them:
-          your browser loads them from AniList’s servers. If you own an image
-          and want it removed, write to us.
+          Cover images are the property of the anime’s studios, publishers and
+          other rights holders. We do not copy them: your browser loads them
+          from AniList’s servers. If you own an image and want it removed, write
+          to us.
         </p>
       ),
     },

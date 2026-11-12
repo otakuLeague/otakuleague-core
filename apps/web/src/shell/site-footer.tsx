@@ -7,11 +7,8 @@ export const ROADMAP_URL =
   'https://cosmic-plutonium-46d.notion.site/2b564006e720817ebcddda0414edf7b7?v=2b564006e72081b7b472000c768b8d2f';
 export const CONTACT_EMAIL = 'contact@otakuleague.com';
 export const DISCORD_URL = 'https://discord.gg/FKv2uhAmrM';
-
-const ABOUT_LINKS = [
-  { href: '/faq', label: 'About & FAQ' },
-  { href: '/contact', label: 'Contact' },
-] as const;
+/** The contact form (/contact) ships in OTA-147 slice 2; until then mail avoids a 404. */
+export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
 
 const LEGAL_LINKS = [
   { href: '/privacy', label: 'Privacy' },
@@ -57,11 +54,12 @@ export function SiteFooter() {
                 Roadmap <span aria-hidden="true">↗</span>
               </a>
             </li>
-            {ABOUT_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href}>{link.label}</Link>
-              </li>
-            ))}
+            <li>
+              <Link href="/faq">About &amp; FAQ</Link>
+            </li>
+            <li>
+              <a href={CONTACT_HREF}>Contact</a>
+            </li>
           </ul>
         </nav>
         <nav aria-labelledby="foot-legal">

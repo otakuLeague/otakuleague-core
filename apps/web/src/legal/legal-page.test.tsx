@@ -28,7 +28,11 @@ describe.each(DOCUMENTS)('$title', (document) => {
 
     const ids = sectionIds(container);
     expect(ids).toEqual(document.sections.map((section) => section.id));
-    expect(new Set(ids).size).toBe(ids.length);
+    const pageIds = [...container.querySelectorAll('[id]')].map((el) => el.id);
+    expect(pageIds).toEqual(
+      expect.arrayContaining(['top', 'toc-heading', 'tldr-heading', ...ids]),
+    );
+    expect(new Set(pageIds).size).toBe(pageIds.length);
     for (const id of ids) expect(id).toMatch(/^[a-z0-9-]+$/);
 
     const desktop = container.querySelector('nav.lg-toc');
@@ -143,11 +147,12 @@ describe('privacy facts', () => {
       'ol_signup',
       'ol_verify',
       'ol_reset',
-      'ol_oauth',
       'ol-theme',
     ]) {
       expect(privacy.textContent).toContain(cookie);
     }
+    expect(privacy.textContent).toContain('s4.anilist.co');
+    expect(privacy.textContent).not.toMatch(/Google|Settings/);
     cleanup();
 
     const { container: sources } = render(
@@ -155,6 +160,7 @@ describe('privacy facts', () => {
     );
     expect(sources.textContent).toContain('AniList');
     expect(sources.textContent).not.toMatch(/MyAnimeList|AnimeThemes/);
+    expect(sources.textContent).not.toMatch(/under its terms/);
   });
 });
 

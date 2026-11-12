@@ -15,8 +15,8 @@ export const PRIVACY_POLICY: LegalDocument = {
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
     'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
-    'Our website, server and database run in EU regions, and account emails go through Brevo, whose servers are in France, Germany and Belgium.',
-    'You can delete your account at any time.',
+    'Our server and database run in an EU region, and account emails go through Brevo, whose servers are in France, Germany and Belgium.',
+    'Write to us at any time and we delete your account and its data.',
   ],
   sections: [
     {
@@ -47,10 +47,6 @@ export const PRIVACY_POLICY: LegalDocument = {
             <li>
               <strong>Password</strong>: stored only as an argon2id hash. We
               never store the password itself.
-            </li>
-            <li>
-              If you sign in with Google: Google is your sign-in provider, and
-              we store your Google account ID and its email address.
             </li>
           </ul>
           <h3>When you use the site</h3>
@@ -108,8 +104,8 @@ export const PRIVACY_POLICY: LegalDocument = {
               [
                 'Vercel',
                 'Hosts the website',
-                'Pages you request, IP address (in transit)',
-                'EU region',
+                'Pages you request, IP address',
+                'Functions run in an EU region; pages are served from Vercel’s global network',
               ],
               [
                 'Railway',
@@ -171,11 +167,6 @@ export const PRIVACY_POLICY: LegalDocument = {
                 '10 minutes',
               ],
               [
-                <code key="n">ol_oauth</code>,
-                'Protects “Continue with Google” against forged requests',
-                '10 minutes',
-              ],
-              [
                 <code key="n">ol-theme</code>,
                 'Remembers the Light or Dark theme, only if you pick one',
                 '1 year, or until you pick System',
@@ -186,18 +177,30 @@ export const PRIVACY_POLICY: LegalDocument = {
       ),
     },
     {
+      id: 'third-party',
+      title: 'Images from AniList',
+      body: (
+        <p>
+          Anime cover images load straight from AniList’s servers (
+          <code>s4.anilist.co</code>), so your browser sends AniList your IP
+          address and browser details when it shows them, as with any image on
+          the web. AniList handles them under its own privacy policy.
+        </p>
+      ),
+    },
+    {
       id: 'keep',
       title: 'How long we keep it',
       body: (
         <ul>
           <li>
-            <strong>Your account</strong>: until you delete it. Deleting it
-            removes your profile, list, XP and sign-ins from the site; copies in
-            our database backups disappear as the backups roll over.
+            <strong>Your account</strong>: until you ask us to delete it. We
+            then delete your profile, list, XP and sign-ins; copies in our
+            database backups disappear as the backups roll over.
           </li>
           <li>
-            <strong>Sign-ups never confirmed</strong>: deleted after 24 hours,
-            by a cleanup that runs every day.
+            <strong>Sign-ups never confirmed</strong>: deleted within about 48
+            hours (they expire after 24 hours and a daily cleanup removes them).
           </li>
           <li>
             <strong>
@@ -221,11 +224,11 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: 'Your rights',
       body: (
         <p>
-          You can see and fix most of your data yourself on your profile and in
-          Settings, and delete your account there. You can also ask us at {mail}{' '}
-          for a copy of your data, to correct or erase it, to restrict or object
-          to how we use it, or to receive it in a portable format. We answer
-          within one month. If you think we got something wrong, you can
+          You can see and fix most of your data yourself on your profile. To
+          delete your account and its data, write to us at {mail}. You can also
+          ask us for a copy of your data, to correct or erase it, to restrict or
+          object to how we use it, or to receive it in a portable format. We
+          answer within one month. If you think we got something wrong, you can
           complain to your data protection authority (in France, the CNIL).
         </p>
       ),
@@ -257,7 +260,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       body: (
         <p>
           If we change this policy in a way that matters, we update the date at
-          the top and tell signed-in members on the site before it applies.
+          the top of this page and say what changed.
         </p>
       ),
     },

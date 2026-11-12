@@ -23,7 +23,7 @@ describe('SiteFooter', () => {
     ).toBe('/faq');
     expect(
       screen.getByRole('link', { name: 'Contact' }).getAttribute('href'),
-    ).toBe('/contact');
+    ).toBe(`mailto:${CONTACT_EMAIL}`);
   });
 
   it('opens the roadmap and every social network in a new tab, without an opener', () => {

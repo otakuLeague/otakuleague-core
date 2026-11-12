@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { DISCORD_URL } from '../../src/shell/site-footer';
-import { CONTACT_HREF, EXTERNAL_LINK, FAQ_ENTRIES } from './faq-entries';
+import { CONTACT_HREF, DISCORD_URL } from '../../src/shell/site-footer';
+import { EXTERNAL_LINK, FAQ_ENTRIES, NewTabMark } from './faq-entries';
 import { FaqDeepLink } from './faq-deep-link';
 import '../styles/info.css';
 
@@ -55,7 +55,7 @@ export default function FaqPage() {
                 <span className="in-q__n" aria-hidden="true">
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                <span className="in-q__t">{entry.question}</span>
+                <h2 className="in-q__t">{entry.question}</h2>
                 <span className="in-q__i" aria-hidden="true" />
               </summary>
               <div className="in-q__a">{entry.answer}</div>
@@ -81,7 +81,10 @@ export default function FaqPage() {
             Dc
           </span>
           <span>
-            <b>Join the Discord ↗</b>
+            <b>
+              Join the Discord
+              <NewTabMark />
+            </b>
             Chat with other fans and follow what ships
           </span>
           <span className="in-cta__arrow" aria-hidden="true">
