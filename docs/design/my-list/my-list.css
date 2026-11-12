@@ -242,13 +242,13 @@
 }
 .ml-status {
   position: absolute;
-  top: var(--space-2);
+  bottom: 12px;
   left: var(--space-2);
   z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: calc(100% - 52px);
+  max-width: calc(100% - 16px);
   height: 24px;
   padding: 0 9px 0 8px;
   border-radius: var(--radius-pill);
@@ -297,7 +297,8 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .ml-meta {
   display: flex;
@@ -369,8 +370,8 @@
     background-color var(--dur-press) var(--ease-enter);
 }
 .ml-plus {
-  right: var(--space-2);
-  bottom: 14px;
+  left: var(--space-2);
+  top: var(--space-2);
   height: 32px;
   padding: 0 12px;
   border-radius: var(--radius-pill);
@@ -513,7 +514,8 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   border-radius: 2px;
 }
 .ml-tt a:hover {
@@ -826,7 +828,8 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   font: 700 15px/20px var(--font-display);
 }
 .ml-pop__head small {
@@ -853,7 +856,7 @@
 }
 .ml-opts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 .ml-opt {
@@ -867,6 +870,7 @@
   background: var(--ground);
   color: var(--ink);
   font: 500 13px/1.15 var(--font-sans);
+  white-space: nowrap;
   text-align: left;
   cursor: pointer;
 }
@@ -912,7 +916,7 @@
   gap: 3px;
 }
 .ml-scorepick button {
-  height: 34px;
+  height: 32px;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -925,10 +929,6 @@
   background: var(--score-high);
   border-color: var(--score-high);
   color: #12101a;
-}
-.ml-scorepick button[data-in] {
-  border-color: color-mix(in oklab, var(--score-high) 50%, transparent);
-  color: var(--ink);
 }
 .ml-switchrow {
   display: flex;
@@ -1108,10 +1108,6 @@
   background: var(--tone);
   box-shadow: 0 0 8px var(--tone);
 }
-.br-card .ml-status {
-  top: auto;
-  bottom: var(--space-2);
-}
 
 /* ---------- XP moment ---------- */
 .ml-xp {
@@ -1237,7 +1233,8 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .ml-row__main a::after {
   content: '';
@@ -1610,6 +1607,8 @@
   .ml-plus {
     height: 44px;
     padding: 0 14px;
+    top: var(--space-1);
+    left: var(--space-1);
   }
   .ml-more-btn {
     width: 44px;
@@ -1673,5 +1672,18 @@
   }
   .ml-only-m {
     display: grid;
+  }
+}
+
+/* View toggle: "Table" on desktop, "List" below --bp-md (the table becomes rows there). */
+.ml-lbl-m {
+  display: none;
+}
+@container (max-width: 767px) {
+  .ml-lbl-d {
+    display: none;
+  }
+  .ml-lbl-m {
+    display: inline;
   }
 }

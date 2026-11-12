@@ -8,7 +8,7 @@ Mockups for `/my-list` and the add-to-list control, built by OTA-142. Open the `
 | `mockup-Table.html` | Table view, sortable headers, inline status/progress/score/favourite, a failed score save; phones get list rows |
 | `mockup-Mobile.html` | Three 390 px frames: list rows, grid with search (match counts in tabs), edit sheet |
 | `mockup-Light.html` | Light theme, Watching tab, table and grid |
-| `mockup-AddControl.html` | Control on the anime header (not in list, in list, popover, XP moment, save failed, removed, guest) and on a card (quick menu, in list, XP moment), phone sheet |
+| `mockup-AddControl.html` | Control on the anime header (not in list, in list, popover, XP moment, save failed, rewatching with the Rewatches stepper, removed, guest) and on a card (quick menu, in list, XP moment), phone sheet |
 | `mockup-States.html` | Loading, empty-list onboarding, empty tab, no results, load error, next page failed, session expired, worst-case content, MAL import dialog, guest |
 
 ## Direction
@@ -37,7 +37,7 @@ Mockups for `/my-list` and the add-to-list control, built by OTA-142. Open the `
 - Liberties: header totals (anime, episodes watched, favourites) from the summary call; per-status colour dots; "Mark all N watched" shortcut; rewatch count shown as "Rewatch ×2".
 
 ## Worst-case content (break-ui)
-Tested: 120-character romaji title, full-width + Japanese title, single-letter "K", 1,284 episodes with no total, 1,122 / ?, rewatch ×14, score 1 and 10, missing score, favourite + score + progress on one meta line, failed save on a row. Fixes applied in the mockups: titles clamp to 2 lines with `overflow-wrap: anywhere` and a reserved 2-line height so card rows align; numbers never truncate (tabular mono); card hover actions sit in a cover-sized overlay so they never cover the meta line; tabs `nowrap` (no "PLAN TO / WATCH" wrap on phones); the 7-column table becomes list rows below 768 px. Known and accepted: on a phone row the heart wraps to its own line when score and a 4-digit progress are present.
+Tested: 120-character romaji title, full-width + Japanese title, single-letter "K", 1,284 episodes with no total, 1,122 / ?, rewatch ×14, score 1 and 10, missing score, favourite + score + progress on one meta line, failed save on a row. Fixes applied in the mockups: titles clamp to 2 lines with `overflow-wrap: anywhere` and a reserved 2-line height so card rows align; numbers never truncate (tabular mono); card hover actions sit in a cover-sized overlay so they never cover the meta line; tabs `nowrap` (no "PLAN TO / WATCH" wrap on phones); the 7-column table becomes list rows below 768 px. Phone rows leave out the favourite heart (it shows in the Favourites tab, on cards and in the edit sheet) so the meta line never wraps. Card layout: info bottom-left (status chip, same corner as on browse cards), actions on top (+1 ep top-left, ⋯ top-right); a failed save replaces the meta line with the error and Retry. Titles use `word-break: normal` with `overflow-wrap: break-word` as the fallback. The 390 px shots use touch emulation (actions always visible).
 
 ## Accessibility check
 - Contrast (computed, sRGB approximation of the oklab mixes): status tones on their 12% tinted fill 5.4–8.5:1 dark, 4.9–6.1:1 light; chips on cover art use a solid dark backing (≥ 4.6:1 even on white art); muted text 6.6:1 dark / 7.3:1 light; ink on XP gold 11.9:1; error text on the error row 6.2:1. The build adds the `--ls-*` tones to `tokens.css` and `CHIP_TOKENS` in `tokens.test.ts`.
