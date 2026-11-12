@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home: loading</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../browse/browse.css" />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: signed in, data streaming. Hero copy, search and section heads are static and render at once; the XP card and each row stream in on their own (one Suspense boundary each). -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/" aria-current="page"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search" aria-label="Header search">
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a>
+            <button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-main">
+        <section class="hm-hero" aria-labelledby="hm-title" data-motion="on">
+          <div class="hm-sky" aria-hidden="true">
+            <div class="hm-blob hm-blob--a"></div>
+            <div class="hm-blob hm-blob--b"></div>
+          </div>
+          <div class="hm-logo">
+            <svg viewBox="0 0 200 200" role="img" aria-label="OtakuLeague logo: a dragon L piercing the O">
+              <defs>
+                <linearGradient id="hmChroma" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChroma-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChroma-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChroma)" stroke-width="20" mask="url(#hmChroma-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChroma)" mask="url(#hmChroma-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChroma)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChroma)" />
+            </svg>
+            <svg viewBox="0 0 200 200" class="hm-logo__sheen" aria-hidden="true">
+              <defs>
+                <linearGradient id="hmChromaSheen" x1="1" y1="1" x2="0" y2="0">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChromaSheen-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChromaSheen-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChromaSheen)" stroke-width="20" mask="url(#hmChromaSheen-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChromaSheen)" mask="url(#hmChromaSheen-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChromaSheen)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChromaSheen)" />
+            </svg>
+          </div>
+          <div class="hm-copy">
+            <p class="hm-eyebrow">Your anime HQ</p>
+            <h1 class="hm-h1" id="hm-title"><span>Track every anime.</span> <span>Earn XP.</span> <span class="hm-grad">Top the season.</span></h1>
+            <p class="hm-lede">Anime pages, seasonal charts and rankings, your watchlist, and XP for everything you add, finish and rate. Every season ends with a leaderboard.</p>
+            <form class="hm-search" role="search" aria-label="Hero search" action="/search" method="get">
+              <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" name="q" placeholder="Search anime, e.g. Frieren" aria-label="Search anime" />
+              <button class="ol-btn ol-btn--primary" type="submit">Search</button>
+            </form>
+            <div class="hm-xp hm-xp-skel" aria-busy="true" aria-label="Loading your XP">
+              <div class="br-skel"></div><div class="br-skel br-skel--line" style="margin: 0; width: 55%"></div><div class="br-skel br-skel--line" style="margin: 0"></div>
+            </div>
+          </div>
+        </section>
+        <div class="hm-rows">
+        <section class="br-section" aria-labelledby="s-continue">
+          <div class="br-section__head">
+            <div><h2 id="s-continue">Continue watching</h2><p>Pick up where you left off</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a></div>
+          </div>
+          <ul class="br-row-scroll" aria-busy="true" aria-label="Loading">
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-trending">
+          <div class="br-section__head">
+            <div><h2 id="s-trending">Trending now</h2><p>Most added this week</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a></div>
+          </div>
+          <ul class="br-row-scroll" aria-busy="true" aria-label="Loading">
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-season">
+          <div class="br-section__head">
+            <div><h2 id="s-season">This season · Fall 2026</h2><p>Airing now, most popular first</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a></div>
+          </div>
+          <ul class="br-row-scroll" aria-busy="true" aria-label="Loading">
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          </ul>
+        </section>
+        <section class="br-section" aria-labelledby="s-top">
+          <div class="br-section__head">
+            <div><h2 id="s-top">Top rated</h2><p>Highest scores of all time</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a></div>
+          </div>
+          <ul class="br-row-scroll" aria-busy="true" aria-label="Loading">
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          <li><div class="br-skel br-skel--cover"></div><div class="br-skel br-skel--line"></div><div class="br-skel br-skel--line br-skel--short"></div></li>
+          </ul>
+        </section>
+        </div>
+        <section class="hm-features" aria-labelledby="hm-feat">
+          <div class="br-section__head">
+            <div><h2 id="hm-feat">Everything you need from day one</h2><p>Free to use. Anime data from AniList.</p></div>
+          </div>
+          <ul class="hm-feat-grid">
+            <li class="hm-feat">
+              <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="2.5" width="14" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
+              <h3>Every anime, one page</h3>
+              <p>Score, synopsis, studios and every season of a franchise.</p>
+            </li>
+            <li class="hm-feat">
+              <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
+              <h3>Find it fast</h3>
+              <p>Typo-proof search, plus <a href="/season">Seasonal</a>, <a href="/top/anime">Rankings</a> and <a href="/discover">Discover</a>.</p>
+            </li>
+            <li class="hm-feat">
+              <span class="hm-feat__ico hm-feat__ico--violet" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5.5l1.5 1.5L8 4.5M4 11l1.5 1.5L8 10M10.5 6h6M10.5 11.5h6M4.5 16h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+              <h3>My List</h3>
+              <p>Episodes and scores in one tap.</p>
+              <ul class="hm-statuses" aria-label="List statuses"><li>Watching</li><li>Completed</li><li>On hold</li><li>Dropped</li><li>Plan to watch</li></ul>
+            </li>
+            <li class="hm-feat hm-feat--wide">
+              <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 7.7l5-.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
+              <h3>XP, levels and your profile</h3>
+              <p>Adding, finishing and rating earns XP. Your level, stats and favourites live on your profile.</p>
+              <div class="hm-meter" aria-hidden="true"><i style="--pct: 62%"></i></div>
+            </li>
+            <li class="hm-feat hm-feat--wide">
+              <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3h8v4a4 4 0 0 1-8 0zM6 5H3.5a2.5 2.5 0 0 0 3 3M14 5h2.5a2.5 2.5 0 0 1-3 3M10 11v3M7 17h6M8 14h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
+              <h3>A leaderboard every season</h3>
+              <p>Climb the <a href="/leaderboard">season leaderboard</a>.</p>
+              <ol class="hm-podium" aria-label="Example leaderboard">
+                <li><b>1</b><span>yuki.exe</span><span>18,420 XP</span></li>
+                <li><b>2</b><span>shonen_jump_sensei</span><span>17,905 XP</span></li>
+                <li><b>3</b><span>mai</span><span>16,330 XP</span></li>
+              </ol>
+            </li>
+          </ul>
+        </section>
+        <section class="hm-road" aria-labelledby="hm-road">
+          <div class="br-section__head">
+            <div><h2 id="hm-road">Coming after launch</h2><p>Next up, roughly in order.</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="https://roadmap.example" rel="noopener">Full roadmap <span aria-hidden="true">↗</span></a></div>
+          </div>
+          <ol class="hm-road__list">
+            <li class="hm-road__first"><span class="ol-badge hm-badge-next">Next</span><h3>Games and quizzes</h3><p>Anime trivia and quick games that pay out XP.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>Friends and notifications</h3><p>Follow friends and hear when a new episode lands.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>List comparator</h3><p>Put two lists side by side and find what to watch together.</p></li>
+            <li><span class="ol-badge ol-badge--upcoming">Later</span><h3>Manga</h3><p>Track chapters next to your anime.</p></li>
+          </ol>
+        </section>
+      </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

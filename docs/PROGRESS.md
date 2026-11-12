@@ -2,39 +2,35 @@
 
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
 
-Updated: 2026-11-11
+Updated: 2026-11-12
 
 ## Current milestone
-W2 designs merged. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR). API and Postgres live on Railway. OTA-152 slice 1 merged; OTA-100 Overview tab is in progress.
+W2 Anime page + search. Done: OTA-152 shell, OTA-97 anime page shell. Merged: OTA-172 season id route (#57), OTA-153 Home design (#59). In review: OTA-100 Overview tab slice 1 (PR #58, 934 lines, waits for Farouk). OTA-171 design-direction docs PR #56 waits for Farouk.
 
 ## Last session
-Autopilot on OTA-100 slice 1 (branch `feat/OTA-100-overview-tab`). The Overview tab now renders:
-- Synopsis: plain text from the API. A "(Source: X)" line is pulled into a note via a ReDoS-safe regex on the last 200 chars. Collapses to the first paragraph. 5-line clamp with fade only when the first paragraph is over 350 chars; the noscript style shows all.
-- Details card: Format, Episodes (incl. "N so far × M min"), Aired (or "Premieres" when upcoming), Season, Studio(s).
-- Genre chips: plain text, deduped, max 20.
-
-Pure view model `overviewFacts()` in `apps/web/src/anime/overview-facts.ts`. `OverviewLoader` in `app/anime/[slug]/overview.tsx` reuses the request-cached `loadAnime` (no extra API call). Client island: `synopsis.tsx`. Caps: synopsis 20,000 chars, studios 10.
-Decision: only an AniList synopsis is shown. A Jikan/MAL synopsis shows the empty box until OTA-127 clears MAL terms (ADR 0006).
+Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/design/home/` (Main, Mobile, Light, SignedIn, Poster, Loading, Error) with `motion.md` and `README.md`; Pierce logo SVGs in `apps/web/public/brand/` (full, light-ground, small mark). Hero = "Calm night" with radial-gradient glows (no `filter: blur`) and an opacity sheen instead of a rotating gradient; motion paused until a client island allows it. LCP = hero `h1`, static. Shared row scroller in `docs/design/browse/browse.css` now bleeds to the edge with a gutter-capped fade, desktop ‹ › buttons and one-line card meta. Row and XP slots keep one height across loaded/loading/error/empty (no CLS).
 
 ## In progress
-- OTA-100 slice 1 PR: open, waiting for Farouk. 934 lines, over the 400-line guideline, so no automerge.
-- OTA-172 PR #57: open. OTA-171 PR #56: Farouk's.
+- OTA-152 remaining slices: 2b member state, mobile sheet + search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding`, 404/500 restyle, social icons.
+- OTA-100 slice 1 (#58): synopsis, details card, genre chips via `overviewFacts()` in `src/anime/overview-facts.ts`. Only an AniList synopsis is shown until OTA-127 clears MAL terms. Next slices: tags + spoiler toggle, trailer + where to watch, next-episode card, tab previews.
 
 ## Next 3 tasks
-1. OTA-100 slice 2: tags + site-wide spoiler toggle (cookie `ol-spoilers`, read with `cookies()` inside the tab's Suspense, modelled on `src/shell/theme.ts`).
-2. OTA-100 slices 3–5: trailer click-to-load (youtube-nocookie, validate id `^[A-Za-z0-9_-]{11}$`) + where to watch (links kind 'streaming'); next-episode card (reuse Countdown or drop); tab previews (score, related via `loadFranchise`). Later API slice for source material + age rating (migration + ADR).
-3. OTA-153 Home design once OTA-171 merges. Also OTA-174 (new: cap source text size in the API, quadratic tag-strip regex) and OTA-173.
+1. OTA-136 Build: Home page (unblocked once this PR merges): Logo component (unique gradient ids), motion island, `--ease-drift` into tokens.css, hide `.sh-bg` on home, browse row changes.
+2. OTA-98 Build: search, or OTA-152 slice 2b.
+3. OTA-166 vendored design skills (protected path, Farouk merges), or OTA-173 (W7): API guard against id enumeration triggering imports, from the OTA-172 security review.
 
 ## Blockers
-- OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
-- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked, so the normal web build fails here; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. API checks rely on CI. The proxy also blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. The proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- `scripts/design/shots.mjs` can't find Playwright in cloud runs (installed under `/opt/node-tools/node_modules`, ESM ignores `NODE_PATH`): run a copy next to a symlinked `node_modules`. Fix belongs in a protected-path PR.
 
 ## Known bugs
-- `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
+- `Cover` has no fallback when an image fails to load. No ticket yet.
 
 ## Notes
+- OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
+- New from the OTA-100 review: OTA-174 (cap source text size in the API).
+- Open questions on OTA-153: Pierce mark site-wide in the header now? Leaderboard per season or all-time? "Trending" sort or reuse Top airing?
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
-- Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
-- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
-- Open design question: ticket asks for "purple primary, cyan secondary"; OTA-91's tokens use teal. v2 keeps teal for UI and purple → cyan for the brand gradient.
+- Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
+- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide.
 - Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.

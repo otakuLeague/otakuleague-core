@@ -39,10 +39,21 @@ export function tabSegmentOf(pathname: string, slug: string): AnimeTabSegment {
   return isTabSegment(rest) ? rest : '';
 }
 
+/** The tab an optional catch-all `[[...tab]]` param names: Overview when absent, null if unknown. */
+export function tabSegmentFromParam(
+  tab: readonly string[] | undefined,
+): AnimeTabSegment | null {
+  if (tab === undefined || tab.length === 0) return '';
+  const [segment] = tab;
+  return tab.length === 1 && segment !== undefined && isTabSegment(segment)
+    ? segment
+    : null;
+}
+
 /** One main-line entry of the season selector, trimmed from the franchise (OTA-97). */
 export interface SeasonOption {
   readonly anilistId: number;
-  /** Null until imported: shown but not linked yet (OTA-97 follow-up). */
+  /** Null until imported: linked through /anime/anilist/[id], which imports it (OTA-172). */
   readonly slug: string | null;
   readonly label: string;
   readonly year: number | null;
@@ -50,14 +61,25 @@ export interface SeasonOption {
   readonly upcoming: boolean;
 }
 
-/** The selector's seasons, or null when there is no other season to open. */
+/**
+ * Where a season opens on this tab: its page once imported, else the AniList id route, which
+ * imports it and redirects to the canonical slug on the same tab (OTA-172).
+ */
+export function seasonHref(
+  season: Pick<SeasonOption, 'anilistId' | 'slug'>,
+  segment: AnimeTabSegment,
+): string {
+  if (season.slug !== null) return tabHref(season.slug, segment);
+  const base = `/anime/anilist/${season.anilistId}`;
+  return segment === '' ? base : `${base}/${segment}`;
+}
+
+/** The selector's seasons, or null when the main line has no other season to switch to. */
 export function seasonOptions(
   franchise: AnimeFranchise | null,
 ): readonly SeasonOption[] | null {
   if (franchise === null || franchise.state === 'unavailable') return null;
-  // Nothing to switch to unless another season has a page (a slug) to open.
-  const others = franchise.mainLine.filter((season) => !season.isCurrent);
-  if (!others.some((season) => season.slug !== null)) return null;
+  if (franchise.mainLine.length < 2) return null;
   return franchise.mainLine.map((season) => ({
     anilistId: season.anilistId,
     slug: season.slug,
