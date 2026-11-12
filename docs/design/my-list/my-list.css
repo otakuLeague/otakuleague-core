@@ -1662,3 +1662,16 @@
 .ml-grid .br-skel {
   display: block;
 }
+
+/* Below --bp-md the table view becomes the list rows (a 7-column table does not fit 390 px). */
+.ml-only-m {
+  display: none;
+}
+@container (max-width: 767px) {
+  .ml-table-wrap[data-m-rows] {
+    display: none;
+  }
+  .ml-only-m {
+    display: grid;
+  }
+}
