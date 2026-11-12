@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { httpUrl, partialDate, synopsisText } from './parse';
+import { httpUrl, partialDate, stripTags, synopsisText } from './parse';
 
 describe('synopsisText', () => {
   it('turns AniList HTML into paragraphs of plain text', () => {
@@ -62,5 +62,64 @@ describe('httpUrl', () => {
     [42, null],
   ])('%j -> %j', (input, expected) => {
     expect(httpUrl(input)).toBe(expected);
+  });
+});
+
+describe('synopsisText raw cap', () => {
+  it('keeps 20,000 characters whole and cuts 20,001 to 20,000', () => {
+    expect(synopsisText('a'.repeat(20_000))).toHaveLength(20_000);
+    expect(synopsisText('a'.repeat(20_001))).toHaveLength(20_000);
+  });
+
+  it('drops a surrogate pair split by the cut', () => {
+    const result = synopsisText(`${'a'.repeat(19_999)}\u{1F600}`);
+
+    expect(result).toHaveLength(19_999);
+    // encodeURIComponent throws on a lone surrogate.
+    expect(() => encodeURIComponent(result ?? '')).not.toThrow();
+  });
+
+  it('does not throw on a tag cut in half', () => {
+    expect(synopsisText(`${'a'.repeat(19_998)}<br>`)).toBe(
+      `${'a'.repeat(19_998)}<b`,
+    );
+  });
+
+  it('is fast on a huge run of "<"', () => {
+    const started = performance.now();
+
+    synopsisText('<'.repeat(100_000));
+
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+});
+
+describe('stripTags', () => {
+  it.each([
+    ['a<br>b', 'a\nb'],
+    ['a<br/>b', 'a\nb'],
+    ['a<br />b', 'a\nb'],
+    ['a</p >b', 'a\n\nb'],
+    ['a<SCRIPT>x</SCRIPT>b', 'ab'],
+    ['a<style>x</style >b', 'ab'],
+    ['a<script>keep', 'akeep'],
+    ['a<script>x<script>y', 'axy'],
+    ['1 < 2', '1 < 2'],
+    ['<i>x</i>', 'x'],
+    ['', ''],
+  ])('%j -> %j', (html, expected) => {
+    expect(stripTags(html)).toBe(expected);
+  });
+
+  it.each([
+    ['"<" x 1,048,576', '<'.repeat(1_048_576)],
+    ['"<script>" x 131,072', '<script>'.repeat(131_072)],
+    ['"<script" x 149,796', '<script'.repeat(149_796)],
+  ])('is linear on hostile input: %s', (_name, html) => {
+    const started = performance.now();
+
+    stripTags(html);
+
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 });

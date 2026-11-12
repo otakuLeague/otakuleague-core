@@ -1,6 +1,6 @@
 import type { AnimeDataSource } from '@otakuleague/shared-types';
 import type { RateLimiter } from './rate-limiter';
-import { SourceUnavailableError } from './source.types';
+import { SourceUnavailableError, UnusableAnswerError } from './source.types';
 
 export interface SourceHttpOptions {
   readonly source: AnimeDataSource;
@@ -13,6 +13,8 @@ export interface SourceHttpOptions {
   /** Longest wait for a free slot before giving up ("queue full"). */
   readonly maxQueueMs: number;
   readonly now?: () => number;
+  /** Largest response body read, in bytes (default 1 MiB). */
+  readonly maxBodyBytes?: number;
 }
 
 export interface SourceResponse {
@@ -22,6 +24,48 @@ export interface SourceResponse {
 
 const DEFAULT_RETRY_AFTER_MS = 60_000;
 const MAX_ATTEMPTS = 2;
+const MAX_BODY_BYTES = 1_048_576;
+
+type CappedBody =
+  | { readonly kind: 'read'; readonly text: string }
+  | { readonly kind: 'too_large' };
+
+/**
+ * Reads the body as text, never holding more than `limit` bytes: a Content-Length above the
+ * limit is refused before reading, and a stream (also one without Content-Length) is cancelled
+ * as soon as it passes the limit.
+ */
+async function readCappedBody(
+  response: Response,
+  limit: number,
+): Promise<CappedBody> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isInteger(declared) && declared > limit) {
+    await response.body?.cancel();
+    return { kind: 'too_large' };
+  }
+  if (response.body === null) return { kind: 'read', text: '' };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel();
+      return { kind: 'too_large' };
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { kind: 'read', text: new TextDecoder().decode(bytes) };
+}
 
 /** Seconds ("30") or an HTTP date; anything else is the default. */
 export function retryAfterMs(header: string | null, now: number): number {
@@ -37,7 +81,8 @@ export function retryAfterMs(header: string | null, now: number): number {
 /**
  * One rate-limited JSON request. 2xx and 404 come back to the adapter; a 429 waits for
  * Retry-After and tries once more; anything else (5xx, timeout, network, non-JSON) throws
- * SourceUnavailableError and starts the cool-down.
+ * SourceUnavailableError and starts the cool-down. A body over `maxBodyBytes` (1 MiB by
+ * default) throws UnusableAnswerError without a cool-down: one bad answer, not a down source.
  */
 export async function requestJson(
   url: string,
@@ -93,11 +138,22 @@ export async function requestJson(
       return fail(`HTTP ${response.status}`);
     }
     try {
+      const capped = await readCappedBody(
+        response,
+        options.maxBodyBytes ?? MAX_BODY_BYTES,
+      );
+      if (capped.kind === 'too_large') {
+        throw new UnusableAnswerError(
+          options.source,
+          'response body too large',
+        );
+      }
       return {
         status: response.status,
-        body: (await response.json()) as unknown,
+        body: JSON.parse(capped.text) as unknown,
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof UnusableAnswerError) throw error;
       return fail('response is not JSON');
     }
   }
