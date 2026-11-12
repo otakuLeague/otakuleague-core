@@ -2,17 +2,22 @@ name: Autopilot merge
 
 # Squash-merges a PR once Farouk's rules are met, so the autopilot never merges anything itself
 # (OTA-161). A PR is merged only if ALL of these hold:
-# - it has the `automerge` label, last added by an account in ALLOWED_LABELERS (the autopilot adds it
-#   after its review found no Critical),
+# - it has the `automerge` label, last added by an account in ALLOWED_LABELERS, OR (OTA-176) the
+#   `autopilot` label, last added by an account in ALLOWED_LABELERS, on a PR opened by such an
+#   account, whose `## Checklist` section has at least 16 task lines and every one ticked (`- [x] `).
+#   The autopilot leaves a step it could not do unticked, e.g. an unresolved Critical or an
+#   oversized PR,
 # - it is open, not a draft, and its branch is in this repo (no forks),
 # - every check run on its head commit completed, and the five CI jobs (GitHub Actions) succeeded;
 #   commit statuses (e.g. deploy previews) are not required,
 # - none of its files matches a pattern in .github/autopilot-protected-paths, read from main.
 # The merge is pinned to the head commit that was checked, so a later push is never merged unseen.
-# Remove the `automerge` label, or disable this workflow in the Actions tab, to stop it.
+# The autopilot keeps its PR a draft until the checklist is final, then marks it ready for review.
+# Remove the `automerge`/`autopilot` label, convert the PR to a draft, or disable this workflow in
+# the Actions tab, to stop it.
 #
 # It runs after CI or Screenshots finishes on a PR (whichever ends last retries the merge), and
-# when the label is added (CI may already be green).
+# when a label is added or the PR is marked ready for review (CI may already be green).
 # No step checks out or runs PR code, which is what makes pull_request_target safe here.
 # A merge made with GITHUB_TOKEN does not start the CI workflow on main (GitHub's loop guard);
 # every merged commit already passed CI on the PR head.
@@ -21,7 +26,7 @@ on:
     workflows: [CI, Screenshots]
     types: [completed]
   pull_request_target:
-    types: [labeled]
+    types: [labeled, ready_for_review]
 
 permissions: {}
 
@@ -33,7 +38,10 @@ jobs:
   merge:
     name: Autopilot merge
     if: >-
-      (github.event_name == 'pull_request_target' && github.event.label.name == 'automerge') ||
+      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' &&
+       (github.event.label.name == 'automerge' || github.event.label.name == 'autopilot')) ||
+      (github.event_name == 'pull_request_target' && github.event.action == 'ready_for_review' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&
        github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
@@ -66,10 +74,29 @@ jobs:
           [ "$(jq -r .draft <<<"$info")" = false ] || skip "PR #$pr is a draft"
           [ "$(jq -r .head.repo.full_name <<<"$info")" = "$REPO" ] || skip "PR #$pr comes from a fork"
           [ "$(jq -r .base.ref <<<"$info")" = "$DEFAULT_BRANCH" ] || skip "PR #$pr does not target $DEFAULT_BRANCH"
-          jq -e '.labels | map(.name) | index("automerge")' <<<"$info" >/dev/null || skip "PR #$pr has no automerge label"
+          # Which label grants the merge: `automerge`, or `autopilot` with a finished checklist (OTA-176).
+          if jq -e '.labels | map(.name) | index("automerge")' <<<"$info" >/dev/null; then
+            gate=automerge
+          elif jq -e '.labels | map(.name) | index("autopilot")' <<<"$info" >/dev/null; then
+            gate=autopilot
+          else
+            skip "PR #$pr has neither the automerge nor the autopilot label"
+          fi
           events=$(gh api --paginate "repos/$REPO/issues/$pr/events?per_page=100")
-          labeler=$(jq -rs '[.[][] | select(.event == "labeled" and .label.name == "automerge")] | last | .actor.login // empty' <<<"$events")
-          grep -qxF -- "$labeler" <<<"${ALLOWED_LABELERS// /$'\n'}" || skip "automerge was added by '${labeler:-unknown}', not an allowed account"
+          labeler=$(jq -rs --arg l "$gate" '[.[][] | select(.event == "labeled" and .label.name == $l)] | last | .actor.login // empty' <<<"$events")
+          grep -qxF -- "$labeler" <<<"${ALLOWED_LABELERS// /$'\n'}" || skip "$gate was added by '${labeler:-unknown}', not an allowed account"
+          if [ "$gate" = autopilot ]; then
+            author=$(jq -r .user.login <<<"$info")
+            grep -qxF -- "$author" <<<"${ALLOWED_LABELERS// /$'\n'}" || skip "PR #$pr was opened by '$author', not an allowed account"
+            # The `## Checklist` section, up to the next `## ` heading.
+            jq -r '.body // ""' <<<"$info" | tr -d '\r' \
+              | awk '/^## /{on = ($0 ~ /^## Checklist[[:space:]]*$/); next} on' > "$RUNNER_TEMP/checklist"
+            # A task line is any list item with a box: `-`, `*`, `+` or `1.`, any spacing, `[ ]`, `[]`, `[x]`.
+            tasks=$(grep -cE '^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]*\[' "$RUNNER_TEMP/checklist" || true)
+            ticked=$(grep -cE '^- \[[xX]\] ' "$RUNNER_TEMP/checklist" || true)
+            [ "$tasks" -ge 16 ] || skip "PR #$pr checklist has $tasks task lines, expected at least 16"
+            [ "$ticked" -eq "$tasks" ] || skip "PR #$pr checklist has $((tasks - ticked)) step(s) not ticked"
+          fi
           sha=$(jq -r .head.sha <<<"$info")
           if [ -n "$RUN_SHA" ] && [ "$RUN_SHA" != "$sha" ]; then skip "the triggering run was on $RUN_SHA, PR head is now $sha"; fi
 
