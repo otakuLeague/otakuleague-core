@@ -51,17 +51,18 @@
           <figcaption>Error · wrong identifier or password (401)</figcaption>
           <!-- Same message for an unknown account, a wrong password and a Google-only account: never says which. -->
           <form class="au-card">
-            <div class="au-alert" role="alert"><strong>That didn't match.</strong><span>Check your email or username and password, then try again.</span></div>
+            <div class="au-alert" role="alert" id="err401"><strong>That didn't match.</strong><span>Check your email or username and password, then try again.</span></div>
             <div class="au-field">
               <label for="e1">Email or username</label>
-              <div class="au-input" data-state="error"><input id="e1" value="kaito_tanaka" aria-invalid="true" aria-describedby="e1a" /></div>
+              <div class="au-input" data-state="error"><input id="e1" value="kaito_tanaka" aria-invalid="true" aria-describedby="err401" /></div>
             </div>
             <div class="au-field">
               <label for="e2">Password</label>
-              <div class="au-input" data-state="error"><input id="e2" type="password" value="hunter22" aria-invalid="true" /><button class="au-reveal" type="button">Show</button></div>
+              <div class="au-input" data-state="error"><input id="e2" type="password" value="hunter22" aria-invalid="true" aria-describedby="err401" /><button class="au-reveal" type="button">Show</button></div>
               <a class="au-after" href="/auth/forgot-password">Forgot password?</a>
             </div>
             <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+            <!-- Shown on every failed sign-in, never only for unconfirmed accounts. -->
             <p class="au-foot"><a href="/auth/resend-confirmation">Didn't get your confirmation email?</a></p>
           </form>
         </figure>
@@ -78,7 +79,7 @@
               <label for="r2">Password</label>
               <div class="au-input"><input id="r2" type="password" /><button class="au-reveal" type="button">Show</button></div>
             </div>
-            <!-- The countdown is not a live region; at 0 a polite status says "You can try again now". -->
+            <p class="au-sr" role="status"></p><!-- Filled with "You can try again now" when the wait ends. -->
             <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">4:52</span></button>
             <p class="au-foot"><a href="/auth/forgot-password">Reset your password instead</a></p>
           </form>
@@ -133,7 +134,8 @@
         <figure class="au-state" data-theme="light">
           <figcaption>Light theme · system light, same layout</figcaption>
           <form class="au-card">
-            <div class="au-alert" data-tone="ok" role="status"><strong>Password updated.</strong><span>Sign in with your new password.</span></div>
+            <!-- Flash present at page load: no live region, focus goes to the page h1. -->
+            <div class="au-alert" data-tone="ok"><strong>Password updated.</strong><span>Sign in with your new password.</span></div>
             <div class="au-field">
               <label for="t1">Email or username</label>
               <div class="au-input" data-demo="focus"><input id="t1" value="kaito@example.com" /></div>

@@ -42,7 +42,7 @@
         <figure class="au-state">
           <figcaption>Resent · cooldown over, button pressed</figcaption>
           <div class="au-card">
-            <div class="au-alert" data-tone="ok" role="status"><strong>Sent again.</strong><span>Use the newest email: older links stop working.</span></div>
+            <div class="au-alert" data-tone="ok" role="status"><strong>Sent again.</strong><span>Use the newest email.</span></div>
             <button class="ol-btn ol-btn--secondary au-btn" aria-disabled="true">Resend email in <span class="ol-num">0:59</span></button>
           </div>
         </figure>
@@ -51,11 +51,12 @@
           <figcaption>Resend · 429 (5 per hour)</figcaption>
           <div class="au-card">
             <div class="au-alert" data-tone="wait" role="alert"><strong>That's a lot of emails.</strong><span>You can resend in about 40 minutes. The last link still works.</span></div>
+            <p class="au-sr" role="status"></p><!-- Filled with "You can try again now" when the wait ends. -->
           </div>
         </figure>
 
         <figure class="au-state">
-          <figcaption>Verified · /auth/verify?token=… success</figcaption>
+          <figcaption>Verified · /auth/verified interstitial (token exchanged, clean URL)</figcaption>
           <!-- The link signs the user in. Memorable moment: the badge pops in with --ease-spring (motion.md). Focus on the h1. -->
           <div class="au-card">
             <div class="au-badge" data-tone="ok" aria-hidden="true">✓</div>
@@ -70,14 +71,14 @@
           <div class="au-card">
             <div class="au-badge" data-tone="wait" aria-hidden="true">◷</div>
             <h2 tabindex="-1">This link doesn't work anymore</h2>
-            <p>Confirmation links last 24 hours and work once. Enter your email for a new one.</p>
+            <p>It has expired or is incomplete. Enter your email for a new one.</p>
             <div class="au-field"><label for="x1">Email</label><div class="au-input"><input id="x1" type="email" autocomplete="email" /></div></div>
             <button class="ol-btn ol-btn--primary au-btn">Send a new link</button>
           </div>
         </figure>
 
         <figure class="au-state">
-          <figcaption>Verify · already confirmed (link opened twice)</figcaption>
+          <figcaption>Verify · used link on an account already confirmed</figcaption>
           <div class="au-card">
             <div class="au-badge" data-tone="ok" aria-hidden="true">✓</div>
             <h2 tabindex="-1">Already confirmed</h2>
@@ -89,8 +90,8 @@
     </section>
 
     <section class="au-board" aria-label="Unverified email banner">
-      <h2>Unconfirmed new email: banner inside the site shell</h2>
-      <!-- Shown only while a changed email (Settings) waits for confirmation; sign-ups cannot be signed in unconfirmed and Google accounts never see it. Below the header, not sticky, server-rendered (no layout shift). Dismiss hides it for the browser session. -->
+      <h2>Unconfirmed new email: banner inside the site shell (not built in v1 unless email change is scoped)</h2>
+      <!-- Only while a changed email (Settings) waits for confirmation: email change is not in PARITY, so this ships only if it is scoped. Sign-ups are never signed in unconfirmed; Google accounts never see it. Below the header, not sticky; rendered in the dynamic part of the page (ADR 0014), so it may stream in after the shell. Dismiss hides it for the browser session. -->
       <div class="sh" style="border: 1px solid var(--border); border-radius: 18px">
         <div class="sh-bg" aria-hidden="true"></div>
         <header class="sh-header ol-glass">
@@ -126,7 +127,7 @@
       </header>
         <div class="au-banner" role="region" aria-label="Email not confirmed">
           <div class="au-banner__in">
-            <p><strong>Confirm your new email address.</strong> Until you do, sign-in and reset emails still go to your old one.</p>
+            <p><strong>Confirm your new email address.</strong> Until you do, account emails still go to your old one.</p>
             <button class="ol-btn ol-btn--secondary ol-btn--sm">Resend</button>
             <button class="au-x" aria-label="Hide for now">×</button>
           </div>

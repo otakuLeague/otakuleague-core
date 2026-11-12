@@ -70,13 +70,13 @@
             </div>
             <div class="au-field">
               <label for="a2">Username</label>
-              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a2" value="Kaito" aria-invalid="true" /></div>
-              <p class="au-msg" data-tone="bad" role="status">Kaito is taken. Try <a href="#">kaito_23</a> or <a href="#">kaito_fan</a>.</p>
+              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a2" value="Kaito" aria-invalid="true" aria-describedby="a2m" /></div>
+              <p class="au-msg" data-tone="bad" role="status" id="a2m">Kaito is taken. Try <a href="#">kaito_23</a> or <a href="#">kaito_fan</a>.</p>
             </div>
             <div class="au-field">
               <label for="a3">Username</label>
-              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a3" value="kai.to!" aria-invalid="true" /></div>
-              <p class="au-msg" data-tone="bad">3 to 20 characters: letters, numbers and _ only.</p>
+              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a3" value="kai.to!" aria-invalid="true" aria-describedby="a3m" /></div>
+              <p class="au-msg" data-tone="bad" id="a3m">3 to 20 characters: letters, numbers and _ only.</p>
             </div>
             <div class="au-field">
               <label for="a4">Username</label>
@@ -96,13 +96,13 @@
             </div>
             <div class="au-field">
               <label for="p2">Confirm password</label>
-              <div class="au-input" data-state="error"><input id="p2" type="password" value="otaku2025" aria-invalid="true" /><button class="au-reveal" type="button">Show</button></div>
-              <p class="au-msg" data-tone="bad">Passwords don't match.</p>
+              <div class="au-input" data-state="error"><input id="p2" type="password" value="otaku2025" aria-invalid="true" aria-describedby="p2m" /><button class="au-reveal" type="button">Show</button></div>
+              <p class="au-msg" data-tone="bad" id="p2m">Passwords don't match.</p>
             </div>
             <div class="au-field">
               <label for="p3">Password (submitted too short)</label>
-              <div class="au-input" data-state="error"><input id="p3" type="password" value="abc1" aria-invalid="true" /><button class="au-reveal" type="button">Show</button></div>
-              <ul class="au-rules"><li>At least 8 characters <em>(4 / 8)</em></li><li data-met>A number or symbol</li></ul>
+              <div class="au-input" data-state="error"><input id="p3" type="password" value="abc1" aria-invalid="true" aria-describedby="p3m" /><button class="au-reveal" type="button">Show</button></div>
+              <ul class="au-rules" id="p3m"><li>At least 8 characters <em>(4 / 8)</em></li><li data-met>A number or symbol</li></ul>
             </div>
           </div>
         </figure>
@@ -132,6 +132,7 @@
           <div class="au-card">
             <div class="au-alert" data-tone="wait" role="alert"><strong>Slow down a little.</strong><span>Too many sign-ups from this network. Try again in about 10 minutes. Your entries are kept.</span></div>
             <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">9:58</span></button>
+            <p class="au-sr" role="status"></p><!-- Filled with "You can try again now" when the wait ends. -->
           </div>
         </figure>
 

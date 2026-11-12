@@ -8,13 +8,14 @@
   --au-sky-a: color-mix(in oklab, var(--brand-a) 30%, transparent);
   --au-sky-b: color-mix(in oklab, var(--accent) 24%, transparent);
   --au-mark: var(--accent);
+  --au-focus: var(--accent);
   --au-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent);
 }
-[data-theme='light'] { --au-mark: var(--accent-ink); }
+[data-theme='light'] { --au-mark: var(--accent-ink); --au-focus: var(--accent-ink); }
 body { margin: 0; background: var(--ground); }
 a { color: var(--accent-ink); text-underline-offset: 3px; }
 :is(a, button, input, textarea, .au-drop):focus-visible,
-[data-demo='focus'] { outline: 2px solid var(--accent); outline-offset: 2px; }
+[data-demo='focus'] { outline: 2px solid var(--au-focus); outline-offset: 2px; }
 
 /* ---------- Page: showcase panel + form column, no site shell ---------- */
 .au {
@@ -197,7 +198,6 @@ h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
   color: var(--muted);
 }
 .au-foot a,
-.au-link { font-weight: 600; }
 
 /* ---------- Fields ---------- */
 .au-field { display: flex; flex-direction: column; gap: 6px; }
@@ -227,9 +227,9 @@ h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
 }
 .au-input textarea { height: 128px; padding: var(--space-3) var(--space-4); resize: vertical; }
 .au-input input::placeholder,
-.au-input textarea::placeholder { color: var(--faint); }
+.au-input textarea::placeholder { color: var(--muted); }
 .au-input:focus-within,
-.au-input[data-demo='focus'] { border-color: var(--accent); box-shadow: var(--au-ring); }
+.au-input[data-demo='focus'] { border-color: var(--au-focus); box-shadow: var(--au-ring); }
 .au-input[data-state='error'] { border-color: var(--bad); }
 .au-input[data-state='ok'] {
   border-color: color-mix(in oklab, var(--good) 60%, transparent);
@@ -402,7 +402,6 @@ h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
   font: 700 28px/1 var(--font-display);
 }
 .au-badge[data-tone='ok'] { --tone: var(--good); }
-.au-badge[data-tone='bad'] { --tone: var(--bad); }
 .au-badge[data-tone='wait'] { --tone: var(--xp-gold); }
 .au-steps-list {
   margin: 0;
@@ -518,7 +517,6 @@ h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
   height: 44px;
 }
 .au-dialog .au-card h2 { padding-right: 36px; }
-.au-chip-xp { background: var(--xp-gold); color: var(--ground); }
 .au-dialog__anime {
   display: flex;
   gap: var(--space-3);
@@ -671,7 +669,7 @@ h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
   border: 2px solid #fff;
   box-shadow: 0 0 0 999px rgba(7, 6, 11, 0.6);
 }
-.ob-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ob-stage:focus-visible { outline: 2px solid var(--au-focus); outline-offset: 2px; }
 .ob-zoom {
   display: grid;
   grid-template-columns: auto 1fr auto;

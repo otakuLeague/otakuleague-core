@@ -21,7 +21,7 @@
     </style>
   </head>
   <body class="ol-root">
-    <!-- State: guest on /anime/frieren pressed "Add to list". Base UI Dialog (modal, focus trapped, Esc and scrim click close, focus returns to the button). Phones get a bottom sheet. -->
+    <!-- State: guest on /anime/frieren pressed "Add to list". Opening the dialog stores the pending add (anime id, status Plan to watch) in sessionStorage; `next` is a same-origin path. Base UI Dialog (modal, focus trapped, Esc and scrim click close, focus returns to the button). Phones get a bottom sheet. -->
     <div class="sh md-page">
       <div class="sh-bg" aria-hidden="true"></div>
       <header class="sh-header ol-glass" inert>
@@ -54,9 +54,9 @@
               <li>Track episodes on every device</li>
               <li>Earn XP for everything you watch</li>
             </ul>
-            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google?next=/anime/frieren&amp;intent=add" data-demo="focus"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
-            <a class="ol-btn ol-btn--primary au-btn" href="/auth?mode=sign-in&amp;next=/anime/frieren&amp;intent=add">Sign in with email or username</a>
-            <p class="au-foot">New here? <a href="/auth?mode=sign-up&amp;next=/anime/frieren&amp;intent=add">Create a free account</a></p>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google?next=/anime/frieren" data-demo="focus"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
+            <a class="ol-btn ol-btn--primary au-btn" href="/auth?mode=sign-in&amp;next=/anime/frieren">Sign in with email or username</a>
+            <p class="au-foot">New here? <a href="/auth?mode=sign-up&amp;next=/anime/frieren">Create a free account</a></p>
           </div>
         </div>
       </div>
