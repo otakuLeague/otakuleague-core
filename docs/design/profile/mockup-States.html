@@ -27,8 +27,8 @@
   <main id="main" class="sh-main">
     <h1 class="pf-sec">Loading</h1>
     <div class="pf-banner pf-banner--none" aria-hidden="true"></div>
-    <div class="pf-skel-hero" aria-busy="true" aria-label="Loading profile"><span class="ol-skel" style="height:136px;width:136px"></span><div style="display:grid;gap:10px"><span class="ol-skel" style="height:34px;width:320px"></span><span class="ol-skel" style="height:16px;width:260px"></span></div></div>
-    <div class="pf-strip" aria-hidden="true"><span class="ol-skel"  style="height:96px;width:100%"></span><span class="ol-skel"  style="height:96px;width:100%"></span><span class="ol-skel"  style="height:96px;width:100%"></span><span class="ol-skel"  style="height:96px;width:100%"></span></div>
+    <div class="pf-skel-hero" aria-busy="true" aria-label="Loading profile"><span class="ol-skel" style="height:136px;width:136px"></span><div style="display:grid;gap:10px"><span class="ol-skel"  style="height:30px;width:320px"></span><span class="ol-skel" style="height:14px;width:260px"></span></div></div>
+    <div class="pf-strip" aria-hidden="true"><span class="ol-skel pf-skel-xp" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span><span class="ol-skel" style="height:96px;width:100%"></span></div>
     <div class="pf-grid" aria-hidden="true"><span class="ol-skel" style="height:240px;width:100%"></span><span class="ol-skel" style="height:240px;width:100%"></span></div>
     <h2 class="pf-sec">Empty: new user, own profile</h2>
     <div class="pf-banner pf-banner--none"><button class="pf-mediabtn pf-mediabtn--banner" type="button" aria-haspopup="dialog">+ Add banner</button></div>
@@ -49,8 +49,9 @@
     <section class="pf-card pf-complete" aria-labelledby="h-c2"><span class="pf-ring" style="--p: 0.2" role="img" aria-label="20% complete">20%</span>
       <div><h2 id="h-c2">Finish your profile: 1 of 5 done</h2><ul class="pf-checks"><li class="is-done">✓ Username</li><li><button type="button">+ Add an avatar</button></li><li><button type="button">+ Add a banner</button></li><li><button type="button">+ Write a bio</button></li><li><button type="button">+ Add your birthday</button></li></ul></div></section>
     <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">+</span><p class="ol-state__title">Your stats start with your first anime</p>
-      <p class="ol-state__body">Add a show to My List: every add, finish and rating earns XP, and your watch stats and favourites fill in here. Visitors see "Nothing here yet".</p>
+      <p class="ol-state__body">Add a show to My List: every add, finish and rating earns XP, and your watch stats and favourites fill in here.</p>
       <a class="ol-btn ol-btn--primary" href="/season">Browse this season</a></div>
+    <p class="pf-anno">Visitors to an empty profile see the same tiles at 0 and "Nothing here yet" instead of this card.</p>
     <h2 class="pf-sec">Private profile: visitor, and the owner's notice</h2>
 
     <div class="pf-banner" style="--c1: #2a5a3a; --c2: #8ad06a; --c3: #10180f" aria-hidden="true"></div>
@@ -70,8 +71,8 @@
     <h2 class="pf-sec">Errors and redirects</h2>
     <div class="pf-frames">
       <div class="ol-state ol-state--error" role="alert" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">!</span><p class="ol-state__title">Couldn't load this profile</p><p class="ol-state__body">Something went wrong on our side. Your list and XP are safe. <span class="ol-num">PROFILE_UNAVAILABLE</span></p><button class="ol-btn ol-btn--secondary" type="button">Try again</button></div>
-      <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">?</span><p class="ol-state__title">No user called "mirai_no_kaz"</p><p class="ol-state__body">Usernames can change. Search the leaderboard, which lists everyone with a username. (404 status)</p><a class="ol-btn ol-btn--secondary" href="/leaderboard?q=mirai_no_kaz">Search the leaderboard</a></div>
-      <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">→</span><p class="ol-state__title">/profile, signed out</p><p class="ol-state__body">/profile redirects to your own /u/ page; a guest goes to sign-in with next=/profile (no spinner page, a server redirect).</p><a class="ol-btn ol-btn--primary" href="/auth?mode=sign-in&amp;next=/profile">Sign in</a></div>
+      <div class="ol-state" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">?</span><p class="ol-state__title">No user called "mirai_no_kaz"</p><p class="ol-state__body">The name may be misspelled, or the player changed it. Try finding them on the leaderboard.</p><a class="ol-btn ol-btn--secondary" href="/leaderboard?season=all&amp;q=mirai_no_kaz">Search players</a><p class="pf-anno">Served with a real 404 status.</p></div>
+      <p class="pf-anno">/profile has no UI of its own: a server redirect to /u/{username}, or for a guest to /auth?mode=sign-in&amp;next=/profile.</p>
     </div>
   </main>
 </div>

@@ -37,7 +37,7 @@
 .lb-step a { display: grid; justify-items: center; gap: var(--space-2); color: inherit; text-decoration: none; min-width: 0; max-width: 100%; border-radius: var(--radius-md); }
 .lb-step .pf-avatar { --s: 84px; box-shadow: 0 0 0 3px var(--ground), 0 0 0 5px var(--m); }
 .lb-step[data-r='1'] .pf-avatar { --s: 112px; }
-.lb-step__name { max-width: 100%; font: 700 18px/1.2 var(--font-display); overflow-wrap: anywhere; }
+.lb-step__name { max-width: 100%; font: 700 18px/1.2 var(--font-display); overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .lb-step__xp { font: 700 15px/1 var(--font-mono); }
 .lb-step__xp small { color: var(--muted); font-weight: 500; }
 .lb-plinth { position: relative; width: 100%; height: 92px; display: grid; place-items: center; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); background: linear-gradient(180deg, color-mix(in oklab, var(--m) 30%, var(--surface)), color-mix(in oklab, var(--m) 6%, var(--surface))); border-top: 3px solid var(--m); }
@@ -45,7 +45,12 @@
 .lb-step[data-r='3'] .lb-plinth { height: 68px; }
 .lb-plinth b { font: 800 34px/1 var(--font-mono); color: var(--m); }
 .lb-plinth b sup { font-size: 0.45em; }
-.lb-crown { color: var(--medal-1); }
+.lb-crown { color: var(--medal-1); font-size: 22px; line-height: 1; }
+.lb-list { max-width: 760px; margin: 0 auto; }
+.lb-table th:nth-child(3) { width: 96px; }
+.lb-table th:nth-child(4) { width: 120px; }
+.lb-table th { white-space: nowrap; }
+.lb-pages > li > span { display: grid; place-items: center; min-width: 40px; height: 40px; color: var(--faint); font: 600 14px/1 var(--font-mono); }
 
 /* ---------- Ranked list ---------- */
 .lb-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
@@ -84,12 +89,14 @@
   .lb-head h1 { font-size: 30px; }
   .lb-tools { width: 100%; flex-wrap: wrap; }
   .lb-search { width: auto; flex: 1 1 100%; min-height: 44px; }
-  .lb-tools .ol-season, .lb-tools .ol-season__trigger { width: 100%; min-height: 44px; justify-content: space-between; }
+  .lb-tools .ol-season, .lb-tools .ol-season__trigger { width: 100%; min-height: 44px; justify-content: flex-start; }
+  .lb-tools .ol-season__chev { margin-left: auto; }
+  .lb-xp-long { display: none; }
   .lb-tools .ol-season__list { left: 0; right: 0; min-width: 0; }
   .lb-podium { gap: var(--space-2); margin-bottom: var(--space-6); }
   .lb-step .pf-avatar { --s: 56px; }
   .lb-step[data-r='1'] .pf-avatar { --s: 72px; }
-  .lb-step__name { font-size: 14px; }
+  .lb-step__name { font-size: 13px; }
   .lb-step__xp { font-size: 13px; }
   .lb-step .pf-lvl { display: none; }
   .lb-plinth { height: 64px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
@@ -105,7 +112,7 @@
   .lb-table td { padding: 8px var(--space-3); font-size: 14px; }
   .lb-table td:first-child { width: 48px; font-size: 14px; }
   .lb-user { min-height: 44px; }
-  .lb-pages a { min-width: 44px; height: 44px; }
+  .lb-pages a, .lb-pages > li > span { min-width: 44px; height: 44px; }
   .lb-me { bottom: var(--space-2); }
   .lb-me .ol-btn { flex: 1 1 100%; min-height: 44px; }
 }
