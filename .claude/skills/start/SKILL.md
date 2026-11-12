@@ -6,7 +6,7 @@ allowed-tools: Read Bash(git status *) Bash(git log *) Bash(git branch *) Bash(g
 ---
 Brief me on where we are. Keep it cheap: read nothing else unless something below is contradictory.
 
-1. Read `docs/PROGRESS.md`.
+1. Read `docs/PROGRESS.md` and the notes in `docs/progress/` (newer than PROGRESS.md).
 2. `git status --short --branch` and `git log --oneline -5`.
 3. Open PRs and their CI: `gh api repos/otakuLeague/otakuleague-core/pulls --jq '.[] | "#\(.number) \(.title) [\(.head.ref)]"'`.
 4. Linear (team OTA, project "v1 Launch"): the in-progress issues and the next 3 by milestone then priority. If the Linear tools aren't available, use PROGRESS.md and say so in one line.

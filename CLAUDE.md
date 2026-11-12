@@ -2,7 +2,7 @@
 
 All-in-one anime platform: anime data, watchlists, XP and leaderboards, later games and quizzes. Solo project, built like a real product. v1 (parity with the old otakuleague.com) launches **2026-12-28**: see docs/ROADMAP.md.
 
-**Start every session with docs/PROGRESS.md** (current state, next tasks). Don't re-explore the repo to find out where we are.
+**Start every session with docs/PROGRESS.md** (current state, next tasks) and the per-ticket notes in `docs/progress/`, which are newer. Don't re-explore the repo to find out where we are.
 
 ## Stack (confirm with me before changing)
 TypeScript strict, Next.js 16 web (`apps/web`), NestJS + Prisma API (`apps/api`), PostgreSQL 18 (Docker locally, real Postgres in tests), REST, pnpm monorepo, `packages/shared-types`. Modular monolith. Redis, queues or search engines only after a measured need. Free tools unless strictly necessary. Hosting: Vercel (web) + Railway (API, DB), ADR 0009.
@@ -37,7 +37,7 @@ Node 24 (`nvm use`), pnpm 12.11.2.
 2. Every task maps to a Linear ticket (team OTA). Branch `type/OTA-123-short-name`; commits reference the key.
 3. Larger features (new module, data model change): architect subagent first, ADR in docs/decisions, then code.
 4. Implement with tests alongside. Simplest design that works. Each kind of work goes to its agent, on its own model and effort (OTA-162): plan `architect` (Fable, high), build `builder` (Sonnet, medium), UI `ui-builder` (Opus, medium), auth/payments/secrets `secure-builder` (Opus, extra high), search/renames/boilerplate `explorer`/`boilerplate` (Haiku, low), tests `test-writer` (Sonnet, low), bugs `debugger` (Opus, max), security audit `security-reviewer` (Fable, max), review `code-reviewer` (Fable, high: never the model that wrote the code). Full table: `.claude/skills/autopilot/SKILL.md`.
-5. `/ship`: lint, typecheck, tests, one code-reviewer pass (plus db-migration-checker if `schema.prisma` changed, security-reviewer if auth/input/secrets), commit, PR, Linear update, rewrite PROGRESS.md.
+5. `/ship`: lint, typecheck, tests, one code-reviewer pass (plus db-migration-checker if `schema.prisma` changed, security-reviewer if auth/input/secrets), commit, PR, Linear update, progress note in `docs/progress/` (PROGRESS.md is only rewritten when no other open PR changes it, OTA-176).
 6. Stopping mid-task: `/wrap`.
 7. Finish with a 4-line summary: Context, Actions, Results, Learnings.
 
