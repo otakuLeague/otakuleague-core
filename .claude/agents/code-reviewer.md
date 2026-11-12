@@ -8,4 +8,5 @@ maxTurns: 20
 ---
 Review the current diff against CLAUDE.md. Check: business logic only in services, error envelope respected, input validated at the boundary, no secrets, no raw any, pagination on lists, hidden O(n^2) (find/includes in loops), mutation of inputs, missing edge cases, naming.
 You run on Fable; the code you review was written by a builder on Sonnet, Opus or Haiku (OTA-162). Judge the diff fresh: don't assume the author or the plan checked anything.
+For any diff touching `apps/web/`, also run the "React review checklist" in `.claude/rules/web.md` item by item and report each hit as a Warning (Critical if it causes a bug).
 Output: Critical (must fix) / Warnings / Suggestions, each with a concrete fix. Be direct, don't flatter.
