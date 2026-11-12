@@ -81,28 +81,42 @@ test('empty list does not warn', () => {
 });
 
 test('CLI with empty input says the guard did not run, exit 0', () => {
-  const result = runCli('\n');
+  const result = runCli('');
   assert.equal(result.status, 0);
   assert.equal(
-    result.stdout.trim(),
-    '::warning title=Deploy order::no changed files listed, the guard did not run',
+    result.stdout,
+    '::warning title=Deploy order::no changed files listed, the guard did not run\n',
   );
 });
 
-test('CLI prints the annotation for a risky change, exit 0', () => {
+test('CLI prints exactly the annotation for a risky change, exit 0', () => {
   const result = runCli(
-    'apps/api/src/anime/anime.controller.ts\n  apps/web/app/page.tsx  \n\n',
+    [
+      'apps/api/src/anime/anime.controller.ts',
+      'apps/web/app/page.tsx',
+      '::error::pwned',
+    ].join('\0') + '\0',
   );
   assert.equal(result.status, 0);
-  assert.ok(
-    result.stdout.startsWith(
-      '::warning title=Deploy order::web and API deploy separately',
-    ),
+  assert.equal(
+    result.stdout,
+    `::warning title=Deploy order::${DEPLOY_ORDER_MESSAGE}\n`,
+  );
+});
+
+test('CLI handles non-ASCII paths', () => {
+  const result = runCli(
+    'apps/web/app/café.tsx\0apps/api/src/anime/anime.controller.ts\0',
+  );
+  assert.equal(result.status, 0);
+  assert.equal(
+    result.stdout,
+    `::warning title=Deploy order::${DEPLOY_ORDER_MESSAGE}\n`,
   );
 });
 
 test('CLI prints nothing for a safe change, exit 0', () => {
-  const result = runCli('apps/web/app/page.tsx\n');
+  const result = runCli('apps/web/app/page.tsx\0');
   assert.equal(result.status, 0);
   assert.equal(result.stdout, '');
 });

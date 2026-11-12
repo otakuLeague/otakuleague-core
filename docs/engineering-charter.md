@@ -87,7 +87,7 @@ Status: proposed | accepted | superseded
 - Short-lived branches, small PRs (aim for under ~400 lines), **Conventional Commits** (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
 - Even solo, do a **self-review** before merging: read the diff as if someone else wrote it.
 - Incomplete work goes behind a feature flag. Database migrations must be backward compatible. Deploy small and often.
-- API changes are additive first (OTA-183). The web app (Vercel) and the API (Railway) deploy separately, and a failed Railway deploy keeps the old API serving, so the window between them can be long. Expand the API, migrate the web app, contract in a later PR. Never remove or rename a response field in the same PR as the web change that stops using it. CI warns (`Deploy order`, `scripts/deploy-order.mjs`) when a PR changes `apps/api/` and `apps/web/` and also `packages/shared-types/` or a controller: make it backward compatible or split it, API first.
+- API changes are additive first (OTA-183). The web app (Vercel) and the API (Railway) deploy separately, and a failed Railway deploy keeps the old API serving, so the window between them can be long. Expand the API, migrate the web app, contract in a later PR. Never remove or rename a response field in the same PR as the web change that stops using it. The CI guard is a heuristic (it only sees shared-types and controllers), so the rule applies regardless of the warning. CI warns (`Deploy order`, `scripts/deploy-order.mjs`) when a PR changes `apps/api/` and `apps/web/` and also `packages/shared-types/` or a controller: make it backward compatible or split it, API first.
 
 ## 8. Security and operations basics
 

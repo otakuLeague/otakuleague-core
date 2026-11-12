@@ -29,7 +29,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - run: git diff --name-only --no-renames HEAD^1 HEAD | node scripts/deploy-order.mjs
+      - run: git diff --name-only --no-renames -z HEAD^1 HEAD -- | node scripts/deploy-order.mjs
+        continue-on-error: true
 
   lint:
     name: Lint

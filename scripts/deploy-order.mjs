@@ -22,14 +22,17 @@ export function deployOrderWarning(changedPaths) {
 }
 
 function annotation(message) {
-  return `::warning title=Deploy order::${message}`;
+  const escaped = message
+    .replaceAll('%', '%25')
+    .replaceAll('\r', '%0D')
+    .replaceAll('\n', '%0A');
+  return `::warning title=Deploy order::${escaped}`;
 }
 
 function main() {
   try {
     const paths = readFileSync(0, 'utf8')
-      .split('\n')
-      .map((line) => line.trim())
+      .split('\0')
       .filter((line) => line !== '');
     if (paths.length === 0) {
       process.stdout.write(
@@ -41,7 +44,7 @@ function main() {
     if (message !== null) process.stdout.write(`${annotation(message)}\n`);
   } catch (error) {
     process.stdout.write(
-      `${annotation(`the guard failed to run: ${String(error)}`)}\n`,
+      `${annotation(`the guard failed to run: ${error instanceof Error ? error.message : 'unknown error'}`)}\n`,
     );
   }
 }
