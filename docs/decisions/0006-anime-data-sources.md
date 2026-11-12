@@ -170,3 +170,25 @@ Reversibility rules, so that a refusal from any source costs a config change, no
 **Adult content**: entries flagged adult (AniList `isAdult`, MyAnimeList rating "Rx - Hentai") are neither imported nor shown for now; the API answers 404 (`ANIME_NOT_FOUND`) as for an unknown id. An anime that any source flags adult on a later refresh is deleted with all its data. Revisit with an explicit age gate if we ever want them.
 
 **Purge and user data**: the 30-day purge deletes an anime with its ids and snapshots (cascade). Before any user table (watchlist entries, quiz attempts) references `anime`, its foreign key must use `Restrict`, and the purge must skip anime that user data references. Otherwise the purge would delete users' rows, or fail as a whole.
+
+## Update 2026-11-12: guard first-visit imports against id enumeration (OTA-173)
+
+Problem: any GET to `/anime/:idSource/:externalId` imports on first visit, with no limit. A crawler walking ids turns "on demand" into the bulk import that decision 1 and "What we must not copy" forbid. It also uses up the one AniList limiter (30 requests per minute shared by imports, refreshes, franchise walks and page sections), costs a source call on every hit of an id AniList does not have, and keeps what it imported alive by coming back, so the 30-day purge never runs. The API only sees Vercel's addresses: it cannot limit per visitor.
+
+Decision: **imports stay open to any id, behind a global cap.** Importing only ids already stored as relation nodes of a franchise is rejected: the season selector (OTA-172) links to seasons the walk has not stored yet (walk in progress, `partial`), search (OTA-98) will open anime that belong to no stored franchise, and `/anime/myanimelist/:id` has no node table to check.
+
+1. **Cold-import cap**: a token bucket in the importer, 10 tokens, one back every 20 seconds. Every attempt to import an anime we do not have takes one token before any source is called, whether the id exists or not, by id or by the slug of a purged anime. Concurrent requests for one id share one attempt. Sustained, that is 3 AniList requests per minute (10% of today's limit) and at most 4,320 attempts per day. Refreshes, fill-ins and franchise walks take no token, so imports cannot starve them. With no token left the API answers 429 `ANIME_IMPORT_LIMIT_REACHED` (a 4xx: unlike the 503 of a source outage it is not logged as an error per request) and logs one warning per minute at most.
+2. **Negative cache**: an id that every source asked answered "not found" (unknown id, manga), or that came back adult, is remembered for 1 hour, per id source and id. A repeat hit gets the same 404 `ANIME_NOT_FOUND` with no source call and no token. An outage (503) is never remembered. Every entry cost a token, so at most 10 + 180 are alive at once: dropping the expired ones on insert is enough, no size limit.
+3. **An id lookup is not a view**: only `/anime/slugs/:slug`, the page a person reads, moves `lastViewedAt`. The id route still imports, serves and refreshes, but an anime imported by walking ids and never opened is purged 30 days later (decision 10).
+4. **`robots.txt`** gets one rule, `Disallow: /anime/anilist/`: a compliant crawler following season links would otherwise import every season it sees. The `X-Robots-Tag` header on that route stays for the others. Still no `Disallow: /` (OTA-134).
+
+All of it is in memory, per process (one Railway instance, ADR 0009): no table, no migration, no env variable, no dependency. A restart refills the bucket and forgets the not-found ids, which costs at most 10 extra imports and one call per forgotten id.
+
+Also rejected: a database table for the not-found ids and the import count. It would survive restarts and a second instance, at the price of a migration and a write per miss, for state that is worth an hour.
+
+Risks we accept:
+
+- **The cap bounds the rate, not the total.** A patient crawler can still make us import up to 4,320 ids a day, each kept 30 days. The hard bound is the relation-node allowlist: revisit it if the cap warning shows up on several days, or if AniList objects.
+- **Too simple on purpose: the bucket does not know who is asking.** While a crawler empties it, a visitor opening a season we do not have, or a purged page, gets the 429 too; cached pages are unaffected. If the warning shows up next to real traffic, the next step is a reserved share for ids we already know (relation nodes, identities) or a firewall rule on Vercel, not a higher cap.
+- A second API instance doubles the cap. During an AniList outage cold requests answer 503 until the bucket is empty, then 429: both mean "try later".
+- A "not found" that stops being true (a new AniList entry, an adult flag lifted) heals within the hour.
