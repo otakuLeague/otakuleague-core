@@ -222,11 +222,11 @@
 
 /* Achievements: badge cards (drawn for when definitions exist) and the empty state. */
 .pf-badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
-.pf-badge { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
-.pf-badge__icon { grid-row: span 3; width: 52px; height: 52px; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(140deg, var(--xp-gold), var(--neon-magenta)); color: #0d0b14; font: 800 18px/1 var(--font-display); }
+.pf-badge { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); align-content: start; }
+.pf-badge__icon { grid-row: span 3; width: 52px; height: 52px; display: grid; place-items: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: linear-gradient(140deg, #f5c84c, #ff6fae); color: #0d0b14; font: 800 18px/1 var(--font-display); }
 .pf-badge h3 { margin: 0; font: 700 15px/1.25 var(--font-display); overflow-wrap: anywhere; }
 .pf-badge p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
-.pf-badge small { display: flex; gap: var(--space-3); font: 500 12px/1.4 var(--font-mono); color: var(--muted); }
+.pf-badge small { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); white-space: nowrap; font: 500 12px/1.4 var(--font-mono); color: var(--muted); }
 .pf-badge small b { color: var(--xp-gold); }
 .pf-empty { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--muted); font-size: 14px; }
 .pf-empty .ol-state__mark { flex: none; }
@@ -349,7 +349,7 @@
 .pf-cap { margin: 0 0 var(--space-3); color: var(--muted); font: 600 12px/1.4 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; }
 .pf-frames { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: var(--space-6); align-items: start; }
 .pf-frames--4 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.pf-phone { width: 100%; max-width: 390px; margin: 0 auto; border: 1px solid var(--border); border-radius: 28px; overflow: hidden; background: var(--ground); position: relative; }
+.pf-phone { color: var(--ink); width: 100%; max-width: 390px; margin: 0 auto; border: 1px solid var(--border); border-radius: 28px; overflow: hidden; background: var(--ground); position: relative; }
 .pf-board { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; min-height: 560px; padding: var(--space-6); border-radius: var(--radius-lg); border: 1px solid var(--border); background: color-mix(in oklab, #07060b 55%, var(--ground)); position: relative; overflow: hidden; }
 
 /* ---------- Loading ---------- */
@@ -359,6 +359,7 @@
 /* ---------- Phones (390) ---------- */
 @container (max-width: 767px) {
   .pf-banner { height: 128px; border-radius: 0; margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-4)) 0; }
+  .pf-sec + .pf-banner { margin-top: 0; }
   .pf-hero { grid-template-columns: minmax(0, 1fr); margin-top: -48px; padding: 0; gap: var(--space-3); }
   .pf-avatar--xl { --s: 96px; box-shadow: 0 0 0 4px var(--ground); }
   .pf-name { font-size: 26px; }
@@ -386,7 +387,7 @@
   .pf-skel-hero { grid-template-columns: 1fr; padding: 0; margin-top: -48px; }
   .pf-skel-hero .ol-skel:first-child { width: 96px; height: 96px; }
   .pf-stage { min-height: 0; }
-  .pf-dialog { position: static; translate: none; width: auto; border-radius: 0; border: 0; box-shadow: none; }
+  .pf-dialog { position: relative; z-index: 1; left: auto; top: auto; translate: none; width: auto; border-radius: 0; border: 0; box-shadow: none; }
   .pf-dialog__body { padding: var(--space-4); gap: var(--space-4); }
   .pf-dialog__head, .pf-dialog__foot { padding: var(--space-3) var(--space-4); }
   .pf-dialog__foot { flex-wrap: wrap; }

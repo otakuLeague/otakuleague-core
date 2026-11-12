@@ -1,0 +1,119 @@
+/* Leaderboard (OTA-157): /leaderboard?season=&q=&page=. Builds on ../profile/profile.css (avatar,
+   level plate, meter, focus rings, mockup helpers) and the shell. Container queries on .sh as in the
+   other mockups; the build uses media queries. */
+
+:root,
+[data-theme] {
+  /* Medal tones. Gold is --xp-gold; silver and bronze go to tokens.css + CHIP_TOKENS with the build.
+     Every medal also prints its rank ("1st"), so colour is never the only signal. */
+  --medal-1: var(--xp-gold);
+  --medal-2: #c9d1e0;
+  --medal-3: #e3a170;
+}
+[data-theme='light'] {
+  --medal-2: #4f5868;
+  --medal-3: #8a4b1f;
+}
+
+.lb-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+.lb-head h1 { margin: 0; font: 800 40px/1.05 var(--font-display); letter-spacing: -0.02em; }
+.lb-sub { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: var(--space-2) 0 0; color: var(--muted); font-size: 14px; }
+.lb-live { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--good) 14%, var(--surface)); color: var(--good); font: 600 12px/1.4 var(--font-sans); }
+.lb-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.lb-live--final { background: color-mix(in oklab, var(--xp-gold) 16%, var(--surface)); color: var(--xp-gold); }
+.lb-live--final::before { content: none; }
+.lb-tools { display: flex; gap: var(--space-2); align-items: center; }
+.lb-search { display: flex; align-items: center; gap: 8px; min-height: 40px; width: 260px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); }
+.lb-search input { all: unset; flex: 1; min-width: 0; color: var(--ink); font: 400 15px/1.4 var(--font-sans); }
+.lb-search input::placeholder { color: var(--muted); }
+.lb-tools .ol-season__trigger:focus-visible { outline-color: var(--accent-ink); }
+.lb-tools .ol-season__list { position: absolute; right: 0; z-index: 20; }
+
+/* ---------- Podium: 2nd, 1st, 3rd. Plinth heights are static (no layout animation). ---------- */
+.lb-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: var(--space-4); max-width: 920px; margin: 0 auto var(--space-10); padding: 0; list-style: none; }
+.lb-step { --m: var(--medal-1); display: grid; justify-items: center; gap: var(--space-2); text-align: center; min-width: 0; }
+.lb-step[data-r='2'] { --m: var(--medal-2); order: -1; }
+.lb-step[data-r='3'] { --m: var(--medal-3); }
+.lb-step a { display: grid; justify-items: center; gap: var(--space-2); color: inherit; text-decoration: none; min-width: 0; max-width: 100%; border-radius: var(--radius-md); }
+.lb-step .pf-avatar { --s: 84px; box-shadow: 0 0 0 3px var(--ground), 0 0 0 5px var(--m); }
+.lb-step[data-r='1'] .pf-avatar { --s: 112px; }
+.lb-step__name { max-width: 100%; font: 700 18px/1.2 var(--font-display); overflow-wrap: anywhere; }
+.lb-step__xp { font: 700 15px/1 var(--font-mono); }
+.lb-step__xp small { color: var(--muted); font-weight: 500; }
+.lb-plinth { position: relative; width: 100%; height: 92px; display: grid; place-items: center; clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); background: linear-gradient(180deg, color-mix(in oklab, var(--m) 30%, var(--surface)), color-mix(in oklab, var(--m) 6%, var(--surface))); border-top: 3px solid var(--m); }
+.lb-step[data-r='1'] .lb-plinth { height: 132px; }
+.lb-step[data-r='3'] .lb-plinth { height: 68px; }
+.lb-plinth b { font: 800 34px/1 var(--font-mono); color: var(--m); }
+.lb-plinth b sup { font-size: 0.45em; }
+.lb-crown { color: var(--medal-1); }
+
+/* ---------- Ranked list ---------- */
+.lb-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+.lb-table caption { text-align: left; color: var(--muted); font-size: 13px; padding-bottom: var(--space-2); }
+.lb-table th { padding: 0 var(--space-4) var(--space-1); text-align: left; color: var(--muted); font: 600 12px/1.4 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; }
+.lb-table td { padding: 10px var(--space-4); background: var(--surface); border-block: 1px solid var(--border); font-size: 15px; }
+.lb-table td:first-child { border-left: 1px solid var(--border); border-radius: var(--radius-md) 0 0 var(--radius-md); width: 72px; font: 700 15px/1 var(--font-mono); color: var(--muted); }
+.lb-table td:last-child { border-right: 1px solid var(--border); border-radius: 0 var(--radius-md) var(--radius-md) 0; text-align: right; font: 700 15px/1 var(--font-mono); }
+.lb-table th:last-child { text-align: right; }
+.lb-table tr:hover td { background: var(--surface-2); }
+.lb-user { display: flex; align-items: center; gap: var(--space-3); min-width: 0; color: inherit; text-decoration: none; font-weight: 600; overflow-wrap: anywhere; }
+.lb-user .pf-avatar { --s: 36px; }
+.lb-you { padding: 1px 8px; border-radius: var(--radius-pill); background: var(--accent-ink); color: var(--surface); font: 700 11px/1.5 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.lb-table tr[aria-current='true'] td { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+.lb-gap td { background: transparent !important; border: 0 !important; text-align: center !important; color: var(--muted); font: 500 13px/1 var(--font-sans) !important; }
+.lb-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); color: var(--muted); font-size: 14px; }
+.lb-pages { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.lb-pages a { display: grid; place-items: center; min-width: 40px; height: 40px; padding: 0 8px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none; font: 600 14px/1 var(--font-mono); border: 1px solid var(--border); }
+.lb-pages a[aria-current='page'] { background: var(--accent-ink); color: var(--surface); border-color: transparent; }
+
+/* ---------- "Your rank" bar: sticky at the bottom while your row is off-screen ---------- */
+.lb-me { position: sticky; bottom: var(--space-4); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-6); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border)); background: color-mix(in oklab, var(--accent) 10%, var(--surface)); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35); font-size: 14px; }
+.lb-me__rank { font: 800 22px/1 var(--font-mono); }
+.lb-me__who { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; min-width: 0; }
+.lb-me__who .pf-avatar { --s: 32px; }
+.lb-me__next { flex: 1 1 200px; display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+.lb-me__next b { color: var(--ink); font-family: var(--font-mono); }
+.lb-me .ol-btn { margin-left: auto; }
+
+/* ---------- Empty season: three open plinths ---------- */
+.lb-step--open .pf-avatar { background: var(--surface-2); color: var(--muted); text-shadow: none; box-shadow: 0 0 0 3px var(--ground), 0 0 0 5px var(--border); }
+.lb-step--open .lb-plinth { background: var(--surface); border-top-color: var(--border); }
+.lb-step--open .lb-plinth b { color: var(--muted); }
+
+@container (max-width: 767px) {
+  .lb-head h1 { font-size: 30px; }
+  .lb-tools { width: 100%; flex-wrap: wrap; }
+  .lb-search { width: auto; flex: 1 1 100%; min-height: 44px; }
+  .lb-tools .ol-season, .lb-tools .ol-season__trigger { width: 100%; min-height: 44px; justify-content: space-between; }
+  .lb-tools .ol-season__list { left: 0; right: 0; min-width: 0; }
+  .lb-podium { gap: var(--space-2); margin-bottom: var(--space-6); }
+  .lb-step .pf-avatar { --s: 56px; }
+  .lb-step[data-r='1'] .pf-avatar { --s: 72px; }
+  .lb-step__name { font-size: 14px; }
+  .lb-step__xp { font-size: 13px; }
+  .lb-step .pf-lvl { display: none; }
+  .lb-plinth { height: 64px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  .lb-step[data-r='1'] .lb-plinth { height: 92px; }
+  .lb-step[data-r='3'] .lb-plinth { height: 48px; }
+  .lb-plinth b { font-size: 24px; }
+  .lb-table { table-layout: fixed; }
+  .lb-table th:nth-child(1) { width: 48px; }
+  .lb-table th:nth-child(4) { width: 76px; }
+  .lb-table th:nth-child(3), .lb-table td:nth-child(3) { width: 0; padding: 0; font-size: 0; }
+  .lb-table td:nth-child(3) > * { display: none; }
+  .lb-table th { padding-inline: var(--space-3); letter-spacing: 0.06em; }
+  .lb-table td { padding: 8px var(--space-3); font-size: 14px; }
+  .lb-table td:first-child { width: 48px; font-size: 14px; }
+  .lb-user { min-height: 44px; }
+  .lb-pages a { min-width: 44px; height: 44px; }
+  .lb-me { bottom: var(--space-2); }
+  .lb-me .ol-btn { flex: 1 1 100%; min-height: 44px; }
+}
+.lb-user .pf-lvl { display: none; }
+@container (max-width: 767px) {
+  .lb-user .pf-lvl { display: inline-grid; margin-left: auto; }
+}
+
+/* Mockup only: full-page screenshots can't show a sticky bar at the viewport bottom, so it sits after the list. */
+.lb-me--shot { position: relative; bottom: auto; }
+.lb-user__n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
