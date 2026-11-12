@@ -1,0 +1,1664 @@
+/* My List (OTA-156): /my-list page, entry card and row, add-to-list control, XP moment.
+   Builds on tokens.css, components.css, the global shell (../global-shell/shell.css) and the
+   browse primitives (../browse/browse.css: .br-cover, .br-seg, .br-skel, .br-state, .br-sr, .br-add).
+   Breakpoints are container queries on .sh like the other mockups; the build uses media queries. */
+
+/* ---------- List status tones ----------
+   Aliases of tested tokens, so each theme re-resolves. The build adds them to tokens.css and to
+   CHIP_TOKENS in tokens.test.ts (4.5:1 on the chip's tinted fill). Every chip also prints its label:
+   colour is never the only signal. */
+:root,
+[data-theme] {
+  --ls-watching: var(--good);
+  --ls-planning: var(--muted);
+  --ls-completed: var(--score-high);
+  --ls-paused: var(--xp-gold);
+  --ls-dropped: var(--bad);
+  --ls-rewatch: var(--neon-magenta);
+}
+[data-s='watching'] { --tone: var(--ls-watching); }
+[data-s='planning'] { --tone: var(--ls-planning); }
+[data-s='completed'] { --tone: var(--ls-completed); }
+[data-s='paused'] { --tone: var(--ls-paused); }
+[data-s='dropped'] { --tone: var(--ls-dropped); }
+[data-s='rewatch'] { --tone: var(--ls-rewatch); }
+
+:is(.ml-card a, .ml-tt a, .ml-tabs a, .ml-more a, .ml-row a) {
+  text-decoration: none;
+}
+
+/* ---------- Page header ---------- */
+.ml-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-6);
+}
+.ml-head h1 {
+  margin: 0;
+  font: 700 44px/1.05 var(--font-display);
+  letter-spacing: -0.03em;
+}
+.ml-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+}
+.ml-stats b {
+  color: var(--ink);
+  font: 600 15px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+}
+.ml-head__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ---------- Status tabs: links (URL state ?status=), not an ARIA tablist ---------- */
+.ml-tabs {
+  margin: 0 0 var(--space-4);
+}
+.ml-tabs li {
+  flex: none;
+}
+.ml-tabs .ol-tab {
+  white-space: nowrap;
+  min-height: 44px;
+  letter-spacing: 0.08em;
+}
+.ml-tabs .ol-tab[aria-current='page'] {
+  color: var(--ink);
+}
+.ml-tabs .ol-tab[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: -1px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ml-tabs .ol-tab[data-s]::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.ml-tabs .ol-tab svg {
+  color: var(--neon-magenta);
+}
+.ml-tabs .ol-tab__count {
+  color: var(--muted);
+}
+.ml-tabs .ol-tab[data-zero] .ol-tab__count {
+  color: var(--faint);
+}
+
+/* ---------- Toolbar: search, sort, view ---------- */
+.ml-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.ml-search {
+  flex: 1 1 280px;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+  transition: border-color var(--dur-press) var(--ease-enter);
+}
+.ml-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.ml-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 400 15px/1 var(--font-sans);
+  outline: none;
+}
+.ml-search input::placeholder {
+  color: var(--muted);
+}
+.ml-search__clear {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.ml-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ml-select span {
+  color: var(--muted);
+}
+.ml-select svg {
+  color: var(--muted);
+}
+.ml-bar__end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ml-count {
+  color: var(--muted);
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ml-icon {
+  flex: none;
+}
+:is(.ml-select, .ml-search__clear, .ml-plus, .ml-more-btn, .ml-fav, .ml-step button, .ml-status-btn,
+  .ml-rate, .ml-opt, .ml-scorepick button, .ml-ctl button, .ml-tt a, .ml-card__link, .ml-sortbtn,
+  .ml-textbtn):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Entry card (grid view) ---------- */
+.ml-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--space-6) var(--space-4);
+}
+.ml-card {
+  position: relative;
+  min-width: 0;
+}
+.ml-card__link {
+  display: block;
+  color: var(--ink);
+  border-radius: var(--radius-lg);
+}
+.ml-cover {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+  transition:
+    outline-color var(--dur-enter) var(--ease-enter),
+    transform var(--dur-enter) var(--ease-enter);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ml-card:hover .ml-cover {
+    outline: 2px solid var(--card-accent, var(--accent));
+    transform: translateY(-2px);
+  }
+}
+.ml-card__link:focus-visible {
+  outline: none;
+}
+.ml-card__link:focus-visible .ml-cover {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ml-status {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 52px);
+  height: 24px;
+  padding: 0 9px 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, #0c0b12 82%, transparent);
+  color: var(--tone);
+  font: 600 12px/1 var(--font-sans);
+  white-space: nowrap;
+}
+/* The chip sits on artwork in both themes, so it always uses the dark-theme tones. */
+.ml-cover .ml-status[data-s='watching'] { --tone: #5fd38a; }
+.ml-cover .ml-status[data-s='planning'] { --tone: #c9c3d9; }
+.ml-cover .ml-status[data-s='completed'] { --tone: #8fb4ff; }
+.ml-cover .ml-status[data-s='paused'] { --tone: #f5c84c; }
+.ml-cover .ml-status[data-s='dropped'] { --tone: #ff7a6b; }
+.ml-cover .ml-status[data-s='rewatch'] { --tone: #ff6fae; }
+.ml-status::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ml-prog {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.ml-prog > span {
+  display: block;
+  height: 100%;
+  background: var(--tone);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+}
+.ml-cover .ml-prog[data-s='planning'] > span { background: #c9c3d9; }
+.ml-title {
+  margin: var(--space-3) 0 var(--space-1);
+  min-height: 40px;
+  font: 700 15px/20px var(--font-display);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ml-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--muted);
+  font: 500 13px/18px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ml-meta b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ml-meta__end {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ml-myscore {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--band);
+  font-weight: 600;
+}
+.ml-myscore[data-band='high'] { --band: var(--score-high); }
+.ml-myscore[data-band='mid'] { --band: var(--score-mid); }
+.ml-myscore[data-band='low'] { --band: var(--score-low); }
+.ml-heart {
+  color: var(--neon-magenta);
+  flex: none;
+}
+.ml-rw {
+  color: var(--ls-rewatch);
+  font-weight: 600;
+}
+
+/* Hover actions on the cover: siblings of the card link, never nested inside it. The overlay has the
+   cover's size so the buttons sit on the artwork whatever the title length. */
+.ml-card__acts {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 2 / 3;
+  pointer-events: none;
+}
+.ml-card__acts > * {
+  pointer-events: auto;
+}
+.ml-plus,
+.ml-more-btn {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid color-mix(in oklab, #fff 22%, transparent);
+  background: color-mix(in oklab, #0c0b12 78%, transparent);
+  color: #ece9f3;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--dur-enter) var(--ease-enter),
+    background-color var(--dur-press) var(--ease-enter);
+}
+.ml-plus {
+  right: var(--space-2);
+  bottom: 14px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  font: 600 13px/1 var(--font-mono);
+}
+.ml-more-btn {
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  font: 700 16px/1 var(--font-sans);
+}
+.ml-card:hover :is(.ml-plus, .ml-more-btn),
+.ml-card:focus-within :is(.ml-plus, .ml-more-btn),
+.ml-card[data-demo='hover'] :is(.ml-plus, .ml-more-btn) {
+  opacity: 1;
+}
+.ml-plus:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+/* +1 is a high-frequency action: press feedback only, no transition (ADR 0011). */
+.ml-plus:active,
+.ml-step button:active,
+.ml-ctl__plus:active {
+  transform: scale(0.96);
+  transition: none;
+}
+@media (hover: none) {
+  .ml-plus,
+  .ml-more-btn {
+    opacity: 1;
+  }
+}
+
+/* Saving and failed states on a card. */
+.ml-card[data-state='error'] .ml-cover {
+  outline: 2px solid var(--bad);
+}
+.ml-inline-err {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: var(--space-1) 0 0;
+  color: var(--bad);
+  font-size: 13px;
+  line-height: 18px;
+}
+.ml-inline-err button,
+.ml-textbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 600 13px/1 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Table view ---------- */
+.ml-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: clip;
+}
+.ml-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  table-layout: fixed;
+}
+.ml-table th {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 1;
+  padding: 0 var(--space-3);
+  height: 44px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  text-align: left;
+  font: 600 11px/16px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ml-sortbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  height: 32px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.ml-table th[aria-sort] {
+  color: var(--ink);
+}
+.ml-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.ml-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ml-table tbody tr:hover td {
+  background: color-mix(in oklab, var(--ink) 3%, transparent);
+}
+.ml-tt {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+.ml-thumb {
+  position: relative;
+  display: block;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+.ml-tt a {
+  color: var(--ink);
+  font: 600 15px/20px var(--font-sans);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  border-radius: 2px;
+}
+.ml-tt a:hover {
+  color: var(--accent-ink);
+}
+.ml-tt small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ml-tt small span + span::before {
+  content: ' · ';
+}
+.ml-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  max-width: 100%;
+  padding: 0 8px 0 10px;
+  border: 1px solid color-mix(in oklab, var(--tone) 38%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--tone) 12%, var(--surface));
+  color: var(--tone);
+  font: 600 13px/1 var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ml-status-btn::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ml-status-btn svg {
+  margin-left: auto;
+  opacity: 0.8;
+}
+.ml-step {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--ground);
+}
+.ml-step button {
+  width: 32px;
+  height: 30px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 600 16px/1 var(--font-mono);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.ml-step button:hover {
+  background: var(--surface-2);
+}
+.ml-step button[aria-disabled='true'] {
+  color: var(--faint);
+  cursor: not-allowed;
+  background: none;
+}
+.ml-step output {
+  min-width: 76px;
+  text-align: center;
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ml-step output b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ml-mini {
+  display: block;
+  width: 140px;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.ml-mini > span {
+  display: block;
+  height: 100%;
+  background: var(--tone);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+}
+.ml-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 52px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--band, var(--muted));
+  font: 600 14px/1 var(--font-mono);
+  cursor: pointer;
+}
+.ml-rate:hover {
+  border-color: var(--border);
+}
+.ml-rate[data-band='high'] { --band: var(--score-high); }
+.ml-rate[data-band='mid'] { --band: var(--score-mid); }
+.ml-rate[data-band='low'] { --band: var(--score-low); }
+.ml-rate[data-empty] {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+}
+.ml-fav {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ml-fav[aria-pressed='true'] {
+  color: var(--neon-magenta);
+}
+.ml-fav:hover {
+  background: var(--surface-2);
+}
+.ml-upd {
+  color: var(--muted);
+  font: 500 13px/1 var(--font-mono);
+  white-space: nowrap;
+}
+.ml-rowmenu {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  font: 700 18px/1 var(--font-sans);
+  cursor: pointer;
+}
+.ml-rowmenu:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ml-table tr[data-state='error'] td {
+  background: color-mix(in oklab, var(--bad) 7%, var(--surface));
+  border-bottom-color: transparent;
+}
+.ml-table tr.ml-errrow td {
+  padding-top: 0;
+  background: color-mix(in oklab, var(--bad) 7%, var(--surface));
+}
+.ml-errline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: 52px;
+  color: var(--bad);
+  font-size: 13px;
+}
+.ml-errline span {
+  color: var(--ink);
+}
+
+/* ---------- Pagination (1,000 entries) ---------- */
+.ml-more {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-10);
+  color: var(--muted);
+  font-size: 14px;
+}
+.ml-more__bar {
+  width: 200px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.ml-more__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(var(--p));
+  transform-origin: left;
+}
+
+/* ---------- Add-to-list control (anime header) ---------- */
+.ml-ctl {
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ml-split {
+  display: inline-flex;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 20px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.ml-split .ol-btn {
+  min-height: 44px;
+}
+.ml-split .ol-btn:first-child {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  padding: 0 18px;
+}
+.ml-split .ol-btn + .ol-btn {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 0 12px;
+  border-left: 1px solid color-mix(in oklab, var(--on-accent) 25%, transparent);
+}
+.ml-ctl__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in oklab, var(--tone) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--tone) 14%, var(--surface));
+  color: var(--ink);
+  font: 600 15px/1 var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ml-ctl__status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 10px var(--tone);
+}
+.ml-ctl__status em {
+  font: 500 14px/1 var(--font-mono);
+  font-style: normal;
+  color: var(--muted);
+}
+.ml-ctl__status[aria-expanded='true'] {
+  border-color: var(--tone);
+}
+.ml-ctl__plus {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 14px/1 var(--font-mono);
+  cursor: pointer;
+}
+.ml-ctl__plus:hover {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.ml-ctl__fav {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  border: 1px solid color-mix(in oklab, var(--neon-magenta) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--neon-magenta) 8%, transparent);
+  color: var(--neon-magenta);
+  cursor: pointer;
+}
+.ml-ctl__fav[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--neon-magenta) 20%, var(--surface));
+}
+
+/* ---------- Edit popover (desktop) / sheet (phone): Base UI Popover / Dialog ---------- */
+.ml-pop {
+  position: relative;
+  width: 360px;
+  max-width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.65);
+  transform-origin: var(--transform-origin, top left);
+  display: grid;
+  gap: var(--space-4);
+}
+.ml-pop__head {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+.ml-pop__head strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font: 700 15px/20px var(--font-display);
+}
+.ml-pop__head small {
+  color: var(--muted);
+  font-size: 13px;
+}
+:is(.ml-pop, .ml-sheet) fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+:is(.ml-pop, .ml-sheet) legend,
+:is(.ml-pop, .ml-sheet) .ml-lbl {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font: 600 11px/16px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ml-opts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.ml-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--ground);
+  color: var(--ink);
+  font: 500 13px/1.15 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.ml-opt::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.ml-opt[aria-checked='true'] {
+  border-color: var(--tone);
+  background: color-mix(in oklab, var(--tone) 14%, var(--surface));
+  font-weight: 600;
+}
+.ml-opt[aria-checked='true']::after {
+  content: '✓';
+  margin-left: auto;
+  color: var(--tone);
+  font-weight: 700;
+}
+.ml-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ml-progress .ml-step {
+  height: 44px;
+}
+.ml-progress .ml-step button {
+  width: 44px;
+  height: 42px;
+  font-size: 18px;
+}
+.ml-progress .ml-step output {
+  min-width: 96px;
+  font-size: 15px;
+}
+.ml-scorepick {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 3px;
+}
+.ml-scorepick button {
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+  color: var(--muted);
+  font: 600 13px/1 var(--font-mono);
+  cursor: pointer;
+}
+.ml-scorepick button[aria-checked='true'] {
+  background: var(--score-high);
+  border-color: var(--score-high);
+  color: #12101a;
+}
+.ml-scorepick button[data-in] {
+  border-color: color-mix(in oklab, var(--score-high) 50%, transparent);
+  color: var(--ink);
+}
+.ml-switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 40px;
+}
+.ml-switchrow > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+.ml-switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+  cursor: pointer;
+}
+.ml-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--dur-enter) var(--ease-enter);
+}
+.ml-switch[aria-checked='true'] {
+  background: var(--neon-magenta);
+}
+.ml-switch[aria-checked='true']::after {
+  transform: translateX(18px);
+  background: #fff;
+}
+.ml-pop__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.ml-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  margin-left: -10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--bad);
+  font: 600 14px/1 var(--font-sans);
+  cursor: pointer;
+}
+.ml-remove:hover {
+  background: color-mix(in oklab, var(--bad) 12%, transparent);
+}
+.ml-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.ml-saved[data-tone='ok']::before {
+  content: '✓';
+  color: var(--good);
+  font-weight: 700;
+}
+.ml-alert {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in oklab, var(--bad) 40%, transparent);
+  background: color-mix(in oklab, var(--bad) 10%, var(--surface));
+  font-size: 13px;
+  line-height: 18px;
+}
+.ml-alert::before {
+  content: '!';
+  grid-row: span 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bad);
+  color: var(--ground);
+  font: 700 12px/1 var(--font-sans);
+}
+.ml-alert span {
+  color: var(--muted);
+}
+
+/* Card quick menu (Base UI Menu with radio items). */
+.ml-menu {
+  width: 240px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.6);
+  transform-origin: var(--transform-origin, top right);
+}
+.ml-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font: 500 14px/1 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.ml-menu button[data-s]::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.ml-menu button[data-highlighted] {
+  background: var(--surface-2);
+}
+.ml-menu button[aria-checked='true']::after {
+  content: '✓';
+  margin-left: auto;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.ml-menu hr {
+  margin: 6px 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.ml-menu small {
+  display: block;
+  padding: 6px 10px 4px;
+  color: var(--muted);
+  font: 600 11px/16px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ml-menu .ml-menu__danger {
+  color: var(--bad);
+}
+
+/* Card add button once the anime is in the list: shows the status dot instead of "+". */
+.br-add[data-s] {
+  opacity: 1;
+  transform: none;
+  background: color-mix(in oklab, #0c0b12 80%, transparent);
+}
+.br-add[data-s]::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 8px var(--tone);
+}
+.br-card .ml-status {
+  top: auto;
+  bottom: var(--space-2);
+}
+
+/* ---------- XP moment ---------- */
+.ml-xp {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--xp-gold);
+  color: #12101a;
+  font: 700 13px/1 var(--font-mono);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--xp-gold) 45%, transparent);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ml-xp[data-demo='frame'] {
+  transform: translateY(-14px) rotate(-3deg);
+}
+.ml-toast {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  width: 360px;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  border: 1px solid color-mix(in oklab, var(--xp-gold) 35%, var(--border));
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.6);
+}
+.ml-toast__badge {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--xp-gold), color-mix(in oklab, var(--xp-gold) 55%, var(--neon-magenta)));
+  color: #12101a;
+  font: 700 13px/1 var(--font-mono);
+  transform: rotate(-4deg);
+}
+.ml-toast strong {
+  display: block;
+  font: 700 15px/20px var(--font-display);
+}
+.ml-toast p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.ml-lvl {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  font: 600 12px/1 var(--font-mono);
+  color: var(--muted);
+}
+.ml-lvl b {
+  color: var(--xp-gold);
+}
+.ml-lvl__bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+  position: relative;
+}
+.ml-lvl__bar > span {
+  position: absolute;
+  inset: 0;
+  background: var(--xp-gold);
+  transform: scaleX(var(--p));
+  transform-origin: left;
+  border-radius: inherit;
+}
+.ml-lvl__bar > span[data-gain] {
+  background: color-mix(in oklab, var(--xp-gold) 45%, #fff);
+}
+/* One-off sheen across a card cover when its entry becomes Completed (transform only). */
+.ml-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 236, 170, 0.35) 50%, transparent 65%);
+  transform: translateX(20%);
+}
+
+/* ---------- Mobile list rows ---------- */
+.ml-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.ml-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.ml-row .ml-thumb {
+  width: 52px;
+}
+.ml-row__main {
+  min-width: 0;
+}
+.ml-row__main a {
+  color: var(--ink);
+  font: 700 15px/20px var(--font-display);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ml-row__main a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.ml-row__sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px var(--space-2);
+  margin-top: 4px;
+  color: var(--muted);
+  font: 500 13px/18px var(--font-mono);
+}
+.ml-row__sub .ml-dotlbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--tone);
+  font: 600 13px/18px var(--font-sans);
+}
+.ml-row__sub .ml-dotlbl::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ml-row .ml-mini {
+  width: 100%;
+  max-width: 180px;
+}
+.ml-row__act {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+.ml-row__act :is(.ml-plus, .ml-more-btn) {
+  position: static;
+  opacity: 1;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ml-row__act .ml-plus {
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+.ml-row__act .ml-more-btn {
+  border-radius: var(--radius-md);
+  background: none;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+/* ---------- Mockup board (frames for the control and states) ---------- */
+.ml-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+.ml-frame {
+  margin: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--surface) 55%, var(--ground));
+  min-width: 0;
+}
+.ml-frame > figcaption {
+  margin-bottom: var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.ml-frame > figcaption b {
+  display: block;
+  color: var(--ink);
+  font: 700 15px/20px var(--font-display);
+  margin-bottom: 2px;
+}
+.ml-frame--wide {
+  grid-column: 1 / -1;
+}
+.ml-h2 {
+  margin: var(--space-16) 0 var(--space-4);
+  font: 700 26px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.ml-h2:first-child {
+  margin-top: 0;
+}
+.ml-note {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 72ch;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-6);
+}
+.ml-phone {
+  position: relative;
+  width: 100%;
+  max-width: 390px;
+  height: 760px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--ground);
+}
+.ml-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, #07060b 66%, transparent);
+}
+.ml-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  border-radius: 22px 22px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--surface);
+  display: grid;
+  gap: var(--space-4);
+}
+.ml-sheet__grab {
+  justify-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  margin-bottom: var(--space-1);
+}
+.ml-sheet .ml-opts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ml-sheet .ml-opt,
+.ml-sheet .ml-scorepick button {
+  min-height: 44px;
+  height: 44px;
+}
+.ml-sheet .ml-scorepick {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.ml-sheet .ml-remove {
+  min-height: 44px;
+}
+
+/* Mini anime header used in the control frames. */
+.ml-ah {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: end;
+  padding: var(--space-6);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 120% at 0% 0%, color-mix(in oklab, var(--c1) 45%, transparent), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--border);
+}
+.ml-ah__cover {
+  position: relative;
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+}
+.ml-ah h3 {
+  margin: 0 0 4px;
+  font: 700 26px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.ml-ah p {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: 14px;
+}
+.ml-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+/* Empty-list onboarding. */
+.ml-onboard {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--space-10);
+  align-items: center;
+  padding: var(--space-10);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(70% 90% at 100% 0%, color-mix(in oklab, var(--brand-b) 16%, transparent), transparent 70%),
+    radial-gradient(60% 80% at 0% 100%, color-mix(in oklab, var(--brand-a) 18%, transparent), transparent 70%),
+    var(--surface);
+  overflow: hidden;
+}
+.ml-onboard h2 {
+  margin: 0 0 var(--space-3);
+  font: 700 36px/1.08 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.ml-onboard > div > p {
+  margin: 0 0 var(--space-6);
+  color: var(--muted);
+  max-width: 46ch;
+}
+.ml-steps {
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  counter-reset: s;
+}
+.ml-steps li {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  counter-increment: s;
+  font-size: 15px;
+}
+.ml-steps li::before {
+  content: counter(s);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--accent-ink);
+  font: 700 14px/1 var(--font-mono);
+}
+.ml-steps li span {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+.ml-steps .ml-xpinline {
+  color: var(--xp-gold);
+  font: 600 13px/1 var(--font-mono);
+}
+.ml-fan {
+  position: relative;
+  height: 300px;
+}
+.ml-fan > span:not(.ml-xp) {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  width: 150px;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  outline: 1px solid var(--border);
+}
+.ml-fan > span:nth-child(1) { transform: translateX(-130%) rotate(-10deg) translateY(24px); }
+.ml-fan > span:nth-child(2) { transform: translateX(-50%) rotate(0deg); z-index: 1; }
+.ml-fan > span:nth-child(3) { transform: translateX(30%) rotate(10deg) translateY(24px); }
+.ml-fan .ml-xp {
+  z-index: 2;
+  top: 4px;
+  right: 8%;
+  transform: rotate(6deg);
+}
+.ml-quick {
+  margin-top: var(--space-10);
+}
+.ml-quick .br-row-scroll {
+  margin-top: var(--space-4);
+}
+
+/* MAL import dialog sketch. */
+.ml-drop {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1.5px dashed color-mix(in oklab, var(--accent) 45%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--accent) 5%, var(--ground));
+  text-align: center;
+  font-size: 14px;
+}
+.ml-drop small {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-cover,
+  .ml-switch::after {
+    transition: none;
+  }
+  .ml-card:hover .ml-cover {
+    transform: none;
+  }
+  .ml-plus:active,
+  .ml-step button:active,
+  .ml-ctl__plus:active {
+    transform: none;
+  }
+}
+
+/* ---------- Below --bp-md ---------- */
+@container (max-width: 767px) {
+  .ml-head {
+    margin-bottom: var(--space-4);
+  }
+  .ml-head h1 {
+    font-size: 32px;
+  }
+  .ml-stats {
+    font-size: 13px;
+    gap: 2px var(--space-3);
+  }
+  .ml-tabs {
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-2);
+  }
+  .ml-tabs .ol-tab {
+    padding-inline: var(--space-3);
+  }
+  .ml-tabs .ol-tab[aria-current='page']::after {
+    left: var(--space-3);
+    right: var(--space-3);
+  }
+  .ml-bar {
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .ml-search {
+    flex-basis: 100%;
+    max-width: none;
+    height: 44px;
+  }
+  .ml-search__clear {
+    width: 40px;
+    height: 40px;
+  }
+  .ml-select {
+    height: 44px;
+  }
+  .ml-bar__end {
+    margin-left: auto;
+  }
+  .ml-seg-m button {
+    min-height: 38px;
+  }
+  .ml-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-3);
+  }
+  .ml-plus {
+    height: 44px;
+    padding: 0 14px;
+  }
+  .ml-more-btn {
+    width: 44px;
+    height: 44px;
+    top: var(--space-1);
+    right: var(--space-1);
+  }
+  .ml-onboard {
+    grid-template-columns: 1fr;
+    padding: var(--space-6) var(--space-4);
+    gap: var(--space-4);
+  }
+  .ml-onboard h2 {
+    font-size: 28px;
+  }
+  .ml-fan {
+    order: -1;
+    height: 200px;
+  }
+  .ml-fan > span:not(.ml-xp) {
+    width: 100px;
+  }
+  .ml-ah {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+  .ml-ah__cover {
+    width: 84px;
+  }
+  .ml-ah h3 {
+    font-size: 20px;
+  }
+  .ml-ah .ml-ctl {
+    grid-column: 1 / -1;
+  }
+  .ml-frame {
+    padding: var(--space-4);
+  }
+  .ml-pop {
+    width: 100%;
+  }
+  .ml-errline {
+    padding-left: 0;
+    flex-wrap: wrap;
+  }
+}
+
+/* Skeleton blocks are spans in the mockup: give them a box. */
+.ml-grid .br-skel {
+  display: block;
+}
