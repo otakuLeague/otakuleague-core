@@ -141,7 +141,7 @@ export class SourceUnavailableError extends Error {
   }
 }
 
-/** The source answered, but nothing usable (e.g. no isAdult): worth a backoff, not a retry. */
+/** The source answered, but nothing usable (e.g. no isAdult, oversized body): worth a backoff, not a retry. */
 export class UnusableAnswerError extends SourceUnavailableError {
   constructor(source: AnimeDataSource, reason: string) {
     super(source, reason);

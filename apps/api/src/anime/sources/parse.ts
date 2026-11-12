@@ -146,25 +146,106 @@ function decodeEntities(value: string): string {
             : Number.parseInt(name.slice(1), 10);
         return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
       }
-      return NAMED_ENTITIES[name.toLowerCase()] ?? entity;
+      const key = name.toLowerCase();
+      return Object.hasOwn(NAMED_ENTITIES, key)
+        ? (NAMED_ENTITIES[key] ?? entity)
+        : entity;
     },
   );
+}
+
+/** Matches SYNOPSIS_MAX_CHARS in apps/web/src/anime/overview-facts.ts. */
+const SYNOPSIS_MAX_RAW_CHARS = 20_000;
+
+const BREAK_TAG = /^br\s*\/?$/i;
+const PARAGRAPH_END_TAG = /^\/p\s*$/i;
+const RAW_TEXT_TAG = /^(script|style)\b/i;
+
+/** Index just past the closing tag of `name` at or after `from`, or -1. */
+function rawTextEnd(html: string, name: string, from: number): number {
+  const closer = new RegExp(`</${name}\\s*>`, 'gi');
+  closer.lastIndex = from;
+  const match = closer.exec(html);
+  return match === null ? -1 : match.index + match[0].length;
+}
+
+/**
+ * Drops tags in one left-to-right pass: <br> becomes a line break, </p> a blank line,
+ * script and style lose their content, every other tag disappears. A '<' that does not
+ * open a tag (no '>' after it, or another '<' first) stays as text. Linear in the input, whatever it contains.
+ */
+export function stripTags(html: string): string {
+  let out = '';
+  let index = 0;
+  const noCloserAhead = new Set<string>();
+  // The last '>' found, reused while it is still ahead: keeps a run of '<' linear.
+  let gt = -1;
+  while (index < html.length) {
+    const lt = html.indexOf('<', index);
+    if (lt === -1) {
+      out += html.slice(index);
+      break;
+    }
+    out += html.slice(index, lt);
+    if (gt < lt + 1) gt = html.indexOf('>', lt + 1);
+    if (gt === -1) {
+      out += html.slice(lt);
+      break;
+    }
+    // A stray '<' (as in "HP < 10") is text; the tag, if any, starts at the next one.
+    const innerLt = html.indexOf('<', lt + 1);
+    if (innerLt !== -1 && innerLt < gt) {
+      out += '<';
+      index = lt + 1;
+      continue;
+    }
+    const inner = html.slice(lt + 1, gt);
+    index = gt + 1;
+    if (BREAK_TAG.test(inner)) {
+      out += '\n';
+    } else if (PARAGRAPH_END_TAG.test(inner)) {
+      out += '\n\n';
+    } else {
+      const raw = RAW_TEXT_TAG.exec(inner);
+      const name = raw?.[1]?.toLowerCase();
+      if (name !== undefined && !noCloserAhead.has(name)) {
+        const end = rawTextEnd(html, name, gt + 1);
+        if (end === -1) noCloserAhead.add(name);
+        else index = end;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The first 20,000 characters, ending on a whole character, tag and entity: a cut that fell
+ * inside a surrogate pair, an unterminated tag ("<b") or entity ("&am") drops that tail.
+ */
+function cutRaw(value: string): string {
+  if (value.length <= SYNOPSIS_MAX_RAW_CHARS) return value;
+  let raw = value.slice(0, SYNOPSIS_MAX_RAW_CHARS);
+  const last = raw.charCodeAt(raw.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) raw = raw.slice(0, -1);
+  const tag = raw.lastIndexOf('<');
+  if (tag > raw.lastIndexOf('>')) raw = raw.slice(0, tag);
+  const entity = raw.lastIndexOf('&');
+  if (entity !== -1 && /^&[#\w]*$/.test(raw.slice(entity))) {
+    raw = raw.slice(0, entity);
+  }
+  return raw;
 }
 
 /**
  * Source synopses come as HTML (AniList: <br>, <i>, <b>) or plain text (Jikan). We store
  * plain text only: tags dropped, script and style content dropped, entities decoded,
  * paragraphs separated by one blank line. The web app renders it as text, never as HTML.
+ * The raw text is cut to 20,000 characters first, before any scan.
  */
 export function synopsisText(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const plain = decodeEntities(
-    value
-      .replaceAll('\u0000', '')
-      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p\s*>/gi, '\n\n')
-      .replace(/<[^>]*>/g, ''),
+    stripTags(cutRaw(value).replaceAll('\u0000', '')),
   );
   const paragraphs = plain
     .replace(/\r\n?/g, '\n')
