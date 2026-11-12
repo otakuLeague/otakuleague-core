@@ -1,10 +1,11 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiExtraModels,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiProperty,
+  ApiPropertyOptional,
   ApiServiceUnavailableResponse,
   ApiTags,
   getSchemaPath,
@@ -15,16 +16,30 @@ import {
   type AnimeDetails,
   type AnimeFranchise,
   type AnimeIdSource,
+  type AnimeSearchPage,
   type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
-import { IsIn, Matches, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import {
   AnimeBySlugAnimeSchema,
   AnimeBySlugRedirectSchema,
   AnimeDetailsSchema,
   AnimeFranchiseSchema,
+  AnimeSearchPageSchema,
   AnimeSlugResolutionSchema,
 } from './anime.openapi';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
@@ -60,6 +75,33 @@ class AnimeSlugParams {
   readonly slug!: string;
 }
 
+class AnimeSearchParams {
+  @ApiProperty({ minLength: 1, maxLength: 100, example: 'attack on titan' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  readonly q!: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  readonly page: number = 1;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  readonly pageSize: number = 24;
+}
+
 @ApiTags('anime')
 @ApiExtraModels(AnimeBySlugAnimeSchema, AnimeBySlugRedirectSchema)
 @Controller('anime')
@@ -67,7 +109,27 @@ export class AnimeController {
   constructor(
     private readonly anime: AnimeService,
     private readonly franchises: AnimeFranchiseService,
+    private readonly search: AnimeSearchService,
   ) {}
+
+  // First: 'search' would otherwise be read as an idSource by a route with one more segment.
+  @Get('search')
+  @ApiOkResponse({
+    type: AnimeSearchPageSchema,
+    description:
+      'Anime we already store, best match first (ADR 0015): by English, romaji or native title or synonym, ignoring case, accents and punctuation, tolerating typos. Never calls a source. A query with no letters or digits is valid and finds nothing.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'q missing or longer than 100 characters, or page or pageSize out of range.',
+  })
+  searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
+    return this.search.search({
+      query: params.q,
+      page: params.page,
+      pageSize: params.pageSize,
+    });
+  }
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the
   // first route that matches.

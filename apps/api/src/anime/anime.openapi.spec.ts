@@ -1,6 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import { type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import type { AnimeDetails, FranchiseSeason } from '@otakuleague/shared-types';
+import type {
+  AnimeDetails,
+  AnimeSearchHit,
+  FranchiseSeason,
+} from '@otakuleague/shared-types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../testing/test-app';
 
@@ -112,6 +116,37 @@ describe('anime OpenAPI schema', () => {
     expect(params('/anime/{idSource}/{externalId}').toSorted()).toEqual([
       'externalId',
       'idSource',
+    ]);
+  });
+
+  it('documents the search route and every hit field', () => {
+    const hitKeys = {
+      slug: true,
+      ref: true,
+      title: true,
+      matchedTitle: true,
+      format: true,
+      episodes: true,
+      season: true,
+      seasonYear: true,
+      startYear: true,
+      coverImageUrl: true,
+      coverColor: true,
+      score: true,
+    } satisfies Record<keyof AnimeSearchHit, true>;
+    const params = (document.paths['/anime/search']?.get?.parameters ?? []).map(
+      (param) => ('name' in param ? param.name : param.$ref),
+    );
+
+    expect(params.toSorted()).toEqual(['page', 'pageSize', 'q']);
+    expect(
+      Object.keys(schema('AnimeSearchHitSchema').properties ?? {}).toSorted(),
+    ).toEqual(Object.keys(hitKeys).toSorted());
+    expect(schema('AnimeSearchPageSchema').required?.toSorted()).toEqual([
+      'hits',
+      'page',
+      'pageSize',
+      'total',
     ]);
   });
 
