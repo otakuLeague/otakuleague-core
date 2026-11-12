@@ -65,3 +65,9 @@ New references, for ambition in motion and art direction (immersive scroll, page
 Where to spend it: the home hero, landing and marketing moments, page transitions, the anime page header, XP and level-up moments. Data-heavy screens (lists, tabs, rankings) stay fast and readable, with motion as polish rather than spectacle.
 
 What still holds: ADR 0011's performance rules (poster or static first paint, nothing heavy on the LCP path, `prefers-reduced-motion` honoured, pause when hidden) and accessibility. A heavier effect, or a new animation library, is fine when the PR states its cost; a new dependency still needs Farouk's merge.
+
+## Status update (2026-11-12, OTA-166)
+
+- Slice 1 vendored `gsap-core`, `gsap-performance`, `gsap-plugins`, `gsap-react`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-utils`, `vercel-react-view-transitions` and `web-design-guidelines` into `.claude/skills/` (guidelines pinned locally, no runtime fetch). Edits to the vendored files are listed in each folder's `SOURCE.md`.
+- `gsap-frameworks` left out (Vue, Svelte and Nuxt only, outside our stack).
+- Impeccable and react-best-practices follow in OTA-188 (Impeccable is Apache-2.0 and ships scripts that must be left out).

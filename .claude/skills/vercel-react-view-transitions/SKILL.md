@@ -15,7 +15,7 @@ Animate between UI states using the browser's native `document.startViewTransiti
 
 Every `<ViewTransition>` should communicate a spatial relationship or continuity. If you can't articulate what it communicates, don't add it.
 
-Implement **all** applicable patterns from this list, in this order:
+In OtakuLeague, build only the transitions the ticket names; skip the full-app audit.
 
 | Priority | Pattern | What it communicates |
 |----------|---------|---------------------|
@@ -25,7 +25,7 @@ Implement **all** applicable patterns from this list, in this order:
 | 4 | **State change** (`enter`/`exit`) | "Something appeared/disappeared" |
 | 5 | **Route change** (page-level) | "Going to a new place" |
 
-This is an implementation order, not a "pick one" list. Implement every pattern that fits the app. Only skip a pattern if the app has no use case for it.
+In OtakuLeague, build only the transitions the ticket names; skip the full-app audit.
 
 ### Choosing Animation Style
 
@@ -50,7 +50,7 @@ Reserve directional slides for hierarchical navigation (list → detail) and ord
 
 ## Implementation Workflow
 
-When adding view transitions to an existing app, **follow [references/implementation.md](references/implementation.md) step by step.** Start with the audit — do not skip it. Use [references/css-recipes.md](references/css-recipes.md) for the applicable CSS and adapt it to the app.
+When adding view transitions to an existing app, **follow [references/implementation.md](references/implementation.md) step by step.** In OtakuLeague, build only the transitions the ticket names; skip the full-app audit. Use [references/css-recipes.md](references/css-recipes.md) for the applicable CSS and adapt it to the app.
 
 ---
 
@@ -327,6 +327,3 @@ Always add the reduced motion CSS from [references/css-recipes.md](references/cs
 - **[references/css-recipes.md](references/css-recipes.md)** — Ready-to-use CSS animation recipes.
 - **[references/nextjs.md](references/nextjs.md)** — Next.js App Router patterns and Server Component details.
 
-## Full Compiled Document
-
-For the complete guide with all reference files expanded: `AGENTS.md`

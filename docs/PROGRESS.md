@@ -5,17 +5,17 @@ Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read
 Updated: 2026-11-12
 
 ## Current milestone
-W2 Anime page + search. Merged on main: OTA-98 slice 1 (#62, local trigram search), OTA-135 slice 1 (#63, catalog lists), OTA-173 (#70, first-visit import guard), OTA-174 (#71, source body caps), designs OTA-155/156/157/158 (#64, #66, #67, #68), OTA-138 ADR 0015 auth (#65). OTA-98 and OTA-135 are Done in Linear. Remaining catalog work: OTA-177 (slices 2–3: seasonal + genre lists, slug claiming).
+W2 Anime page + search. Merged on main and Done: OTA-98 slice 1 (#62), OTA-135 slice 1 (#63), OTA-173 (#70), OTA-174 (#71), OTA-183 deploy-order guard (#72), OTA-147 legal/info pages slice 1 (#69), designs OTA-155/156/157/158 (#64, #66, #67, #68), OTA-138 ADR 0015 auth (#65).
 
 ## Last session
-OTA-183 (open, this PR): deploy-order guard. `scripts/deploy-order.mjs` warns when a PR changes `apps/api/` and `apps/web/` plus `packages/shared-types/` or an API controller; CI job `Deploy order` (warning only). Rule: API changes additive first (expand → migrate web → contract), in charter §7 and `.claude/rules/api.md`. Heuristic: it also fires on additive vertical slices. The guard cannot fire on its own PR.
+OTA-166 slice 1 (open, draft then ready): vendored GSAP, `vercel-react-view-transitions` and `web-design-guidelines` skills into `.claude/skills/`, each with LICENSE and SOURCE.md (edits to vendored text listed there). `gsap-frameworks` left out. Guidelines pinned locally, no runtime fetch. Protected path (`.claude/`): Farouk merges.
 
 ## In progress
-- Open: #69 OTA-147 legal/info pages slice 1, draft; waiting on Farouk to confirm legal copy. Its note lives on its own branch.
-- Open: OTA-183 deploy-order guard (protected paths `.github`, `scripts`, `.claude/skills`; Farouk merges).
+- Backlog: OTA-188 slice 2, Impeccable (Apache-2.0, scripts left out) and react-best-practices.
+- OTA-147 remaining slices: `/contact` (slice 2, needs the email provider; until then FAQ and footer use `mailto:contact@otakuleague.com`). Launch gate: Vercel and other DPAs, account-deletion wording (OTA-180/181), Google sign-in text (OTA-179), contact mailbox host, AnimeThemes credit on the Music tab (OTA-107).
 
 ## Next 3 tasks
-1. OTA-166 vendor design skills (protected path, Farouk merges).
+1. OTA-185 review checklist for AI-written React (protected path, Farouk merges).
 2. OTA-177 catalog list slices 2–3: seasonal + genre lists, then slug claiming.
 3. OTA-136 Build Home page, after the OTA-177 seasonal list. Logo component (unique gradient ids), motion island, `--ease-drift` into tokens.css, hide `.sh-bg` on home, browse row changes.
 

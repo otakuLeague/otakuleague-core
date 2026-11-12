@@ -6,14 +6,7 @@ Use the official [React `<ViewTransition>` reference](https://react.dev/referenc
 
 ## Step 1: Audit the App
 
-Before writing any code, scan the codebase thoroughly. Search for:
-
-- **Every `<Link>` and `router.push`** — these are your navigation triggers. Open every file that contains one.
-- **Every `<Suspense>` boundary** — each one is a candidate for a reveal animation. Check what its fallback renders.
-- **Every page/route component** — list them all. Each page needs a VT placement decision.
-- **Persistent elements** — headers, navbars, sidebars, sticky controls that stay on screen across navigations. These need `viewTransitionName` isolation.
-- **Shared visual elements** — images, cards, or avatars that appear on both a source and target view (e.g., a thumbnail in a list and the same image on a detail page).
-- **Skeleton-to-content control pairs** — if a Suspense fallback renders a control (search input, tab bar) that also exists in the real content, both need a matching `viewTransitionName`.
+In OtakuLeague, build only the transitions the ticket names; skip the full-app audit.
 
 Then classify every navigation and produce a navigation map:
 
