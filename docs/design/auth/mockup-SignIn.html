@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth: sign in</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /auth?mode=sign-in, guest, keyboard focus in the identifier field. No site shell. -->
+    <div class="au">
+      <aside class="au-show" aria-label="About OtakuLeague">
+        <a class="au-show__logo" href="/"><img src="../../../apps/web/public/brand/logo-pierce.svg" alt="OtakuLeague home" width="96" height="96" /></a>
+        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">+50 XP</span></div>
+        <p class="au-show__kicker ol-label">Fall 2026 season is live</p>
+        <h2 class="au-show__title">Track every anime. <em>Earn XP.</em> Top the season.</h2>
+        <p class="au-show__lede">Your list, your progress and your rank, in one place.</p>
+      </aside>
+      <main class="au-main">
+        <header class="au-top">
+          <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
+          <p>New here? <a class="au-link" href="/auth?mode=sign-up">Create an account</a></p>
+        </header>
+        <div class="au-center">
+          <form class="au-card" action="/auth/sign-in" method="post" novalidate>
+            <h1>Welcome back</h1>
+            <p>Sign in to keep your list, XP and rank in sync.</p>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google?next=/"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
+            <div class="au-or">or</div>
+            <div class="au-field">
+              <label for="id">Email or username</label>
+              <div class="au-input" data-demo="focus"><input id="id" name="identifier" autocomplete="username" autocapitalize="none" spellcheck="false" value="kaito_" /></div>
+            </div>
+            <div class="au-field">
+              <div class="au-field__row"><label for="pw">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <div class="au-input"><input id="pw" name="password" type="password" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false" aria-controls="pw">Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+            <p class="au-foot">No account yet? <a href="/auth?mode=sign-up">Create one, it's free</a></p>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <section class="au-board" aria-label="Other sign-in states">
+      <h2>Sign in: other states</h2>
+      <div class="au-grid">
+        <figure class="au-state">
+          <figcaption>Error · wrong identifier or password (401)</figcaption>
+          <!-- Same message for an unknown account, a wrong password and a Google-only account: never says which. -->
+          <form class="au-card">
+            <div class="au-alert" role="alert"><strong>That didn't match.</strong><span>Check your email or username and password, then try again.</span></div>
+            <div class="au-field">
+              <label for="e1">Email or username</label>
+              <div class="au-input" data-state="error"><input id="e1" value="kaito_tanaka" aria-invalid="true" aria-describedby="e1a" /></div>
+            </div>
+            <div class="au-field">
+              <div class="au-field__row"><label for="e2">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <div class="au-input" data-state="error"><input id="e2" type="password" value="hunter22" aria-invalid="true" /><button class="au-reveal" type="button">Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Rate limited · 429 with Retry-After</figcaption>
+          <form class="au-card">
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many attempts.</strong><span>For your safety, sign-in is paused. Try again in <b class="ol-num">4:52</b>, or reset your password.</span></div>
+            <div class="au-field">
+              <label for="r1">Email or username</label>
+              <div class="au-input"><input id="r1" value="kaito_tanaka" /></div>
+            </div>
+            <div class="au-field">
+              <label for="r2">Password</label>
+              <div class="au-input"><input id="r2" type="password" /><button class="au-reveal" type="button">Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">4:52</span></button>
+            <p class="au-foot"><a href="/auth/forgot-password">Reset your password instead</a></p>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Loading · submitting</figcaption>
+          <form class="au-card" aria-busy="true">
+            <div class="au-field">
+              <label for="l1">Email or username</label>
+              <div class="au-input" aria-disabled="true"><input id="l1" value="kaito.tanaka.the.longest.address@university-of-kyoto.example.ac.jp" readonly /></div>
+            </div>
+            <div class="au-field">
+              <label for="l2">Password</label>
+              <div class="au-input" aria-disabled="true"><input id="l2" type="password" value="xxxxxxxxxx" readonly /><button class="au-reveal" type="button" disabled>Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-busy="true"><span class="au-spin" aria-hidden="true"></span>Signing in…</button>
+            <a class="ol-btn ol-btn--secondary au-btn" aria-disabled="true"><span class="au-g" aria-hidden="true">G</span>Continue with Google</a>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Error · Google cancelled or failed (callback ?error=)</figcaption>
+          <form class="au-card">
+            <div class="au-alert" role="alert"><strong>Google sign-in didn't finish.</strong><span>Nothing changed. Try again, or use your email and password.</span></div>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google"><span class="au-g" aria-hidden="true">G</span>Try Google again</a>
+            <div class="au-or">or</div>
+            <div class="au-field">
+              <label for="g1">Email or username</label>
+              <div class="au-input"><input id="g1" /></div>
+            </div>
+          </form>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Error · empty submit (client validation)</figcaption>
+          <form class="au-card">
+            <div class="au-field">
+              <label for="v1">Email or username</label>
+              <div class="au-input" data-state="error"><input id="v1" aria-invalid="true" aria-describedby="v1m" /></div>
+              <p class="au-msg" data-tone="bad" id="v1m">Enter your email or username.</p>
+            </div>
+            <div class="au-field">
+              <label for="v2">Password</label>
+              <div class="au-input" data-state="error"><input id="v2" type="password" aria-invalid="true" aria-describedby="v2m" /><button class="au-reveal" type="button">Show</button></div>
+              <p class="au-msg" data-tone="bad" id="v2m">Enter your password.</p>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+          </form>
+        </figure>
+
+        <figure class="au-state" data-theme="light">
+          <figcaption>Light theme · system light, same layout</figcaption>
+          <form class="au-card">
+            <div class="au-alert" data-tone="ok" role="status"><strong>Password updated.</strong><span>Sign in with your new password.</span></div>
+            <div class="au-field">
+              <label for="t1">Email or username</label>
+              <div class="au-input" data-demo="focus"><input id="t1" value="kaito@example.com" /></div>
+            </div>
+            <div class="au-field">
+              <div class="au-field__row"><label for="t2">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <div class="au-input"><input id="t2" type="text" value="new-passw0rd" /><button class="au-reveal" type="button" aria-pressed="true">Hide</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+          </form>
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>
