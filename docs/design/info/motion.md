@@ -1,6 +1,6 @@
 # About/FAQ, contact and legal: motion (OTA-158)
 
-Transform and opacity only (ADR 0011, ADR 0012); colour transitions on small elements are paint-only and allowed. Durations and easings are the tokens in `tokens.css`. These are reading pages: nothing moves on load, no smooth-scroll library (Lenis is home-only).
+Transform and opacity only (ADR 0011, ADR 0012). The few colour transitions below (small text and icons) are this page's own choice: paint-only, on tiny areas, and dropped with reduced motion. Durations and easings are the tokens in `tokens.css`. These are reading pages: nothing moves on load, no smooth-scroll library (Lenis is home-only).
 
 | Element | Trigger | Property | Duration / easing |
 | --- | --- | --- | --- |

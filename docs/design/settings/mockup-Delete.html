@@ -37,12 +37,12 @@
     <p>Removes your profile, list, favourites, XP and leaderboard history, and signs you out on every device. <b>This can't be undone.</b></p>
     <button class="ol-btn st-btn-outline-danger" type="button" aria-haspopup="dialog">Delete account…</button>
   </div>
-</section></div></div></div><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-typed" aria-describedby="del-d-typed">
+</section></div></div></div><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-typed" aria-describedby="del-d-typed del-l-typed">
   <div class="pf-dialog__head"><h2 id="del-t-typed">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
   <form class="pf-dialog__body" id="del-typed">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
     <p class="st-dialog__lede" id="del-d-typed">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <ul class="st-gone" id="del-l-typed">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
@@ -56,99 +56,99 @@
         <a class="au-after" href="/auth/forgot-password">Forgot your password?</a>
       </div>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-typed">Delete account</button></div>
 </div></div>
 <div class="st-board" style="margin-top: 48px">
-<figure><figcaption>2 · Opened (empty field, Delete disabled)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-idle" aria-describedby="del-d-idle">
-  <div class="pf-dialog__head"><h2 id="del-t-idle">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
-  <form class="pf-dialog__body" id="del-idle">
+<figure><figcaption>2 · Opened (empty field, Delete disabled)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-idle-1" aria-describedby="del-d-idle-1 del-l-idle-1">
+  <div class="pf-dialog__head"><h2 id="del-t-idle-1">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
+  <form class="pf-dialog__body" id="del-idle-1">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-idle">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-idle-1">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-idle-1">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
       <li>Sign-ins on every device, this one included</li>
     </ul>
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
-    <div class="au-field"><label for="d-pass">Enter your password to confirm</label>
-        <div class="au-input"><input id="d-pass" type="password" value="" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    <div class="au-field"><label for="d-pass-1">Enter your password to confirm</label>
+        <div class="au-input"><input id="d-pass-1" type="password" value="" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
         
         
         <a class="au-after" href="/auth/forgot-password">Forgot your password?</a>
       </div>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" aria-disabled="true">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-idle-1" aria-disabled="true">Delete account</button></div>
 </div></div></figure>
-<figure><figcaption>3 · Wrong password</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-wrong" aria-describedby="del-d-wrong">
-  <div class="pf-dialog__head"><h2 id="del-t-wrong">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
-  <form class="pf-dialog__body" id="del-wrong">
+<figure><figcaption>3 · Wrong password</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-wrong-2" aria-describedby="del-d-wrong-2 del-l-wrong-2">
+  <div class="pf-dialog__head"><h2 id="del-t-wrong-2">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
+  <form class="pf-dialog__body" id="del-wrong-2">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-wrong">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-wrong-2">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-wrong-2">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
       <li>Sign-ins on every device, this one included</li>
     </ul>
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
-    <div class="au-field"><label for="d-pass">Enter your password to confirm</label>
-        <div class="au-input" data-state="error"><input id="d-pass" type="password" value="hunter2-old" autocomplete="current-password" aria-invalid="true" aria-describedby="d-msg" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
-        <p class="au-msg" data-tone="bad" id="d-msg">That's not your password. Nothing was deleted.</p>
+    <div class="au-field"><label for="d-pass-2">Enter your password to confirm</label>
+        <div class="au-input" data-state="error"><input id="d-pass-2" type="password" value="hunter2-old" autocomplete="current-password" aria-invalid="true" aria-describedby="d-msg-2" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+        <p class="au-msg" data-tone="bad" id="d-msg-2">That's not your password. Nothing was deleted.</p>
         
         <a class="au-after" href="/auth/forgot-password">Forgot your password?</a>
       </div>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-wrong-2">Delete account</button></div>
 </div></div></figure>
-<figure><figcaption>4 · Deleting (dialog locked)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-deleting" aria-describedby="del-d-deleting">
-  <div class="pf-dialog__head"><h2 id="del-t-deleting">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close" aria-disabled="true">×</button></div>
-  <form class="pf-dialog__body" id="del-deleting">
+<figure><figcaption>4 · Deleting (dialog locked)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-deleting-3" aria-describedby="del-d-deleting-3 del-l-deleting-3">
+  <div class="pf-dialog__head"><h2 id="del-t-deleting-3">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close" aria-disabled="true">×</button></div>
+  <form class="pf-dialog__body" id="del-deleting-3">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-deleting">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-deleting-3">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-deleting-3">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
       <li>Sign-ins on every device, this one included</li>
     </ul>
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
-    <div class="au-field"><label for="d-pass">Enter your password to confirm</label>
-        <div class="au-input" aria-disabled="true"><input id="d-pass" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    <div class="au-field"><label for="d-pass-3">Enter your password to confirm</label>
+        <div class="au-input" aria-disabled="true"><input id="d-pass-3" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
         
         
         <a class="au-after" href="/auth/forgot-password">Forgot your password?</a>
       </div>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button" aria-disabled="true">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" aria-busy="true" aria-disabled="true"><span class="au-spin" aria-hidden="true"></span>Deleting…</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button" aria-disabled="true">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-deleting-3" aria-busy="true" aria-disabled="true"><span class="au-spin" aria-hidden="true"></span>Deleting…</button></div>
 </div></div></figure>
-<figure><figcaption>5 · Too many tries (429)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-locked" aria-describedby="del-d-locked">
-  <div class="pf-dialog__head"><h2 id="del-t-locked">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
-  <form class="pf-dialog__body" id="del-locked">
+<figure><figcaption>5 · Too many tries (429)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-locked-4" aria-describedby="del-d-locked-4 del-l-locked-4">
+  <div class="pf-dialog__head"><h2 id="del-t-locked-4">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
+  <form class="pf-dialog__body" id="del-locked-4">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-locked">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-locked-4">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-locked-4">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
       <li>Sign-ins on every device, this one included</li>
     </ul>
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
-    <div class="au-field"><label for="d-pass">Enter your password to confirm</label>
-        <div class="au-input"><input id="d-pass" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    <div class="au-field"><label for="d-pass-4">Enter your password to confirm</label>
+        <div class="au-input"><input id="d-pass-4" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
         
-        <p class="au-msg" data-tone="bad" id="d-msg" role="alert">Too many tries. Wait 10 minutes, or reset your password first.</p>
+        <p class="au-msg" data-tone="bad" id="d-msg-4" role="alert">Too many tries. Wait 10 minutes, or reset your password first.</p>
         <a class="au-after" href="/auth/forgot-password">Forgot your password?</a>
       </div>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" aria-disabled="true">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-locked-4" aria-disabled="true">Delete account</button></div>
 </div></div></figure>
-<figure><figcaption>6 · Google-only account: confirm with Google</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-google" aria-describedby="del-d-google">
-  <div class="pf-dialog__head"><h2 id="del-t-google">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
-  <form class="pf-dialog__body" id="del-google">
+<figure><figcaption>6 · Google-only account: confirm with Google</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-google-5" aria-describedby="del-d-google-5 del-l-google-5">
+  <div class="pf-dialog__head"><h2 id="del-t-google-5">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
+  <form class="pf-dialog__body" id="del-google-5">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-google">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-google-5">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-google-5">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
@@ -157,14 +157,14 @@
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
     <p class="st-dialog__lede">You sign in with Google, so confirm it's you there. You come straight back here to finish.</p><button class="ol-btn ol-btn--secondary au-btn" type="button"><span class="au-g" aria-hidden="true">G</span>Confirm with Google</button>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" aria-disabled="true">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-google-5" aria-disabled="true">Delete account</button></div>
 </div></div></figure>
-<figure><figcaption>7 · Google-only: back from Google (fresh sign-in, max 5 min)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-google-ok" aria-describedby="del-d-google-ok">
-  <div class="pf-dialog__head"><h2 id="del-t-google-ok">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
-  <form class="pf-dialog__body" id="del-google-ok">
+<figure><figcaption>7 · Google-only: back from Google (fresh sign-in, max 5 min)</figcaption><div class="st-stage pf-stage" style="min-height: 720px"><div class="pf-scrim" aria-hidden="true"></div><div class="pf-dialog st-dialog " role="alertdialog" aria-modal="true" aria-labelledby="del-t-google-ok-6" aria-describedby="del-d-google-ok-6 del-l-google-ok-6">
+  <div class="pf-dialog__head"><h2 id="del-t-google-ok-6">Delete your account?</h2><button class="pf-close" type="button" aria-label="Close">×</button></div>
+  <form class="pf-dialog__body" id="del-google-ok-6">
     <div class="st-acct"><span class="pf-avatar" style="--c1: #2f9fb0; --c2: #3b2a8a" aria-hidden="true">KA</span><div><b>kaito_backlog_keeper</b><span>kaito.tanaka.watches.everything@example.com</span></div></div>
-    <p class="st-dialog__lede" id="del-d-google-ok">Everything goes, right away, and <b>it can't be undone</b>:</p>
-    <ul class="st-gone">
+    <p class="st-dialog__lede" id="del-d-google-ok-6">Everything goes, right away, and <b>it can't be undone</b>:</p>
+    <ul class="st-gone" id="del-l-google-ok-6">
       <li>Your profile, photo, banner and bio</li>
       <li>My List: 312 anime, scores and favourites</li>
       <li>Level 16, 13,480 XP and every leaderboard season</li>
@@ -173,7 +173,7 @@
     <p class="au-msg" data-tone="hint">There's no export yet. Want a copy of your list first? Email contact@otakuleague.com before deleting.</p>
     <p class="st-confirmed" role="status">Confirmed as kaito.tanaka.watches.everything@example.com just now</p>
   </form>
-  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit">Delete account</button></div>
+  <div class="pf-dialog__foot"><button class="ol-btn ol-btn--secondary" type="button">Keep my account</button><button class="ol-btn st-btn-danger" type="submit" form="del-google-ok-6">Delete account</button></div>
 </div></div></figure>
 <figure class="st-wide"><figcaption>8 · Done: signed out, on the home page</figcaption><div class="st-card" style="padding: 24px; display: grid; gap: 16px"><div class="sh-ph" style="min-height: 180px">Home page, signed out (header shows Sign in / Join free)</div><div class="st-toast" role="status">Your account and all its data were deleted. Take care.</div></div></figure>
 </div>
@@ -185,14 +185,14 @@
         <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
         <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
       </div>
-      <nav aria-labelledby="f-about"><h2 class="ol-label" id="f-about">OtakuLeague</h2><ul>
+      <nav aria-labelledby="f-about-7"><h2 class="ol-label" id="f-about-7">OtakuLeague</h2><ul>
         <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li><li><a href="/faq">About &amp; FAQ</a></li><li><a href="/contact">Contact</a></li>
       </ul></nav>
-      <nav aria-labelledby="f-legal"><h2 class="ol-label" id="f-legal">Legal</h2><ul>
+      <nav aria-labelledby="f-legal-7"><h2 class="ol-label" id="f-legal-7">Legal</h2><ul>
         <li><a href="/privacy">Privacy</a></li><li><a href="/terms">Terms</a></li><li><a href="/data-sources">Data sources</a></li>
       </ul></nav>
-      <div><h2 class="ol-label" id="f-social">Follow</h2>
-        <ul class="sh-social" aria-labelledby="f-social">
+      <div><h2 class="ol-label" id="f-social-7">Follow</h2>
+        <ul class="sh-social" aria-labelledby="f-social-7">
           <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li><li><a href="#" aria-label="OtakuLeague on X">X</a></li><li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li><li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li><li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
         </ul>
       </div>
