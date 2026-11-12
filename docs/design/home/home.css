@@ -765,6 +765,10 @@
   .hm-rows .br-row-scroll {
     scroll-padding-inline: var(--space-4);
   }
+  .hm-retry {
+    min-height: 44px;
+    padding: 0 var(--space-4);
+  }
   .hm-h2 {
     font-size: 26px;
     line-height: 32px;
