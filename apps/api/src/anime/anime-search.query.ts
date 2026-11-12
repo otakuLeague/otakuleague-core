@@ -1,7 +1,4 @@
-import {
-  ANIME_TITLE_KINDS,
-  type AnimeTitleKind,
-} from '@otakuleague/shared-types';
+import type { AnimeTitleKind } from '@otakuleague/shared-types';
 import type { PrismaService } from '../prisma/prisma.service';
 
 export interface AnimeRankRequest {
