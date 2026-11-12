@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { ThemeSwitch } from './theme-switch';
 
-// Links and socials from the old site's footer (PARITY.md §1); legal pages land with OTA-147.
-const ROADMAP_URL =
+// Links and socials from the old site's footer (PARITY.md §1); legal pages from OTA-147.
+export const ROADMAP_URL =
   'https://cosmic-plutonium-46d.notion.site/2b564006e720817ebcddda0414edf7b7?v=2b564006e72081b7b472000c768b8d2f';
 export const CONTACT_EMAIL = 'contact@otakuleague.com';
+export const DISCORD_URL = 'https://discord.gg/FKv2uhAmrM';
 
 const ABOUT_LINKS = [
   { href: '/faq', label: 'About & FAQ' },
@@ -15,13 +16,13 @@ const ABOUT_LINKS = [
 const LEGAL_LINKS = [
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
-  { href: '/cookies', label: 'Cookies' },
+  { href: '/data-sources', label: 'Data sources' },
 ] as const;
 
 // Short marks until the networks' official icons are added (no icon dependency yet).
 export const SOCIAL_LINKS = [
   { href: 'https://x.com/otakuLeague2025', name: 'X', mark: 'X' },
-  { href: 'https://discord.gg/FKv2uhAmrM', name: 'Discord', mark: 'Dc' },
+  { href: DISCORD_URL, name: 'Discord', mark: 'Dc' },
   {
     href: 'https://www.instagram.com/otaku__league',
     name: 'Instagram',
@@ -86,7 +87,7 @@ export function SiteFooter() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={social.name}
+                  aria-label={`OtakuLeague on ${social.name}`}
                 >
                   <span aria-hidden="true">{social.mark}</span>
                 </a>
@@ -101,7 +102,7 @@ export function SiteFooter() {
           © 2026 OtakuLeague ·{' '}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
         </span>
-        <span>Anime data from AniList</span>
+        <Link href="/data-sources">Anime data from AniList</Link>
       </div>
     </footer>
   );

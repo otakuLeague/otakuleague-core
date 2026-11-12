@@ -13,7 +13,11 @@ describe('SiteFooter', () => {
       within(legal)
         .getAllByRole('link')
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/privacy', '/terms', '/cookies']);
+    ).toEqual(['/privacy', '/terms', '/data-sources']);
+    expect(
+      within(legal).getByRole('link', { name: 'Data sources' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Cookies' })).toBeNull();
     expect(
       screen.getByRole('link', { name: 'About & FAQ' }).getAttribute('href'),
     ).toBe('/faq');
@@ -28,7 +32,7 @@ describe('SiteFooter', () => {
     const external = [
       screen.getByRole('link', { name: /Roadmap/ }),
       ...SOCIAL_LINKS.map((social) =>
-        screen.getByRole('link', { name: social.name }),
+        screen.getByRole('link', { name: `OtakuLeague on ${social.name}` }),
       ),
     ];
     expect(external).toHaveLength(6);
@@ -45,7 +49,11 @@ describe('SiteFooter', () => {
     expect(
       screen.getByRole('link', { name: CONTACT_EMAIL }).getAttribute('href'),
     ).toBe(`mailto:${CONTACT_EMAIL}`);
-    expect(screen.getByText('Anime data from AniList')).toBeDefined();
+    expect(
+      screen
+        .getByRole('link', { name: 'Anime data from AniList' })
+        .getAttribute('href'),
+    ).toBe('/data-sources');
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeDefined();
   });
 });
