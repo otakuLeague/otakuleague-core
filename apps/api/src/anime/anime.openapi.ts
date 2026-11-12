@@ -5,6 +5,7 @@ import {
   ANIME_ID_SOURCES,
   ANIME_SEASONS,
   ANIME_STATUSES,
+  ANIME_TITLE_KINDS,
   type AnimeAttribution,
   type AnimeBySlug,
   type AnimeDataSource,
@@ -13,6 +14,9 @@ import {
   type AnimeLink,
   type AnimeNextEpisode,
   type AnimeScore,
+  type AnimeSearchHit,
+  type AnimeSearchPage,
+  type AnimeTitleKind,
   type AnimeStudio,
   type AnimeTag,
   type AnimeTrailer,
@@ -272,4 +276,67 @@ export class AnimeFranchiseSchema implements AnimeFranchise {
 export class AnimeSlugResolutionSchema implements AnimeSlugResolution {
   @ApiProperty({ type: 'integer' }) readonly anilistId!: number;
   @ApiProperty({ example: 'attack-on-titan' }) readonly canonicalSlug!: string;
+}
+
+type AnimeSearchRef = AnimeSearchHit['ref'];
+type AnimeSearchMatchedTitle = AnimeSearchHit['matchedTitle'];
+type AnimeSearchScore = NonNullable<AnimeSearchHit['score']>;
+
+class AnimeSearchRefSchema implements AnimeSearchRef {
+  @ApiProperty({ enum: ANIME_ID_SOURCES }) readonly source!: AnimeIdSource;
+  @ApiProperty({ example: '16498' }) readonly id!: string;
+}
+
+class AnimeSearchMatchedTitleSchema implements AnimeSearchMatchedTitle {
+  @ApiProperty({ enum: ANIME_TITLE_KINDS }) readonly kind!: AnimeTitleKind;
+  @ApiProperty() readonly text!: string;
+}
+
+class AnimeSearchScoreSchema implements AnimeSearchScore {
+  @ApiProperty({ enum: ANIME_DATA_SOURCES }) readonly source!: AnimeDataSource;
+  @ApiProperty() readonly score!: number;
+  @ApiProperty({ enum: [10, 100] }) readonly scale!: 10 | 100;
+}
+
+export class AnimeSearchHitSchema implements AnimeSearchHit {
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Canonical slug; null without an AniList identity: link by ref',
+  })
+  readonly slug!: string | null;
+  @ApiProperty({ type: AnimeSearchRefSchema })
+  readonly ref!: AnimeSearchHit['ref'];
+  @ApiProperty({
+    description: 'English, else romaji, else native, else the matched title',
+  })
+  readonly title!: string;
+  @ApiProperty({ type: AnimeSearchMatchedTitleSchema })
+  readonly matchedTitle!: AnimeSearchHit['matchedTitle'];
+  @ApiProperty({ enum: ANIME_FORMATS, nullable: true })
+  readonly format!: AnimeSearchHit['format'];
+  @ApiProperty(NULLABLE_INTEGER) readonly episodes!: number | null;
+  @ApiProperty({ enum: ANIME_SEASONS, nullable: true })
+  readonly season!: AnimeSearchHit['season'];
+  @ApiProperty(NULLABLE_INTEGER) readonly seasonYear!: number | null;
+  @ApiProperty(NULLABLE_INTEGER) readonly startYear!: number | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly coverImageUrl!: string | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly coverColor!: string | null;
+  @ApiProperty({ type: AnimeSearchScoreSchema, nullable: true })
+  readonly score!: AnimeSearchHit['score'];
+}
+
+export class AnimeSearchPageSchema implements AnimeSearchPage {
+  @ApiProperty({ type: [AnimeSearchHitSchema] })
+  readonly hits!: readonly AnimeSearchHit[];
+  @ApiProperty({ type: 'integer' }) readonly page!: number;
+  @ApiProperty({ type: 'integer' }) readonly pageSize!: number;
+  @ApiProperty({
+    type: 'integer',
+    description: 'Anime matching the query, across all pages',
+  })
+  readonly total!: number;
 }

@@ -10,6 +10,7 @@ import {
   ANIME_SOURCE_ADAPTERS,
   AnimeImportService,
 } from './anime-import.service';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
@@ -88,6 +89,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     },
     AnimeImportService,
     AnimeService,
+    AnimeSearchService,
     FranchiseWalker,
     SourceBackoff,
     ImportLimits,
