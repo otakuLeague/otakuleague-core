@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth: sign up</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /auth?mode=sign-up, guest, form half filled: username available, one password rule met, confirm not typed yet. -->
+    <div class="au">
+      <aside class="au-show" aria-label="About OtakuLeague">
+        <a class="au-show__logo" href="/"><img src="../../../apps/web/public/brand/logo-pierce.svg" alt="OtakuLeague home" width="96" height="96" /></a>
+        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">Lv 12</span></div>
+        <p class="au-show__kicker ol-label">Free, no ads in your list</p>
+        <h2 class="au-show__title">Track every anime. <em>Earn XP.</em> Top the season.</h2>
+        <p class="au-show__lede">Add shows, log episodes, climb the season leaderboard.</p>
+      </aside>
+      <main class="au-main">
+        <header class="au-top">
+          <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
+        </header>
+        <div class="au-center">
+          <form class="au-card" action="/auth/sign-up" method="post" novalidate>
+            <h1>Create your account</h1>
+            <p>Takes a minute. You can add an avatar and bio right after.</p>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/auth/google?next=/onboarding"><span class="au-g" aria-hidden="true">G</span>Sign up with Google</a>
+            <div class="au-or">or with email</div>
+            <div class="au-field">
+              <label for="u">Username</label>
+              <div class="au-input" data-state="ok"><span class="au-prefix" aria-hidden="true">@</span><input id="u" name="username" value="kaito_23" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" aria-describedby="um" /></div>
+              <p class="au-msg" data-tone="ok" id="um" role="status">kaito_23 is available</p>
+            </div>
+            <div class="au-field">
+              <label for="em">Email</label>
+              <div class="au-input"><input id="em" name="email" type="email" value="kaito@example.com" autocomplete="email" /></div>
+            </div>
+            <div class="au-field">
+              <label for="pw">Password</label>
+              <div class="au-input" data-demo="focus"><input id="pw" type="password" value="otaku" autocomplete="new-password" aria-describedby="pr" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+              <ul class="au-rules" id="pr" aria-label="Password rules">
+                <li>At least 8 characters</li>
+                <li data-met>A number or symbol<span class="au-sr">: done</span></li>
+              </ul>
+            </div>
+            <div class="au-field">
+              <label for="pc">Confirm password</label>
+              <div class="au-input"><input id="pc" type="password" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+            </div>
+            <button class="ol-btn ol-btn--primary au-btn">Create account</button>
+            <p class="au-foot">Already a member? <a href="/auth?mode=sign-in">Sign in</a></p>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <section class="au-board" aria-label="Other sign-up states">
+      <h2>Sign up: other states</h2>
+      <div class="au-grid">
+        <figure class="au-state">
+          <figcaption>Username · checking, taken, invalid</figcaption>
+          <!-- Debounced 300 ms after typing stops; nothing shows under 3 characters. Usernames are public (/u/name), so "taken" reveals nothing private. -->
+          <div class="au-card">
+            <div class="au-field">
+              <label for="a1">Username</label>
+              <div class="au-input"><span class="au-prefix" aria-hidden="true">@</span><input id="a1" value="frieren" /></div>
+              <p class="au-msg" data-tone="wait" role="status">Checking…</p>
+            </div>
+            <div class="au-field">
+              <label for="a2">Username</label>
+              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a2" value="Kaito" aria-invalid="true" aria-describedby="a2m" /></div>
+              <p class="au-msg" data-tone="bad" role="status" id="a2m">Kaito is taken. Try <a href="#">kaito_23</a> or <a href="#">kaito_fan</a>.</p>
+            </div>
+            <div class="au-field">
+              <label for="a3">Username</label>
+              <div class="au-input" data-state="error"><span class="au-prefix" aria-hidden="true">@</span><input id="a3" value="kai.to!" aria-invalid="true" aria-describedby="a3m" /></div>
+              <p class="au-msg" data-tone="bad" id="a3m">3 to 20 characters: letters, numbers and _ only.</p>
+            </div>
+            <div class="au-field">
+              <label for="a4">Username</label>
+              <div class="au-input" data-state="ok"><span class="au-prefix" aria-hidden="true">@</span><input id="a4" value="xX_shadow_monarch_Xx" /></div>
+              <p class="au-msg" data-tone="ok">xX_shadow_monarch_Xx is available · 20 / 20</p>
+            </div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Password · rules met, confirm mismatch</figcaption>
+          <div class="au-card">
+            <div class="au-field">
+              <label for="p1">Password</label>
+              <div class="au-input" data-state="ok"><input id="p1" type="password" value="otaku2026" /><button class="au-reveal" type="button">Show</button></div>
+              <ul class="au-rules"><li data-met>At least 8 characters</li><li data-met>A number or symbol</li></ul>
+            </div>
+            <div class="au-field">
+              <label for="p2">Confirm password</label>
+              <div class="au-input" data-state="error"><input id="p2" type="password" value="otaku2025" aria-invalid="true" aria-describedby="p2m" /><button class="au-reveal" type="button">Show</button></div>
+              <p class="au-msg" data-tone="bad" id="p2m">Passwords don't match.</p>
+            </div>
+            <div class="au-field">
+              <label for="p3">Password (submitted too short)</label>
+              <div class="au-input" data-state="error"><input id="p3" type="password" value="abc1" aria-invalid="true" aria-describedby="p3m" /><button class="au-reveal" type="button">Show</button></div>
+              <ul class="au-rules" id="p3m"><li>At least 8 characters <em>(4 / 8)</em></li><li data-met>A number or symbol</li></ul>
+            </div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Loading · creating account</figcaption>
+          <div class="au-card" aria-busy="true">
+            <div class="au-field"><label for="s1">Username</label><div class="au-input" aria-disabled="true"><span class="au-prefix" aria-hidden="true">@</span><input id="s1" value="kaito_23" readonly /></div></div>
+            <div class="au-field"><label for="s2">Email</label><div class="au-input" aria-disabled="true"><input id="s2" value="kaito@example.com" readonly /></div></div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-busy="true"><span class="au-spin" aria-hidden="true"></span>Creating account…</button>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Email already registered · identical to a new sign-up</figcaption>
+          <!-- Byte-for-byte the check-email screen of mockup-Email (no session either way). The existing owner gets "Someone tried to sign up with this address: sign in or reset your password." -->
+          <div class="au-card">
+            <div class="au-badge" aria-hidden="true">✉</div>
+            <h2 tabindex="-1">Check your email</h2>
+            <p>We sent a confirmation link to <strong>kaito@example.com</strong>. Open it to finish signing up. It works for 24 hours.</p>
+            <button class="ol-btn ol-btn--secondary au-btn" aria-disabled="true">Resend email in <span class="ol-num">0:42</span></button>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Rate limited · 429</figcaption>
+          <div class="au-card">
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Slow down a little.</strong><span>Too many sign-ups from this network. Try again in about 10 minutes. Your entries are kept.</span></div>
+            <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">9:58</span></button>
+            <p class="au-sr" role="status"></p><!-- Filled with "You can try again now" when the wait ends. -->
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Error · server or network (5xx)</figcaption>
+          <div class="au-card">
+            <div class="au-alert" role="alert"><strong>We couldn't create your account.</strong><span>Nothing was saved and your entries are still here. Try again in a moment.</span></div>
+            <button class="ol-btn ol-btn--primary au-btn">Try again</button>
+          </div>
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>
