@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -10,7 +11,13 @@ import {
 import { SourceUnavailableError, UnusableAnswerError } from './source.types';
 
 type Reply =
-  | { status: number; headers?: Record<string, string>; body?: string }
+  | {
+      status: number;
+      headers?: Record<string, string>;
+      body?: string | Buffer;
+      /** Sent without Content-Length. */
+      chunked?: true;
+    }
   | { status: number; headers: Record<string, string>; noBody: true }
   | 'hang';
 
@@ -27,7 +34,12 @@ async function fakeSource(
       response.writeHead(reply.status, reply.headers).flushHeaders();
       return;
     }
-    response.writeHead(reply.status, reply.headers).end(reply.body ?? '{}');
+    const body = reply.body ?? '{}';
+    const headers =
+      reply.chunked === true
+        ? reply.headers
+        : { 'Content-Length': String(Buffer.byteLength(body)), ...reply.headers };
+    response.writeHead(reply.status, headers).end(body);
   });
   await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
@@ -201,7 +213,7 @@ describe('requestJson body limit', () => {
     const source = await fakeSource([
       {
         status: 200,
-        headers: { 'Transfer-Encoding': 'chunked' },
+        chunked: true,
         body: json(limit),
       },
     ]);
@@ -223,7 +235,7 @@ describe('requestJson body limit', () => {
     const source = await fakeSource([
       {
         status: 200,
-        headers: { 'Transfer-Encoding': 'chunked' },
+        chunked: true,
         body: json(limit + 1),
       },
     ]);
@@ -257,6 +269,25 @@ describe('requestJson body limit', () => {
     await expect(requestJson(source.url, {}, small())).rejects.toThrow(
       'response body too large',
     );
+  });
+
+  it('rejects a gzip body that decodes over the limit, without a cool-down', async () => {
+    const source = await fakeSource([
+      {
+        status: 200,
+        headers: { 'Content-Encoding': 'gzip' },
+        body: gzipSync(json(limit * 10)),
+      },
+    ]);
+    const shared = small();
+
+    await expect(requestJson(source.url, {}, shared)).rejects.toThrow(
+      'response body too large',
+    );
+    await expect(requestJson(source.url, {}, shared)).rejects.toThrow(
+      'response body too large',
+    );
+    expect(source.calls()).toBe(2);
   });
 
   it('rejects an oversized 404 body too', async () => {

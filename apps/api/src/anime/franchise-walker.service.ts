@@ -15,6 +15,7 @@ import { AnimeSourceSettings } from './sources/source-settings';
 import {
   type RelationNode,
   SourceUnavailableError,
+  UnusableAnswerError,
 } from './sources/source.types';
 
 /** The backoff key of an AniList id in relations answers (shared with the read path). */
@@ -171,10 +172,12 @@ export class FranchiseWalker implements OnModuleDestroy {
     for (let at = 0; at < missing.length; at += RELATIONS_PAGE_SIZE) {
       if (!this.canFetch()) return null;
       const asked = missing.slice(at, at + RELATIONS_PAGE_SIZE);
-      const batch = await this.fetchBatch(asked);
+      const { nodes: batch, overflowed } = await this.fetchSplitting(asked);
       const answered = new Set(batch.map(({ anilistId }) => anilistId));
-      // Left out: one backoff step up; answered: back to the first step.
+      // Left out: one backoff step up; answered: back to the first step. An id whose own
+      // answer was too large was backed off already.
       for (const id of asked) {
+        if (overflowed.has(id)) continue;
         if (answered.has(id)) this.backoff.clear(relationsKey(id));
         else this.backoff.backOff(relationsKey(id));
       }
@@ -209,6 +212,34 @@ export class FranchiseWalker implements OnModuleDestroy {
       this.settings.get('anilist').enabled &&
       !this.anilist.isDown()
     );
+  }
+
+  /**
+   * fetchBatch, but an oversized answer halves the batch and asks each half again, so one
+   * huge entry costs only itself. A single id that still overflows is backed off and reported.
+   */
+  private async fetchSplitting(
+    ids: readonly number[],
+  ): Promise<{ nodes: RelationNode[]; overflowed: Set<number> }> {
+    try {
+      return { nodes: await this.fetchBatch(ids), overflowed: new Set() };
+    } catch (error) {
+      if (!(error instanceof UnusableAnswerError)) throw error;
+      const [only] = ids;
+      if (ids.length === 1 && only !== undefined) {
+        this.backoff.backOff(relationsKey(only));
+        return { nodes: [], overflowed: new Set([only]) };
+      }
+      if (!this.canFetch()) throw error;
+      const middle = Math.ceil(ids.length / 2);
+      const first = await this.fetchSplitting(ids.slice(0, middle));
+      if (!this.canFetch()) throw error;
+      const second = await this.fetchSplitting(ids.slice(middle));
+      return {
+        nodes: [...first.nodes, ...second.nodes],
+        overflowed: new Set([...first.overflowed, ...second.overflowed]),
+      };
+    }
   }
 
   /** fetchRelations takes only a free slot: when none is, wait one interval and try again. */

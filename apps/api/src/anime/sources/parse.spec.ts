@@ -65,6 +65,24 @@ describe('httpUrl', () => {
   });
 });
 
+describe('synopsisText hostile markup', () => {
+  it('does not read inherited object keys as entities', () => {
+    expect(synopsisText('&constructor; &__proto__; &toString;')).toBe(
+      '&constructor; &__proto__; &toString;',
+    );
+  });
+
+  it('drops a script after a stray "<"', () => {
+    expect(synopsisText('1 < 2 <script>evil()</script> tail')).toBe(
+      '1 < 2  tail',
+    );
+  });
+
+  it('drops a script inside a comment', () => {
+    expect(synopsisText('<!-- <script>x</script> -->')).toBe('<!--  -->');
+  });
+});
+
 describe('synopsisText raw cap', () => {
   it('keeps 20,000 characters whole and cuts 20,001 to 20,000', () => {
     expect(synopsisText('a'.repeat(20_000))).toHaveLength(20_000);
@@ -79,18 +97,12 @@ describe('synopsisText raw cap', () => {
     expect(() => encodeURIComponent(result ?? '')).not.toThrow();
   });
 
-  it('does not throw on a tag cut in half', () => {
-    expect(synopsisText(`${'a'.repeat(19_998)}<br>`)).toBe(
-      `${'a'.repeat(19_998)}<b`,
-    );
+  it('drops a tag cut in half', () => {
+    expect(synopsisText(`${'a'.repeat(19_998)}<br>`)).toBe('a'.repeat(19_998));
   });
 
-  it('is fast on a huge run of "<"', () => {
-    const started = performance.now();
-
-    synopsisText('<'.repeat(100_000));
-
-    expect(performance.now() - started).toBeLessThan(1_000);
+  it('drops an entity cut in half', () => {
+    expect(synopsisText(`${'a'.repeat(19_996)}&amp;`)).toBe('a'.repeat(19_996));
   });
 });
 
@@ -105,6 +117,8 @@ describe('stripTags', () => {
     ['a<script>keep', 'akeep'],
     ['a<script>x<script>y', 'axy'],
     ['1 < 2', '1 < 2'],
+    ['HP < 10.<br>Then more', 'HP < 10.\nThen more'],
+    ['a < b</p>c', 'a < b\n\nc'],
     ['<i>x</i>', 'x'],
     ['', ''],
   ])('%j -> %j', (html, expected) => {

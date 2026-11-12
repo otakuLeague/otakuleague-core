@@ -31,9 +31,10 @@ type CappedBody =
   | { readonly kind: 'too_large' };
 
 /**
- * Reads the body as text, never holding more than `limit` bytes: a Content-Length above the
- * limit is refused before reading, and a stream (also one without Content-Length) is cancelled
- * as soon as it passes the limit.
+ * Reads the body as text, stopping at `limit` bytes: a Content-Length above the limit is
+ * refused before reading, and a stream (also one without Content-Length) is cancelled as soon
+ * as it passes the limit. Peak memory is about three times the body: the chunks, their
+ * joined copy and the decoded string.
  */
 async function readCappedBody(
   response: Response,
@@ -137,23 +138,24 @@ export async function requestJson(
       await response.body?.cancel();
       return fail(`HTTP ${response.status}`);
     }
+    let capped: CappedBody;
     try {
-      const capped = await readCappedBody(
+      capped = await readCappedBody(
         response,
         options.maxBodyBytes ?? MAX_BODY_BYTES,
       );
-      if (capped.kind === 'too_large') {
-        throw new UnusableAnswerError(
-          options.source,
-          'response body too large',
-        );
-      }
+    } catch (error) {
+      return fail(error instanceof Error ? error.name : 'network error');
+    }
+    if (capped.kind === 'too_large') {
+      throw new UnusableAnswerError(options.source, 'response body too large');
+    }
+    try {
       return {
         status: response.status,
         body: JSON.parse(capped.text) as unknown,
       };
-    } catch (error) {
-      if (error instanceof UnusableAnswerError) throw error;
+    } catch {
       return fail('response is not JSON');
     }
   }
