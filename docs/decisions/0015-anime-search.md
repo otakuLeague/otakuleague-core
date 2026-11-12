@@ -55,7 +55,7 @@ Not built, noted for later: a hand-maintained alias table for abbreviations AniL
 
 ### API
 
-`GET /anime/search?q=&page=&pageSize=`, declared first in `AnimeController`. `q` is required, 1 to 100 characters after trimming. `page` is 1 to 100, default 1. `pageSize` is 1 to 50, default 24. Anything else is a 400 with the usual error envelope (ADR 0002). A query with no letters or digits ("!!!") is a valid request that returns an empty page. Later slices add `format`, `season`, `year`, `genre`, `status`, `sort` and `exact` as optional query parameters, and a `correction` field on the page.
+`GET /anime/search?q=&page=&pageSize=`. `q` is required, 1 to 100 characters after trimming and NFKD decomposition; NUL characters count as spaces. `page` is 1 to 100, default 1. `pageSize` is 1 to 50, default 24. Anything else is a 400 with the usual error envelope (ADR 0002). A query with no letters or digits ("!!!") is a valid request that returns an empty page. Later slices add `format`, `season`, `year`, `genre`, `status`, `sort` and `exact` as optional query parameters, and a `correction` field on the page.
 
 ```ts
 export const ANIME_TITLE_KINDS = ['english', 'romaji', 'native', 'synonym'] as const;
@@ -114,11 +114,13 @@ Three database queries per request and no source call. Step 2 reuses `mergeAnime
 CREATE FUNCTION anime_search_normalize(value text) RETURNS text
 LANGUAGE sql IMMUTABLE PARALLEL SAFE RETURNS NULL ON NULL INPUT
 RETURN btrim(regexp_replace(
-  translate(regexp_replace(lower(normalize(value, NFKD)), '[̀-ͯ''’]', '', 'g'), '×', 'x'),
+  translate(
+    regexp_replace(lower(normalize(value, NFKD)), '[\u0300-\u036f\u0027\u2018\u2019\u02bc]', '', 'g'),
+    U&'\00D7', 'x'),
   '[\x01-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+', ' ', 'g'));
 ```
 
-In words: Unicode compatibility decomposition and lowercase; accents and apostrophes deleted; `×` becomes `x`; every run of ASCII punctuation or whitespace becomes one space. Examples: `Re:ZERO -Starting Life-` gives `re zero starting life`, `HUNTER×HUNTER (2011)` gives `hunterxhunter 2011`, `JoJo's` gives `jojos`, `Pokémon` gives `pokemon`, full-width `８６－` gives `86`, `!!!` gives an empty string. The rules follow ADR 0007's slug rules where they overlap. Because `%`, `_` and `\` are removed, a normalised query is always safe inside a pattern.
+In words: Unicode compatibility decomposition and lowercase; accents and apostrophes (U+0027, U+2018, U+2019, U+02BC) deleted; `×` becomes `x`; every run of ASCII punctuation or whitespace becomes one space. Examples: `Re:ZERO -Starting Life-` gives `re zero starting life`, `HUNTER×HUNTER (2011)` gives `hunterxhunter 2011`, `JoJo's` gives `jojos`, `Pokémon` gives `pokemon`, full-width `８６－` gives `86`, `!!!` gives an empty string. The rules follow ADR 0007's slug rules where they overlap. Because `%`, `_` and `\` are removed, a normalised query is always safe inside a pattern.
 
 **Matching.** A title matches when `anime_search_normalize(q) <% normalized`: the `pg_trgm` word-similarity operator, at its default threshold of 0.6. It compares the query with the best-matching stretch of the title, so one word of a long title, a word prefix and a small typo all pass, and a query of one or two characters only matches a whole word (searching "k" finds the anime "K", not every title containing a k). The default threshold is used on purpose: the operator can use the index without any per-session setting.
 
@@ -207,7 +209,7 @@ Both rows of requirement 1 hold. At 20,000 anime the table is 10 MB, the GIN ind
 
 **Freshness.** In slice 1 the query reads the snapshots themselves, so there is nothing to keep in sync. In slice 2 the titles are written in the snapshot's transaction, so a reader sees both or neither.
 
-**Bounded cost.** Offset pagination with a total count is enough here: the result set of one query is bounded by the catalogue, and `page` is capped at 100. The query text is capped at 100 characters, which also bounds the trigram work per row.
+**Bounded cost.** Offset pagination with a total count is enough here: the result set of one query is bounded by the catalogue, and `page` is capped at 100. The query text is capped at 100 characters after NFKD decomposition (one character such as U+FDFA expands to 18, so the raw length alone does not bound the work; a measured 100 of them took about 39 s at 20,000 anime), a query with no letter or digit skips the scan, and the ranking transaction runs with a 2 s `statement_timeout`. A timeout is not mapped to a 503 yet: it surfaces as the default 500.
 
 ## Consequences
 

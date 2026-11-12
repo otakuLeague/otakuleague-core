@@ -9,15 +9,25 @@ const failingDatabase = {
 } as unknown as PrismaService;
 
 describe('AnimeSearchService', () => {
-  it('answers an empty page without a query when every source is switched off', async () => {
-    const service = new AnimeSearchService(
+  const service = (enabled: boolean) =>
+    new AnimeSearchService(
       failingDatabase,
       new FixedClock(new Date('2026-10-15T12:00:00.000Z')),
-      { isEnabled: () => false } as unknown as AnimeImportService,
+      { isEnabled: () => enabled } as unknown as AnimeImportService,
     );
 
+  it('answers an empty page without a query when every source is switched off', async () => {
     await expect(
-      service.search({ query: 'aot', page: 2, pageSize: 10 }),
+      service(false).search({ query: 'aot', page: 2, pageSize: 10 }),
     ).resolves.toEqual({ hits: [], page: 2, pageSize: 10, total: 0 });
   });
+
+  it.each(['!!!', '  -- ', '\u0301', '・'])(
+    'answers an empty page without a query for %j, which has no letter or digit',
+    async (query) => {
+      await expect(
+        service(true).search({ query, page: 1, pageSize: 24 }),
+      ).resolves.toEqual({ hits: [], page: 1, pageSize: 24, total: 0 });
+    },
+  );
 });

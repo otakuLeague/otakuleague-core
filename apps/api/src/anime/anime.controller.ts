@@ -30,6 +30,9 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
 } from 'class-validator';
 import {
   AnimeBySlugAnimeSchema,
@@ -75,14 +78,33 @@ class AnimeSlugParams {
   readonly slug!: string;
 }
 
+const MAX_QUERY_LENGTH = 100;
+
+/** The SQL normalises with NFKD, which can expand one character into 18 (U+FDFA). */
+@ValidatorConstraint({ name: 'maxNormalizedLength' })
+class MaxNormalizedLength implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return (
+      typeof value === 'string' &&
+      value.normalize('NFKD').length <= MAX_QUERY_LENGTH
+    );
+  }
+
+  defaultMessage(): string {
+    return `q must be at most ${MAX_QUERY_LENGTH} characters after Unicode normalisation`;
+  }
+}
+
 class AnimeSearchParams {
   @ApiProperty({ minLength: 1, maxLength: 100, example: 'attack on titan' })
+  // NUL cannot be stored or compared by PostgreSQL (22021): treat it as a separator.
   @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
+    typeof value === 'string' ? value.replaceAll('\u0000', ' ').trim() : value,
   )
   @IsString()
   @MinLength(1)
-  @MaxLength(100)
+  @MaxLength(MAX_QUERY_LENGTH)
+  @Validate(MaxNormalizedLength)
   readonly q!: string;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 1 })
@@ -109,10 +131,10 @@ export class AnimeController {
   constructor(
     private readonly anime: AnimeService,
     private readonly franchises: AnimeFranchiseService,
-    private readonly search: AnimeSearchService,
+    private readonly animeSearch: AnimeSearchService,
   ) {}
 
-  // First: 'search' would otherwise be read as an idSource by a route with one more segment.
+  // One segment: cannot clash with the two-segment routes below.
   @Get('search')
   @ApiOkResponse({
     type: AnimeSearchPageSchema,
@@ -124,7 +146,7 @@ export class AnimeController {
       'q missing or longer than 100 characters, or page or pageSize out of range.',
   })
   searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
-    return this.search.search({
+    return this.animeSearch.search({
       query: params.q,
       page: params.page,
       pageSize: params.pageSize,

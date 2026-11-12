@@ -17,9 +17,22 @@ export interface AnimeSearchRequest {
   readonly pageSize: number;
 }
 
+/** Ranking scans every stored title (slice 1): bound the time one request can take. */
+const RANK_TIMEOUT = '2s';
+
+/**
+ * A query with no letter or digit once decomposed (NFKD) cannot match: SQL normalisation
+ * leaves nothing, or only marks and punctuation that pg_trgm ignores. Mirrors the SQL
+ * loosely on purpose; it only skips the scan.
+ */
+const hasSearchableText = (query: string): boolean =>
+  /[\p{L}\p{N}]/u.test(query.normalize('NFKD'));
+
 /**
  * Searches the titles we already store (ADR 0015). Never calls a source, and never counts as
- * a view: listing an anime must not postpone its 30-day purge.
+ * a view: listing an anime must not postpone its 30-day purge. `total` counts ranked anime;
+ * a hit is dropped when its anime vanished between the two queries (purged) or no shown
+ * source names an id for it, so a page can hold fewer hits than `total` implies.
  */
 @Injectable()
 export class AnimeSearchService {
@@ -37,13 +50,17 @@ export class AnimeSearchService {
     const sources = SOURCE_PRIORITY.filter(this.importer.isEnabled).map(
       (source) => DB_DATA_SOURCE[source],
     );
-    if (sources.length === 0) return { hits: [], page, pageSize, total: 0 };
+    if (sources.length === 0 || !hasSearchableText(query))
+      return { hits: [], page, pageSize, total: 0 };
 
-    const ranked = await rankAnime(this.prisma, {
-      query,
-      sources,
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
+    const ranked = await this.prisma.$transaction(async (transaction) => {
+      await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
+      return rankAnime(transaction, {
+        query,
+        sources,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      });
     });
     if (ranked.matches.length === 0) {
       return { hits: [], page, pageSize, total: ranked.total };

@@ -5,5 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE FUNCTION anime_search_normalize(value text) RETURNS text
 LANGUAGE sql IMMUTABLE PARALLEL SAFE RETURNS NULL ON NULL INPUT
 RETURN btrim(regexp_replace(
-  translate(regexp_replace(lower(normalize(value, NFKD)), '[̀-ͯ''’]', '', 'g'), '×', 'x'),
+  translate(
+    regexp_replace(lower(normalize(value, NFKD)), '[\u0300-\u036f\u0027\u2018\u2019\u02bc]', '', 'g'),
+    U&'\00D7', 'x'),
   '[\x01-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+', ' ', 'g'));

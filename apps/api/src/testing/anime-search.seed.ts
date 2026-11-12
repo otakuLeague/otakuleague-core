@@ -1,5 +1,6 @@
 /**
  * Real titles and synonyms as AniList lists them, for the ranking table of ADR 0015.
+ * Season 2 comes before season 1 on purpose: popularity, not insertion order, must rank them.
  * `slug` null: an anime with no identity row (not yet claimed).
  */
 export interface SearchSeedAnime {
@@ -14,15 +15,6 @@ export interface SearchSeedAnime {
 
 export const SEARCH_SEED: readonly SearchSeedAnime[] = [
   {
-    anilistId: 16498,
-    slug: 'attack-on-titan',
-    english: 'Attack on Titan',
-    romaji: 'Shingeki no Kyojin',
-    native: '進撃の巨人',
-    synonyms: ['AoT', 'SnK'],
-    members: 3_600_000,
-  },
-  {
     anilistId: 25777,
     slug: 'attack-on-titan-season-2',
     english: 'Attack on Titan Season 2',
@@ -30,6 +22,15 @@ export const SEARCH_SEED: readonly SearchSeedAnime[] = [
     native: '進撃の巨人 Season2',
     synonyms: ['AoT S2', 'SnK S2'],
     members: 2_300_000,
+  },
+  {
+    anilistId: 16498,
+    slug: 'attack-on-titan',
+    english: 'Attack on Titan',
+    romaji: 'Shingeki no Kyojin',
+    native: '進撃の巨人',
+    synonyms: ['AoT', 'SnK'],
+    members: 3_600_000,
   },
   {
     anilistId: 113415,

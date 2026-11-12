@@ -2,13 +2,14 @@ import type { INestApplication } from '@nestjs/common';
 import type {
   AnimeDataSource,
   AnimeSearchPage,
+  AnimeTitleKind,
 } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
-import { createTestApp } from '../testing/test-app';
-import { SEARCH_SEED } from './anime-search.seed';
+import { createTestApp, FixedClock } from '../testing/test-app';
+import { SEARCH_SEED } from '../testing/anime-search.seed';
 import {
   AnimeSourceSettings,
   type SourceSettings,
@@ -46,7 +47,7 @@ const COWBOY_BEBOP = SEARCH_SEED.findIndex(
 const RANKING: readonly (readonly [
   query: string,
   slug: string,
-  kind: string,
+  kind: AnimeTitleKind,
   matched: string,
 ])[] = [
   ['aot', 'attack-on-titan', 'synonym', 'AoT'],
@@ -82,7 +83,7 @@ describe('GET /anime/search', () => {
   let prisma: PrismaService;
   const settings = new SwitchableSettings();
 
-  const search = (params: Record<string, string | number>) =>
+  const search = (params: Record<string, string | number> | string) =>
     request(app.getHttpServer()).get('/anime/search').query(params);
   const ok = async (params: Record<string, string | number>) => {
     const response = await search(params).expect(200);
@@ -91,6 +92,7 @@ describe('GET /anime/search', () => {
 
   beforeAll(async () => {
     app = await createTestApp({
+      clock: new FixedClock(NOW),
       overrides: [{ provide: AnimeSourceSettings, useValue: settings }],
     });
     prisma = app.get(PrismaService);
@@ -215,6 +217,13 @@ describe('GET /anime/search', () => {
         hits: [],
         total: 0,
       });
+      // Only Jikan on: the anime ranks, but it has no MyAnimeList id here, so no card
+      // can link to it and the hit is dropped (documented in the service).
+      settings.enabled.jikan = true;
+      expect(await ok({ q: 'cowboy bebop' })).toMatchObject({
+        hits: [],
+        total: 1,
+      });
     } finally {
       settings.enabled.anilist = true;
       settings.enabled.jikan = true;
@@ -245,7 +254,12 @@ describe('GET /anime/search', () => {
     ['q missing', {}],
     ['q empty', { q: '' }],
     ['q only spaces', { q: '   ' }],
+    ['q only a NUL character', { q: '\u0000' }],
     ['q over 100 characters', { q: 'a'.repeat(101) }],
+    ['q over 100 characters once decomposed', { q: 'ﷺ'.repeat(100) }],
+    ['q repeated', 'q=aot&q=jjk'],
+    ['page 1.5', { q: 'aot', page: 1.5 }],
+    ['pageSize not a number', { q: 'aot', pageSize: 'ten' }],
     ['page 0', { q: 'aot', page: 0 }],
     ['page over 100', { q: 'aot', page: 101 }],
     ['page not a number', { q: 'aot', page: 'two' }],
@@ -258,6 +272,10 @@ describe('GET /anime/search', () => {
     expect(response.body).toMatchObject({
       error: { code: 'VALIDATION_FAILED' },
     });
+  });
+
+  it('treats a NUL character inside the query as a separator', async () => {
+    await ok({ q: 'ao\u0000t' });
   });
 
   it('accepts the largest allowed query and page size', async () => {

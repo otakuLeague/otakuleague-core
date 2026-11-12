@@ -24,6 +24,14 @@ export interface AnimeRankPage {
   readonly matches: readonly AnimeRankMatch[];
 }
 
+/** The `kind` numbers of the VALUES list in the query below, in order. */
+const KIND_BY_RANK: readonly AnimeTitleKind[] = [
+  'english',
+  'romaji',
+  'native',
+  'synonym',
+];
+
 interface RankRow {
   readonly total: number;
   readonly anime_id: string | null;
@@ -37,7 +45,7 @@ interface RankRow {
  * the end returns no match but the right total. Parameters only, never string-built SQL.
  */
 export async function rankAnime(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, '$queryRaw'>,
   { query, sources, limit, offset }: AnimeRankRequest,
 ): Promise<AnimeRankPage> {
   const rows = await prisma.$queryRaw<RankRow[]>`
@@ -78,8 +86,7 @@ export async function rankAnime(
     LEFT JOIN page ON true
     ORDER BY page.exact DESC, page.score DESC, page.members DESC NULLS LAST, page.anime_id`;
   const matches = rows.flatMap((row) => {
-    const kind =
-      row.kind === null ? undefined : ANIME_TITLE_KINDS[row.kind - 1];
+    const kind = row.kind === null ? undefined : KIND_BY_RANK[row.kind - 1];
     return row.anime_id === null || row.title === null || kind === undefined
       ? []
       : [{ animeId: row.anime_id, kind, title: row.title }];
