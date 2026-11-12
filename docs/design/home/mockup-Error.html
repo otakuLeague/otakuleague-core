@@ -99,7 +99,7 @@
         <section class="br-section" aria-labelledby="s-continue">
           <div class="br-section__head">
             <div><h2 id="s-continue">Continue watching</h2><p>Pick up where you left off</p></div>
-            <a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a>
+            <div class="hm-head-end"><a class="br-section__all" href="/my-list?status=watching">My List <span aria-hidden="true">→</span></a></div>
           </div>
           <div class="hm-empty">
             <p><strong>Nothing in progress</strong>Mark an anime as Watching and it shows up here with your episode count.</p>
@@ -108,8 +108,8 @@
         </section>
         <section class="br-section" aria-labelledby="s-trending">
           <div class="br-section__head">
-            <div><h2 id="s-trending">Trending now</h2><p>What everyone is adding to their list this week</p></div>
-            <a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a>
+            <div><h2 id="s-trending">Trending now</h2><p>Most added this week</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/discover">See all <span aria-hidden="true">→</span></a></div>
           </div>
           <div class="br-inline-error" role="alert">
             <span>Trending didn't load. The rest of the page is fine.</span>
@@ -118,8 +118,8 @@
         </section>
         <section class="br-section" aria-labelledby="s-season">
           <div class="br-section__head">
-            <div><h2 id="s-season">This season · Fall 2026</h2><p>Airing now, sorted by popularity</p></div>
-            <a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a>
+            <div><h2 id="s-season">This season · Fall 2026</h2><p>Airing now, most popular first</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/season">Full season <span aria-hidden="true">→</span></a></div>
           </div>
           <div class="hm-empty">
             <p><strong>The Fall 2026 line-up isn't in yet</strong>New seasons fill up over the first weeks. Summer 2026 is complete.</p>
@@ -128,10 +128,10 @@
         </section>
         <section class="br-section" aria-labelledby="s-top">
           <div class="br-section__head">
-            <div><h2 id="s-top">Top rated</h2><p>The highest scores of all time</p></div>
-            <a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a>
+            <div><h2 id="s-top">Top rated</h2><p>Highest scores of all time</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="/top/anime">Rankings <span aria-hidden="true">→</span></a><div class="br-row-nav"><button type="button" aria-controls="r-top" aria-label="Scroll Top rated back" disabled>‹</button><button type="button" aria-controls="r-top" aria-label="Scroll Top rated forward">›</button></div></div>
           </div>
-          <ul class="br-row-scroll">
+          <ul class="br-row-scroll" id="r-top">
           <li class="br-card">
             <a class="ol-anime-card" href="/anime/fullmetal-alchemist-brotherhood" style="--card-accent: #8a3b2b">
               <div class="ol-anime-card__cover" style="--c1: #8a3b2b; --c2: #24151a">
@@ -225,35 +225,36 @@
         </section>
         </div>
         <section class="hm-features" aria-labelledby="hm-feat">
-          <h2 class="hm-h2" id="hm-feat">Everything you need from day one</h2>
-          <p class="hm-sub">Free to use. Anime data comes from AniList and stays up to date.</p>
+          <div class="br-section__head">
+            <div><h2 id="hm-feat">Everything you need from day one</h2><p>Free to use. Anime data from AniList.</p></div>
+          </div>
           <ul class="hm-feat-grid">
             <li class="hm-feat">
               <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="2.5" width="14" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
               <h3>Every anime, one page</h3>
-              <p>Score, status, synopsis, studios, genres and every season of a franchise, one click apart.</p>
+              <p>Score, synopsis, studios and every season of a franchise.</p>
             </li>
             <li class="hm-feat">
               <span class="hm-feat__ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></span>
               <h3>Find it fast</h3>
-              <p>Search that forgives typos, plus <a href="/season">Seasonal</a>, <a href="/top/anime">Rankings</a> and <a href="/discover">Discover</a> lists with real filters.</p>
+              <p>Typo-proof search, plus <a href="/season">Seasonal</a>, <a href="/top/anime">Rankings</a> and <a href="/discover">Discover</a>.</p>
             </li>
             <li class="hm-feat">
               <span class="hm-feat__ico hm-feat__ico--violet" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5.5l1.5 1.5L8 4.5M4 11l1.5 1.5L8 10M10.5 6h6M10.5 11.5h6M4.5 16h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
               <h3>My List</h3>
-              <p>Log episodes and scores in one tap. Your list, sorted the way you watch:</p>
+              <p>Episodes and scores in one tap.</p>
               <ul class="hm-statuses" aria-label="List statuses"><li>Watching</li><li>Completed</li><li>On hold</li><li>Dropped</li><li>Plan to watch</li></ul>
             </li>
             <li class="hm-feat hm-feat--wide">
               <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 7.7l5-.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
-              <h3>XP, levels and a profile to show for it</h3>
-              <p>Adding, finishing and rating anime earns XP. Level up and show your stats, favourites and achievements on your profile.</p>
+              <h3>XP, levels and your profile</h3>
+              <p>Adding, finishing and rating earns XP. Your level, stats and favourites live on your profile.</p>
               <div class="hm-meter" aria-hidden="true"><i style="--pct: 62%"></i></div>
             </li>
             <li class="hm-feat hm-feat--wide">
               <span class="hm-feat__ico hm-feat__ico--gold" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3h8v4a4 4 0 0 1-8 0zM6 5H3.5a2.5 2.5 0 0 0 3 3M14 5h2.5a2.5 2.5 0 0 1-3 3M10 11v3M7 17h6M8 14h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg></span>
               <h3>A leaderboard every season</h3>
-              <p>Climb the <a href="/leaderboard">season leaderboard</a> with everyone else watching along.</p>
+              <p>Climb the <a href="/leaderboard">season leaderboard</a>.</p>
               <ol class="hm-podium" aria-label="Example leaderboard">
                 <li><b>1</b><span>yuki.exe</span><span>18,420 XP</span></li>
                 <li><b>2</b><span>shonen_jump_sensei</span><span>17,905 XP</span></li>
@@ -263,12 +264,9 @@
           </ul>
         </section>
         <section class="hm-road" aria-labelledby="hm-road">
-          <div class="hm-road__head">
-            <div>
-              <h2 class="hm-h2" id="hm-road">Coming after launch</h2>
-              <p class="hm-sub">What we're building next, in roughly this order.</p>
-            </div>
-            <a class="hm-road__all" href="https://roadmap.example" rel="noopener">Full roadmap <span aria-hidden="true">↗</span></a>
+          <div class="br-section__head">
+            <div><h2 id="hm-road">Coming after launch</h2><p>Next up, roughly in order.</p></div>
+            <div class="hm-head-end"><a class="br-section__all" href="https://roadmap.example" rel="noopener">Full roadmap <span aria-hidden="true">↗</span></a></div>
           </div>
           <ol class="hm-road__list">
             <li class="hm-road__first"><span class="ol-badge hm-badge-next">Next</span><h3>Games and quizzes</h3><p>Anime trivia and quick games that pay out XP.</p></li>

@@ -263,13 +263,16 @@
 .hm-ctas .ol-btn--ghost {
   border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
 }
-:is(.hm-ctas .ol-btn, .hm-search .ol-btn, .hm-xp a, .hm-band .ol-btn, .hm-road__all, .hm-retry):focus-visible {
+:is(.hm-ctas .ol-btn, .hm-search .ol-btn, .hm-xp a, .hm-band .ol-btn, .hm-retry):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 /* Signed in: the CTA pair becomes the XP card (PARITY "/ Home": welcome name + XP preview). */
 .hm-xp {
+  /* Same height loaded, loading and failed (CLS). */
+  min-height: 150px;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -357,6 +360,7 @@
 }
 .hm-xp--error {
   grid-template-columns: 1fr auto;
+  align-content: center;
   border-color: color-mix(in oklab, var(--bad) 40%, transparent);
   background: color-mix(in oklab, var(--bad) 8%, var(--surface));
 }
@@ -370,10 +374,31 @@
 .hm-rows .br-section {
   margin-bottom: 56px;
 }
-/* Without it, mandatory snapping scrolls an overflowing row 6 px past its padding, so the first
-   card sits left of the heading (browse.css only sets this below 768 px; same fix applies there). */
-.hm-rows .br-row-scroll {
-  scroll-padding-inline: 6px;
+.hm-head-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: none;
+}
+.br-section__head h2,
+.br-section__head p,
+.hm-sub {
+  text-wrap: balance;
+}
+/* Every row slot (cards, skeleton, error, empty) has the same height, so nothing below shifts when
+   a row resolves (CLS). 356 px = 176 px card: 264 px cover + 2-line title + meta + scroll padding. */
+.hm-rows {
+  --hm-row-h: 356px;
+}
+.hm-rows :is(.br-row-scroll, .br-inline-error, .hm-empty) {
+  min-height: var(--hm-row-h);
+  box-sizing: border-box;
+}
+.hm-rows .br-inline-error {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
 }
 .hm-card-progress {
   position: absolute;
@@ -398,8 +423,10 @@
 }
 .hm-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  text-align: center;
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-6);
   padding: var(--space-6);
@@ -442,19 +469,25 @@
 .hm-features {
   margin: var(--space-16) 0;
 }
+.hm-features .br-section__head,
+.hm-road .br-section__head {
+  margin-bottom: 0;
+}
 .hm-feat-grid {
   list-style: none;
-  margin: var(--space-6) 0 0;
+  margin: var(--space-4) 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: start;
   gap: var(--space-4);
 }
 .hm-feat {
   grid-column: span 2;
   display: grid;
-  align-content: start;
-  gap: var(--space-3);
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -466,6 +499,9 @@
 .hm-feat h3 {
   margin: 0;
   font: 700 19px/24px var(--font-display);
+}
+.hm-feat > :not(.hm-feat__ico, h3) {
+  grid-column: 1 / -1;
 }
 .hm-feat p {
   margin: 0;
@@ -548,25 +584,9 @@
 .hm-road {
   margin: var(--space-16) 0;
 }
-.hm-road__head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-.hm-road__all {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--accent-ink);
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 4px;
-}
 .hm-road__list {
   list-style: none;
-  margin: var(--space-6) 0 0;
+  margin: var(--space-4) 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -618,11 +638,21 @@
     var(--surface);
   border: 1px solid var(--border);
 }
+.hm-band__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  flex: none;
+}
 .hm-band .ol-btn {
   height: 48px;
+  min-height: 48px;
   padding: 0 20px;
+  font-size: 15px;
   text-decoration: none;
-  flex: none;
+}
+.hm-band .ol-btn--ghost {
+  border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
 }
 
 /* ---------- Skeletons (loading) ---------- */
@@ -632,6 +662,7 @@
 }
 .hm-xp-skel {
   display: grid;
+  align-content: center;
   grid-template-columns: 48px 1fr;
   gap: var(--space-3) var(--space-4);
   align-items: center;
@@ -717,8 +748,25 @@
     padding: var(--space-6) 0 var(--space-10);
     margin-top: calc(-1 * var(--space-6));
   }
+  /* Logo moves inline, right of the eyebrow, at 60 px. */
   .hm-logo {
-    max-width: 132px;
+    position: absolute;
+    top: var(--space-6);
+    right: 0;
+    width: 60px;
+    max-width: 60px;
+  }
+  .hm-eyebrow {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    padding-right: 72px;
+  }
+  .hm-rows {
+    --hm-row-h: 316px;
+  }
+  .hm-xp {
+    min-height: 196px;
   }
   .hm-blob--a {
     left: -260px;
@@ -762,9 +810,6 @@
   .hm-rows .br-section {
     margin-bottom: var(--space-10);
   }
-  .hm-rows .br-row-scroll {
-    scroll-padding-inline: var(--space-4);
-  }
   .hm-retry {
     min-height: 44px;
     padding: 0 var(--space-4);
@@ -782,10 +827,6 @@
     grid-column: 1 / -1;
     padding: var(--space-4);
   }
-  .hm-road__head {
-    display: grid;
-    align-items: start;
-  }
   .hm-road__list {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -793,6 +834,9 @@
     display: grid;
     padding: var(--space-6);
     margin-top: var(--space-10);
+  }
+  .hm-band__ctas {
+    display: grid;
   }
   .hm-band .ol-btn {
     justify-content: center;

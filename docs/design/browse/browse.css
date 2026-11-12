@@ -489,11 +489,16 @@
   padding: var(--space-2) 0;
 }
 .br-row-scroll {
+  /* Runs to the viewport edge (OTA-153): the page gutter becomes padding, and scroll-padding keeps
+     mandatory snapping from scrolling the first card past the gutter. The gutter is the shell's
+     column offset (.sh-main: max 1280 px, 24 px padding; 16 px below 768 px), written without %
+     because scroll-padding percentages resolve against the scroller, not the page. Top padding
+     keeps the hover lift, glow and focus ring inside the scroll box. */
+  --br-row-gutter: max(var(--space-6), calc(50cqw - 640px + var(--space-6)));
   list-style: none;
-  margin: 0;
-  /* Padding keeps the hover lift, glow and focus ring inside the scroll box. */
-  padding: 6px 6px var(--space-2);
-  margin: -6px -6px 0;
+  margin: -6px calc(-1 * var(--br-row-gutter)) 0;
+  padding: 6px var(--br-row-gutter) var(--space-2);
+  scroll-padding-inline: var(--br-row-gutter);
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 176px;
@@ -501,6 +506,45 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: thin;
+  /* Right-edge fade says "more this way" when the last visible card is cut. */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent);
+}
+/* Desktop row arrows (section head): only with a fine pointer and room for them. */
+.br-row-nav {
+  display: none;
+  gap: var(--space-2);
+}
+.br-row-nav button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 18px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background-color var(--dur-press) var(--ease-enter), border-color var(--dur-press) var(--ease-enter);
+}
+.br-row-nav button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.br-row-nav button:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+.br-row-nav button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  @container (min-width: 1024px) {
+    .br-row-nav {
+      display: inline-flex;
+    }
+  }
 }
 .br-row-scroll > li {
   scroll-snap-align: start;
@@ -701,9 +745,9 @@
   }
   .br-row-scroll {
     grid-auto-columns: 148px;
-    margin-inline: calc(-1 * var(--space-4));
-    padding-inline: var(--space-4);
-    scroll-padding-inline: var(--space-4);
+    --br-row-gutter: var(--space-4);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
   }
   .br-genres {
     margin-inline: calc(-1 * var(--space-4));
