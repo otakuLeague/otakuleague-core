@@ -17,10 +17,9 @@ Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/
 ## Next 3 tasks
 1. OTA-136 Build: Home page (unblocked once this PR merges): Logo component (unique gradient ids), motion island, `--ease-drift` into tokens.css, hide `.sh-bg` on home, browse row changes.
 2. OTA-98 Build: search, or OTA-152 slice 2b.
-3. OTA-166 vendored design skills (protected path, Farouk merges).
+3. OTA-166 vendored design skills (protected path, Farouk merges), or OTA-173 (W7): API guard against id enumeration triggering imports, from the OTA-172 security review.
 
 ## Blockers
-- OTA-168 (needs-human): Postgres volume backups, deploy drills.
 - Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. The proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
 - `scripts/design/shots.mjs` can't find Playwright in cloud runs (installed under `/opt/node-tools/node_modules`, ESM ignores `NODE_PATH`): run a copy next to a symlinked `node_modules`. Fix belongs in a protected-path PR.
 
@@ -28,6 +27,7 @@ Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/
 - `Cover` has no fallback when an image fails to load. No ticket yet.
 
 ## Notes
+- OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
 - Open questions on OTA-153: Pierce mark site-wide in the header now? Leaderboard per season or all-time? "Trending" sort or reuse Top airing?
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
 - Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.

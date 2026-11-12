@@ -26,5 +26,11 @@ export function robotsHeaders(indexing: SearchIndexing): RobotsHeaderRule[] {
           headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
         },
       ]
-    : [];
+    : [
+        // The AniList id route only redirects: never an indexable page of its own (OTA-172).
+        {
+          source: '/anime/anilist/:path*',
+          headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+        },
+      ];
 }

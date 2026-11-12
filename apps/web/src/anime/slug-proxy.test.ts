@@ -151,6 +151,21 @@ describe('anime slug proxy', () => {
     expect(resolve).not.toHaveBeenCalled();
   });
 
+  it('lets the AniList id route through without resolving anything', async () => {
+    const { visit, resolve } = setUp(() => missing);
+
+    for (const path of [
+      '/anime/anilist/20958',
+      '/anime/anilist/20958/episodes',
+    ]) {
+      const response = await visit(path);
+      expect(response.status).toBe(200);
+      expect(location(response)).toBeNull();
+      expect(rewrittenTo(response)).toBeNull();
+    }
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
   it('handles a trailing slash like the bare path', async () => {
     const { visit } = setUp(() => found('attack-on-titan'));
 
