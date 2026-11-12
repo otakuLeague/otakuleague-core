@@ -134,7 +134,7 @@ describe('legal tables', () => {
 describe('privacy facts', () => {
   afterEach(cleanup);
 
-  it('lists the processors and every essential cookie, and credits only AniList as a source', () => {
+  it('lists the processors and every essential cookie, and credits every data source', () => {
     const { container: privacy } = render(
       <LegalPage document={PRIVACY_POLICY} />,
     );
@@ -158,9 +158,50 @@ describe('privacy facts', () => {
     const { container: sources } = render(
       <LegalPage document={DATA_SOURCES} />,
     );
-    expect(sources.textContent).toContain('AniList');
-    expect(sources.textContent).not.toMatch(/MyAnimeList|AnimeThemes/);
+    for (const source of ['AniList', 'MyAnimeList', 'Jikan', 'AnimeThemes']) {
+      expect(sources.textContent).toContain(source);
+    }
+    expect(sources.textContent).not.toMatch(/authorized by MyAnimeList/i);
     expect(sources.textContent).not.toMatch(/under its terms/);
+  });
+
+  it('states the confirmed regions, retention and age rule', () => {
+    const { container } = render(<LegalPage document={PRIVACY_POLICY} />);
+    const text = container.textContent;
+    for (const fact of [
+      'Paris, France',
+      'Amsterdam, Netherlands (EU)',
+      'Germany (Sentry’s EU data region)',
+      'expire within 30 days',
+      '90 days at most',
+      'kept 1 month',
+      'consent of a parent or guardian',
+    ]) {
+      expect(text).toContain(fact);
+    }
+    expect(text).not.toMatch(
+      /founder|roll over|EU or United States|not meant for children|18\+|tracking pixels/,
+    );
+  });
+});
+
+describe('terms facts', () => {
+  afterEach(cleanup);
+
+  it('names the host, not the publisher, and French law without blocking under-15s', () => {
+    const { container } = render(<LegalPage document={TERMS_OF_USE} />);
+    const text = container.textContent;
+    expect(text).toContain('private individual');
+    expect(text).toContain('article 6, III, 2');
+    expect(text).toContain(
+      'Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA',
+    );
+    expect(text).toContain('governed by French law');
+    expect(text).toContain('mandatory consumer law of your country');
+    expect(text).not.toMatch(/at least 15|SIRET|18\+/);
+    expect(
+      screen.getByRole('heading', { level: 2, name: /Legal notice/ }),
+    ).toBeDefined();
   });
 });
 

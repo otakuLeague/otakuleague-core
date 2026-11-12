@@ -2,8 +2,9 @@ import { CONTACT_EMAIL } from '../shell/site-footer';
 import type { LegalDocument } from './legal-document';
 import { LegalTable } from './legal-page';
 
-// Credits only sources in use today (ADR 0006 is still proposed): AniList. MyAnimeList and
-// AnimeThemes are added here once their use is approved.
+// Credits every source in use (ADR 0006 and its OTA-92 update): AniList first, MyAnimeList
+// through Jikan, AnimeThemes. Never "authorized by MyAnimeList": that needs MAL's written
+// authorization (OTA-127). Images are hotlinked with attribution, never re-hosted.
 export const DATA_SOURCES: LegalDocument = {
   path: '/data-sources',
   title: 'Data sources',
@@ -11,9 +12,9 @@ export const DATA_SOURCES: LegalDocument = {
     'Where the anime information on OtakuLeague comes from, who owns it, and how to report a mistake.',
   lastUpdated: '2026-11-12',
   summary: [
-    'Anime information on OtakuLeague comes from AniList.',
-    'Cover images belong to their rights holders and load from AniList’s servers.',
-    'Your list, scores and XP stay on OtakuLeague and are never sent to AniList.',
+    'Anime information on OtakuLeague comes from AniList, with MyAnimeList (through Jikan) filling gaps and AnimeThemes for openings and endings.',
+    'Cover images belong to their rights holders and load from the sources’ servers.',
+    'Your list, scores and XP stay on OtakuLeague and are never sent to our data sources.',
   ],
   sections: [
     {
@@ -23,7 +24,9 @@ export const DATA_SOURCES: LegalDocument = {
         <>
           <p>
             We do not write anime information ourselves. It comes from the
-            source below, through its public API.
+            sources below, through their public APIs. AniList comes first;
+            another source only fills what AniList lacks, and values from two
+            sources are never mixed.
           </p>
           <LegalTable
             caption="Sources"
@@ -38,6 +41,28 @@ export const DATA_SOURCES: LegalDocument = {
                   AniList API terms
                 </a>,
               ],
+              [
+                <span key="n">
+                  <a href="https://myanimelist.net">MyAnimeList</a>, through{' '}
+                  <a href="https://jikan.moe">Jikan</a>
+                </span>,
+                'Details AniList does not have, and cover images when AniList has none',
+                <a key="t" href="https://myanimelist.net/about/terms_of_use">
+                  MyAnimeList terms of use
+                </a>,
+              ],
+              [
+                <a key="n" href="https://animethemes.moe">
+                  AnimeThemes
+                </a>,
+                'Openings and endings: song titles and artists',
+                <a
+                  key="t"
+                  href="https://animethemes.moe/about/terms-of-service"
+                >
+                  AnimeThemes terms of service
+                </a>,
+              ],
             ]}
           />
         </>
@@ -50,8 +75,8 @@ export const DATA_SOURCES: LegalDocument = {
         <p>
           Cover images are the property of the anime’s studios, publishers and
           other rights holders. We do not copy them: your browser loads them
-          from AniList’s servers. If you own an image and want it removed, write
-          to us.
+          from AniList’s servers, or MyAnimeList’s when AniList has none. If you
+          own an image and want it removed, write to us.
         </p>
       ),
     },
@@ -61,8 +86,8 @@ export const DATA_SOURCES: LegalDocument = {
       body: (
         <p>
           Member lists, scores, XP, levels and leaderboards are built on
-          OtakuLeague. We never send your activity to AniList or any other data
-          source.
+          OtakuLeague. We never send your activity to AniList, MyAnimeList,
+          AnimeThemes or any other data source.
         </p>
       ),
     },
@@ -74,8 +99,8 @@ export const DATA_SOURCES: LegalDocument = {
           Our information is only as good as the source’s. If something is wrong
           or missing, tell us at{' '}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>; when the
-          mistake is in the source, the fastest fix is to correct it on AniList
-          itself.
+          mistake is in the source, the fastest fix is to correct it on that
+          source itself.
         </p>
       ),
     },

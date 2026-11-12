@@ -1,5 +1,6 @@
 import type {
   AnimeDataSource,
+  AnimeListEntry,
   AnimeFormat,
   AnimeIdSource,
   AnimeLink,
@@ -111,6 +112,15 @@ export interface RelationNode extends MediaSummaryFields, AnimeKind {
   readonly edges: readonly RelationEdge[];
 }
 
+/** A list card as AniList describes it: the shared entry before our slug is joined. */
+export type ListedAnime = Omit<AnimeListEntry, 'slug'>;
+
+/** One block of a catalog list (ADR 0016). Adult entries are already dropped. */
+export interface ListBlock {
+  readonly entries: readonly ListedAnime[];
+  readonly hasNextPage: boolean;
+}
+
 export interface AnimeRef {
   readonly source: AnimeIdSource;
   readonly externalId: number;
@@ -131,13 +141,15 @@ export class SourceUnavailableError extends Error {
   }
 }
 
-/** The source answered, but nothing usable (e.g. no isAdult): worth a backoff, not a retry. */
+/** The source answered, but nothing usable (e.g. no isAdult, oversized body): worth a backoff, not a retry. */
 export class UnusableAnswerError extends SourceUnavailableError {
   constructor(source: AnimeDataSource, reason: string) {
     super(source, reason);
     this.name = 'UnusableAnswerError';
   }
 }
+
+export type FetchPriority = 'interactive' | 'background';
 
 /** One data source behind the common interface (ADR 0006 update). */
 export abstract class AnimeSourceAdapter {
@@ -148,6 +160,12 @@ export abstract class AnimeSourceAdapter {
   abstract readonly lookups: readonly AnimeIdSource[];
   /** True during a cool-down after a failure: background work skips the source. */
   abstract isDown(): boolean;
-  /** Throws SourceUnavailableError; never returns adult entries as anything but `adult: true`. */
-  abstract fetchAnime(ref: AnimeRef): Promise<SourceResult>;
+  /**
+   * Throws SourceUnavailableError; never returns adult entries as anything but `adult: true`.
+   * A `background` call takes only a free rate-limit slot, so it never queues ahead of a person.
+   */
+  abstract fetchAnime(
+    ref: AnimeRef,
+    priority?: FetchPriority,
+  ): Promise<SourceResult>;
 }

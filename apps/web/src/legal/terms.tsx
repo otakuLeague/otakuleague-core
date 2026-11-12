@@ -24,8 +24,9 @@ export const TERMS_OF_USE: LegalDocument = {
         <p>
           These terms apply when you use otakuleague.com. By creating an account
           you agree to them, and to how we handle your data in the{' '}
-          <Link href="/privacy">privacy policy</Link>. You must be at least 15
-          years old to create an account.
+          <Link href="/privacy">privacy policy</Link>. Anyone can browse the
+          site. If you are under 15, you need the consent of a parent or
+          guardian to create an account.
         </p>
       ),
     },
@@ -99,6 +100,7 @@ export const TERMS_OF_USE: LegalDocument = {
           Anime details and images come from third parties and belong to their
           owners; see <Link href="/data-sources">data sources</Link>. We show
           them as they are and cannot promise they are complete or correct.
+          OtakuLeague shows no adult content.
         </p>
       ),
     },
@@ -133,6 +135,37 @@ export const TERMS_OF_USE: LegalDocument = {
           If we change these terms in a way that matters, we update the date at
           the top of this page and say what changed.
         </p>
+      ),
+    },
+    {
+      id: 'law',
+      title: 'Applicable law',
+      body: (
+        <p>
+          These terms are governed by French law, and French courts have
+          jurisdiction. This does not take away the protection that the
+          mandatory consumer law of your country gives you if you live in the
+          European Union.
+        </p>
+      ),
+    },
+    {
+      id: 'legal-notice',
+      title: 'Legal notice',
+      body: (
+        <>
+          <p>
+            <strong>Publisher</strong>: OtakuLeague is published by a private
+            individual acting in a non-professional capacity. As article 6, III,
+            2 of the French law n° 2004-575 of 21 June 2004 (LCEN) allows, the
+            publisher has given their identification details to the host instead
+            of publishing them here. Contact: {mail}.
+          </p>
+          <p>
+            <strong>Host</strong>: Vercel Inc., 440 N Barranca Ave #4133,
+            Covina, CA 91723, USA.
+          </p>
+        </>
       ),
     },
     {

@@ -1,9 +1,10 @@
+import Link from 'next/link';
 import { CONTACT_EMAIL } from '../shell/site-footer';
 import type { LegalDocument } from './legal-document';
 import { LegalTable } from './legal-page';
 
-// Facts from ADR 0015 (auth, cookies, rate limits, Brevo) and ADR 0009 (EU hosting). Anything
-// not confirmed yet is worded conservatively; the open list is in docs/progress/OTA-147.md.
+// Facts from ADR 0015 (auth, cookies, rate limits, Brevo), ADR 0009 (hosting) and the facts
+// Farouk confirmed on 2026-11-12 (publisher, regions, retention, age); see docs/progress/OTA-147.md.
 const mail = <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 
 export const PRIVACY_POLICY: LegalDocument = {
@@ -15,7 +16,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
     'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
-    'Our server and database run in an EU region, and account emails go through Brevo, whose servers are in France, Germany and Belgium.',
+    'Your data stays in the EU: the website’s functions run in Paris, our server and database in Amsterdam, error reports in Germany, and account emails go through Brevo in the EU.',
     'Write to us at any time and we delete your account and its data.',
   ],
   sections: [
@@ -24,9 +25,11 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: 'Who we are',
       body: (
         <p>
-          OtakuLeague (otakuleague.com) is an independent project run by its
-          founder, who is responsible for your data (the “controller”). Write to{' '}
-          {mail} about anything in this policy.
+          OtakuLeague (otakuleague.com) is published by a private individual,
+          not a company, who is responsible for your data (the “controller”).
+          The publisher’s details are with our host; see the{' '}
+          <Link href="/terms#legal-notice">legal notice</Link>. Write to {mail}{' '}
+          about anything in this policy.
         </p>
       ),
     },
@@ -83,8 +86,8 @@ export const PRIVACY_POLICY: LegalDocument = {
           To run your account and the features you use (contract), to keep the
           service safe and working (legitimate interest), and to answer you when
           you write to us (legitimate interest). We do not sell your data, show
-          ads or build advertising profiles. Our emails contain no tracking
-          pixels and no tracked links.
+          ads or build advertising profiles. Opens and clicks on our emails are
+          only counted anonymously, never tied to you.
         </p>
       ),
     },
@@ -105,25 +108,25 @@ export const PRIVACY_POLICY: LegalDocument = {
                 'Vercel',
                 'Hosts the website',
                 'Pages you request, IP address',
-                'Functions run in an EU region; pages are served from Vercel’s global network',
+                'Functions run in Paris, France; pages are served from Vercel’s global network',
               ],
               [
                 'Railway',
                 'Runs our server and database',
                 'Everything listed above',
-                'EU region',
+                'Amsterdam, Netherlands (EU)',
               ],
               [
                 'Sentry',
                 'Error reports',
                 'What broke, the page, your browser; no passwords',
-                'Sentry’s data centres (EU or United States)',
+                'Germany (Sentry’s EU data region)',
               ],
               [
                 'Brevo',
                 'Sends account emails',
-                'Your email address and the email’s content',
-                'France, Germany, Belgium',
+                'Your email address and the email’s content (no preview of it is stored)',
+                'EU (France, Germany, Belgium)',
               ],
             ]}
           />
@@ -178,13 +181,15 @@ export const PRIVACY_POLICY: LegalDocument = {
     },
     {
       id: 'third-party',
-      title: 'Images from AniList',
+      title: 'Images from our data sources',
       body: (
         <p>
           Anime cover images load straight from AniList’s servers (
-          <code>s4.anilist.co</code>), so your browser sends AniList your IP
-          address and browser details when it shows them, as with any image on
-          the web. AniList handles them under its own privacy policy.
+          <code>s4.anilist.co</code>), or from MyAnimeList’s (
+          <code>cdn.myanimelist.net</code>) when AniList has none, so your
+          browser sends them your IP address and browser details when it shows
+          them, as with any image on the web. Each handles them under its own
+          privacy policy.
         </p>
       ),
     },
@@ -195,8 +200,9 @@ export const PRIVACY_POLICY: LegalDocument = {
         <ul>
           <li>
             <strong>Your account</strong>: until you ask us to delete it. We
-            then delete your profile, list, XP and sign-ins; copies in our
-            database backups disappear as the backups roll over.
+            then delete your profile, list, XP and sign-ins from our database
+            straight away, except what the law requires us to keep; copies in
+            our database backups expire within 30 days.
           </li>
           <li>
             <strong>Sign-ups never confirmed</strong>: deleted within about 48
@@ -214,7 +220,11 @@ export const PRIVACY_POLICY: LegalDocument = {
           </li>
           <li>
             <strong>Error reports</strong>: deleted automatically by Sentry
-            after its retention period.
+            after 90 days at most.
+          </li>
+          <li>
+            <strong>Email sending logs</strong> (at Brevo): kept 1 month,
+            without a preview of the email’s content.
           </li>
         </ul>
       ),
@@ -249,8 +259,11 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: 'Children',
       body: (
         <p>
-          OtakuLeague is not meant for children under 15. If you think a child
-          under 15 has an account, write to us and we will delete it.
+          Anyone can browse OtakuLeague, and it shows no adult content. To
+          create an account, children under 15 need the consent of a parent or
+          guardian (article 8 of the GDPR and article 45 of the French loi
+          Informatique et Libertés). If you think a child under 15 has an
+          account without that consent, write to us and we will delete it.
         </p>
       ),
     },

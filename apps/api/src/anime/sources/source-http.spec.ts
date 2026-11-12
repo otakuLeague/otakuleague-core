@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,10 +8,18 @@ import {
   retryAfterMs,
   type SourceHttpOptions,
 } from './source-http';
-import { SourceUnavailableError } from './source.types';
+import { SourceUnavailableError, UnusableAnswerError } from './source.types';
 
 type Reply =
-  { status: number; headers?: Record<string, string>; body?: string } | 'hang';
+  | {
+      status: number;
+      headers?: Record<string, string>;
+      body?: string | Buffer;
+      /** Sent without Content-Length. */
+      chunked?: true;
+    }
+  | { status: number; headers: Record<string, string>; noBody: true }
+  | 'hang';
 
 /** A local stand-in for a source: answers each request with the next reply. */
 async function fakeSource(
@@ -21,7 +30,16 @@ async function fakeSource(
     const reply = replies[Math.min(calls, replies.length - 1)];
     calls += 1;
     if (reply === undefined || reply === 'hang') return;
-    response.writeHead(reply.status, reply.headers).end(reply.body ?? '{}');
+    if ('noBody' in reply) {
+      response.writeHead(reply.status, reply.headers).flushHeaders();
+      return;
+    }
+    const body = reply.body ?? '{}';
+    const headers =
+      reply.chunked === true
+        ? reply.headers
+        : { 'Content-Length': String(Buffer.byteLength(body)), ...reply.headers };
+    response.writeHead(reply.status, headers).end(body);
   });
   await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
@@ -165,5 +183,133 @@ describe('requestJson', () => {
     await expect(requestJson(source.url, {}, options())).rejects.toThrow(
       'not JSON',
     );
+  });
+
+  it('turns an empty body into the not-JSON failure', async () => {
+    const source = await fakeSource([{ status: 200, body: '' }]);
+
+    await expect(requestJson(source.url, {}, options())).rejects.toThrow(
+      'not JSON',
+    );
+  });
+});
+
+describe('requestJson body limit', () => {
+  const limit = 64;
+  const small = (overrides: Partial<SourceHttpOptions> = {}) =>
+    options({ maxBodyBytes: limit, ...overrides });
+  /** A JSON string of exactly `bytes` bytes. */
+  const json = (bytes: number) => `"${'a'.repeat(bytes - 2)}"`;
+
+  it('accepts a body of exactly the limit, with Content-Length', async () => {
+    const source = await fakeSource([{ status: 200, body: json(limit) }]);
+
+    await expect(
+      requestJson(source.url, {}, small()),
+    ).resolves.toMatchObject({ status: 200 });
+  });
+
+  it('accepts a body of exactly the limit, chunked (no Content-Length)', async () => {
+    const source = await fakeSource([
+      {
+        status: 200,
+        chunked: true,
+        body: json(limit),
+      },
+    ]);
+
+    await expect(
+      requestJson(source.url, {}, small()),
+    ).resolves.toMatchObject({ status: 200 });
+  });
+
+  it('rejects one byte over the limit, with Content-Length', async () => {
+    const source = await fakeSource([{ status: 200, body: json(limit + 1) }]);
+
+    await expect(requestJson(source.url, {}, small())).rejects.toThrow(
+      'jikan unavailable: response body too large',
+    );
+  });
+
+  it('rejects one byte over the limit, chunked', async () => {
+    const source = await fakeSource([
+      {
+        status: 200,
+        chunked: true,
+        body: json(limit + 1),
+      },
+    ]);
+
+    await expect(requestJson(source.url, {}, small())).rejects.toThrow(
+      'response body too large',
+    );
+  });
+
+  it('rejects on Content-Length alone, without waiting for the body', async () => {
+    const source = await fakeSource([
+      {
+        status: 200,
+        headers: { 'Content-Length': String(limit + 1) },
+        noBody: true,
+      },
+    ]);
+    const started = performance.now();
+
+    await expect(
+      requestJson(source.url, {}, small({ timeoutMs: 5_000 })),
+    ).rejects.toThrow('response body too large');
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
+
+  it('counts bytes, not characters', async () => {
+    // 40 characters, 80 bytes.
+    const body = JSON.stringify('\u00e9'.repeat(39));
+    const source = await fakeSource([{ status: 200, body }]);
+
+    await expect(requestJson(source.url, {}, small())).rejects.toThrow(
+      'response body too large',
+    );
+  });
+
+  it('rejects a gzip body that decodes over the limit, without a cool-down', async () => {
+    const source = await fakeSource([
+      {
+        status: 200,
+        headers: { 'Content-Encoding': 'gzip' },
+        body: gzipSync(json(limit * 10)),
+      },
+    ]);
+    const shared = small();
+
+    await expect(requestJson(source.url, {}, shared)).rejects.toThrow(
+      'response body too large',
+    );
+    await expect(requestJson(source.url, {}, shared)).rejects.toThrow(
+      'response body too large',
+    );
+    expect(source.calls()).toBe(2);
+  });
+
+  it('rejects an oversized 404 body too', async () => {
+    const source = await fakeSource([{ status: 404, body: json(limit + 1) }]);
+
+    await expect(requestJson(source.url, {}, small())).rejects.toThrow(
+      'response body too large',
+    );
+  });
+
+  it('throws UnusableAnswerError and does not mark the source down', async () => {
+    const source = await fakeSource([{ status: 200, body: json(limit + 1) }]);
+    const shared = small();
+
+    const error: unknown = await requestJson(source.url, {}, shared).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(UnusableAnswerError);
+    expect(error).toBeInstanceOf(SourceUnavailableError);
+    await expect(requestJson(source.url, {}, shared)).rejects.toThrow(
+      'response body too large',
+    );
+    expect(source.calls()).toBe(2);
   });
 });

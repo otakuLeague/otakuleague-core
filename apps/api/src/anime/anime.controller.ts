@@ -1,30 +1,56 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiExtraModels,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiProperty,
+  ApiPropertyOptional,
   ApiServiceUnavailableResponse,
+  ApiTooManyRequestsResponse,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
 import {
   ANIME_ID_SOURCES,
+  ANIME_LIST_DEFAULT_LIMIT,
+  ANIME_LIST_KINDS,
+  ANIME_LIST_MAX_LIMIT,
   type AnimeBySlug,
   type AnimeDetails,
   type AnimeFranchise,
   type AnimeIdSource,
+  type AnimeListKind,
+  type AnimeListPage,
+  type AnimeSearchPage,
   type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
-import { IsIn, Matches, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
+} from 'class-validator';
 import {
   AnimeBySlugAnimeSchema,
   AnimeBySlugRedirectSchema,
   AnimeDetailsSchema,
   AnimeFranchiseSchema,
+  AnimeListPageSchema,
+  AnimeSearchPageSchema,
   AnimeSlugResolutionSchema,
 } from './anime.openapi';
+import { AnimeListService } from './anime-list.service';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
@@ -60,6 +86,83 @@ class AnimeSlugParams {
   readonly slug!: string;
 }
 
+class AnimeListParams {
+  @ApiProperty({ enum: ANIME_LIST_KINDS })
+  @IsIn(ANIME_LIST_KINDS, {
+    message: `kind must be one of: ${ANIME_LIST_KINDS.join(', ')}`,
+  })
+  readonly kind!: AnimeListKind;
+}
+
+class AnimeListQuery {
+  @ApiPropertyOptional({
+    description: 'The nextCursor of the previous page; opaque.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  readonly cursor?: string;
+
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 1,
+    maximum: ANIME_LIST_MAX_LIMIT,
+    default: ANIME_LIST_DEFAULT_LIMIT,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(ANIME_LIST_MAX_LIMIT)
+  readonly limit?: number;
+}
+
+const MAX_QUERY_LENGTH = 100;
+
+/** The SQL normalises with NFKD, which can expand one character into 18 (U+FDFA). */
+@ValidatorConstraint({ name: 'maxNormalizedLength' })
+class MaxNormalizedLength implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return (
+      typeof value === 'string' &&
+      value.normalize('NFKD').length <= MAX_QUERY_LENGTH
+    );
+  }
+
+  defaultMessage(): string {
+    return `q must be at most ${MAX_QUERY_LENGTH} characters after Unicode normalisation`;
+  }
+}
+
+class AnimeSearchParams {
+  @ApiProperty({ minLength: 1, maxLength: 100, example: 'attack on titan' })
+  // NUL cannot be stored or compared by PostgreSQL (22021): treat it as a separator.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replaceAll('\u0000', ' ').trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(MAX_QUERY_LENGTH)
+  @Validate(MaxNormalizedLength)
+  readonly q!: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  readonly page: number = 1;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  readonly pageSize: number = 24;
+}
+
 @ApiTags('anime')
 @ApiExtraModels(AnimeBySlugAnimeSchema, AnimeBySlugRedirectSchema)
 @Controller('anime')
@@ -67,7 +170,49 @@ export class AnimeController {
   constructor(
     private readonly anime: AnimeService,
     private readonly franchises: AnimeFranchiseService,
+    private readonly lists: AnimeListService,
+    private readonly animeSearch: AnimeSearchService,
   ) {}
+
+  // Declared before ':idSource/:externalId': both have two segments.
+  @Get('lists/:kind')
+  @ApiOkResponse({
+    type: AnimeListPageSchema,
+    description:
+      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Unknown list, malformed cursor or limit out of range.',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'AniList is switched off, or we do not hold this page and AniList is down or rate-limited.',
+  })
+  getList(
+    @Param() params: AnimeListParams,
+    @Query() query: AnimeListQuery,
+  ): Promise<AnimeListPage> {
+    return this.lists.getList(params.kind, query.cursor, query.limit);
+  }
+
+  // One segment: cannot clash with the two-segment routes below.
+  @Get('search')
+  @ApiOkResponse({
+    type: AnimeSearchPageSchema,
+    description:
+      'Anime we already store, best match first (ADR 0016): by English, romaji or native title or synonym, ignoring case, accents and punctuation, tolerating typos. Never calls a source. A query with no letters or digits is valid and finds nothing.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'q missing or longer than 100 characters, or page or pageSize out of range.',
+  })
+  searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
+    return this.animeSearch.search({
+      query: params.q,
+      page: params.page,
+      pageSize: params.pageSize,
+    });
+  }
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the
   // first route that matches.
@@ -96,6 +241,10 @@ export class AnimeController {
   @ApiServiceUnavailableResponse({
     description:
       'The anime is not cached any more and its sources are down or rate-limited.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
   })
   getBySlug(@Param() params: AnimeSlugParams): Promise<AnimeBySlug> {
     return this.anime.getBySlug(params.slug);
@@ -142,6 +291,10 @@ export class AnimeController {
   @ApiServiceUnavailableResponse({
     description:
       'We do not have this anime yet and its sources are down or rate-limited.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
   })
   get(@Param() params: AnimeLookupParams): Promise<AnimeDetails> {
     return this.anime.getByExternalId({

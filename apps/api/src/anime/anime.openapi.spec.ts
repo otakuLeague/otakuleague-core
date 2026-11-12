@@ -1,6 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import { type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import type { AnimeDetails, FranchiseSeason } from '@otakuleague/shared-types';
+import type {
+  AnimeDetails,
+  AnimeListPage,
+  AnimeSearchHit,
+  FranchiseSeason,
+} from '@otakuleague/shared-types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from '../testing/test-app';
 
@@ -39,6 +44,14 @@ const ANIME_DETAILS_KEYS = {
   attributions: true,
 } satisfies Record<keyof AnimeDetails, true>;
 
+const ANIME_LIST_PAGE_KEYS = {
+  kind: true,
+  entries: true,
+  nextCursor: true,
+  freshness: true,
+  fetchedAt: true,
+} satisfies Record<keyof AnimeListPage, true>;
+
 interface Schema {
   properties?: Record<string, Schema & { $ref?: string; items?: Schema }>;
   nullable?: boolean;
@@ -70,6 +83,23 @@ describe('anime OpenAPI schema', () => {
     expect(Object.keys(details.properties ?? {}).toSorted()).toEqual(keys);
     expect(details.required?.toSorted()).toEqual(keys);
     expect(details.properties?.canonicalSlug?.nullable).toBe(true);
+  });
+
+  it('documents every AnimeListPage field, all required, and declares the list route before the two-segment anime route', () => {
+    const page = schema('AnimeListPageSchema');
+    const keys = Object.keys(ANIME_LIST_PAGE_KEYS).toSorted();
+
+    expect(Object.keys(page.properties ?? {}).toSorted()).toEqual(keys);
+    expect(page.required?.toSorted()).toEqual(keys);
+    expect(page.properties?.nextCursor?.nullable).toBe(true);
+    expect(page.properties?.entries?.items).toEqual({
+      $ref: '#/components/schemas/AnimeListEntrySchema',
+    });
+    const paths = Object.keys(document.paths);
+    expect(paths).toContain('/anime/lists/{kind}');
+    expect(paths.indexOf('/anime/lists/{kind}')).toBeLessThan(
+      paths.indexOf('/anime/{idSource}/{externalId}'),
+    );
   });
 
   it('gives each Sourced shape its own schema', () => {
@@ -112,6 +142,37 @@ describe('anime OpenAPI schema', () => {
     expect(params('/anime/{idSource}/{externalId}').toSorted()).toEqual([
       'externalId',
       'idSource',
+    ]);
+  });
+
+  it('documents the search route and every hit field', () => {
+    const hitKeys = {
+      slug: true,
+      ref: true,
+      title: true,
+      matchedTitle: true,
+      format: true,
+      episodes: true,
+      season: true,
+      seasonYear: true,
+      startYear: true,
+      coverImageUrl: true,
+      coverColor: true,
+      score: true,
+    } satisfies Record<keyof AnimeSearchHit, true>;
+    const params = (document.paths['/anime/search']?.get?.parameters ?? []).map(
+      (param) => ('name' in param ? param.name : param.$ref),
+    );
+
+    expect(params.toSorted()).toEqual(['page', 'pageSize', 'q']);
+    expect(
+      Object.keys(schema('AnimeSearchHitSchema').properties ?? {}).toSorted(),
+    ).toEqual(Object.keys(hitKeys).toSorted());
+    expect(schema('AnimeSearchPageSchema').required?.toSorted()).toEqual([
+      'hits',
+      'page',
+      'pageSize',
+      'total',
     ]);
   });
 

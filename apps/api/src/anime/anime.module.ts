@@ -10,10 +10,13 @@ import {
   ANIME_SOURCE_ADAPTERS,
   AnimeImportService,
 } from './anime-import.service';
+import { AnimeListService } from './anime-list.service';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
 import { AnimeFranchiseService } from './franchise.service';
+import { ImportLimits } from './import-limits';
 import { SourceBackoff } from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { JikanAdapter } from './sources/jikan.adapter';
@@ -37,6 +40,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly importer: AnimeImportService,
     private readonly walker: FranchiseWalker,
+    private readonly lists: AnimeListService,
   ) {}
 
   onModuleInit(): void {
@@ -67,6 +71,12 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
       .catch((error: unknown) =>
         this.logger.warn(`Franchise purge failed: ${String(error)}`),
       );
+    this.lists
+      .purgeStale()
+      .then((count) => this.logger.log(`Purged ${count} stale list pages`))
+      .catch((error: unknown) =>
+        this.logger.warn(`List page purge failed: ${String(error)}`),
+      );
   }
 }
 
@@ -87,8 +97,11 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     },
     AnimeImportService,
     AnimeService,
+    AnimeListService,
+    AnimeSearchService,
     FranchiseWalker,
     SourceBackoff,
+    ImportLimits,
     AnimeFranchiseService,
     AnimePurgeScheduler,
   ],
