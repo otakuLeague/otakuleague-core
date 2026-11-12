@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Onboarding</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /onboarding for a Google user (username was generated, so 3 steps), step 2 Avatar, photo chosen and being cropped. Email sign-ups chose a username already: they see 2 steps (Avatar, Bio). -->
+    <div class="ob">
+      <header class="ob-top">
+        <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
+        <nav class="ob-progress" aria-label="Profile setup progress">
+          <span class="ob-count">Step 2 of 3</span>
+          <ol>
+            <li data-done>Username<span class="au-sr">: done</span></li>
+            <li aria-current="step">Avatar</li>
+            <li>Bio</li>
+          </ol>
+        </nav>
+        <a class="ol-btn ol-btn--ghost" href="/" style="min-height: 44px">Skip for now</a>
+      </header>
+      <main class="ob-body">
+        <section class="ob-step" aria-labelledby="h">
+          <h1 id="h">Pick your avatar</h1>
+          <p>Drag to frame it, zoom with the slider. This is how you'll show up on the leaderboard.</p>
+          <div class="ob-crop">
+            <div class="ob-stage" tabindex="0" role="application" aria-label="Crop area. Arrow keys move the photo, plus and minus zoom." aria-describedby="h"></div>
+            <div style="display: grid; gap: var(--space-6)">
+              <label class="ob-zoom"><span aria-hidden="true">−</span><input type="range" min="1" max="3" step="0.05" value="1.6" aria-label="Zoom" /><span aria-hidden="true">+</span></label>
+              <div class="ob-previews" aria-label="Preview">
+                <span class="ob-av" style="width: 96px; height: 96px"></span>
+                <span class="ob-av" style="width: 48px; height: 48px"></span>
+                <span class="ob-av" style="width: 28px; height: 28px"></span>
+              </div>
+              <p class="au-msg" data-tone="hint">JPG, PNG or WebP, up to 5 MB. Saved as a 512 px square.</p>
+              <button class="ol-btn ol-btn--secondary" style="min-height: 44px; justify-self: start">Choose another photo</button>
+            </div>
+          </div>
+          <div class="ob-actions">
+            <a class="ol-btn ol-btn--ghost" href="#">← Back</a>
+            <button class="ol-btn ol-btn--primary">Save and continue</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <section class="au-board" aria-label="Other onboarding states">
+      <h2>Onboarding: other steps and states</h2>
+      <div class="au-grid">
+        <figure class="au-state">
+          <figcaption>Step 1 · username (Google user, generated name)</figcaption>
+          <div class="ob-step">
+            <h2>Choose your username</h2>
+            <p>We picked one from your email. Keep it or make it yours.</p>
+            <div class="au-field">
+              <label for="u1">Username</label>
+              <div class="au-input" data-state="ok" data-demo="focus"><span class="au-prefix" aria-hidden="true">@</span><input id="u1" value="kaito_tanaka" maxlength="20" /></div>
+              <p class="au-msg" data-tone="ok" role="status">kaito_tanaka is available · otakuleague.com/u/kaito_tanaka</p>
+            </div>
+            <div class="ob-actions"><span></span><button class="ol-btn ol-btn--primary">Continue</button></div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Step 2 · avatar, nothing chosen yet</figcaption>
+          <div class="ob-step">
+            <div class="au-drop" tabindex="0" role="button">
+              <span class="ob-av ob-av--initials" style="width: 72px; height: 72px">KA</span>
+              <strong>Drop an image or choose a file</strong>
+              <span>JPG, PNG or WebP, up to 5 MB</span>
+            </div>
+            <div class="ob-actions"><a class="ol-btn ol-btn--ghost" href="#">← Back</a><button class="ol-btn ol-btn--secondary">Keep initials</button></div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Step 2 · error: too big or not an image</figcaption>
+          <div class="ob-step">
+            <div class="au-alert" role="alert"><strong>That file is 8.4 MB.</strong><span>Pick an image under 5 MB (JPG, PNG or WebP).</span></div>
+            <div class="au-drop" tabindex="0" role="button"><strong>Choose another file</strong><span>or drop it here</span></div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Step 3 · bio, near the 300 limit</figcaption>
+          <div class="ob-step">
+            <h2>Say hi</h2>
+            <p>A line or two on what you watch. Optional.</p>
+            <div class="au-field">
+              <label for="b1">Bio</label>
+              <div class="au-input"><textarea id="b1" maxlength="300" aria-describedby="bc">Seinen and slow-burn fantasy. Currently rewatching Frieren for the third time and pretending I'm not crying at every flashback. Mushishi, Monster and Vinland Saga top my list. Open to recs: drop me anything with quiet worldbuilding and a great soundtrack, I'm all ears. Ask me about Bones.</textarea></div>
+              <span class="ob-count-chars" id="bc">292 / 300</span>
+            </div>
+            <div class="ob-actions"><a class="ol-btn ol-btn--ghost" href="#">← Back</a><button class="ol-btn ol-btn--primary">Finish</button></div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Saving · then save failed</figcaption>
+          <div class="ob-step">
+            <div class="ob-actions"><a class="ol-btn ol-btn--ghost" aria-disabled="true">← Back</a><button class="ol-btn ol-btn--primary" aria-busy="true"><span class="au-spin" aria-hidden="true"></span>Saving…</button></div>
+            <div class="au-alert" role="alert"><strong>Couldn't save your avatar.</strong><span>Your crop is kept. Try again, or skip this step and add it later in Settings.</span></div>
+            <div class="ob-actions"><a class="ol-btn ol-btn--ghost" href="#">Skip this step</a><button class="ol-btn ol-btn--primary">Try again</button></div>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Done · profile preview</figcaption>
+          <div class="ob-step" role="status">
+            <h2>You're all set</h2>
+            <div class="ob-card">
+              <span class="ob-av" style="width: 64px; height: 64px"></span>
+              <div><strong>@kaito_tanaka</strong><p>Seinen and slow-burn fantasy. Currently rewatching Frieren for the third time…</p></div>
+            </div>
+            <a class="ol-btn ol-btn--primary au-btn" href="/season">Find something to watch</a>
+            <a class="ol-btn ol-btn--secondary au-btn" href="/u/kaito_tanaka">See my profile</a>
+          </div>
+        </figure>
+
+        <figure class="au-state">
+          <figcaption>Skip for now · confirm (Base UI AlertDialog)</figcaption>
+          <div class="au-card">
+            <h2>Skip profile setup?</h2>
+            <p>You'll start with your initials and no bio. Change them any time in Settings → Edit profile. We won't ask again.</p>
+            <button class="ol-btn ol-btn--primary au-btn">Skip</button>
+            <button class="ol-btn ol-btn--secondary au-btn">Keep going</button>
+          </div>
+        </figure>
+      </div>
+    </section>
+  </body>
+</html>
