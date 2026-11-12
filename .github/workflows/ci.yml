@@ -17,6 +17,21 @@ concurrency:
 
 # Each job starts from a fresh checkout. No test retries: a flaky test fails the run.
 jobs:
+  # OTA-183: warning only (never fails). On pull_request the checkout is the merge commit, so its
+  # first parent is the base branch. Uses the runner's Node, no setup action.
+  deploy-order:
+    name: Deploy order
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - run: git diff --name-only --no-renames -z HEAD^1 HEAD -- | node scripts/deploy-order.mjs
+        continue-on-error: true
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
