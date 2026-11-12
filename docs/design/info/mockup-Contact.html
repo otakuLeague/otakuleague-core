@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contact</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../auth/auth.css" />
+    <link rel="stylesheet" href="../profile/profile.css" />
+    <link rel="stylesheet" href="info.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: /contact signed in (email prefilled from the account, still editable), filled in. Board below: empty submit, sending, sent, 5xx, 429, limits. A hidden honeypot field and a per-IP rate limit replace the old site's nothing (no captcha). -->
+<div class="sh">
+  <div class="sh-bg" aria-hidden="true"></div>
+  <header class="sh-header ol-glass"><div class="sh-header__in">
+    <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+    <nav aria-label="Main"><ul class="sh-nav">
+      <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+      <li><a class="sh-nav__link" href="/season">Seasonal</a></li><li><a class="sh-nav__link" href="/top/anime">Rankings</a></li><li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+    </ul></nav>
+    <span class="sh-spacer"></span>
+    <div class="sh-search" role="search"><label class="sh-search__field"><input type="search" placeholder="Search anime" aria-label="Search anime" /><kbd class="sh-kbd">/</kbd></label></div>
+    <div class="sh-right"><a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a><button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button><button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></div>
+  </div></header>
+  <main id="main" class="sh-main">
+<div class="in-contact">
+<header class="in-hero"><p class="ol-label in-kicker">Contact</p><h1>Say hi, report a bug, <em>pitch an idea.</em></h1><p class="in-lede">Every field is required unless it says optional.</p></header>
+<div class="in-contact__grid">
+<form class="in-form" aria-label="Contact form" novalidate>
+  
+  
+  <div class="in-col">
+    <div class="au-field"><label for="n-idle">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input"><input id="n-idle" type="text" value="Kaito" autocomplete="name" /></div>
+  
+</div>
+    <div class="au-field"><label for="e-idle">Email</label>
+  <div class="au-input"><input id="e-idle" type="email" value="kaito.tanaka.watches.everything@example.com" autocomplete="email" /></div>
+  
+</div>
+  </div>
+  <div class="au-field"><label for="s-idle">Subject</label>
+  <div class="au-input"><input id="s-idle" type="text" value="Profile XP not updating after +1" aria-describedby="s-idle-m s-idle-c" /></div>
+  <div class="in-fieldfoot"><span id="s-idle-m"></span><span class="in-count" id="s-idle-c">33 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-idle">Message</label>
+  <div class="au-input"><textarea id="m-idle" aria-describedby="m-idle-m m-idle-c" maxlength="5000" placeholder="What's on your mind?">Hi! When I mark an episode as watched on my phone, the XP chip shows +10 but my level card on the profile still says 1,120 XP to level 17 until I refresh. Is that expected?
+
+Steps: open My List, press +1 on Frieren, open my profile from the menu.
+Phone: Pixel 8, Chrome 131.</textarea></div>
+  <div class="in-fieldfoot"><span id="m-idle-m"></span><span class="in-count" id="m-idle-c">268 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-idle">Leave this empty</label><input id="hp-idle" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form>
+<aside class="in-reach" aria-labelledby="reach-h">
+  <h2 id="reach-h">Other ways to reach us</h2>
+  <ul class="in-reach__list">
+    <li><a href="mailto:contact@otakuleague.com"><span class="in-ico" data-tone="accent" aria-hidden="true">@</span><span><b>Email</b><span>contact@otakuleague.com</span></span></a></li>
+    <li><a href="https://discord.example"><span class="in-ico" data-tone="brand" aria-hidden="true">Dc</span><span><b>Discord ↗</b><span>Fastest for bugs and ideas</span></span></a></li>
+  </ul>
+  <ul class="in-socials" aria-label="OtakuLeague on social media">
+    <li><a href="https://x.example"><i aria-hidden="true">X</i>X</a></li>
+    <li><a href="https://instagram.example"><i aria-hidden="true">Ig</i>Instagram</a></li>
+    <li><a href="https://tiktok.example"><i aria-hidden="true">Tt</i>TikTok</a></li>
+    <li><a href="https://facebook.example"><i aria-hidden="true">Fb</i>Facebook</a></li>
+  </ul>
+  <p class="in-reply"><b>I read every message.</b> Replies usually take a few days. For a bug, say what you did, what you expected and what happened.</p>
+</aside>
+</div>
+</div>
+<section class="in-board" aria-label="Other states">
+<h2>Other states</h2>
+<figure><figcaption>1 · Empty submit (focus moves to the first invalid field)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  
+  <div class="au-alert" role="alert"><strong>3 fields need a look.</strong><span>Email, subject and message are required.</span></div>
+  <div class="in-col">
+    <div class="au-field"><label for="n-empty">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input"><input id="n-empty" type="text" value="" autocomplete="name" /></div>
+  
+</div>
+    <div class="au-field"><label for="e-empty">Email</label>
+  <div class="au-input" data-state="error"><input id="e-empty" type="email" value="" autocomplete="email" aria-invalid="true" aria-describedby="e-empty-m" /></div>
+  <div class="in-fieldfoot"><p class="au-msg" data-tone="bad" id="e-empty-m">Enter your email so we can reply.</p></div>
+</div>
+  </div>
+  <div class="au-field"><label for="s-empty">Subject</label>
+  <div class="au-input" data-state="error"><input id="s-empty" type="text" value="" aria-invalid="true" aria-describedby="s-empty-m s-empty-c" /></div>
+  <div class="in-fieldfoot"><p class="au-msg" data-tone="bad" id="s-empty-m">Add a subject.</p><span class="in-count" id="s-empty-c">0 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-empty">Message</label>
+  <div class="au-input" data-state="error"><textarea id="m-empty" aria-invalid="true" aria-describedby="m-empty-m m-empty-c" maxlength="5000" placeholder="What's on your mind?"></textarea></div>
+  <div class="in-fieldfoot"><p class="au-msg" data-tone="bad" id="m-empty-m">Write a message.</p><span class="in-count" id="m-empty-c">0 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-empty">Leave this empty</label><input id="hp-empty" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form></figure>
+<figure><figcaption>2 · Sending (fields read-only, button keeps its width)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  
+  
+  <div class="in-col">
+    <div class="au-field"><label for="n-sending">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input in-input-ro" aria-disabled="true"><input id="n-sending" type="text" value="Kaito" autocomplete="name" readonly /></div>
+  
+</div>
+    <div class="au-field"><label for="e-sending">Email</label>
+  <div class="au-input in-input-ro" aria-disabled="true"><input id="e-sending" type="email" value="kaito.tanaka.watches.everything@example.com" autocomplete="email" readonly /></div>
+  
+</div>
+  </div>
+  <div class="au-field"><label for="s-sending">Subject</label>
+  <div class="au-input in-input-ro" aria-disabled="true"><input id="s-sending" type="text" value="Profile XP not updating after +1" aria-describedby="s-sending-m s-sending-c" readonly /></div>
+  <div class="in-fieldfoot"><span id="s-sending-m"></span><span class="in-count" id="s-sending-c">33 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-sending">Message</label>
+  <div class="au-input in-input-ro" aria-disabled="true"><textarea id="m-sending" aria-describedby="m-sending-m m-sending-c" readonly maxlength="5000" placeholder="What's on your mind?">Hi! When I mark an episode as watched on my phone, the XP chip shows +10 but my level card on the profile still says 1,120 XP to level 17 until I refresh. Is that expected?
+
+Steps: open My List, press +1 on Frieren, open my profile from the menu.
+Phone: Pixel 8, Chrome 131.</textarea></div>
+  <div class="in-fieldfoot"><span id="m-sending-m"></span><span class="in-count" id="m-sending-c">268 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-sending">Leave this empty</label><input id="hp-sending" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-busy="true" aria-disabled="true"><span class="au-spin" aria-hidden="true"></span>Sending…</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form></figure>
+<figure><figcaption>3 · Sent: the form is replaced, focus on the heading</figcaption><section class="in-sent" aria-labelledby="sent-h">
+  <span class="in-sent__mark" aria-hidden="true">✓</span>
+  <h2 id="sent-h" tabindex="-1">Message sent</h2>
+  <p>Thanks, Kaito. I'll reply to <b>kaito.tanaka.watches.everything@example.com</b>, usually within a few days. Nothing in your inbox? Check spam for contact@otakuleague.com.</p>
+  <div class="in-sent__acts"><a class="ol-btn ol-btn--primary" href="/">Back to OtakuLeague</a><button class="ol-btn ol-btn--secondary" type="button">Send another message</button></div>
+</section></figure>
+<figure><figcaption>4 · Server error (5xx): text kept</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  <div class="au-alert" role="alert"><strong>Your message wasn't sent.</strong><span>Something went wrong on our side. Your text is still here: try again, or email contact@otakuleague.com.</span></div>
+  
+  <div class="in-col">
+    <div class="au-field"><label for="n-error">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input"><input id="n-error" type="text" value="Kaito" autocomplete="name" /></div>
+  
+</div>
+    <div class="au-field"><label for="e-error">Email</label>
+  <div class="au-input"><input id="e-error" type="email" value="kaito.tanaka.watches.everything@example.com" autocomplete="email" /></div>
+  
+</div>
+  </div>
+  <div class="au-field"><label for="s-error">Subject</label>
+  <div class="au-input"><input id="s-error" type="text" value="Profile XP not updating after +1" aria-describedby="s-error-m s-error-c" /></div>
+  <div class="in-fieldfoot"><span id="s-error-m"></span><span class="in-count" id="s-error-c">33 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-error">Message</label>
+  <div class="au-input"><textarea id="m-error" aria-describedby="m-error-m m-error-c" maxlength="5000" placeholder="What's on your mind?">Hi! When I mark an episode as watched on my phone, the XP chip shows +10 but my level card on the profile still says 1,120 XP to level 17 until I refresh. Is that expected?
+
+Steps: open My List, press +1 on Frieren, open my profile from the menu.
+Phone: Pixel 8, Chrome 131.</textarea></div>
+  <div class="in-fieldfoot"><span id="m-error-m"></span><span class="in-count" id="m-error-c">268 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-error">Leave this empty</label><input id="hp-error" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Try again</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form></figure>
+<figure><figcaption>5 · Rate limited (429)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  <div class="au-alert" data-tone="wait" role="alert"><strong>You've sent a few messages in a short time.</strong><span>Try again in about 10 minutes. Your text is still here.</span></div>
+  
+  <div class="in-col">
+    <div class="au-field"><label for="n-rate">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input"><input id="n-rate" type="text" value="Kaito" autocomplete="name" /></div>
+  
+</div>
+    <div class="au-field"><label for="e-rate">Email</label>
+  <div class="au-input"><input id="e-rate" type="email" value="kaito.tanaka.watches.everything@example.com" autocomplete="email" /></div>
+  
+</div>
+  </div>
+  <div class="au-field"><label for="s-rate">Subject</label>
+  <div class="au-input"><input id="s-rate" type="text" value="Profile XP not updating after +1" aria-describedby="s-rate-m s-rate-c" /></div>
+  <div class="in-fieldfoot"><span id="s-rate-m"></span><span class="in-count" id="s-rate-c">33 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-rate">Message</label>
+  <div class="au-input"><textarea id="m-rate" aria-describedby="m-rate-m m-rate-c" maxlength="5000" placeholder="What's on your mind?">Hi! When I mark an episode as watched on my phone, the XP chip shows +10 but my level card on the profile still says 1,120 XP to level 17 until I refresh. Is that expected?
+
+Steps: open My List, press +1 on Frieren, open my profile from the menu.
+Phone: Pixel 8, Chrome 131.</textarea></div>
+  <div class="in-fieldfoot"><span id="m-rate-m"></span><span class="in-count" id="m-rate-c">268 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-rate">Leave this empty</label><input id="hp-rate" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form></figure>
+<figure><figcaption>6 · Too long: pasted subject over 200 (message is hard-capped at 5,000)</figcaption><form class="in-form" aria-label="Contact form" novalidate>
+  
+  
+  <div class="in-col">
+    <div class="au-field"><label for="n-long">Name <span class="in-opt">(optional)</span></label>
+  <div class="au-input"><input id="n-long" type="text" value="Kaito" autocomplete="name" /></div>
+  
+</div>
+    <div class="au-field"><label for="e-long">Email</label>
+  <div class="au-input"><input id="e-long" type="email" value="kaito.tanaka.watches.everything@example.com" autocomplete="email" /></div>
+  
+</div>
+  </div>
+  <div class="au-field"><label for="s-long">Subject</label>
+  <div class="au-input" data-state="error"><input id="s-long" type="text" value="XP chip and profile level card disagree after marking an episode watched on mobile Chrome, until a full refresh, on every anime I tried (Frieren, Dandadan, Apothecary Diaries) since last week" aria-invalid="true" aria-describedby="s-long-m s-long-c" /></div>
+  <div class="in-fieldfoot"><p class="au-msg" data-tone="bad" id="s-long-m">Keep the subject to 200 characters.</p><span class="in-count" data-tone="bad" id="s-long-c">204 / 200</span></div>
+</div>
+  <div class="au-field"><label for="m-long">Message</label>
+  <div class="au-input"><textarea id="m-long" aria-describedby="m-long-m m-long-c" maxlength="5000" placeholder="What's on your mind?">Hi! When I mark an episode as watched on my phone, the XP chip shows +10 but my level card on the profile still says 1,120 XP to level 17 until I refresh. Is that expected?
+
+Steps: open My List, press +1 on Frieren, open my profile from the menu.
+Phone: Pixel 8, Chrome 131.</textarea></div>
+  <div class="in-fieldfoot"><span id="m-long-m"></span><span class="in-count" id="m-long-c">268 / 5,000</span></div>
+</div>
+  <div class="in-hp" aria-hidden="true"><label for="hp-long">Leave this empty</label><input id="hp-long" tabindex="-1" autocomplete="off" /></div>
+  <div class="in-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Send message</button><p>We use your email only to reply. <a href="/privacy#contact">Privacy</a></p></div>
+</form></figure>
+</section>
+  </main>
+  <footer class="sh-foot">
+    <div class="sh-foot__in">
+      <div class="sh-foot__brand">
+        <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+        <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+      </div>
+      <nav aria-labelledby="f-about"><h2 class="ol-label" id="f-about">OtakuLeague</h2><ul>
+        <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li><li><a href="/faq">About &amp; FAQ</a></li><li><a href="/contact">Contact</a></li>
+      </ul></nav>
+      <nav aria-labelledby="f-legal"><h2 class="ol-label" id="f-legal">Legal</h2><ul>
+        <li><a href="/privacy">Privacy</a></li><li><a href="/terms">Terms</a></li><li><a href="/data-sources">Data sources</a></li>
+      </ul></nav>
+      <div><h2 class="ol-label" id="f-social">Follow</h2>
+        <ul class="sh-social" aria-labelledby="f-social">
+          <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li><li><a href="#" aria-label="OtakuLeague on X">X</a></li><li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li><li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li><li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sh-foot__base"><span>© 2026 OtakuLeague · contact@otakuleague.com</span><span>Anime data from AniList, MyAnimeList and AnimeThemes</span></div>
+  </footer>
+</div>
+  </body>
+</html>

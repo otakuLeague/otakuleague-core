@@ -238,7 +238,7 @@
 .st-acct .pf-avatar { --s: 40px; font-size: 14px; }
 .st-acct div { display: grid; min-width: 0; }
 .st-acct b { font-weight: 600; overflow-wrap: anywhere; }
-.st-acct span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.st-acct div span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .st-gone { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); font-size: 14px; }
 .st-gone li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-2); }
 .st-gone li::before { content: '✕'; color: var(--bad); font-weight: 700; text-align: center; }
