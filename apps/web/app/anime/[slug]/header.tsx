@@ -57,6 +57,15 @@ function HeaderState({
   );
 }
 
+/** The API caps how many new anime import at once (429, OTA-173): expected, not an outage. */
+export function ImportBusyState() {
+  return (
+    <HeaderState mark="…" title="This anime can’t be shown right now">
+      <p>Lots of new anime are being added right now. Try again in a minute.</p>
+    </HeaderState>
+  );
+}
+
 /**
  * The anime's accent for the whole page (tabs included, which render outside this Suspense
  * boundary). Every value is "#rrggbb": the cover colour is validated, the rest computed.
@@ -357,6 +366,9 @@ export async function AnimeHeaderLoader({ slug }: { readonly slug: string }) {
           <p>It was removed, or its data source is switched off.</p>
         </HeaderState>
       );
+    }
+    if (result.failure.kind === 'api_error' && result.failure.status === 429) {
+      return <ImportBusyState />;
     }
     return (
       <HeaderState mark="!" title="This anime can’t be shown right now" error>

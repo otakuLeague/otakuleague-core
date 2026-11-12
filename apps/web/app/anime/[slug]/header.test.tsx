@@ -403,6 +403,20 @@ describe('AnimeHeaderLoader', () => {
     ).toBe('This anime is not available');
   });
 
+  it('says to try again in a minute on the import cap (429), not that AniList is down', async () => {
+    await renderLoader({
+      ok: false,
+      failure: {
+        kind: 'api_error',
+        status: 429,
+        error: { error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' } },
+      },
+    });
+    expect(screen.getByText(/Try again in a minute/)).toBeTruthy();
+    expect(screen.queryByText(/AniList isn’t answering/)).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('links to the new address when the canonical slug moved meanwhile', async () => {
     expect(
       await renderLoader({

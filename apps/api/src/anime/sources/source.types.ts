@@ -139,6 +139,8 @@ export class UnusableAnswerError extends SourceUnavailableError {
   }
 }
 
+export type FetchPriority = 'interactive' | 'background';
+
 /** One data source behind the common interface (ADR 0006 update). */
 export abstract class AnimeSourceAdapter {
   abstract readonly source: AnimeDataSource;
@@ -148,6 +150,12 @@ export abstract class AnimeSourceAdapter {
   abstract readonly lookups: readonly AnimeIdSource[];
   /** True during a cool-down after a failure: background work skips the source. */
   abstract isDown(): boolean;
-  /** Throws SourceUnavailableError; never returns adult entries as anything but `adult: true`. */
-  abstract fetchAnime(ref: AnimeRef): Promise<SourceResult>;
+  /**
+   * Throws SourceUnavailableError; never returns adult entries as anything but `adult: true`.
+   * A `background` call takes only a free rate-limit slot, so it never queues ahead of a person.
+   */
+  abstract fetchAnime(
+    ref: AnimeRef,
+    priority?: FetchPriority,
+  ): Promise<SourceResult>;
 }

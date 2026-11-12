@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings: states</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../auth/auth.css" />
+    <link rel="stylesheet" href="../profile/profile.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="ol-root">
+    <!-- Every settings state as cards: loading, load error, the username, password and email forms (idle, invalid, saving, error, saved), the Google-only variant, pending email change, adult-content locks, preference save error, language menu, session expired, import placeholder. The delete dialog is in mockup-Delete. -->
+<div class="sh">
+  <div class="sh-bg" aria-hidden="true"></div>
+  <header class="sh-header ol-glass"><div class="sh-header__in">
+    <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+    <nav aria-label="Main"><ul class="sh-nav">
+      <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+      <li><a class="sh-nav__link" href="/season">Seasonal</a></li><li><a class="sh-nav__link" href="/top/anime">Rankings</a></li><li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+    </ul></nav>
+    <span class="sh-spacer"></span>
+    <div class="sh-search" role="search"><label class="sh-search__field"><input type="search" placeholder="Search anime" aria-label="Search anime" /><kbd class="sh-kbd">/</kbd></label></div>
+    <div class="sh-right"><a class="ol-btn ol-btn--ghost ol-btn--sm sh-only-desktop" href="/my-list">My List</a><button class="sh-avatar" aria-label="Account menu" aria-expanded="false">KA</button><button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></div>
+  </div></header>
+  <main id="main" class="sh-main">
+<div class="st" style="display: block">
+<header class="st-head"><h1>Settings: states</h1><p class="st-who">Every state the build needs, as cards. Section order and copy as in mockup-Main.</p></header>
+<div class="st-board">
+<figure><figcaption>1 · Loading (streamed: header and nav render at once, cards skeleton)</figcaption><div class="st-card"><div class="st-skel-row"><div><span class="ol-skel" style="height: 14px; width: 30%"></span><span class="ol-skel" style="height: 12px; width: 70%"></span></div><span class="ol-skel" style="height: 32px"></span></div><div class="st-skel-row"><div><span class="ol-skel" style="height: 14px; width: 30%"></span><span class="ol-skel" style="height: 12px; width: 70%"></span></div><span class="ol-skel" style="height: 32px"></span></div><div class="st-skel-row"><div><span class="ol-skel" style="height: 14px; width: 30%"></span><span class="ol-skel" style="height: 12px; width: 70%"></span></div><span class="ol-skel" style="height: 32px"></span></div></div></figure>
+<figure><figcaption>2 · Load failed: retry card (parity), profile link still works</figcaption><div class="ol-state ol-state--error" role="alert" style="max-width: none"><span class="ol-state__mark" aria-hidden="true">!</span><p class="ol-state__title">Couldn't load your settings</p><p class="ol-state__body">Check your connection and try again. Your settings are safe; nothing was changed.</p><div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--ghost" href="/settings/edit-profile">Edit profile</a></div></div></figure>
+<figure><figcaption>3 · Username: taken (live check, 300 ms debounce)</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_backlog_keeper</p></div>
+  <form class="st-form" id="f-user-taken-3" aria-label="Change username">
+    <div class="au-field"><label for="u-new-taken-3">New username</label>
+      <div class="au-input" data-state="error" ><span class="au-prefix">/u/</span><input id="u-new-taken-3" value="kaito" autocomplete="off" spellcheck="false" aria-describedby="u-msg-taken-3 u-rule-taken-3" aria-invalid="true" /></div>
+      <p class="au-msg" data-tone="bad" id="u-msg-taken-3" aria-live="polite">kaito is taken. Try another.</p>
+      <p class="au-msg" data-tone="hint" id="u-rule-taken-3">3–20 letters, digits or _. Your profile link changes and old links stop working.</p>
+    </div>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Save username</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>4 · Username: available</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_backlog_keeper</p></div>
+  <form class="st-form" id="f-user-ok-4" aria-label="Change username">
+    <div class="au-field"><label for="u-new-ok-4">New username</label>
+      <div class="au-input" data-state="ok" ><span class="au-prefix">/u/</span><input id="u-new-ok-4" value="kaito_rewatch_club" autocomplete="off" spellcheck="false" aria-describedby="u-msg-ok-4 u-rule-ok-4" /></div>
+      <p class="au-msg" data-tone="ok" id="u-msg-ok-4" aria-live="polite">kaito_rewatch_club is available</p>
+      <p class="au-msg" data-tone="hint" id="u-rule-ok-4">3–20 letters, digits or _. Your profile link changes and old links stop working.</p>
+    </div>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Save username</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>5 · Username: rule broken</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_backlog_keeper</p></div>
+  <form class="st-form" id="f-user-rule-5" aria-label="Change username">
+    <div class="au-field"><label for="u-new-rule-5">New username</label>
+      <div class="au-input" data-state="error" ><span class="au-prefix">/u/</span><input id="u-new-rule-5" value="kaito.exe" autocomplete="off" spellcheck="false" aria-describedby="u-msg-rule-5 u-rule-rule-5" aria-invalid="true" /></div>
+      <p class="au-msg" data-tone="bad" id="u-msg-rule-5" aria-live="polite">Use 3–20 letters, digits or _ (no dots).</p>
+      <p class="au-msg" data-tone="hint" id="u-rule-rule-5">3–20 letters, digits or _. Your profile link changes and old links stop working.</p>
+    </div>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Save username</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>6 · Username: saving, then 409 race</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_backlog_keeper</p></div>
+  <form class="st-form" id="f-user-saving-6" aria-label="Change username">
+    <div class="au-field"><label for="u-new-saving-6">New username</label>
+      <div class="au-input" aria-disabled="true" ><span class="au-prefix">/u/</span><input id="u-new-saving-6" value="kaito_rewatch_club" autocomplete="off" spellcheck="false" aria-describedby="u-rule-saving-6" readonly /></div>
+      
+      <p class="au-msg" data-tone="hint" id="u-rule-saving-6">3–20 letters, digits or _. Your profile link changes and old links stop working.</p>
+    </div>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-busy="true" aria-disabled="true"><span class="au-spin" aria-hidden="true"></span>Saving…</button><button class="ol-btn ol-btn--ghost" type="button" aria-disabled="true">Cancel</button></div>
+  </form>
+</div></div><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_backlog_keeper</p></div>
+  <form class="st-form" id="f-user-race-6" aria-label="Change username">
+    <div class="au-field"><label for="u-new-race-6">New username</label>
+      <div class="au-input" data-state="error" ><span class="au-prefix">/u/</span><input id="u-new-race-6" value="kaito_rewatch_club" autocomplete="off" spellcheck="false" aria-describedby="u-msg-race-6 u-rule-race-6" aria-invalid="true" /></div>
+      <p class="au-msg" data-tone="bad" id="u-msg-race-6" role="alert">Someone took kaito_rewatch_club a moment ago (409). Try another.</p>
+      <p class="au-msg" data-tone="hint" id="u-rule-race-6">3–20 letters, digits or _. Your profile link changes and old links stop working.</p>
+    </div>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Save username</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>7 · Username saved (toast; profile link updated)</figcaption><div class="st-card"><div class="st-row">
+  <div class="st-row__main"><h3>Username</h3><p class="st-row__value ol-num">kaito_rewatch_club</p></div>
+  <button class="ol-btn ol-btn--secondary ol-btn--sm" type="button" aria-expanded="false" aria-controls="f-user">Change</button>
+</div></div><div class="st-toast" role="status">Username changed. Your profile is now /u/kaito_rewatch_club.</div></figure>
+<figure><figcaption>8 · Password: idle (rules unmet, save disabled)</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-8" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-8">Current password</label><div class="au-input"><input id="p-cur-8" type="password" value="" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-8">New password</label>
+      <div class="au-input"><input id="p-new-8" type="password" value="tanaka" autocomplete="new-password" aria-describedby="p-rules-8 p-out-8" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      
+      <ul class="au-rules" id="p-rules-8" aria-label="Password rules">
+  <li>8 characters or more<span class="au-sr">, not yet</span></li>
+  <li>A number or symbol<span class="au-sr">, not yet</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-8">Confirm new password</label>
+      <div class="au-input"><input id="p-conf-8" type="password" value="" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-8">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-disabled="true">Change password</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>9 · Password: wrong current password (400)</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-9" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-9">Current password</label><div class="au-input" data-state="error"><input id="p-cur-9" type="password" value="hunter22" autocomplete="current-password" aria-invalid="true" aria-describedby="p-cur-msg-9" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><p class="au-msg" data-tone="bad" id="p-cur-msg-9">That's not your current password.</p><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-9">New password</label>
+      <div class="au-input"><input id="p-new-9" type="password" value="night-shift-4ever" autocomplete="new-password" aria-describedby="p-rules-9 p-out-9" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      
+      <ul class="au-rules" id="p-rules-9" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-9">Confirm new password</label>
+      <div class="au-input"><input id="p-conf-9" type="password" value="night-shift-4ever" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-9">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Change password</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>10 · Password: saving</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-10" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-10">Current password</label><div class="au-input" aria-disabled="true"><input id="p-cur-10" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-10">New password</label>
+      <div class="au-input" aria-disabled="true"><input id="p-new-10" type="password" value="night-shift-4ever" autocomplete="new-password" aria-describedby="p-rules-10 p-out-10" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      
+      <ul class="au-rules" id="p-rules-10" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-10">Confirm new password</label>
+      <div class="au-input" aria-disabled="true"><input id="p-conf-10" type="password" value="night-shift-4ever" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-10">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit" aria-busy="true" aria-disabled="true"><span class="au-spin" aria-hidden="true"></span>Changing…</button><button class="ol-btn ol-btn--ghost" type="button" aria-disabled="true">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>11 · Password: server error (5xx), form kept</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-11" aria-label="Change password">
+    <div class="au-alert" role="alert"><strong>Your password wasn't changed.</strong><span>Something went wrong on our side. Your old password still works; try again in a moment.</span></div>
+    <div class="au-field"><label for="p-cur-11">Current password</label><div class="au-input"><input id="p-cur-11" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-11">New password</label>
+      <div class="au-input"><input id="p-new-11" type="password" value="night-shift-4ever" autocomplete="new-password" aria-describedby="p-rules-11 p-out-11" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      
+      <ul class="au-rules" id="p-rules-11" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-11">Confirm new password</label>
+      <div class="au-input"><input id="p-conf-11" type="password" value="night-shift-4ever" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-11">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Try again</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>12 · Password: saved</figcaption><div class="st-card"><div class="st-row">
+  <div class="st-row__main"><h3>Password</h3><p class="st-status" data-tone="ok" role="status">Password changed. Every other device was signed out.</p></div>
+  <button class="ol-btn ol-btn--secondary ol-btn--sm" type="button" aria-expanded="false">Change</button>
+</div></div></figure>
+<figure><figcaption>12b · Password: confirm doesn't match</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-13" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-13">Current password</label><div class="au-input"><input id="p-cur-13" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-13">New password</label>
+      <div class="au-input"><input id="p-new-13" type="password" value="night-shift-4ever" autocomplete="new-password" aria-describedby="p-rules-13 p-out-13" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      
+      <ul class="au-rules" id="p-rules-13" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-13">Confirm new password</label>
+      <div class="au-input" data-state="error"><input id="p-conf-13" type="password" value="night-shift-4evr" autocomplete="new-password" aria-invalid="true" aria-describedby="p-conf-msg-13" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><p class="au-msg" data-tone="bad" id="p-conf-msg-13">The two passwords don't match.</p>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-13">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Change password</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>12c · Password: too common (refused by the API list)</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-14" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-14">Current password</label><div class="au-input"><input id="p-cur-14" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-14">New password</label>
+      <div class="au-input" data-state="error"><input id="p-new-14" type="password" value="password1" autocomplete="new-password" aria-describedby="p-new-msg-14 p-rules-14 p-out-14" aria-invalid="true" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      <p class="au-msg" data-tone="bad" id="p-new-msg-14">This password is too common. Pick something only you would use.</p>
+      <ul class="au-rules" id="p-rules-14" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-14">Confirm new password</label>
+      <div class="au-input"><input id="p-conf-14" type="password" value="password1" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-14">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Change password</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>12d · Password: over 128 characters</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Password</h3></div>
+  <form class="st-form" id="f-pass-15" aria-label="Change password">
+    
+    <div class="au-field"><label for="p-cur-15">Current password</label><div class="au-input"><input id="p-cur-15" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div><a class="au-after" href="/auth/forgot-password">Forgot it?</a></div>
+    <div class="au-field"><label for="p-new-15">New password</label>
+      <div class="au-input" data-state="error"><input id="p-new-15" type="password" value="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" autocomplete="new-password" aria-describedby="p-new-msg-15 p-rules-15 p-out-15" aria-invalid="true" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+      <p class="au-msg" data-tone="bad" id="p-new-msg-15">Use 128 characters or fewer (this one has 141).</p>
+      <ul class="au-rules" id="p-rules-15" aria-label="Password rules">
+  <li data-met>8 characters or more<span class="au-sr">, done</span></li>
+  <li data-met>A number or symbol<span class="au-sr">, done</span></li>
+</ul>
+    </div>
+    <div class="au-field"><label for="p-conf-15">Confirm new password</label>
+      <div class="au-input"><input id="p-conf-15" type="password" value="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…" autocomplete="new-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint" id="p-out-15">You stay signed in here. Every other device is signed out.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Change password</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>13 · Google-only account: no password form</figcaption><div class="st-card"><div class="st-row st-row--stack">
+  <div class="st-row__main"><h3>Password <span class="st-tag">Not set</span></h3><p class="st-row__hint">You sign in with Google. Add a password to also sign in with your email or username: we email you a link to set it.</p></div>
+  <button class="ol-btn ol-btn--secondary ol-btn--sm" type="button">Set a password by email</button>
+</div></div></figure>
+<figure><figcaption>14 · Google-only: reset link sent</figcaption><div class="st-card"><div class="st-row st-row--stack">
+  <div class="st-row__main"><h3>Password <span class="st-tag">Not set</span></h3><p class="st-row__hint">You sign in with Google. Add a password to also sign in with your email or username: we email you a link to set it.</p></div>
+  <p class="st-status" data-tone="ok" role="status">Link sent to kaito.tanaka.watches.everything@example.com. It works for 1 hour.</p>
+</div></div></figure>
+<figure><figcaption>15 · Email: change form</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Email</h3><p class="st-row__value">kaito.tanaka.watches.everything@example.com</p></div>
+  <form class="st-form" id="f-email-18" aria-label="Change email">
+    <div class="au-field"><label for="e-new-18">New email</label>
+      <div class="au-input"><input id="e-new-18" type="email" value="k.tanaka@proton.example" autocomplete="email" /></div>
+      
+    </div>
+    <div class="au-field"><label for="e-pass-18">Current password</label>
+      <div class="au-input"><input id="e-pass-18" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint">We send a link to the new address. Your email only changes when you open it, and we tell your current address too.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send confirmation link</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>16 · Email: invalid address</figcaption><div class="st-card"><div class="st-row" data-open>
+  <div class="st-row__main"><h3>Email</h3><p class="st-row__value">kaito.tanaka.watches.everything@example.com</p></div>
+  <form class="st-form" id="f-email-19" aria-label="Change email">
+    <div class="au-field"><label for="e-new-19">New email</label>
+      <div class="au-input" data-state="error"><input id="e-new-19" type="email" value="kaito@@example" autocomplete="email" aria-invalid="true" aria-describedby="e-msg-19" /></div>
+      <p class="au-msg" data-tone="bad" id="e-msg-19">Enter an email like name@example.com.</p>
+    </div>
+    <div class="au-field"><label for="e-pass-19">Current password</label>
+      <div class="au-input"><input id="e-pass-19" type="password" value="hunter2-old" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false">Show</button></div>
+    </div>
+    <p class="au-msg" data-tone="hint">We send a link to the new address. Your email only changes when you open it, and we tell your current address too.</p>
+    <div class="st-form__foot"><button class="ol-btn ol-btn--primary" type="submit">Send confirmation link</button><button class="ol-btn ol-btn--ghost" type="button">Cancel</button></div>
+  </form>
+</div></div></figure>
+<figure><figcaption>17 · Email: pending change (same answer whether or not the address is in use)</figcaption><div class="st-card"><div class="st-row">
+  <div class="st-row__main"><h3>Email <span class="st-tag" data-tone="wait">Change pending</span></h3><p class="st-row__value">kaito.tanaka.watches.everything@example.com</p><p class="st-row__hint">Used to sign in and for account emails. Never shown to other players.</p></div>
+  <button class="ol-btn ol-btn--secondary ol-btn--sm" type="button" aria-expanded="false" aria-controls="f-email">Change</button>
+</div><div class="st-note" role="region" aria-label="Pending email change">
+  <p><b>Check your inbox at k.tanaka@proton.example.</b></p>
+  <p>If that address can be used, a confirmation link is waiting there (valid 24 h). Until you open it, you keep signing in with kaito.tanaka.watches.everything@example.com.</p>
+  <div class="st-note__acts"><button class="ol-btn ol-btn--secondary ol-btn--sm" type="button">Resend link</button><button class="ol-btn ol-btn--ghost ol-btn--sm" type="button">Cancel change</button></div>
+</div></div></figure>
+<figure><figcaption>18 · Email: resent, then cooldown</figcaption><div class="st-card"><div class="st-note" role="status" aria-label="Pending email change">
+  <p><b>Check your inbox at k.tanaka@proton.example.</b></p>
+  <p>If that address can be used, a confirmation link is waiting there (valid 24 h). Until you open it, you keep signing in with kaito.tanaka.watches.everything@example.com.</p>
+  <div class="st-note__acts"><button class="ol-btn ol-btn--secondary ol-btn--sm" type="button">Resend link</button><button class="ol-btn ol-btn--ghost ol-btn--sm" type="button">Cancel change</button><span class="st-status" data-tone="ok">Sent again</span></div>
+</div></div><div class="st-card"><div class="st-note" role="region" aria-label="Pending email change">
+  <p><b>Check your inbox at k.tanaka@proton.example.</b></p>
+  <p>If that address can be used, a confirmation link is waiting there (valid 24 h). Until you open it, you keep signing in with kaito.tanaka.watches.everything@example.com.</p>
+  <div class="st-note__acts"><button class="ol-btn ol-btn--secondary ol-btn--sm" type="button" aria-disabled="true" aria-describedby="e-cool-21">Resend link</button><span class="st-status" id="e-cool-21">You can resend in 0:42</span><button class="ol-btn ol-btn--ghost ol-btn--sm" type="button">Cancel change</button></div>
+</div></div></figure>
+<figure><figcaption>19 · Adult content: no birthday</figcaption><div class="st-card"><div class="st-row">
+  <div class="st-row__main"><h3 id="l-adult-22">Show adult content</h3><p class="st-row__hint" id="d-adult-22"><span class="st-lock">Locked until we know you are 18 or older.</span> <a href="/settings/edit-profile#birthday">Add your birthday</a> (only you see the year).</p></div>
+  <button class="pf-switch" type="button" role="switch" aria-checked="false" aria-labelledby="l-adult-22" aria-describedby="d-adult-22" aria-disabled="true"><span>Off</span><i></i></button>
+</div></div></figure>
+<figure><figcaption>20 · Adult content: under 18</figcaption><div class="st-card"><div class="st-row">
+  <div class="st-row__main"><h3 id="l-adult-23">Show adult content</h3><p class="st-row__hint" id="d-adult-23"><span class="st-lock">Locked until 3 March 2027, your 18th birthday.</span></p></div>
+  <button class="pf-switch" type="button" role="switch" aria-checked="false" aria-labelledby="l-adult-23" aria-describedby="d-adult-23" aria-disabled="true"><span>Off</span><i></i></button>
+</div></div></figure>
+<figure><figcaption>21 · Preference save failed: switch flips back</figcaption><div class="st-card"><div class="st-row"><div class="st-row__main"><h3 id="l-adult-24">Show adult content</h3><p class="st-row__hint" id="d-adult-24">Includes titles rated 18+ in search, browse and rankings.</p><p class="st-status" data-tone="bad" role="alert">Couldn't save. It's still off; try again.</p></div><button class="pf-switch" type="button" role="switch" aria-checked="false" aria-labelledby="l-adult-24" aria-describedby="d-adult-24"><span>Off</span><i></i></button></div></div></figure>
+<figure><figcaption>22 · Language menu open (Base UI Select)</figcaption><div class="st-card" style="overflow: visible; min-height: 250px"><div class="st-row st-row--stack-m" style="position: relative">
+  <div class="st-row__main"><h3 id="l-lang-25">Language</h3><p class="st-row__hint" id="d-lang-25">Japanese, Spanish and French are coming.</p></div>
+  <button class="st-select" type="button" aria-haspopup="listbox" aria-expanded="true" aria-labelledby="l-lang-25" aria-describedby="d-lang-25"><span>English</span><svg width="12" height="12" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+  <ul class="st-menu" role="listbox" aria-label="Language">
+    <li role="option" aria-selected="true">English</li>
+    <li role="option" aria-disabled="true" lang="ja">日本語 <span class="st-tag">Coming soon</span></li>
+    <li role="option" aria-disabled="true" lang="es">Español <span class="st-tag">Coming soon</span></li>
+    <li role="option" aria-disabled="true" lang="fr">Français <span class="st-tag">Coming soon</span></li>
+  </ul>
+</div></div></figure>
+<figure><figcaption>23 · Session expired on save: sent to sign in with next=/settings</figcaption><div class="st-card" style="padding: 24px; display: grid; gap: 16px; justify-items: start"><div class="au-alert" data-tone="info" role="status" style="width: 100%"><strong>Your session expired.</strong><span>Sign in again to keep changing your settings. Unsaved changes are not kept.</span></div><div class="au-card" style="max-width: 360px"><h2 style="font-size: 24px">Sign in</h2><div class="au-field"><label for="s-id-26">Email or username</label><div class="au-input"><input id="s-id-26" value="kaito_backlog_keeper" /></div></div></div><p class="au-msg" data-tone="hint">The auth page from OTA-155, at /auth?mode=sign-in&amp;next=%2Fsettings.</p></div></figure>
+<figure><figcaption>24 · Import &amp; export (/settings/import-export redirects here)</figcaption><div>
+  <div class="st-sec__head"><h2 id="h-imp-27">Import &amp; export</h2></div>
+  <div class="st-card st-soon">
+    <span class="st-soon__mark" aria-hidden="true">⇄</span>
+    <p><b>Integrations are on the roadmap</b>Sync with AniList and MyAnimeList, and export your list. Importing a MyAnimeList XML file already works in <a href="/my-list?import=mal">My List → Import</a>.</p>
+  </div>
+</div></figure>
+</div>
+</div>
+  </main>
+  <footer class="sh-foot">
+    <div class="sh-foot__in">
+      <div class="sh-foot__brand">
+        <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+        <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+      </div>
+      <nav aria-labelledby="f-about-27"><h2 class="ol-label" id="f-about-27">OtakuLeague</h2><ul>
+        <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li><li><a href="/faq">About &amp; FAQ</a></li><li><a href="/contact">Contact</a></li>
+      </ul></nav>
+      <nav aria-labelledby="f-legal-27"><h2 class="ol-label" id="f-legal-27">Legal</h2><ul>
+        <li><a href="/privacy">Privacy</a></li><li><a href="/terms">Terms</a></li><li><a href="/data-sources">Data sources</a></li>
+      </ul></nav>
+      <div><h2 class="ol-label" id="f-social-27">Follow</h2>
+        <ul class="sh-social" aria-labelledby="f-social-27">
+          <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li><li><a href="#" aria-label="OtakuLeague on X">X</a></li><li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li><li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li><li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sh-foot__base"><span>© 2026 OtakuLeague · contact@otakuleague.com</span><span>Anime data from AniList, MyAnimeList and AnimeThemes</span></div>
+  </footer>
+</div>
+  </body>
+</html>
