@@ -21,7 +21,6 @@
       <main class="au-main">
         <header class="au-top">
           <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
-          <p>Remembered it? <a class="au-link" href="/auth?mode=sign-in">Sign in</a></p>
         </header>
         <div class="au-center">
           <form class="au-card" action="/auth/forgot-password" method="post" novalidate>
@@ -43,9 +42,9 @@
       <div class="au-grid">
         <figure class="au-state">
           <figcaption>Forgot · sent (always the same, account or not)</figcaption>
-          <div class="au-card" role="status">
+          <div class="au-card">
             <div class="au-badge" aria-hidden="true">✉</div>
-            <h2>Check your inbox</h2>
+            <h2 tabindex="-1">Check your inbox</h2>
             <p>If <strong>kaito@example.com</strong> belongs to an account, a reset link is on its way. It works for 1 hour.</p>
             <p class="au-steps-list">Nothing after 5 minutes? Check spam, or make sure this is the address you signed up with. Google accounts have no password: use <em>Continue with Google</em>.</p>
             <a class="ol-btn ol-btn--secondary au-btn" href="/auth/forgot-password">Use a different email</a>
@@ -55,7 +54,7 @@
         <figure class="au-state">
           <figcaption>Forgot · rate limited (429, Retry-After 720 s)</figcaption>
           <form class="au-card">
-            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many reset requests.</strong><span>You can ask for another link in <b class="ol-num">12 min</b>. If one already arrived, it still works.</span></div>
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many reset requests.</strong><span>You can ask for another link in about 12 minutes. If one already arrived, it still works.</span></div>
             <div class="au-field">
               <label for="r1">Email</label>
               <div class="au-input"><input id="r1" type="email" value="kaito@example.com" /></div>
@@ -97,7 +96,7 @@
         <figure class="au-state">
           <figcaption>Reset · expired, already used or invalid link</figcaption>
           <!-- One screen for all three: the token is checked server-side before the form renders. -->
-          <div class="au-card" role="alert">
+          <div class="au-card">
             <div class="au-badge" data-tone="wait" aria-hidden="true">◷</div>
             <h2>This link has expired</h2>
             <p>Reset links work once, for 1 hour. Ask for a new one and use the most recent email.</p>

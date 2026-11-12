@@ -13,7 +13,7 @@
     <div class="au">
       <aside class="au-show" aria-label="About OtakuLeague">
         <a class="au-show__logo" href="/"><img src="../../../apps/web/public/brand/logo-pierce.svg" alt="OtakuLeague home" width="96" height="96" /></a>
-        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">+50 XP</span></div>
+        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">Lv 12</span></div>
         <p class="au-show__kicker ol-label">Free, no ads in your list</p>
         <h2 class="au-show__title">Track every anime. <em>Earn XP.</em> Top the season.</h2>
         <p class="au-show__lede">Add shows, log episodes, climb the season leaderboard.</p>
@@ -21,7 +21,6 @@
       <main class="au-main">
         <header class="au-top">
           <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
-          <p>Already a member? <a class="au-link" href="/auth?mode=sign-in">Sign in</a></p>
         </header>
         <div class="au-center">
           <form class="au-card" action="/auth/sign-up" method="post" novalidate>
@@ -118,19 +117,20 @@
         </figure>
 
         <figure class="au-state">
-          <figcaption>Email already registered · no reveal</figcaption>
-          <!-- The form moves on to "Check your email" exactly like a new account (mockup-Email). The existing owner gets an email: "Someone tried to sign up with this address. Sign in or reset your password." -->
+          <figcaption>Email already registered · identical to a new sign-up</figcaption>
+          <!-- Byte-for-byte the check-email screen of mockup-Email (no session either way). The existing owner gets "Someone tried to sign up with this address: sign in or reset your password." -->
           <div class="au-card">
             <div class="au-badge" aria-hidden="true">✉</div>
-            <h2>Check your email</h2>
-            <p>We sent a link to <strong>kaito@example.com</strong>. Same screen whether or not that address already has an account.</p>
+            <h2 tabindex="-1">Check your email</h2>
+            <p>We sent a confirmation link to <strong>kaito@example.com</strong>. Open it to finish signing up. It works for 24 hours.</p>
+            <button class="ol-btn ol-btn--secondary au-btn" aria-disabled="true">Resend email in <span class="ol-num">0:42</span></button>
           </div>
         </figure>
 
         <figure class="au-state">
           <figcaption>Rate limited · 429</figcaption>
           <div class="au-card">
-            <div class="au-alert" data-tone="wait" role="alert"><strong>Slow down a little.</strong><span>Too many sign-ups from this network. Try again in <b class="ol-num">10 min</b>. Your entries are kept.</span></div>
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Slow down a little.</strong><span>Too many sign-ups from this network. Try again in about 10 minutes. Your entries are kept.</span></div>
             <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">9:58</span></button>
           </div>
         </figure>

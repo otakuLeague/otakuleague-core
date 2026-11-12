@@ -7,8 +7,10 @@
   --font-mono-face: 'JetBrains Mono';
   --au-sky-a: color-mix(in oklab, var(--brand-a) 30%, transparent);
   --au-sky-b: color-mix(in oklab, var(--accent) 24%, transparent);
+  --au-mark: var(--accent);
   --au-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent);
 }
+[data-theme='light'] { --au-mark: var(--accent-ink); }
 body { margin: 0; background: var(--ground); }
 a { color: var(--accent-ink); text-underline-offset: 3px; }
 :is(a, button, input, textarea, .au-drop):focus-visible,
@@ -66,7 +68,7 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
 }
 .au-show__title em {
   font-style: normal;
-  background: linear-gradient(90deg, var(--accent-ink), var(--brand-b));
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -111,7 +113,6 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
   justify-content: space-between;
   gap: var(--space-4);
 }
-.au-top p { margin: 0 0 0 auto; font-size: 14px; color: var(--muted); }
 .au-logo {
   display: inline-flex;
   align-items: center;
@@ -123,8 +124,17 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
   letter-spacing: -0.01em;
   border-radius: var(--radius-sm);
 }
-.au-logo svg { width: 28px; height: 28px; color: var(--accent-ink); }
-.au-logo b { color: var(--accent-ink); }
+.au-logo svg { width: 28px; height: 28px; color: var(--au-mark); }
+/* Home wordmark styling (global-shell .sh-logo b) and the Pierce small mark, themed by colour. */
+.au-logo b {
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sh-logo__mark.au-mark { background: none; color: var(--au-mark); }
+.sh-logo__mark.au-mark svg { display: block; width: 28px; height: 28px; }
+h1[tabindex='-1']:focus, h2[tabindex='-1']:focus { outline: none; }
 .au-center {
   flex: 1;
   display: grid;
@@ -191,14 +201,8 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
 
 /* ---------- Fields ---------- */
 .au-field { display: flex; flex-direction: column; gap: 6px; }
-.au-field__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-3);
-}
 .au-field label { font-size: 14px; font-weight: 600; }
-.au-field__row a { font-size: 14px; font-weight: 500; }
+.au-after { align-self: flex-end; font-size: 14px; font-weight: 500; }
 .au-input {
   position: relative;
   display: flex;
@@ -424,7 +428,6 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
 @media (max-width: 767.98px) {
   .au { min-height: 0; }
   .au-main { padding: var(--space-2) var(--space-4) var(--space-10); }
-  .au-top p { display: none; }
   .au-center { padding-top: var(--space-6); }
   .au-card h1 { font-size: 28px; }
   .au-board { padding: var(--space-10) var(--space-4); }
@@ -432,7 +435,7 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
   .au-state { padding: var(--space-4); }
   .au-foot a,
   .au-msg a,
-  .au-field__row a {
+  .au-after {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
@@ -588,7 +591,7 @@ a { color: var(--accent-ink); text-underline-offset: 3px; }
   grid-template-columns: 1fr minmax(0, 560px) 1fr;
   align-items: center;
   gap: var(--space-6);
-  padding: var(--space-4) var(--space-10);
+  padding: var(--space-6) var(--space-10) var(--space-4);
 }
 .ob-top > :last-child { justify-self: end; }
 .ob-progress { display: grid; gap: var(--space-2); }

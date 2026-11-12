@@ -13,7 +13,7 @@
     <div class="au">
       <aside class="au-show" aria-label="About OtakuLeague">
         <a class="au-show__logo" href="/"><img src="../../../apps/web/public/brand/logo-pierce.svg" alt="OtakuLeague home" width="96" height="96" /></a>
-        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">+50 XP</span></div>
+        <div class="au-tiles" aria-hidden="true"><i></i><i></i><i></i><span class="au-xp">Lv 12</span></div>
         <p class="au-show__kicker ol-label">Fall 2026 season is live</p>
         <h2 class="au-show__title">Track every anime. <em>Earn XP.</em> Top the season.</h2>
         <p class="au-show__lede">Your list, your progress and your rank, in one place.</p>
@@ -21,7 +21,6 @@
       <main class="au-main">
         <header class="au-top">
           <a class="au-logo" href="/"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg><span>Otaku<b>League</b></span></a>
-          <p>New here? <a class="au-link" href="/auth?mode=sign-up">Create an account</a></p>
         </header>
         <div class="au-center">
           <form class="au-card" action="/auth/sign-in" method="post" novalidate>
@@ -34,8 +33,9 @@
               <div class="au-input" data-demo="focus"><input id="id" name="identifier" autocomplete="username" autocapitalize="none" spellcheck="false" value="kaito_" /></div>
             </div>
             <div class="au-field">
-              <div class="au-field__row"><label for="pw">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <label for="pw">Password</label>
               <div class="au-input"><input id="pw" name="password" type="password" autocomplete="current-password" /><button class="au-reveal" type="button" aria-pressed="false" aria-controls="pw">Show</button></div>
+              <a class="au-after" href="/auth/forgot-password">Forgot password?</a>
             </div>
             <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
             <p class="au-foot">No account yet? <a href="/auth?mode=sign-up">Create one, it's free</a></p>
@@ -57,17 +57,19 @@
               <div class="au-input" data-state="error"><input id="e1" value="kaito_tanaka" aria-invalid="true" aria-describedby="e1a" /></div>
             </div>
             <div class="au-field">
-              <div class="au-field__row"><label for="e2">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <label for="e2">Password</label>
               <div class="au-input" data-state="error"><input id="e2" type="password" value="hunter22" aria-invalid="true" /><button class="au-reveal" type="button">Show</button></div>
+              <a class="au-after" href="/auth/forgot-password">Forgot password?</a>
             </div>
             <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
+            <p class="au-foot"><a href="/auth/resend-confirmation">Didn't get your confirmation email?</a></p>
           </form>
         </figure>
 
         <figure class="au-state">
           <figcaption>Rate limited · 429 with Retry-After</figcaption>
           <form class="au-card">
-            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many attempts.</strong><span>For your safety, sign-in is paused. Try again in <b class="ol-num">4:52</b>, or reset your password.</span></div>
+            <div class="au-alert" data-tone="wait" role="alert"><strong>Too many attempts.</strong><span>For your safety, sign-in is paused for about 5 minutes. You can also reset your password.</span></div>
             <div class="au-field">
               <label for="r1">Email or username</label>
               <div class="au-input"><input id="r1" value="kaito_tanaka" /></div>
@@ -76,6 +78,7 @@
               <label for="r2">Password</label>
               <div class="au-input"><input id="r2" type="password" /><button class="au-reveal" type="button">Show</button></div>
             </div>
+            <!-- The countdown is not a live region; at 0 a polite status says "You can try again now". -->
             <button class="ol-btn ol-btn--primary au-btn" aria-disabled="true">Try again in <span class="ol-num">4:52</span></button>
             <p class="au-foot"><a href="/auth/forgot-password">Reset your password instead</a></p>
           </form>
@@ -136,8 +139,9 @@
               <div class="au-input" data-demo="focus"><input id="t1" value="kaito@example.com" /></div>
             </div>
             <div class="au-field">
-              <div class="au-field__row"><label for="t2">Password</label><a href="/auth/forgot-password">Forgot password?</a></div>
+              <label for="t2">Password</label>
               <div class="au-input"><input id="t2" type="text" value="new-passw0rd" /><button class="au-reveal" type="button" aria-pressed="true">Hide</button></div>
+              <a class="au-after" href="/auth/forgot-password">Forgot password?</a>
             </div>
             <button class="ol-btn ol-btn--primary au-btn">Sign in</button>
           </form>
