@@ -13,10 +13,15 @@ import {
 } from '@nestjs/swagger';
 import {
   ANIME_ID_SOURCES,
+  ANIME_LIST_DEFAULT_LIMIT,
+  ANIME_LIST_KINDS,
+  ANIME_LIST_MAX_LIMIT,
   type AnimeBySlug,
   type AnimeDetails,
   type AnimeFranchise,
   type AnimeIdSource,
+  type AnimeListKind,
+  type AnimeListPage,
   type AnimeSearchPage,
   type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
@@ -40,9 +45,11 @@ import {
   AnimeBySlugRedirectSchema,
   AnimeDetailsSchema,
   AnimeFranchiseSchema,
+  AnimeListPageSchema,
   AnimeSearchPageSchema,
   AnimeSlugResolutionSchema,
 } from './anime.openapi';
+import { AnimeListService } from './anime-list.service';
 import { AnimeSearchService } from './anime-search.service';
 import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
@@ -77,6 +84,37 @@ class AnimeSlugParams {
     message: 'slug must be letters and digits joined by single hyphens',
   })
   readonly slug!: string;
+}
+
+class AnimeListParams {
+  @ApiProperty({ enum: ANIME_LIST_KINDS })
+  @IsIn(ANIME_LIST_KINDS, {
+    message: `kind must be one of: ${ANIME_LIST_KINDS.join(', ')}`,
+  })
+  readonly kind!: AnimeListKind;
+}
+
+class AnimeListQuery {
+  @ApiPropertyOptional({
+    description: 'The nextCursor of the previous page; opaque.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  readonly cursor?: string;
+
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 1,
+    maximum: ANIME_LIST_MAX_LIMIT,
+    default: ANIME_LIST_DEFAULT_LIMIT,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(ANIME_LIST_MAX_LIMIT)
+  readonly limit?: number;
 }
 
 const MAX_QUERY_LENGTH = 100;
@@ -132,8 +170,30 @@ export class AnimeController {
   constructor(
     private readonly anime: AnimeService,
     private readonly franchises: AnimeFranchiseService,
+    private readonly lists: AnimeListService,
     private readonly animeSearch: AnimeSearchService,
   ) {}
+
+  // Declared before ':idSource/:externalId': both have two segments.
+  @Get('lists/:kind')
+  @ApiOkResponse({
+    type: AnimeListPageSchema,
+    description:
+      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Unknown list, malformed cursor or limit out of range.',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'AniList is switched off, or we do not hold this page and AniList is down or rate-limited.',
+  })
+  getList(
+    @Param() params: AnimeListParams,
+    @Query() query: AnimeListQuery,
+  ): Promise<AnimeListPage> {
+    return this.lists.getList(params.kind, query.cursor, query.limit);
+  }
 
   // One segment: cannot clash with the two-segment routes below.
   @Get('search')

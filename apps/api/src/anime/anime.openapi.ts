@@ -3,6 +3,7 @@ import {
   ANIME_DATA_SOURCES,
   ANIME_FORMATS,
   ANIME_ID_SOURCES,
+  ANIME_LIST_KINDS,
   ANIME_SEASONS,
   ANIME_STATUSES,
   ANIME_TITLE_KINDS,
@@ -11,6 +12,8 @@ import {
   type AnimeDataSource,
   type AnimeDetails,
   type AnimeIdSource,
+  type AnimeListEntry,
+  type AnimeListPage,
   type AnimeLink,
   type AnimeNextEpisode,
   type AnimeScore,
@@ -276,6 +279,77 @@ export class AnimeFranchiseSchema implements AnimeFranchise {
 export class AnimeSlugResolutionSchema implements AnimeSlugResolution {
   @ApiProperty({ type: 'integer' }) readonly anilistId!: number;
   @ApiProperty({ example: 'attack-on-titan' }) readonly canonicalSlug!: string;
+}
+
+class AnimeListScoreSchema {
+  @ApiProperty({ enum: ANIME_DATA_SOURCES })
+  readonly source!: AnimeDataSource;
+  @ApiProperty() readonly score!: number;
+  @ApiProperty({ enum: [10, 100] }) readonly scale!: 10 | 100;
+}
+
+class AnimeListEntrySchema implements AnimeListEntry {
+  @ApiProperty({ type: 'integer' }) readonly anilistId!: number;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Canonical slug when we know the anime; otherwise link /anime/anilist/{anilistId}',
+  })
+  readonly slug!: string | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly titleEnglish!: string | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly titleRomaji!: string | null;
+  @ApiProperty({ type: String, nullable: true })
+  readonly coverImageUrl!: string | null;
+  @ApiProperty({ type: String, nullable: true, example: '#e4a15d' })
+  readonly coverColor!: string | null;
+  @ApiProperty({ enum: ANIME_FORMATS, nullable: true })
+  readonly format!: AnimeListEntry['format'];
+  @ApiProperty({ enum: ANIME_STATUSES, nullable: true })
+  readonly status!: AnimeListEntry['status'];
+  @ApiProperty(NULLABLE_INTEGER) readonly episodes!: number | null;
+  @ApiProperty({ enum: ANIME_SEASONS, nullable: true })
+  readonly season!: AnimeListEntry['season'];
+  @ApiProperty(NULLABLE_INTEGER) readonly seasonYear!: number | null;
+  @ApiProperty({ type: PartialDateSchema, nullable: true })
+  readonly startDate!: PartialDate | null;
+  @ApiProperty({ type: [String] }) readonly genres!: readonly string[];
+  @ApiProperty({
+    ...NULLABLE_INTEGER,
+    description: 'Users who have it in a list on AniList',
+  })
+  readonly members!: number | null;
+  @ApiProperty({
+    type: AnimeListScoreSchema,
+    nullable: true,
+    description: 'Keeps its source and scale; null when unrated',
+  })
+  readonly score!: AnimeListEntry['score'];
+}
+
+export class AnimeListPageSchema implements AnimeListPage {
+  @ApiProperty({ enum: ANIME_LIST_KINDS })
+  readonly kind!: AnimeListPage['kind'];
+  @ApiProperty({
+    type: [AnimeListEntrySchema],
+    description:
+      'May hold fewer than the limit: only a null nextCursor is the end',
+  })
+  readonly entries!: readonly AnimeListEntry[];
+  @ApiProperty({ type: String, nullable: true })
+  readonly nextCursor!: string | null;
+  @ApiProperty({
+    enum: ['fresh', 'stale'],
+    description: 'stale: older than its lifetime; refreshed in the background',
+  })
+  readonly freshness!: AnimeListPage['freshness'];
+  @ApiProperty({
+    format: 'date-time',
+    description: 'When the oldest source page behind this answer was fetched',
+  })
+  readonly fetchedAt!: string;
 }
 
 type AnimeSearchRef = AnimeSearchHit['ref'];

@@ -51,6 +51,60 @@ export function httpUrl(value: unknown): string | null {
   return protocol === 'https:' || protocol === 'http:' ? candidate : null;
 }
 
+/** "#rrggbb", or null. */
+export function hexColor(value: unknown): string | null {
+  const color = text(value);
+  return color !== null && /^#[0-9a-f]{6}$/i.test(color)
+    ? color.toLowerCase()
+    : null;
+}
+
+/** Postgres int4 maximum: AniList ids are far below it. */
+const MAX_ID = 2_147_483_647;
+
+/** An AniList id: 1 to the int4 maximum, or null. */
+export function anilistId(value: unknown): number | null {
+  const id = integer(value, 1);
+  return id !== null && id <= MAX_ID ? id : null;
+}
+
+const MAX_TEXT_LENGTH = 300;
+export const MAX_GENRES = 20;
+
+/** Third-party text bounded before it is stored: at most 300 characters, no lone surrogates. */
+export function boundedText(value: unknown): string | null {
+  const trimmed = text(value);
+  return trimmed === null
+    ? null
+    : trimmed.slice(0, MAX_TEXT_LENGTH).replace(/\p{Surrogate}/gu, '\uFFFD');
+}
+
+export function boundedTexts(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .map(boundedText)
+        .filter((item) => item !== null)
+        .slice(0, MAX_GENRES)
+    : [];
+}
+
+/** An https URL on anilist.co or one of its subdomains (its CDN), or null. */
+export function anilistImageUrl(value: unknown): string | null {
+  const url = httpUrl(value);
+  if (url === null) return null;
+  const { protocol, hostname } = new URL(url);
+  return protocol === 'https:' &&
+    (hostname === 'anilist.co' || hostname.endsWith('.anilist.co'))
+    ? url
+    : null;
+}
+
+/** A score out of 100 above zero (0 is AniList's "unrated"), or null. */
+export function percentScore(value: unknown): number | null {
+  const score = finite(value);
+  return score !== null && score > 0 && score <= 100 ? score : null;
+}
+
 /** { year, month, day } with each part optional except the year. */
 export function partialDate(value: unknown): PartialDate | null {
   const parts = record(value);

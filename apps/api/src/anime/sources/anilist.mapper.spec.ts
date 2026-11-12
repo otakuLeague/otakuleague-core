@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { mapAniListMedia, mapAniListRelationNodes } from './anilist.mapper';
+import {
+  mapAniListListBlock,
+  mapAniListMedia,
+  mapAniListRelationNodes,
+} from './anilist.mapper';
 import { fixture } from './fixtures';
 import { record } from './parse';
 
@@ -346,5 +350,124 @@ describe('mapAniListRelationNodes', () => {
     });
 
     expect(mapped.map(({ edges }) => edges)).toEqual([[], []]);
+  });
+});
+
+describe('mapAniListListBlock', () => {
+  const data = (name: string) => record(record(fixture(name)).response).data;
+
+  it('maps a page, drops the adult entry and keeps the sparse one with nulls', () => {
+    const block = mapAniListListBlock(data('lists/anilist-airing'));
+
+    expect(block?.hasNextPage).toBe(true);
+    expect(block?.entries.map(({ anilistId }) => anilistId)).toEqual([
+      900001, 900002, 900004,
+    ]);
+    expect(block?.entries[0]).toEqual({
+      anilistId: 900001,
+      titleEnglish: 'Synthetic Magic Academy',
+      titleRomaji: 'Synthetic Mahou Gakuen',
+      coverImageUrl:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx900001-synthetic.jpg',
+      coverColor: '#e4a15d',
+      format: 'TV',
+      status: 'RELEASING',
+      episodes: null,
+      season: 'FALL',
+      seasonYear: 2026,
+      startDate: { year: 2026, month: 10, day: 3 },
+      genres: ['Action', 'Fantasy'],
+      members: 52000,
+      score: { source: 'anilist', score: 81, scale: 100 },
+    });
+    expect(block?.entries[1]).toMatchObject({
+      titleEnglish: null,
+      coverImageUrl: null,
+      coverColor: null,
+      format: null,
+      score: null,
+      genres: [],
+      startDate: { year: 2026, month: null, day: null },
+    });
+  });
+
+  it('maps another page and keeps its next-page marker', () => {
+    expect(mapAniListListBlock(data('lists/anilist-top-page2'))).toMatchObject({
+      hasNextPage: true,
+      entries: [{ anilistId: 900011 }, { anilistId: 900012 }],
+    });
+  });
+
+  it('treats a missing isAdult as adult (so a page of only those is degraded), and an empty page as empty', () => {
+    expect(
+      mapAniListListBlock({ Page: { media: [{ id: 5, title: {} }] } }),
+    ).toBeNull();
+    expect(mapAniListListBlock({ Page: { media: [] } })).toEqual({
+      entries: [],
+      hasNextPage: false,
+    });
+  });
+
+  it('returns null without a Page', () => {
+    expect(mapAniListListBlock(null)).toBeNull();
+    expect(mapAniListListBlock({ Page: { media: 'x' } })).toBeNull();
+  });
+
+  const withMedia = (...media: unknown[]) => ({
+    Page: { pageInfo: { hasNextPage: false }, media },
+  });
+  const sound = {
+    id: 5,
+    isAdult: false,
+    title: { romaji: 'x' },
+    coverImage: { large: 'https://s4.anilist.co/a.jpg', color: '#AABBCC' },
+  };
+
+  it('keeps only https covers on anilist.co and its subdomains', () => {
+    const cover = (large: string) =>
+      mapAniListListBlock(withMedia({ ...sound, coverImage: { large } }))
+        ?.entries[0]?.coverImageUrl;
+
+    expect(cover('https://s4.anilist.co/a.jpg')).toBe(
+      'https://s4.anilist.co/a.jpg',
+    );
+    expect(cover('http://s4.anilist.co/a.jpg')).toBeNull();
+    expect(cover('https://evilanilist.co/a.jpg')).toBeNull();
+    expect(cover('https://anilist.co.evil.test/a.jpg')).toBeNull();
+    expect(cover('javascript:alert(1)')).toBeNull();
+  });
+
+  it('bounds third-party text, genres, ids and the page size', () => {
+    const entry = mapAniListListBlock(
+      withMedia({
+        ...sound,
+        title: { romaji: 'a'.repeat(400), english: 'bad\ud800end' },
+        genres: Array.from({ length: 30 }, (_, i) => `g${i}`),
+      }),
+    )?.entries[0];
+    const huge = mapAniListListBlock(withMedia({ ...sound, id: 2 ** 31 }));
+    const many = mapAniListListBlock(
+      withMedia(
+        ...Array.from({ length: 80 }, (_, i) => ({ ...sound, id: i + 1 })),
+      ),
+    );
+
+    expect(entry?.titleRomaji).toHaveLength(300);
+    expect(entry?.titleEnglish).toBe('bad\ufffdend');
+    expect(entry?.genres).toHaveLength(20);
+    expect(entry?.coverColor).toBe('#aabbcc');
+    expect(huge).toBeNull();
+    expect(many?.entries).toHaveLength(50);
+  });
+
+  it('refuses a degraded page: media of which nothing is usable', () => {
+    expect(mapAniListListBlock(withMedia({ id: 'x' }, null))).toBeNull();
+  });
+
+  it('treats a score of 0 as unrated', () => {
+    expect(
+      mapAniListListBlock(withMedia({ ...sound, averageScore: 0 }))?.entries[0]
+        ?.score,
+    ).toBeNull();
   });
 });
