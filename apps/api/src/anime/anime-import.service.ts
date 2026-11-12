@@ -34,6 +34,7 @@ import {
   SourceUnavailableError,
   UnusableAnswerError,
 } from './sources/source.types';
+import { ImportLimits } from './import-limits';
 import { backoffKey, SourceBackoff } from './source-backoff';
 
 export const ANIME_SOURCE_ADAPTERS = Symbol('ANIME_SOURCE_ADAPTERS');
@@ -41,6 +42,7 @@ export const ANIME_SOURCE_ADAPTERS = Symbol('ANIME_SOURCE_ADAPTERS');
 const PURGE_BATCH = 1_000;
 /** Concurrent imports racing for the same id or slug: each lost race costs one attempt. */
 const STORE_ATTEMPTS = 3;
+const LIMIT_WARN_INTERVAL_MS = 60_000;
 
 /** What one source said when asked to refresh an anime. */
 export type RefreshOutcome =
@@ -50,6 +52,14 @@ export function sourceNotAvailable(): ApiException {
   return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, {
     code: 'ANIME_SOURCES_UNAVAILABLE',
     message: 'The anime data sources are unavailable. Try again later.',
+  });
+}
+
+export function importLimitReached(): ApiException {
+  return new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
+    code: 'ANIME_IMPORT_LIMIT_REACHED',
+    message:
+      'Too many new anime are being imported right now. Try again in a minute.',
   });
 }
 
@@ -94,6 +104,8 @@ export class AnimeImportService implements OnModuleDestroy {
    * it, which only costs one extra call per anime.
    */
   private readonly notFoundAt = new Map<string, number>();
+  /** When the import cap was last logged: one warning per minute at most. */
+  private limitWarnedAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -103,6 +115,7 @@ export class AnimeImportService implements OnModuleDestroy {
     @Inject(ANIME_SOURCE_ADAPTERS)
     private readonly adapters: readonly AnimeSourceAdapter[],
     private readonly backoff: SourceBackoff,
+    private readonly limits: ImportLimits,
   ) {}
 
   isEnabled = (source: AnimeDataSource): boolean =>
@@ -251,11 +264,23 @@ export class AnimeImportService implements OnModuleDestroy {
       },
     });
     if (linked) return linked.animeId;
+    if (this.limits.isKnownMissing(ref)) throw animeNotFound();
     // ADR 0007: a removed anime costs no source call, however often its URL is hit.
     if (await this.isRemoved([ref])) throw animeNotFound();
     const candidates = this.enabledAdapters().filter((adapter) =>
       adapter.lookups.includes(ref.source),
     );
+    if (candidates.length === 0) throw animeNotFound();
+    if (!this.limits.takeImportToken()) {
+      const now = this.clock.now().getTime();
+      if (now - this.limitWarnedAt >= LIMIT_WARN_INTERVAL_MS) {
+        this.limitWarnedAt = now;
+        this.logger.warn(
+          'Cold anime import cap reached: new imports are refused.',
+        );
+      }
+      throw importLimitReached();
+    }
     let unavailable = false;
     for (const adapter of candidates) {
       let result;
@@ -271,6 +296,7 @@ export class AnimeImportService implements OnModuleDestroy {
       // Adult entries are neither stored nor shown (ADR 0006 update): same answer as unknown.
       if (result.snapshot.adult) {
         await this.remove(null, result.snapshot.ids);
+        this.limits.rememberMissing(ref);
         throw animeNotFound();
       }
       const animeId = await this.store(adapter, result.snapshot);
@@ -278,7 +304,9 @@ export class AnimeImportService implements OnModuleDestroy {
       void this.shared(`fill:${animeId}`, () => this.fillFromOthers(animeId));
       return animeId;
     }
-    throw unavailable ? sourceNotAvailable() : animeNotFound();
+    if (unavailable) throw sourceNotAvailable();
+    this.limits.rememberMissing(ref);
+    throw animeNotFound();
   }
 
   /**
