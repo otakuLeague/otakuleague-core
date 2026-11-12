@@ -102,7 +102,8 @@
   color: var(--muted);
 }
 .ml-tabs .ol-tab[data-zero] .ol-tab__count {
-  color: var(--faint);
+  /* --faint is under 4.5:1; zero counts stay muted but readable. */
+  color: var(--muted);
 }
 
 /* ---------- Toolbar: search, sort, view ---------- */
@@ -128,7 +129,7 @@
   transition: border-color var(--dur-press) var(--ease-enter);
 }
 .ml-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
 }
 .ml-search input {
@@ -193,7 +194,7 @@
 :is(.ml-select, .ml-search__clear, .ml-plus, .ml-more-btn, .ml-fav, .ml-step button, .ml-status-btn,
   .ml-rate, .ml-opt, .ml-scorepick button, .ml-ctl button, .ml-tt a, .ml-card__link, .ml-sortbtn,
   .ml-textbtn):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
 }
 
@@ -237,7 +238,7 @@
   outline: none;
 }
 .ml-card__link:focus-visible .ml-cover {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
 }
 .ml-status {
@@ -1588,8 +1589,8 @@
     height: 44px;
   }
   .ml-search__clear {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
   .ml-select {
     height: 44px;
@@ -1598,7 +1599,7 @@
     margin-left: auto;
   }
   .ml-seg-m button {
-    min-height: 38px;
+    min-height: 44px;
   }
   .ml-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -49,12 +49,12 @@
     <button class="ol-btn ol-btn--secondary" type="button" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V2M4.5 5.5 8 2l3.5 3.5M2.5 11v2.5h11V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Import from MAL</button>
   </div>
 </div><nav aria-label="Filter by status"><ul class="ol-tabs ml-tabs" style="list-style:none;padding:0">
-  <li><a class="ol-tab" href="/my-list?status=all" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>1,042</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=favourites"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>38</span></a></li>
+  <li><a class="ol-tab" href="/my-list" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>1,042</span></a></li>
+  <li><a class="ol-tab" href="/my-list?favourite=1"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>38</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=watching" data-s="watching">Watching <span class="ol-tab__count"><span class="br-sr">, </span>6</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=planning" data-s="planning">Plan to watch <span class="ol-tab__count"><span class="br-sr">, </span>220</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=completed" data-s="completed">Completed <span class="ol-tab__count"><span class="br-sr">, </span>702</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=paused" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>41</span></a></li>
+  <li><a class="ol-tab" href="/my-list?status=on-hold" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>41</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=dropped" data-s="dropped">Dropped <span class="ol-tab__count"><span class="br-sr">, </span>61</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=rewatch" data-s="rewatch">Rewatch <span class="ol-tab__count"><span class="br-sr">, </span>12</span></a></li>
 </ul></nav><div class="ml-bar">
@@ -159,7 +159,7 @@
 </li></ul><div class="ml-more">
   <span class="ml-more__bar" aria-hidden="true"><span style="--p: 0.05758157389635317"></span></span>
   <span role="status">Showing <b class="ol-num">60</b> of <b class="ol-num">1,042</b></span>
-  <a class="ol-btn ol-btn--secondary" href="/my-list?status=all&amp;cursor=c60">Load 60 more</a>
+  <a class="ol-btn ol-btn--secondary" href="/my-list?cursor=c60">Next 60</a>
 </div>
   </main>
 </div></div></div>
@@ -184,7 +184,7 @@
     </div>
   </div>
 </header>
-  <main id="main" class="sh-main">
+  <main class="sh-main">
 <div class="ml-head">
   <div>
     <h1>My List</h1>
@@ -198,12 +198,12 @@
     <button class="ol-btn ol-btn--secondary" type="button" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V2M4.5 5.5 8 2l3.5 3.5M2.5 11v2.5h11V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Import from MAL</button>
   </div>
 </div><nav aria-label="Filter by status"><ul class="ol-tabs ml-tabs" style="list-style:none;padding:0">
-  <li><a class="ol-tab" href="/my-list?status=all" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>3</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=favourites"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>1</span></a></li>
+  <li><a class="ol-tab" href="/my-list" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>3</span></a></li>
+  <li><a class="ol-tab" href="/my-list?favourite=1"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>1</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=watching" data-s="watching">Watching <span class="ol-tab__count"><span class="br-sr">, </span>1</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=planning" data-s="planning">Plan to watch <span class="ol-tab__count"><span class="br-sr">, </span>1</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=completed" data-s="completed" data-zero>Completed <span class="ol-tab__count"><span class="br-sr">, </span>0</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=paused" data-s="paused" data-zero>On hold <span class="ol-tab__count"><span class="br-sr">, </span>0</span></a></li>
+  <li><a class="ol-tab" href="/my-list?status=on-hold" data-s="paused" data-zero>On hold <span class="ol-tab__count"><span class="br-sr">, </span>0</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=dropped" data-s="dropped">Dropped <span class="ol-tab__count"><span class="br-sr">, </span>1</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=rewatch" data-s="rewatch" data-zero>Rewatch <span class="ol-tab__count"><span class="br-sr">, </span>0</span></a></li>
 </ul></nav><div class="ml-bar">
@@ -278,7 +278,7 @@
     </div>
   </div>
 </header>
-  <main id="main" class="sh-main">
+  <main class="sh-main">
 <div class="ml-head">
   <div>
     <h1>My List</h1>
@@ -292,12 +292,12 @@
     <button class="ol-btn ol-btn--secondary" type="button" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V2M4.5 5.5 8 2l3.5 3.5M2.5 11v2.5h11V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Import from MAL</button>
   </div>
 </div><nav aria-label="Filter by status"><ul class="ol-tabs ml-tabs" style="list-style:none;padding:0">
-  <li><a class="ol-tab" href="/my-list?status=all" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>1,042</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=favourites"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>38</span></a></li>
+  <li><a class="ol-tab" href="/my-list" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>1,042</span></a></li>
+  <li><a class="ol-tab" href="/my-list?favourite=1"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>38</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=watching" data-s="watching">Watching <span class="ol-tab__count"><span class="br-sr">, </span>6</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=planning" data-s="planning">Plan to watch <span class="ol-tab__count"><span class="br-sr">, </span>220</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=completed" data-s="completed">Completed <span class="ol-tab__count"><span class="br-sr">, </span>702</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=paused" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>41</span></a></li>
+  <li><a class="ol-tab" href="/my-list?status=on-hold" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>41</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=dropped" data-s="dropped">Dropped <span class="ol-tab__count"><span class="br-sr">, </span>61</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=rewatch" data-s="rewatch">Rewatch <span class="ol-tab__count"><span class="br-sr">, </span>12</span></a></li>
 </ul></nav><ul class="ml-rows"><li class="ml-row">
@@ -338,14 +338,14 @@
 </li></ul>
   </main>
 </div><div class="ml-scrim" aria-hidden="true"></div>
-<div class="ml-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+<div class="ml-sheet" role="dialog" aria-modal="true" aria-labelledby="dlg-1">
   <span class="ml-sheet__grab" aria-hidden="true"></span>
-  <div class="ml-pop__head"><span class="ml-thumb"><div class="br-cover" style="--c1: #3a7d6b; --c2: #1d2b3a" aria-hidden="true"></div></span><div><strong id="sh-t">Frieren: Beyond Journey's End</strong><small>TV · 28 episodes</small></div></div>
+  <div class="ml-pop__head"><span class="ml-thumb"><div class="br-cover" style="--c1: #3a7d6b; --c2: #1d2b3a" aria-hidden="true"></div></span><div><strong id="dlg-1">Frieren: Beyond Journey's End</strong><small>TV · 28 episodes</small></div></div>
   <fieldset><legend>Status</legend><div class="ml-opts" role="radiogroup" aria-label="Status">
     <button class="ml-opt" data-s="watching" type="button" role="radio" aria-checked="true">Watching</button><button class="ml-opt" data-s="planning" type="button" role="radio" aria-checked="false">Plan to watch</button><button class="ml-opt" data-s="completed" type="button" role="radio" aria-checked="false">Completed</button><button class="ml-opt" data-s="paused" type="button" role="radio" aria-checked="false">On hold</button><button class="ml-opt" data-s="dropped" type="button" role="radio" aria-checked="false">Dropped</button><button class="ml-opt" data-s="rewatch" type="button" role="radio" aria-checked="false">Rewatch</button>
   </div></fieldset>
-  <div><span class="ml-lbl" id="ep-l"><span>Episodes</span><button class="ml-textbtn" type="button" style="font-size:12px;letter-spacing:0;text-transform:none">Mark all 28 watched</button></span>
-    <div class="ml-progress"><div class="ml-step" role="group" aria-labelledby="ep-l"><button type="button" aria-label="One episode less">−</button><output><b>27</b> / 28</output><button type="button" aria-label="One episode more">+</button></div></div></div>
+  <div><span class="ml-lbl" id="ep-2"><span>Episodes</span><button class="ml-textbtn" type="button" style="font-size:12px;letter-spacing:0;text-transform:none">Mark all 28 watched</button></span>
+    <div class="ml-progress"><div class="ml-step" role="group" aria-labelledby="ep-2"><button type="button" aria-label="One episode less">−</button><output><b>27</b> / 28</output><button type="button" aria-label="One episode more">+</button></div></div></div>
   <fieldset><legend><span>Your score</span><button class="ml-textbtn" type="button" style="font-size:12px;letter-spacing:0;text-transform:none">Clear</button></legend><div class="ml-scorepick" role="radiogroup" aria-label="Your score, 1 to 10">
     <button type="button" role="radio" aria-checked="false">1</button><button type="button" role="radio" aria-checked="false">2</button><button type="button" role="radio" aria-checked="false">3</button><button type="button" role="radio" aria-checked="false">4</button><button type="button" role="radio" aria-checked="false">5</button><button type="button" role="radio" aria-checked="false">6</button><button type="button" role="radio" aria-checked="false">7</button><button type="button" role="radio" aria-checked="false">8</button><button type="button" role="radio" aria-checked="false">9</button><button type="button" role="radio" aria-checked="true">10</button>
   </div></fieldset>

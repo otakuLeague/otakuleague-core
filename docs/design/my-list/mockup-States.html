@@ -51,12 +51,12 @@
     <button class="ol-btn ol-btn--secondary" type="button" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V2M4.5 5.5 8 2l3.5 3.5M2.5 11v2.5h11V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Import from MAL</button>
   </div>
 </div><nav aria-label="Filter by status"><ul class="ol-tabs ml-tabs" style="list-style:none;padding:0">
-  <li><a class="ol-tab" href="/my-list?status=all" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=favourites"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
+  <li><a class="ol-tab" href="/my-list" aria-current="page">All <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
+  <li><a class="ol-tab" href="/my-list?favourite=1"><svg class="ml-heart" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 2.8 1.5-1.8 3-2.8 5-2.8 3.6 0 6 3.5 4.5 7.3C19.5 16.4 12 21 12 21z"/></svg> Favourites <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=watching" data-s="watching">Watching <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=planning" data-s="planning">Plan to watch <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=completed" data-s="completed">Completed <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
-  <li><a class="ol-tab" href="/my-list?status=paused" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
+  <li><a class="ol-tab" href="/my-list?status=on-hold" data-s="paused">On hold <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=dropped" data-s="dropped">Dropped <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
   <li><a class="ol-tab" href="/my-list?status=rewatch" data-s="rewatch">Rewatch <span class="ol-tab__count"><span class="br-sr">, </span>–</span></a></li>
 </ul></nav><div class="ml-bar">
@@ -94,7 +94,7 @@
 
 <section class="ml-sec" aria-labelledby="st-tab"><h2 class="ml-h2" id="st-tab">Empty tab and no search results</h2>
 <div class="ml-board">
-  <figure class="ml-frame"><figcaption><b>Empty tab</b>Dropped has 0: the tab stays (old board always showed empty columns), the panel says so kindly.</figcaption><div class="br-state"><span class="br-state__ico" aria-hidden="true">✓</span><h2>Nothing dropped</h2><p>Shows you stop watching land here. Change a status from any card's ⋯ menu.</p><div class="br-state__actions"><a class="ol-btn ol-btn--secondary" href="/my-list?status=all">See all 1,042</a></div></div></figure>
+  <figure class="ml-frame"><figcaption><b>Empty tab</b>Dropped has 0: the tab stays (old board always showed empty columns), the panel says so kindly.</figcaption><div class="br-state"><span class="br-state__ico" aria-hidden="true">✓</span><h2>Nothing dropped</h2><p>Shows you stop watching land here. Change a status from any card's ⋯ menu.</p><div class="br-state__actions"><a class="ol-btn ol-btn--secondary" href="/my-list">See all 1,042</a></div></div></figure>
   <figure class="ml-frame"><figcaption><b>No results</b>Search runs on the server across English, romaji and native titles, inside the current tab. Tab counts show matches, so another tab with hits is one click away.</figcaption><div class="br-state"><span class="br-state__ico" aria-hidden="true">?</span><h2>No “frieern” in Completed</h2><p>It matches <b>1</b> anime in Watching. Check the spelling or search the whole list.</p><div class="br-state__actions"><a class="ol-btn ol-btn--primary" href="/my-list?status=watching&amp;q=frieern">Show in Watching</a><button class="ol-btn ol-btn--ghost" type="button">Clear search</button></div></div></figure>
 </div></section>
 
