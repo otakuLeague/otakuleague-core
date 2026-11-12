@@ -78,4 +78,5 @@ flowchart LR
 - [ADR 0004: Error tracking and structured logging](decisions/0004-error-tracking-and-logging.md)
 - [ADR 0005: Integration tests against a real PostgreSQL](decisions/0005-integration-tests-real-postgres.md)
 - [ADR 0013: Screenshots of the real pages on every web PR](decisions/0013-pr-screenshots.md)
+- [ADR 0015: Authentication](decisions/0015-authentication.md) (proposed, not built yet: sessions in Postgres, cookie on the web origin only, Brevo for email)
 - [ADR template](decisions/0000-template.md)
