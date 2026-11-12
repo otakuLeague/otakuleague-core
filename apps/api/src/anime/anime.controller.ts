@@ -22,9 +22,10 @@ import {
   type AnimeIdSource,
   type AnimeListKind,
   type AnimeListPage,
+  type AnimeSearchPage,
   type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
@@ -34,6 +35,10 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
 } from 'class-validator';
 import {
   AnimeBySlugAnimeSchema,
@@ -41,9 +46,11 @@ import {
   AnimeDetailsSchema,
   AnimeFranchiseSchema,
   AnimeListPageSchema,
+  AnimeSearchPageSchema,
   AnimeSlugResolutionSchema,
 } from './anime.openapi';
 import { AnimeListService } from './anime-list.service';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
@@ -110,6 +117,52 @@ class AnimeListQuery {
   readonly limit?: number;
 }
 
+const MAX_QUERY_LENGTH = 100;
+
+/** The SQL normalises with NFKD, which can expand one character into 18 (U+FDFA). */
+@ValidatorConstraint({ name: 'maxNormalizedLength' })
+class MaxNormalizedLength implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return (
+      typeof value === 'string' &&
+      value.normalize('NFKD').length <= MAX_QUERY_LENGTH
+    );
+  }
+
+  defaultMessage(): string {
+    return `q must be at most ${MAX_QUERY_LENGTH} characters after Unicode normalisation`;
+  }
+}
+
+class AnimeSearchParams {
+  @ApiProperty({ minLength: 1, maxLength: 100, example: 'attack on titan' })
+  // NUL cannot be stored or compared by PostgreSQL (22021): treat it as a separator.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replaceAll('\u0000', ' ').trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(MAX_QUERY_LENGTH)
+  @Validate(MaxNormalizedLength)
+  readonly q!: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  readonly page: number = 1;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  readonly pageSize: number = 24;
+}
+
 @ApiTags('anime')
 @ApiExtraModels(AnimeBySlugAnimeSchema, AnimeBySlugRedirectSchema)
 @Controller('anime')
@@ -118,6 +171,7 @@ export class AnimeController {
     private readonly anime: AnimeService,
     private readonly franchises: AnimeFranchiseService,
     private readonly lists: AnimeListService,
+    private readonly animeSearch: AnimeSearchService,
   ) {}
 
   // Declared before ':idSource/:externalId': both have two segments.
@@ -139,6 +193,25 @@ export class AnimeController {
     @Query() query: AnimeListQuery,
   ): Promise<AnimeListPage> {
     return this.lists.getList(params.kind, query.cursor, query.limit);
+  }
+
+  // One segment: cannot clash with the two-segment routes below.
+  @Get('search')
+  @ApiOkResponse({
+    type: AnimeSearchPageSchema,
+    description:
+      'Anime we already store, best match first (ADR 0016): by English, romaji or native title or synonym, ignoring case, accents and punctuation, tolerating typos. Never calls a source. A query with no letters or digits is valid and finds nothing.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'q missing or longer than 100 characters, or page or pageSize out of range.',
+  })
+  searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
+    return this.animeSearch.search({
+      query: params.q,
+      page: params.page,
+      pageSize: params.pageSize,
+    });
   }
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the

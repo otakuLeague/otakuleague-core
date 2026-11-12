@@ -140,6 +140,46 @@ export interface AnimeDetails {
   readonly attributions: readonly AnimeAttribution[];
 }
 
+export const ANIME_TITLE_KINDS = [
+  'english',
+  'romaji',
+  'native',
+  'synonym',
+] as const;
+export type AnimeTitleKind = (typeof ANIME_TITLE_KINDS)[number];
+
+/** One anime in GET /anime/search (ADR 0016). */
+export interface AnimeSearchHit {
+  /** Canonical slug (ADR 0007); null when the anime has no AniList identity: link by `ref`. */
+  readonly slug: string | null;
+  /** The AniList id when visible, else the MyAnimeList id. */
+  readonly ref: { readonly source: AnimeIdSource; readonly id: string };
+  /** English, else romaji, else native, else the matched title. */
+  readonly title: string;
+  /** Always present. The card shows "Also known as" when `text` differs from `title`. */
+  readonly matchedTitle: {
+    readonly kind: AnimeTitleKind;
+    readonly text: string;
+  };
+  readonly format: AnimeFormat | null;
+  readonly episodes: number | null;
+  readonly season: AnimeSeason | null;
+  readonly seasonYear: number | null;
+  readonly startYear: number | null;
+  readonly coverImageUrl: string | null;
+  readonly coverColor: string | null;
+  /** The first visible source's score, with its label (scores are never mixed, ADR 0006). */
+  readonly score: Pick<AnimeScore, 'source' | 'score' | 'scale'> | null;
+}
+
+export interface AnimeSearchPage {
+  readonly hits: readonly AnimeSearchHit[];
+  readonly page: number;
+  readonly pageSize: number;
+  /** Anime matching the query, across all pages. */
+  readonly total: number;
+}
+
 /**
  * GET /anime/slugs/:slug (ADR 0007). Any slug other than the canonical one (alias, former
  * canonical, other letter case) answers a redirect as data: the web client refuses HTTP

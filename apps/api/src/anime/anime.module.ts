@@ -11,6 +11,7 @@ import {
   AnimeImportService,
 } from './anime-import.service';
 import { AnimeListService } from './anime-list.service';
+import { AnimeSearchService } from './anime-search.service';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
@@ -97,6 +98,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     AnimeImportService,
     AnimeService,
     AnimeListService,
+    AnimeSearchService,
     FranchiseWalker,
     SourceBackoff,
     ImportLimits,
