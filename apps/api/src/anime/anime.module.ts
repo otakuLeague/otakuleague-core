@@ -38,6 +38,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly importer: AnimeImportService,
     private readonly walker: FranchiseWalker,
+    private readonly lists: AnimeListService,
   ) {}
 
   onModuleInit(): void {
@@ -67,6 +68,12 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
       )
       .catch((error: unknown) =>
         this.logger.warn(`Franchise purge failed: ${String(error)}`),
+      );
+    this.lists
+      .purgeStale()
+      .then((count) => this.logger.log(`Purged ${count} stale list pages`))
+      .catch((error: unknown) =>
+        this.logger.warn(`List page purge failed: ${String(error)}`),
       );
   }
 }

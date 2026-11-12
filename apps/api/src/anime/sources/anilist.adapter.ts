@@ -7,6 +7,7 @@ import {
 import {
   ANILIST_ANIME_QUERY,
   ANILIST_LIST_QUERY,
+  LIST_PAGE_SIZE,
   ANILIST_RELATIONS_QUERY,
 } from './anilist.query';
 import { isRecord, record } from './parse';
@@ -28,8 +29,10 @@ export const RELATIONS_PAGE_SIZE = 50;
 
 /** What a catalog list asks AniList for (ADR 0016). */
 export interface ListQuery {
-  readonly sort: readonly string[];
-  readonly status?: string;
+  readonly sort: readonly (
+    'TRENDING_DESC' | 'POPULARITY_DESC' | 'SCORE_DESC'
+  )[];
+  readonly status?: 'RELEASING' | 'NOT_YET_RELEASED';
 }
 
 /**
@@ -130,16 +133,17 @@ export class AniListAdapter extends AnimeSourceAdapter {
   }
 
   /**
-   * ADR 0016: block `page` (1-based, 50 entries) of a catalog list. A response without a
-   * usable Page fails like an HTTP error and starts the cool-down. Like the other fetches it
-   * does not check the kill switch: the caller does.
+   * ADR 0016: block `page` (1-based, 50 entries) of a catalog list. Like the other fetches it
+   * does not check the kill switch: the caller does. An answer that is not a trustworthy page
+   * (GraphQL errors next to it, no Page, or nothing usable in it) is an UnusableAnswerError
+   * and does not start the shared cool-down: one bad list query must not keep imports at 503.
    */
   async fetchList(
     query: ListQuery,
     page: number,
     wait: ListFetchWait,
   ): Promise<ListBlock> {
-    const variables = { page, sort: query.sort, status: query.status };
+    const variables = { page, perPage: LIST_PAGE_SIZE, ...query };
     const { status, body } = await requestJson(
       this.baseUrl,
       {
@@ -149,13 +153,15 @@ export class AniListAdapter extends AnimeSourceAdapter {
       },
       wait === 'background' ? { ...this.http, maxQueueMs: 0 } : this.http,
     );
+    const errors = record(body).errors;
     const block =
-      status === 200 ? mapAniListListBlock(record(body).data) : null;
+      status === 200 && !(Array.isArray(errors) && errors.length > 0)
+        ? mapAniListListBlock(record(body).data)
+        : null;
     if (block === null) {
-      this.http.limiter.markDown(this.http.coolDownMs);
-      throw new SourceUnavailableError(
+      throw new UnusableAnswerError(
         'anilist',
-        `list answered HTTP ${status} without a usable Page`,
+        `list answered HTTP ${status} without a trustworthy Page`,
       );
     }
     return block;

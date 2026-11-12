@@ -159,7 +159,12 @@ describe('GET /anime/lists/:kind', () => {
     });
     expect(second).toEqual(first);
     expect(requests).toEqual([
-      { page: 1, sort: ['POPULARITY_DESC'], status: 'RELEASING' },
+      {
+        page: 1,
+        perPage: 50,
+        sort: ['POPULARITY_DESC'],
+        status: 'RELEASING',
+      },
     ]);
   });
 
@@ -185,32 +190,62 @@ describe('GET /anime/lists/:kind', () => {
     expect(requests.map(({ page }) => page)).toEqual([1, 2]);
   });
 
-  it('ends at the last page and at the 1000-entry cap', async () => {
+  it('ends at the last page', async () => {
     answer = (page) => ({
       media: fullPage(page).slice(0, 3),
       hasNextPage: false,
     });
+
     const last = await list(`/anime/lists/upcoming?cursor=${encodeCursor(0)}`);
-    answer = (page) => ({ media: fullPage(page), hasNextPage: true });
+
+    expect(last.entries).toHaveLength(3);
+    expect(last.nextCursor).toBeNull();
+  });
+
+  /** Stored pages 1 to `count`, each with a next page, so the next one may be fetched. */
+  const storePages = (count: number) =>
+    prisma.animeListPage.createMany({
+      data: Array.from({ length: count }, (_, index) => ({
+        listKey: 'top',
+        page: index + 1,
+        fetchedAt: clock.now(),
+        hasNextPage: true,
+        entries: [],
+      })),
+    });
+
+  it('ends at the 1000-entry cap', async () => {
+    await storePages(19);
+
     const capped = await list(
       `/anime/lists/top?limit=50&cursor=${encodeCursor(999)}`,
     );
 
-    expect(last.entries).toHaveLength(3);
-    expect(last.nextCursor).toBeNull();
     expect(ids(capped)).toEqual([20049]);
     expect(capped.nextCursor).toBeNull();
   });
 
   it('answers an empty page past the end of a list', async () => {
+    await storePages(10);
     answer = () => ({ media: [], hasNextPage: false });
 
     expect(
       await list(`/anime/lists/top?cursor=${encodeCursor(500)}`),
-    ).toMatchObject({
-      entries: [],
-      nextCursor: null,
+    ).toMatchObject({ entries: [], nextCursor: null });
+  });
+
+  it('never asks AniList for a page whose predecessor we do not hold', async () => {
+    const deep = await list(`/anime/lists/top?cursor=${encodeCursor(500)}`);
+    await storePages(1);
+    await prisma.animeListPage.update({
+      where: { listKey_page: { listKey: 'top', page: 1 } },
+      data: { hasNextPage: false },
     });
+    const pastEnd = await list(`/anime/lists/top?cursor=${encodeCursor(50)}`);
+
+    expect(deep).toMatchObject({ entries: [], nextCursor: null });
+    expect(pastEnd).toMatchObject({ entries: [], nextCursor: null });
+    expect(requests).toHaveLength(0);
   });
 
   it('serves a stale page at once and refreshes it in the background', async () => {
@@ -265,6 +300,67 @@ describe('GET /anime/lists/:kind', () => {
         message: 'The anime data sources are unavailable. Try again later.',
       },
     });
+  });
+
+  it('does not ask again for 5 minutes after a failed fetch', async () => {
+    failing = true;
+    await get('/anime/lists/airing').expect(503);
+    failing = false;
+
+    await get('/anime/lists/airing').expect(503);
+    clock.advance(5 * 60 * 1000);
+    const recovered = await list('/anime/lists/airing');
+
+    expect(requests).toHaveLength(2);
+    expect(recovered.entries).toHaveLength(24);
+  });
+
+  it('never replaces a stored first page with an empty answer', async () => {
+    await list('/anime/lists/trending');
+    clock.advance(HOUR_MS);
+    answer = () => ({ media: [], hasNextPage: false });
+
+    await list('/anime/lists/trending');
+    await lists.settle();
+    const after = await list('/anime/lists/trending');
+
+    expect(requests).toHaveLength(2);
+    expect(after).toMatchObject({ freshness: 'stale' });
+    expect(after.entries).toHaveLength(24);
+  });
+
+  it('treats a degraded answer as a failure: errors next to a Page, nothing usable in it', async () => {
+    answer = () => ({
+      media: [{ id: 5, isAdult: true, title: {} }],
+      hasNextPage: false,
+    });
+
+    await get('/anime/lists/top').expect(503);
+    expect(await prisma.animeListPage.count()).toBe(0);
+  });
+
+  it('purges pages not refreshed for 30 days, and only those', async () => {
+    const day = 24 * HOUR_MS;
+    await prisma.animeListPage.createMany({
+      data: [
+        { page: 1, age: 31 },
+        { page: 2, age: 30 },
+        { page: 3, age: 29 },
+      ].map(({ page, age }) => ({
+        listKey: 'top',
+        page,
+        fetchedAt: new Date(clock.now().getTime() - age * day),
+        hasNextPage: true,
+        entries: [],
+      })),
+    });
+
+    expect(await lists.purgeStale()).toBe(1);
+    expect(
+      (await prisma.animeListPage.findMany({ orderBy: { page: 'asc' } })).map(
+        ({ page }) => page,
+      ),
+    ).toEqual([2, 3]);
   });
 
   it('treats a stored page that no longer validates as missing', async () => {

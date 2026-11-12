@@ -5,13 +5,16 @@ import {
 } from '@otakuleague/shared-types';
 import type { AnimeListPage as AnimeListPageRow } from '../generated/prisma/client';
 import {
-  finite,
+  anilistId,
+  anilistImageUrl,
+  boundedText,
+  boundedTexts,
+  hexColor,
   integer,
   oneOf,
   partialDate,
+  percentScore,
   record,
-  text,
-  texts,
 } from './sources/parse';
 import type { ListBlock, ListedAnime } from './sources/source.types';
 
@@ -40,31 +43,30 @@ export function toListRow(block: ListBlock, fetchedAt: Date) {
 function readScore(value: unknown): ListedAnime['score'] | undefined {
   if (value === null) return null;
   const raw = record(value);
-  const score = finite(raw.score);
-  const scale = raw.scale === 10 || raw.scale === 100 ? raw.scale : null;
-  return raw.source === 'anilist' && score !== null && scale !== null
-    ? { source: 'anilist', score, scale }
+  const score = percentScore(raw.score);
+  return raw.source === 'anilist' && raw.scale === 100 && score !== null
+    ? { source: 'anilist', score, scale: 100 }
     : undefined;
 }
 
 function readEntry(value: unknown): ListedAnime | null {
   const raw = record(value);
-  const anilistId = integer(raw.anilistId, 1);
+  const id = anilistId(raw.anilistId);
   const score = readScore(raw.score);
-  if (anilistId === null || score === undefined) return null;
+  if (id === null || score === undefined) return null;
   return {
-    anilistId,
-    titleEnglish: text(raw.titleEnglish),
-    titleRomaji: text(raw.titleRomaji),
-    coverImageUrl: text(raw.coverImageUrl),
-    coverColor: text(raw.coverColor),
+    anilistId: id,
+    titleEnglish: boundedText(raw.titleEnglish),
+    titleRomaji: boundedText(raw.titleRomaji),
+    coverImageUrl: anilistImageUrl(raw.coverImageUrl),
+    coverColor: hexColor(raw.coverColor),
     format: oneOf(raw.format, ANIME_FORMATS),
     status: oneOf(raw.status, ANIME_STATUSES),
     episodes: integer(raw.episodes, 1),
     season: oneOf(raw.season, ANIME_SEASONS),
     seasonYear: integer(raw.seasonYear, 1),
     startDate: partialDate(raw.startDate),
-    genres: texts(raw.genres),
+    genres: boundedTexts(raw.genres),
     members: integer(raw.members),
     score,
   };

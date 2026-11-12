@@ -59,4 +59,26 @@ describe('anime_list_page rows', () => {
     expect(fromListRow(stored({ not: 'a list' }))).toBeNull();
     expect(fromListRow(stored(null))).toBeNull();
   });
+
+  it('reads an off-site cover, a bad colour or an out-of-range score as absent or a miss', () => {
+    const read = fromListRow(
+      stored([
+        {
+          ...entry,
+          coverImageUrl: 'https://evil.test/c.jpg',
+          coverColor: 'red',
+        },
+      ]),
+    );
+
+    expect(read?.entries[0]).toMatchObject({
+      coverImageUrl: null,
+      coverColor: null,
+    });
+    expect(
+      fromListRow(
+        stored([{ ...entry, score: { ...entry.score, score: 500 } }]),
+      ),
+    ).toBeNull();
+  });
 });

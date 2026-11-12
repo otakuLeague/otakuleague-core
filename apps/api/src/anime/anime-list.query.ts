@@ -1,13 +1,14 @@
 import type { AnimeListKind } from '@otakuleague/shared-types';
 import type { ListQuery } from './sources/anilist.adapter';
+import { LIST_PAGE_SIZE } from './sources/anilist.query';
+
+export { LIST_PAGE_SIZE };
 
 // Catalog lists (ADR 0016): what each kind asks AniList for, how long a stored page lives,
 // and the cursor arithmetic. Pure, so the service stays about I/O.
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** Entries per stored page: AniList's `perPage` maximum. */
-export const LIST_PAGE_SIZE = 50;
 /** A list is read at most this deep (20 source pages). */
 export const LIST_MAX_DEPTH = 1_000;
 
@@ -75,5 +76,51 @@ export function readWindow(offset: number, limit: number) {
     end,
     firstPage: Math.floor(offset / LIST_PAGE_SIZE) + 1,
     lastPage: Math.floor((end - 1) / LIST_PAGE_SIZE) + 1,
+  };
+}
+
+/** A stored source page as `assembleWindow` reads it. */
+export interface WindowBlock<Entry> {
+  /** AniList's page number, from 1. */
+  readonly page: number;
+  readonly entries: readonly Entry[];
+  readonly hasNextPage: boolean;
+  readonly fetchedAt: Date;
+  readonly fresh: boolean;
+}
+
+/**
+ * The entries at positions `offset` to `offset + limit - 1` (capped at LIST_MAX_DEPTH) from
+ * the blocks that hold them, each read against its own first position. `nextOffset` is null
+ * at the end: the cap, or a last block with nothing left. Stale when any block is; fetchedAt
+ * is the oldest block's (null without blocks).
+ */
+export function assembleWindow<Entry>(
+  blocks: readonly WindowBlock<Entry>[],
+  offset: number,
+  limit: number,
+) {
+  const end = Math.min(offset + limit, LIST_MAX_DEPTH);
+  const entries = blocks.flatMap(({ page, entries: block }) => {
+    const base = (page - 1) * LIST_PAGE_SIZE;
+    return block.slice(Math.max(offset - base, 0), Math.max(end - base, 0));
+  });
+  const last = blocks.at(-1);
+  const hasMore =
+    last !== undefined &&
+    (last.entries.length > end - (last.page - 1) * LIST_PAGE_SIZE ||
+      last.hasNextPage);
+  return {
+    entries,
+    nextOffset: end < LIST_MAX_DEPTH && hasMore ? end : null,
+    freshness: blocks.every(({ fresh }) => fresh)
+      ? ('fresh' as const)
+      : ('stale' as const),
+    fetchedAt:
+      blocks.length === 0
+        ? null
+        : new Date(
+            Math.min(...blocks.map(({ fetchedAt }) => fetchedAt.getTime())),
+          ),
   };
 }

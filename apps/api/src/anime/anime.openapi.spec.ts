@@ -84,7 +84,7 @@ describe('anime OpenAPI schema', () => {
     expect(details.properties?.canonicalSlug?.nullable).toBe(true);
   });
 
-  it('documents every AnimeListPage field, all required, before the two-segment anime route', () => {
+  it('documents every AnimeListPage field, all required, and declares the list route before the two-segment anime route', () => {
     const page = schema('AnimeListPageSchema');
     const keys = Object.keys(ANIME_LIST_PAGE_KEYS).toSorted();
 

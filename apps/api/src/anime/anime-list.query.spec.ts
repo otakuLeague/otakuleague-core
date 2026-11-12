@@ -1,12 +1,14 @@
 import { ANIME_LIST_KINDS } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
+  assembleWindow,
   decodeCursor,
   encodeCursor,
   isFresh,
   listKey,
   listSpec,
   readWindow,
+  type WindowBlock,
 } from './anime-list.query';
 
 const HOUR_MS = 3_600_000;
@@ -122,5 +124,78 @@ describe('readWindow', () => {
       firstPage: 20,
       lastPage: 20,
     });
+  });
+});
+
+describe('assembleWindow', () => {
+  const T0 = new Date('2026-11-12T10:00:00Z');
+  const block = (
+    page: number,
+    count: number,
+    extra: Partial<WindowBlock<number>> = {},
+  ): WindowBlock<number> => ({
+    page,
+    entries: Array.from({ length: count }, (_, i) => (page - 1) * 50 + i),
+    hasNextPage: true,
+    fetchedAt: T0,
+    fresh: true,
+    ...extra,
+  });
+
+  it('reads one block', () => {
+    const window = assembleWindow([block(1, 50)], 0, 3);
+
+    expect(window).toMatchObject({
+      entries: [0, 1, 2],
+      nextOffset: 3,
+      freshness: 'fresh',
+      fetchedAt: T0,
+    });
+  });
+
+  it('joins two blocks, each against its own first position', () => {
+    // Page 1 is short (an entry was dropped): page 2 still starts at position 50.
+    const window = assembleWindow([block(1, 49), block(2, 50)], 48, 4);
+
+    expect(window.entries).toEqual([48, 50, 51]);
+    expect(window.nextOffset).toBe(52);
+  });
+
+  it('ends on a last block with nothing left', () => {
+    const window = assembleWindow([block(1, 3, { hasNextPage: false })], 0, 24);
+
+    expect(window).toMatchObject({ entries: [0, 1, 2], nextOffset: null });
+  });
+
+  it('continues when the last block has more than the window', () => {
+    expect(
+      assembleWindow([block(1, 30, { hasNextPage: false })], 0, 10).nextOffset,
+    ).toBe(10);
+  });
+
+  it('is stale with the oldest fetchedAt when any block is stale', () => {
+    const older = new Date(T0.getTime() - 1_000);
+    const window = assembleWindow(
+      [block(1, 50), block(2, 50, { fresh: false, fetchedAt: older })],
+      40,
+      20,
+    );
+
+    expect(window).toMatchObject({ freshness: 'stale', fetchedAt: older });
+  });
+
+  it('is empty and at the end without blocks', () => {
+    expect(assembleWindow([], 500, 24)).toEqual({
+      entries: [],
+      nextOffset: null,
+      freshness: 'fresh',
+      fetchedAt: null,
+    });
+  });
+
+  it('stops at the cap even when AniList has more', () => {
+    const window = assembleWindow([block(20, 50)], 999, 50);
+
+    expect(window).toMatchObject({ entries: [999], nextOffset: null });
   });
 });

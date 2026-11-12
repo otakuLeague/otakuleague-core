@@ -9,12 +9,19 @@ import {
   AnimeTag,
   AnimeTrailer,
 } from '@otakuleague/shared-types';
+import { LIST_PAGE_SIZE } from './anilist.query';
 import {
+  anilistId,
+  anilistImageUrl,
+  boundedText,
+  boundedTexts,
   finite,
+  hexColor,
   httpUrl,
   integer,
   oneOf,
   partialDate,
+  percentScore,
   record,
   synopsisText,
   text,
@@ -150,14 +157,6 @@ function allTimeRank(
   return ranking === undefined ? null : integer(ranking.rank, 1);
 }
 
-/** "#rrggbb", or null. */
-function hexColor(value: unknown): string | null {
-  const color = text(value);
-  return color !== null && /^#[0-9a-f]{6}$/i.test(color)
-    ? color.toLowerCase()
-    : null;
-}
-
 function nextEpisode(value: unknown): AnimeSnapshot['nextEpisode'] {
   const raw = record(value);
   const episode = integer(raw.episode, 1);
@@ -286,16 +285,16 @@ export function mapAniListRelationNodes(value: unknown): RelationNode[] {
 /** One media object of ANILIST_LIST_QUERY; null when unusable or not explicitly non-adult. */
 function listedAnime(value: unknown): ListedAnime | null {
   const media = record(value);
-  const anilistId = integer(media.id, 1);
-  if (anilistId === null || media.isAdult !== false) return null;
+  const id = anilistId(media.id);
+  if (id === null || media.isAdult !== false) return null;
   const title = record(media.title);
   const cover = record(media.coverImage);
-  const score = finite(media.averageScore);
+  const score = percentScore(media.averageScore);
   return {
-    anilistId,
-    titleEnglish: text(title.english),
-    titleRomaji: text(title.romaji),
-    coverImageUrl: httpUrl(cover.large),
+    anilistId: id,
+    titleEnglish: boundedText(title.english),
+    titleRomaji: boundedText(title.romaji),
+    coverImageUrl: anilistImageUrl(cover.large),
     coverColor: hexColor(cover.color),
     format: oneOf(media.format, FORMATS),
     status: oneOf(media.status, STATUSES),
@@ -303,27 +302,30 @@ function listedAnime(value: unknown): ListedAnime | null {
     season: oneOf(media.season, SEASONS),
     seasonYear: integer(media.seasonYear, 1),
     startDate: partialDate(media.startDate),
-    genres: texts(media.genres),
+    genres: boundedTexts(media.genres),
     members: integer(media.popularity),
-    score:
-      score !== null && score > 0 && score <= 100
-        ? { source: 'anilist', score, scale: 100 }
-        : null,
+    score: score === null ? null : { source: 'anilist', score, scale: 100 },
   };
 }
 
 /**
- * `data` of ANILIST_LIST_QUERY to a block; null when there is no usable Page (the caller
- * treats that as a failed call). Unusable and adult entries are dropped one by one.
+ * `data` of ANILIST_LIST_QUERY to a block; null when the answer is not a trustworthy page:
+ * no Page, or media of which nothing is usable (a degraded answer
+ * must never replace a stored page). Adult and unusable entries are dropped one by one.
  */
 export function mapAniListListBlock(value: unknown): ListBlock | null {
   const page = record(record(value).Page);
   if (!Array.isArray(page.media)) return null;
+  // Bounded: a larger answer than asked for is cut, never stored whole.
+  const media: unknown[] = page.media.slice(0, LIST_PAGE_SIZE);
+  const entries = media.flatMap((media) => {
+    const entry = listedAnime(media);
+    return entry === null ? [] : [entry];
+  });
+  // Every entry dropped: all adult is possible in theory, a broken answer is the likely case.
+  if (media.length > 0 && entries.length === 0) return null;
   return {
-    entries: page.media.flatMap((media) => {
-      const entry = listedAnime(media);
-      return entry === null ? [] : [entry];
-    }),
+    entries,
     hasNextPage: record(page.pageInfo).hasNextPage === true,
   };
 }

@@ -1,11 +1,11 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AniListAdapter } from './anilist.adapter';
+import { AniListAdapter, type ListQuery } from './anilist.adapter';
 import { fixture } from './fixtures';
 import { record } from './parse';
 import { AnimeSourceSettings, type SourceSettings } from './source-settings';
-import { SourceUnavailableError } from './source.types';
+import { SourceUnavailableError, UnusableAnswerError } from './source.types';
 
 describe('AniListAdapter.fetchList', () => {
   let server: Server;
@@ -28,7 +28,7 @@ describe('AniListAdapter.fetchList', () => {
         }
       })(),
     );
-  const airing = { sort: ['POPULARITY_DESC'], status: 'RELEASING' };
+  const airing: ListQuery = { sort: ['POPULARITY_DESC'], status: 'RELEASING' };
 
   beforeAll(async () => {
     server = createServer((req, res) => {
@@ -61,7 +61,7 @@ describe('AniListAdapter.fetchList', () => {
   it('asks for one page with the list sort and status, and maps it', async () => {
     const block = await adapter().fetchList(airing, 2, 'visitor');
 
-    expect(variablesSeen).toEqual([{ page: 2, ...airing }]);
+    expect(variablesSeen).toEqual([{ page: 2, perPage: 50, ...airing }]);
     expect(block.entries).toHaveLength(3);
     expect(block.hasNextPage).toBe(true);
   });
@@ -69,7 +69,9 @@ describe('AniListAdapter.fetchList', () => {
   it('omits the status of a list without one', async () => {
     await adapter().fetchList({ sort: ['SCORE_DESC'] }, 1, 'visitor');
 
-    expect(variablesSeen).toEqual([{ page: 1, sort: ['SCORE_DESC'] }]);
+    expect(variablesSeen).toEqual([
+      { page: 1, perPage: 50, sort: ['SCORE_DESC'] },
+    ]);
   });
 
   it('fails and cools down on an HTTP error', async () => {
@@ -82,17 +84,31 @@ describe('AniListAdapter.fetchList', () => {
     expect(source.isDown()).toBe(true);
   });
 
-  it('fails when the answer has no usable Page', async () => {
+  it('fails without cooling down when the answer has no usable Page', async () => {
     respond = (res) =>
       void res
         .writeHead(200, { 'Content-Type': 'application/json' })
         .end(JSON.stringify({ errors: [{ message: 'boom' }], data: null }));
     const source = adapter(0, 60_000);
 
-    await expect(source.fetchList(airing, 1, 'visitor')).rejects.toThrow(
-      /without a usable Page/,
+    await expect(source.fetchList(airing, 1, 'visitor')).rejects.toBeInstanceOf(
+      UnusableAnswerError,
     );
-    expect(source.isDown()).toBe(true);
+    expect(source.isDown()).toBe(false);
+  });
+
+  it('refuses a Page that arrives with GraphQL errors', async () => {
+    respond = (res) =>
+      void res.writeHead(200, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({
+          ...record(record(fixture('anilist-list-airing')).response),
+          errors: [{ message: 'partial' }],
+        }),
+      );
+
+    await expect(adapter().fetchList(airing, 1, 'visitor')).rejects.toThrow(
+      /trustworthy/,
+    );
   });
 
   it('a background fetch takes only a free slot, without cooling down', async () => {

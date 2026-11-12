@@ -40,7 +40,7 @@ Consistency or availability: **availability**. A list that is an hour old, or sh
 - `kind`: `trending | seasonal | top | upcoming | airing`. `limit`: 1 to 50, default 24.
 - `season` (`WINTER | SPRING | SUMMER | FALL`) and `year` (1917 to next year) go together and only with `seasonal`; both omitted means the current season by the injected `Clock` (UTC; January to March is winter). The response echoes the season it served.
 - `genre`: one of AniList's 18 non-adult genres (`ANIME_GENRES` in shared-types).
-- Anything else, including a malformed cursor, is 400 `VALIDATION_ERROR`. AniList switched off, or a page we do not hold while AniList is down or its queue is full: 503 `ANIME_SOURCES_UNAVAILABLE`.
+- Anything else, including a malformed cursor, is 400 `VALIDATION_FAILED`. AniList switched off, or a page we do not hold while AniList is down or its queue is full: 503 `ANIME_SOURCES_UNAVAILABLE`.
 - Response: `{ kind, season, entries, nextCursor, freshness: 'fresh' | 'stale', fetchedAt }`. An entry: `anilistId`, `slug | null`, `titleEnglish`, `titleRomaji`, `coverImageUrl`, `coverColor`, `format`, `status`, `episodes`, `season`, `seasonYear`, `startDate`, `genres`, `members`, `score` (`{ source, score, scale }`, so the score keeps its source label, ADR 0006).
 
 **Lists** (one AniList `Page` query, `type: ANIME`, `isAdult: false`, `perPage: 50`; arguments per AniList's docs and the old site's queries, not called from this session, where graphql.anilist.co is blocked):
