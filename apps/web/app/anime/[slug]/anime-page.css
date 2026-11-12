@@ -176,10 +176,6 @@ html:has(.anime-sticky--shown) {
 .anime-season__menu[hidden] {
   display: none;
 }
-.anime-season__unlinked {
-  opacity: 0.6;
-  cursor: default;
-}
 .anime-season .ol-season__list {
   max-height: min(60vh, 420px);
   overflow-y: auto;

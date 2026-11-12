@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { type FocusEvent, useEffect, useId, useRef, useState } from 'react';
 import {
   type SeasonOption,
-  tabHref,
+  seasonHref,
   tabSegmentOf,
 } from '../../../src/anime/tabs';
 
@@ -122,27 +122,17 @@ export function SeasonSelector({
             );
             return (
               <li key={season.anilistId}>
-                {season.slug === null ? (
-                  // Not imported yet, so no page to open: listed, not linked.
-                  <a
-                    role="link"
-                    aria-disabled="true"
-                    className={`${className} anime-season__unlinked`}
-                  >
-                    {content}
-                    <span className="anime-sr-only">, not available yet</span>
-                  </a>
-                ) : (
-                  <Link
-                    href={tabHref(season.slug, segment)}
-                    prefetch={false}
-                    aria-current={season.isCurrent ? 'true' : undefined}
-                    className={className}
-                    onClick={() => setOpen(false)}
-                  >
-                    {content}
-                  </Link>
-                )}
+                <Link
+                  href={seasonHref(season, segment)}
+                  prefetch={false}
+                  // Not imported yet: the id route imports it, then redirects to its page.
+                  rel={season.slug === null ? 'nofollow' : undefined}
+                  aria-current={season.isCurrent ? 'true' : undefined}
+                  className={className}
+                  onClick={() => setOpen(false)}
+                >
+                  {content}
+                </Link>
               </li>
             );
           })}

@@ -1,0 +1,859 @@
+/* Home (OTA-153): "Calm night" hero with the Pierce logo, carousels, features, roadmap teaser.
+   Builds on tokens.css, components.css, ../global-shell/shell.css and ../browse/browse.css (card,
+   section row, skeleton, inline error). Breakpoints are container queries on .sh like the other
+   mockups; the build uses media queries (1099.98px and 767.98px). Prefix: hm-. */
+
+:root {
+  /* Ambient loops only (hero blobs, logo float and sheen). Candidate for tokens.css in the build. */
+  --ease-drift: cubic-bezier(0.45, 0, 0.55, 1);
+  --hm-blob-a: color-mix(in oklab, var(--brand-a) 34%, transparent);
+  --hm-blob-b: color-mix(in oklab, var(--accent) 26%, transparent);
+  --hm-dot: color-mix(in oklab, var(--ink) 11%, transparent);
+  /* Pierce chroma (OTA-160 olChroma), dark ground. */
+  --hm-chroma-1: #e9fffa;
+  --hm-chroma-2: var(--accent);
+  --hm-chroma-3: #ffffff;
+  --hm-chroma-4: var(--brand-a);
+  --hm-chroma-5: #d9ccff;
+  --hm-chroma-6: var(--brand-b);
+  --hm-mark: var(--accent);
+}
+[data-theme='light'] {
+  --hm-blob-a: color-mix(in oklab, var(--brand-a) 16%, transparent);
+  --hm-blob-b: color-mix(in oklab, var(--accent) 30%, transparent);
+  --hm-dot: color-mix(in oklab, var(--ink) 13%, transparent);
+  /* White highlights vanish on the light ground: same order, darker metal. */
+  --hm-chroma-1: var(--accent-ink);
+  --hm-chroma-2: var(--brand-b);
+  --hm-chroma-3: #3b2f63;
+  --hm-chroma-4: var(--brand-a);
+  --hm-chroma-5: #8f6ae8;
+  --hm-chroma-6: var(--accent-ink);
+  --hm-mark: var(--accent-ink);
+}
+
+/* The hero paints its own night sky: the shell's static background is not used on the home page. */
+.sh:has(.hm-hero) > .sh-bg {
+  display: none;
+}
+
+/* Pierce small mark in the header and footer logo (replaces the placeholder "O" tile). */
+.sh-logo__mark.hm-mark {
+  background: none;
+  width: 28px;
+  height: 28px;
+  color: var(--hm-mark);
+}
+.hm-mark svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* ---------- Hero ---------- */
+.hm-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 620px);
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-16) 0 72px;
+  margin-top: calc(-1 * var(--space-10));
+}
+.hm-sky {
+  /* Full bleed behind the hero; the hero itself stays in the page column. */
+  position: absolute;
+  z-index: -1;
+  inset: calc(-1 * var(--header-h)) calc(50% - 50cqw) 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hm-sky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--hm-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+.hm-blob {
+  /* A radial gradient instead of filter: blur(): same soft edge, no blur pass to rasterise. */
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+.hm-blob--a {
+  left: calc(50% - 640px);
+  top: 20px;
+  width: 640px;
+  height: 640px;
+  /* Eased falloff (approximates a Gaussian blur): a linear fade leaves a visible rim. */
+  background: radial-gradient(
+    closest-side,
+    var(--hm-blob-a),
+    color-mix(in oklab, var(--hm-blob-a) 72%, transparent) 30%,
+    color-mix(in oklab, var(--hm-blob-a) 40%, transparent) 55%,
+    color-mix(in oklab, var(--hm-blob-a) 15%, transparent) 78%,
+    color-mix(in oklab, var(--hm-blob-a) 4%, transparent) 92%,
+    transparent
+  );
+}
+.hm-blob--b {
+  left: calc(50% + 40px);
+  top: 120px;
+  width: 600px;
+  height: 600px;
+  /* Eased falloff (approximates a Gaussian blur): a linear fade leaves a visible rim. */
+  background: radial-gradient(
+    closest-side,
+    var(--hm-blob-b),
+    color-mix(in oklab, var(--hm-blob-b) 72%, transparent) 30%,
+    color-mix(in oklab, var(--hm-blob-b) 40%, transparent) 55%,
+    color-mix(in oklab, var(--hm-blob-b) 15%, transparent) 78%,
+    color-mix(in oklab, var(--hm-blob-b) 4%, transparent) 92%,
+    transparent
+  );
+}
+
+/* Logo: two copies of Pierce, the second with the gradient turned 180 degrees. Cross-fading their
+   opacity reads as light moving over chrome, without repainting the SVG. */
+.hm-logo {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 1;
+}
+.hm-logo svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hm-logo__sheen {
+  opacity: 0;
+}
+
+/* Motion is off until the client island sets data-motion="on" (not reduced motion, no Save-Data,
+   hero in view, tab visible). Off = paused on frame 0 = the poster, so turning it on never jumps. */
+.hm-blob--a {
+  animation: hm-drift-a 18s var(--ease-drift) infinite alternate paused;
+}
+.hm-blob--b {
+  animation: hm-drift-b 22s var(--ease-drift) infinite alternate paused;
+}
+.hm-logo {
+  animation: hm-float 6s var(--ease-drift) infinite alternate paused;
+}
+.hm-logo__sheen {
+  animation: hm-sheen 9s var(--ease-drift) infinite alternate paused;
+}
+.hm-hero[data-motion='on'] :is(.hm-blob, .hm-logo, .hm-logo__sheen) {
+  animation-play-state: running;
+}
+@keyframes hm-drift-a {
+  to {
+    transform: translate(120px, 60px) scale(1.12);
+  }
+}
+@keyframes hm-drift-b {
+  to {
+    transform: translate(-140px, -40px) scale(0.92);
+  }
+}
+@keyframes hm-float {
+  to {
+    transform: translateY(-8px);
+  }
+}
+@keyframes hm-sheen {
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-blob,
+  .hm-logo,
+  .hm-logo__sheen {
+    animation: none;
+  }
+}
+
+.hm-copy {
+  display: grid;
+  gap: var(--space-6);
+  justify-items: start;
+}
+.hm-eyebrow {
+  margin: 0;
+  font: 600 12px/16px var(--font-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.hm-h1 {
+  /* LCP element: plain text, painted with the first HTML, never animated in. */
+  margin: 0;
+  font: 800 60px/64px var(--font-display);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.hm-h1 span {
+  display: block;
+}
+.hm-h1 .hm-grad {
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hm-lede {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 18px;
+  line-height: 28px;
+  /* Brighter than --muted: it sits on the blob glow (>= 5.9:1 at the blob peak, dark). */
+  color: color-mix(in oklab, var(--ink) 50%, var(--muted));
+}
+.hm-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 56px;
+  padding: 0 6px 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.hm-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hm-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 16px var(--font-sans);
+  outline: none;
+}
+.hm-search input::placeholder {
+  color: var(--muted);
+}
+.hm-search .ol-btn {
+  height: 44px;
+}
+.hm-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.hm-ctas .ol-btn {
+  height: 48px;
+  padding: 0 20px;
+  font-size: 15px;
+  text-decoration: none;
+}
+.hm-ctas .ol-btn--ghost {
+  border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
+}
+:is(.hm-ctas .ol-btn, .hm-search .ol-btn, .hm-xp a, .hm-band .ol-btn, .hm-retry):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Signed in: the CTA pair becomes the XP card (PARITY "/ Home": welcome name + XP preview). */
+.hm-xp {
+  /* Same height loaded, loading and failed (CLS). */
+  min-height: 176px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  border: 1px solid var(--border);
+}
+.hm-xp__avatar {
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  color: #12101a;
+  font: 700 16px/1 var(--font-display);
+}
+.hm-xp__hi {
+  margin: 0;
+  min-width: 0;
+  font: 700 16px/22px var(--font-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm-xp__hi span {
+  display: block;
+  font: 500 13px/18px var(--font-sans);
+  color: var(--muted);
+}
+.hm-xp__lvl {
+  justify-self: end;
+}
+.hm-xp__bar {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: 6px;
+}
+.hm-meter {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.hm-meter > i {
+  display: block;
+  height: 100%;
+  width: var(--pct);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--xp-gold), color-mix(in oklab, var(--xp-gold) 60%, var(--neon-magenta)));
+}
+.hm-xp__nums {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font: 500 13px/18px var(--font-sans);
+  color: var(--muted);
+}
+.hm-xp__nums b {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.hm-xp__foot {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.hm-xp__foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.hm-xp--error {
+  grid-template-columns: 1fr auto;
+  align-content: center;
+  border-color: color-mix(in oklab, var(--bad) 40%, transparent);
+  background: color-mix(in oklab, var(--bad) 8%, var(--surface));
+}
+.hm-xp--error p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* ---------- Sections ---------- */
+.hm-rows .br-section {
+  margin-bottom: 56px;
+}
+.hm-head-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: none;
+}
+.br-section__head h2,
+.br-section__head p,
+.hm-sub {
+  text-wrap: balance;
+}
+/* Every row slot (cards, skeleton, error, empty) has the same height, so nothing below shifts when
+   a row resolves (CLS). 356 px = 176 px card: 264 px cover + 2-line title + meta + scroll padding. */
+.hm-rows {
+  --hm-row-h: 356px;
+}
+.hm-rows :is(.br-row-scroll, .br-inline-error, .hm-empty) {
+  min-height: var(--hm-row-h);
+  box-sizing: border-box;
+}
+.hm-rows .br-inline-error {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+.hm-card-progress {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, #000 45%, transparent);
+  overflow: hidden;
+}
+.hm-card-progress > i {
+  display: block;
+  width: var(--pct);
+  height: 100%;
+  background: var(--accent);
+}
+.hm-ep {
+  font: 600 12px/18px var(--font-mono);
+  color: var(--accent-ink);
+}
+.hm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-6);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+.hm-empty p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.hm-empty strong {
+  display: block;
+  color: var(--ink);
+  font: 700 16px/22px var(--font-display);
+  margin-bottom: 2px;
+}
+.hm-empty .ol-btn {
+  text-decoration: none;
+}
+.hm-empty .ol-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hm-h2 {
+  margin: 0;
+  font: 800 34px/40px var(--font-display);
+  letter-spacing: -0.02em;
+}
+.hm-sub {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 24px;
+  max-width: 60ch;
+}
+
+/* Features: what v1 ships. */
+.hm-features {
+  margin: var(--space-16) 0;
+}
+.hm-features .br-section__head,
+.hm-road .br-section__head {
+  margin-bottom: 0;
+}
+.hm-feat-grid {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+.hm-feat {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.hm-feat--wide {
+  grid-column: span 3;
+}
+.hm-feat h3 {
+  margin: 0;
+  font: 700 19px/24px var(--font-display);
+}
+.hm-feat > :not(.hm-feat__ico, h3) {
+  grid-column: 1 / -1;
+}
+.hm-feat p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+}
+.hm-feat a {
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.hm-feat a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hm-feat__ico {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  color: var(--accent-ink);
+}
+.hm-feat__ico--gold {
+  background: color-mix(in oklab, var(--xp-gold) 16%, var(--surface));
+  color: var(--xp-gold);
+}
+.hm-feat__ico--violet {
+  background: color-mix(in oklab, var(--brand-a) 16%, var(--surface));
+  color: var(--brand-a);
+}
+.hm-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hm-statuses li {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+.hm-podium {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.hm-podium li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+.hm-podium b {
+  font: 700 14px/1 var(--font-mono);
+  color: var(--xp-gold);
+}
+.hm-podium span:last-child {
+  font: 500 13px/1 var(--font-mono);
+  color: var(--muted);
+}
+.hm-podium .hm-you {
+  outline: 1px solid color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+/* Roadmap teaser: later, so quieter than the features (dashed, no fill). */
+.hm-road {
+  margin: var(--space-16) 0;
+}
+.hm-road__list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.hm-road__list li {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  border: 1px dashed color-mix(in oklab, var(--ink) 18%, transparent);
+  border-radius: var(--radius-lg);
+}
+.hm-road__list h3 {
+  margin: var(--space-2) 0 0;
+  font: 700 17px/22px var(--font-display);
+}
+.hm-road__list p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+}
+.hm-road__list .ol-badge {
+  justify-self: start;
+}
+.hm-road__first {
+  border-style: solid !important;
+  border-color: color-mix(in oklab, var(--neon-magenta) 45%, transparent) !important;
+  background: color-mix(in oklab, var(--neon-magenta) 6%, transparent);
+}
+.hm-badge-next {
+  background: color-mix(in oklab, var(--neon-magenta) 16%, var(--surface));
+  color: var(--neon-magenta);
+}
+
+/* Closing band, guests only. */
+.hm-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-top: var(--space-16);
+  padding: var(--space-10);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(80% 140% at 0% 0%, color-mix(in oklab, var(--brand-a) 18%, transparent), transparent 60%),
+    radial-gradient(70% 140% at 100% 100%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border);
+}
+.hm-band__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  flex: none;
+}
+.hm-band .ol-btn {
+  height: 48px;
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 15px;
+  text-decoration: none;
+}
+.hm-band .ol-btn--ghost {
+  border: 1px solid color-mix(in oklab, var(--ink) 18%, transparent);
+}
+
+/* ---------- Skeletons (loading) ---------- */
+.hm-skel-head {
+  display: grid;
+  gap: var(--space-2);
+}
+.hm-xp-skel {
+  display: grid;
+  align-content: center;
+  grid-template-columns: 48px 1fr;
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+}
+.hm-xp-skel .br-skel:first-child {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  grid-row: span 2;
+}
+
+/* ---------- Mockup-only annotations (not part of the build) ---------- */
+.hm-note {
+  margin: 0 0 var(--space-3);
+  font: 600 12px/16px var(--font-mono);
+  color: var(--muted);
+}
+.hm-lcp-mark {
+  outline: 2px dashed var(--xp-gold);
+  outline-offset: 8px;
+  position: relative;
+}
+.hm-lcp-mark::after {
+  content: 'LCP';
+  position: absolute;
+  top: -30px;
+  right: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--xp-gold);
+  color: #12101a;
+  font: 700 12px/18px var(--font-mono);
+  letter-spacing: 0;
+}
+.hm-poster-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-10) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hm-poster-notes li {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+}
+.hm-poster-notes b {
+  display: block;
+  color: var(--ink);
+  font: 700 15px/22px var(--font-display);
+  margin-bottom: 4px;
+}
+
+/* ---------- Tablet ---------- */
+@container (max-width: 1099px) {
+  .hm-hero {
+    grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+    gap: var(--space-10);
+  }
+  .hm-h1 {
+    font-size: 48px;
+    line-height: 52px;
+  }
+  .hm-feat,
+  .hm-feat--wide {
+    grid-column: span 3;
+  }
+  .hm-road__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Mobile ---------- */
+@container (max-width: 767px) {
+  .hm-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-6) 0 var(--space-10);
+    margin-top: calc(-1 * var(--space-6));
+  }
+  /* Logo moves inline, right of the eyebrow, at 60 px. */
+  .hm-logo {
+    position: absolute;
+    top: var(--space-6);
+    right: 0;
+    width: 60px;
+    max-width: 60px;
+  }
+  .hm-eyebrow {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    padding-right: 72px;
+  }
+  .hm-rows {
+    --hm-row-h: 316px;
+  }
+  .hm-xp {
+    min-height: 232px;
+  }
+  .hm-blob--a {
+    left: -260px;
+    top: 0;
+    width: 520px;
+    height: 520px;
+  }
+  .hm-blob--b {
+    left: 120px;
+    top: 220px;
+    width: 440px;
+    height: 440px;
+  }
+  .hm-copy {
+    gap: var(--space-4);
+  }
+  .hm-h1 {
+    font-size: 38px;
+    line-height: 42px;
+  }
+  .hm-lede {
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .hm-search {
+    height: 52px;
+  }
+  .hm-search .ol-btn {
+    display: none;
+  }
+  .hm-ctas {
+    width: 100%;
+    display: grid;
+  }
+  .hm-ctas .ol-btn {
+    justify-content: center;
+  }
+  .hm-xp__foot {
+    flex-direction: column;
+    gap: 0;
+  }
+  .hm-xp__foot a {
+    min-height: 44px;
+  }
+  .hm-rows .br-section {
+    margin-bottom: var(--space-10);
+  }
+  .hm-retry {
+    min-height: 44px;
+    padding: 0 var(--space-4);
+  }
+  .hm-h2 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .hm-features,
+  .hm-road {
+    margin: var(--space-10) 0;
+  }
+  .hm-feat,
+  .hm-feat--wide {
+    grid-column: 1 / -1;
+    padding: var(--space-4);
+  }
+  .hm-road__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hm-band {
+    display: grid;
+    padding: var(--space-6);
+    margin-top: var(--space-10);
+  }
+  .hm-band__ctas {
+    display: grid;
+  }
+  .hm-band .ol-btn {
+    justify-content: center;
+  }
+  .hm-empty {
+    padding: var(--space-4);
+  }
+  .hm-empty .ol-btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+  .hm-poster-notes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

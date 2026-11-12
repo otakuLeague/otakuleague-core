@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home: hero poster frame</title>
+    <link rel="stylesheet" href="../../../apps/web/app/styles/tokens.css" />
+    <link rel="stylesheet" href="../../../apps/web/app/styles/components.css" />
+    <link rel="stylesheet" href="../global-shell/shell.css" />
+    <link rel="stylesheet" href="../browse/browse.css" />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+  <body class="ol-root">
+    <!-- State: the hero poster = frame 0 of every hero animation. Shown before the client island runs, with prefers-reduced-motion, with Save-Data, when the tab is hidden and when the hero is scrolled out of view (paused). The dashed box marks the LCP element (the h1); it is plain text and never animates in. -->
+    <div class="sh">
+      <div class="sh-bg" aria-hidden="true"></div>
+      <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
+      <header class="sh-header ol-glass">
+        <div class="sh-header__in">
+          <a class="sh-logo" href="/" aria-current="page"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+          <nav aria-label="Main">
+            <ul class="sh-nav">
+              <li><button class="sh-nav__link" aria-expanded="false">Discover <svg class="sh-chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button></li>
+              <li><a class="sh-nav__link" href="/season">Seasonal</a></li>
+              <li><a class="sh-nav__link" href="/top/anime">Rankings</a></li>
+              <li><a class="sh-nav__link" href="/leaderboard">Leaderboard</a></li>
+            </ul>
+          </nav>
+          <span class="sh-spacer"></span>
+          <div class="sh-search" role="search" aria-label="Header search">
+            <label class="sh-search__field">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" placeholder="Search anime" aria-label="Search anime" />
+              <kbd class="sh-kbd">/</kbd>
+            </label>
+          </div>
+          <div class="sh-right">
+            <button class="sh-icon-btn sh-only-mobile" aria-label="Search anime"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+            <a class="ol-btn ol-btn--ghost ol-btn--sm" href="/auth?mode=sign-in">Sign in</a>
+            <a class="ol-btn ol-btn--primary ol-btn--sm sh-only-desktop" href="/auth?mode=sign-up">Sign up</a>
+            <button class="sh-icon-btn sh-burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg></button>
+          </div>
+        </div>
+      </header>
+      <main id="main" class="sh-main">
+        <section class="hm-hero" aria-labelledby="hm-title" data-motion="off">
+          <div class="hm-sky" aria-hidden="true">
+            <div class="hm-blob hm-blob--a"></div>
+            <div class="hm-blob hm-blob--b"></div>
+          </div>
+          <div class="hm-logo">
+            <svg viewBox="0 0 200 200" role="img" aria-label="OtakuLeague logo: a dragon L piercing the O">
+              <defs>
+                <linearGradient id="hmChroma" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChroma-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChroma-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChroma)" stroke-width="20" mask="url(#hmChroma-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChroma)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChroma)" mask="url(#hmChroma-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChroma)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChroma)" />
+            </svg>
+            <svg viewBox="0 0 200 200" class="hm-logo__sheen" aria-hidden="true">
+              <defs>
+                <linearGradient id="hmChromaSheen" x1="1" y1="1" x2="0" y2="0">
+                  <stop offset="0" style="stop-color: var(--hm-chroma-1)" /><stop offset="0.25" style="stop-color: var(--hm-chroma-2)" /><stop offset="0.45" style="stop-color: var(--hm-chroma-3)" /><stop offset="0.62" style="stop-color: var(--hm-chroma-4)" /><stop offset="0.82" style="stop-color: var(--hm-chroma-5)" /><stop offset="1" style="stop-color: var(--hm-chroma-6)" />
+                </linearGradient>
+                <mask id="hmChromaSheen-x" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="#000" stroke-width="34" /></mask>
+                <mask id="hmChromaSheen-e" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff" /><circle cx="91" cy="30" r="2.8" fill="#000" /></mask>
+              </defs>
+              <circle cx="100" cy="100" r="56" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M80 48 L80 176 L152 176" fill="none" stroke="url(#hmChromaSheen)" stroke-width="20" mask="url(#hmChromaSheen-x)" />
+              <path d="M95.1 155.8 A56 56 0 0 1 65.5 144.1" fill="none" stroke="url(#hmChromaSheen)" stroke-width="22" />
+              <path d="M70 52 L70 32 L82 20 L101 25 L114 35 L97 39 L90 52 Z" fill="url(#hmChromaSheen)" mask="url(#hmChromaSheen-e)" />
+              <path d="M80 22 L71 5 L89 15 Z" fill="url(#hmChromaSheen)" />
+              <path d="M150 166 L180 159 L167 176 L182 193 L150 186 Z" fill="url(#hmChromaSheen)" />
+            </svg>
+          </div>
+          <div class="hm-copy">
+            <p class="hm-eyebrow">Your anime HQ</p>
+            <h1 class="hm-h1 hm-lcp-mark" id="hm-title"><span>Track every anime.</span> <span>Earn XP.</span> <span class="hm-grad">Top the season.</span></h1>
+            <p class="hm-lede">Anime pages, seasonal charts and rankings, your watchlist, and XP for everything you add, finish and rate. Every season ends with a leaderboard.</p>
+            <form class="hm-search" role="search" aria-label="Hero search" action="/search" method="get">
+              <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <input type="search" name="q" placeholder="Search anime, e.g. Frieren" aria-label="Search anime" />
+              <button class="ol-btn ol-btn--primary" type="submit">Search</button>
+            </form>
+            <div class="hm-ctas">
+              <a class="ol-btn ol-btn--primary" href="/auth?mode=sign-up">Create your account</a>
+              <a class="ol-btn ol-btn--ghost" href="/auth?mode=sign-in">I already have one</a>
+            </div>
+          </div>
+        </section>
+        <ul class="hm-poster-notes">
+          <li><b>What is static</b>Everything on this frame: two gradient blobs at rest, the dot grid, the logo at its base position, the sheen copy at opacity 0. Same markup and CSS as the live hero: motion only adds animation-play-state: running.</li>
+          <li><b>When it stays static</b>Before hydration; prefers-reduced-motion: reduce; navigator.connection.saveData; document hidden; hero out of view (IntersectionObserver). The island flips data-motion, nothing else.</li>
+          <li><b>LCP</b>The h1 (text, system-rendered in the first HTML, font via next/font with display swap). The logo is inline SVG: not an LCP candidate, and no image is fetched above the fold.</li>
+        </ul>
+      </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark hm-mark" aria-hidden="true"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="56" fill="none" stroke="currentColor" stroke-width="28" /><path d="M80 48 L80 176 L152 176" fill="none" stroke="currentColor" stroke-width="28" /></svg></span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

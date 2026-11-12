@@ -2,34 +2,36 @@
 
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
 
-Updated: 2026-11-11
+Updated: 2026-11-12
 
 ## Current milestone
-W1 Live skeleton (Nov 2–8) is overdue. Done: OTA-97, OTA-134, OTA-163 (real-page screenshots on every web PR, #52). API and Postgres live on Railway (OTA-133 docs PR #50 open, green). W2: designs merged; OTA-152 slice 1 merged, slice 2a (guest desktop header) in PR #53.
+W2 Anime page + search. Done: OTA-152 shell, OTA-97 anime page shell. Merged: OTA-172 season id route (#57), OTA-153 Home design (#59), OTA-100 Overview tab slice 1 (#58), OTA-171 design direction (#56).
 
 ## Last session
-Autopilot on OTA-152 slice 2a (branch `feat/OTA-152-header-menus`, ADR 0014). Guest desktop header in `apps/web/src/shell/`: `nav.ts` (link data, `activeSection`), `disclosure.tsx` (native `<details name="sh-menu">` enhanced to close on Esc, outside click, focus leaving, link click), `header-nav.tsx` (client, `usePathname` inside `Suspense`), `site-header.tsx` (server: logo, GET search form, Sign in/up). Search box hidden below 1100 px so the header fits at 768 px; below 768 px only logo and Sign in until the mobile sheet. `overflow-x: clip` keeps the header sticky; the anime sticky bar sits under the header and its observer uses `--header-h` as root margin. Discover panel is a solid surface (nested backdrop-filter does not blur). Links to unbuilt routes use `prefetch={false}` and 404 for now. Header adds ~1.1 kB gzipped JS.
+Autopilot on OTA-153 (branch `design/OTA-153-home-page`). Home mockups in `docs/design/home/` (Main, Mobile, Light, SignedIn, Poster, Loading, Error) with `motion.md` and `README.md`; Pierce logo SVGs in `apps/web/public/brand/` (full, light-ground, small mark). Hero = "Calm night" with radial-gradient glows (no `filter: blur`) and an opacity sheen instead of a rotating gradient; motion paused until a client island allows it. LCP = hero `h1`, static. Shared row scroller in `docs/design/browse/browse.css` now bleeds to the edge with a gutter-capped fade, desktop ‹ › buttons and one-line card meta. Row and XP slots keep one height across loaded/loading/error/empty (no CLS).
 
 ## In progress
-- OTA-152: slice 2a PR #53. Remaining slices: 2b member state (`ShellViewer` union, account menu, skip link), mobile sheet + mobile search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding` (route groups), 404/500 restyle, social icons.
-- OTA-133: docs PR #50.
+- OTA-152 remaining slices: 2b member state, mobile sheet + search (Base UI, `package.json` → Farouk merges), hide shell on `/auth*` and `/onboarding`, 404/500 restyle, social icons.
+- OTA-100 slice 1 (#58, merged): synopsis, details card, genre chips via `overviewFacts()` in `src/anime/overview-facts.ts`. Only an AniList synopsis is shown until OTA-127 clears MAL terms. Next slices: tags + spoiler toggle, trailer + where to watch, next-episode card, tab previews.
 
 ## Next 3 tasks
-1. OTA-152 slice 2b (member state and account menu).
-2. OTA-100 Overview tab (unblocked), or OTA-166 vendored design skills (protected path, Farouk merges). Page reports now use the real CI screenshots (OTA-163).
-3. After PR #50 merges: link `docs/deploy-vercel.md` from ADR 0009 and architecture.md.
+1. OTA-136 Build: Home page (unblocked once this PR merges): Logo component (unique gradient ids), motion island, `--ease-drift` into tokens.css, hide `.sh-bg` on home, browse row changes.
+2. OTA-98 Build: search, or OTA-152 slice 2b.
+3. OTA-166 vendored design skills (protected path, Farouk merges), or OTA-173 (W7): API guard against id enumeration triggering imports, from the OTA-172 security review.
 
 ## Blockers
-- OTA-168 (needs-human): Postgres volume backups, deploy drills, Postgres 18 vs 16.
-- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked, so the normal web build fails here; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. API checks rely on CI. The proxy also blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Prisma engines and Google Fonts are blocked; `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. The proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
+- `scripts/design/shots.mjs` can't find Playwright in cloud runs (installed under `/opt/node-tools/node_modules`, ESM ignores `NODE_PATH`): run a copy next to a symlinked `node_modules`. Fix belongs in a protected-path PR.
 
 ## Known bugs
-- `Cover` has no fallback when an image fails to load (visible in CI screenshots, where CDN images are blocked). No ticket yet.
+- `Cover` has no fallback when an image fails to load. No ticket yet.
 
 ## Notes
-- OTA-160 decided (logo "Pierce", hero "Calm night", CSS/SVG only for v1): OTA-153 Home design is unblocked.
+- OTA-172: seasons without a slug link to `app/anime/anilist/[id]/[[...tab]]`, which redirects to the canonical slug; because `loading.tsx` streams, a direct hit is HTTP 200 with a meta refresh, never a real 307/404 (see `.claude/rules/web.md`).
+- New from the OTA-100 review: OTA-174 (cap source text size in the API).
+- Open questions on OTA-153: Pierce mark site-wide in the header now? Leaderboard per season or all-time? "Trending" sort or reuse Top airing?
 - At launch (OTA-149): flip `SEARCH_INDEXING` to `'allowed'`; checks in `docs/deploy-vercel.md`.
-- Dependabot PR #18 (TypeScript 7 / ESLint 10) stays red until typescript-eslint and Next's ESLint plugins support them; never auto-merged.
-- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide (CLAUDE.md forbids AI attribution).
+- Dependabot PR #18 stays red until typescript-eslint and Next's ESLint plugins support TS 7 / ESLint 10.
+- Autopilot commits are authored "Claude <noreply@anthropic.com>" by the cloud environment, so squash merges may add a Co-authored-by trailer. Farouk to decide.
 - Design direction (ADR 0012 addendum, 2026-11-11): the look need not match the old site. Bolder identity, richer motion and dynamic pages are welcome (motion-first references listed there); PARITY.md covers features only. ADR 0011 performance rules still apply.
 - Open product question (OTA-99): regional streaming availability needs a non-AniList source (ADR 0006) or stays out of v1.

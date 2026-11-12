@@ -23,8 +23,13 @@ describe('robotsHeaders', () => {
     ]);
   });
 
-  it('sends no header when allowed', () => {
-    expect(robotsHeaders('allowed')).toEqual([]);
+  it('keeps only the AniList id redirect route out of the index when allowed', () => {
+    expect(robotsHeaders('allowed')).toEqual([
+      {
+        source: '/anime/anilist/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ]);
   });
 });
 
