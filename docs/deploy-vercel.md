@@ -30,6 +30,7 @@ With a cached install, the workspace `prepare` step that builds `shared-types` w
 | --- | --- | --- | --- |
 | `API_BASE_URL` | `https://api-production-9cacf2d8.up.railway.app` | Production, Preview | Server-only |
 | `NEXT_PUBLIC_SENTRY_DSN` | not set yet | n/a | OTA-167 |
+| `INTERNAL_API_KEY` | not set yet (ADR 0019, runbook in `docs/deploy.md`) | Production: the production key. Preview: the preview key (`INTERNAL_API_KEY_PREVIEW` on Railway), **never the production key** | Server-only, Sensitive. Two different values under one name |
 
 ## Search indexing
 
