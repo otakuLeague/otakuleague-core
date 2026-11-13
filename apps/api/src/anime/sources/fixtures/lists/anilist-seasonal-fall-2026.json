@@ -1,0 +1,94 @@
+{
+  "variables": {
+    "page": 1,
+    "sort": ["POPULARITY_DESC"],
+    "season": "FALL",
+    "seasonYear": 2026
+  },
+  "response": {
+    "data": {
+      "Page": {
+        "pageInfo": {
+          "hasNextPage": false
+        },
+        "media": [
+          {
+            "id": 900101,
+            "isAdult": false,
+            "title": {
+              "romaji": "Synthetic Kyoushitsu no Hoshi",
+              "english": "Synthetic Classroom Star"
+            },
+            "coverImage": {
+              "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx900101-synthetic.jpg",
+              "color": "#5da4e4"
+            },
+            "format": "TV",
+            "status": "RELEASING",
+            "episodes": 12,
+            "season": "FALL",
+            "seasonYear": 2026,
+            "startDate": {
+              "year": 2026,
+              "month": 10,
+              "day": 4
+            },
+            "genres": ["Drama", "Slice of Life"],
+            "popularity": 61000,
+            "averageScore": 79
+          },
+          {
+            "id": 900102,
+            "isAdult": false,
+            "title": {
+              "romaji": "Synthetic Uchuu Kaizoku",
+              "english": "Synthetic Space Pirates"
+            },
+            "coverImage": {
+              "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx900102-synthetic.jpg",
+              "color": "#5da4e4"
+            },
+            "format": "TV",
+            "status": "RELEASING",
+            "episodes": 24,
+            "season": "FALL",
+            "seasonYear": 2026,
+            "startDate": {
+              "year": 2026,
+              "month": 10,
+              "day": 7
+            },
+            "genres": ["Action", "Sci-Fi"],
+            "popularity": 48000,
+            "averageScore": 74
+          },
+          {
+            "id": 900103,
+            "isAdult": false,
+            "title": {
+              "romaji": "Synthetic Natsu no Ondo",
+              "english": "Synthetic Summer Tune"
+            },
+            "coverImage": {
+              "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx900103-synthetic.jpg",
+              "color": "#5da4e4"
+            },
+            "format": "ONA",
+            "status": "RELEASING",
+            "episodes": null,
+            "season": "FALL",
+            "seasonYear": 2026,
+            "startDate": {
+              "year": 2026,
+              "month": 11,
+              "day": 2
+            },
+            "genres": ["Music"],
+            "popularity": 9000,
+            "averageScore": null
+          }
+        ]
+      }
+    }
+  }
+}

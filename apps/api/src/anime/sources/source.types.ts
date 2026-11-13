@@ -135,6 +135,8 @@ export class SourceUnavailableError extends Error {
   constructor(
     readonly source: AnimeDataSource,
     readonly reason: string,
+    /** True when an earlier attempt of the same call already reached the source. */
+    readonly requestSent = false,
   ) {
     super(`${source} unavailable: ${reason}`);
     this.name = 'SourceUnavailableError';

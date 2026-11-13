@@ -59,10 +59,10 @@ export const LIST_PAGE_SIZE = 50;
  * ADR 0016: one block of up to 50 cards of a catalog list. `isAdult: false` is asked of
  * AniList and checked again by the mapper. Fields are exactly what a list card renders.
  */
-export const ANILIST_LIST_QUERY = `query ListPage($page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus) {
+export const ANILIST_LIST_QUERY = `query ListPage($page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus, $season: MediaSeason, $seasonYear: Int, $genre: String) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { hasNextPage }
-    media(type: ANIME, isAdult: false, sort: $sort, status: $status) {
+    media(type: ANIME, isAdult: false, sort: $sort, status: $status, season: $season, seasonYear: $seasonYear, genre: $genre) {
       id isAdult title { romaji english } coverImage { large color }
       format status episodes season seasonYear startDate { year month day }
       genres popularity averageScore

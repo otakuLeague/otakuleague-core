@@ -38,7 +38,10 @@ async function fakeSource(
     const headers =
       reply.chunked === true
         ? reply.headers
-        : { 'Content-Length': String(Buffer.byteLength(body)), ...reply.headers };
+        : {
+            'Content-Length': String(Buffer.byteLength(body)),
+            ...reply.headers,
+          };
     response.writeHead(reply.status, headers).end(body);
   });
   await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
@@ -143,6 +146,27 @@ describe('requestJson', () => {
     expect(source.calls()).toBe(1);
   });
 
+  it('says whether a request had already reached the source when the call is refused', async () => {
+    const source = await fakeSource([
+      { status: 429, headers: { 'Retry-After': '0' } },
+    ]);
+    const shared = options({
+      limiter: new RateLimiter(60_000),
+      maxQueueMs: 100,
+    });
+
+    const retried = await requestJson(source.url, {}, shared).catch(
+      (error: unknown) => error,
+    );
+    const refused = await requestJson(source.url, {}, shared).catch(
+      (error: unknown) => error,
+    );
+
+    expect(retried).toMatchObject({ reason: 'queue full', requestSent: true });
+    expect(refused).toMatchObject({ reason: 'queue full', requestSent: false });
+    expect(source.calls()).toBe(1);
+  });
+
   it('gives up at once when Retry-After is longer than it may wait', async () => {
     const source = await fakeSource([
       { status: 429, headers: { 'Retry-After': '120' } },
@@ -204,9 +228,9 @@ describe('requestJson body limit', () => {
   it('accepts a body of exactly the limit, with Content-Length', async () => {
     const source = await fakeSource([{ status: 200, body: json(limit) }]);
 
-    await expect(
-      requestJson(source.url, {}, small()),
-    ).resolves.toMatchObject({ status: 200 });
+    await expect(requestJson(source.url, {}, small())).resolves.toMatchObject({
+      status: 200,
+    });
   });
 
   it('accepts a body of exactly the limit, chunked (no Content-Length)', async () => {
@@ -218,9 +242,9 @@ describe('requestJson body limit', () => {
       },
     ]);
 
-    await expect(
-      requestJson(source.url, {}, small()),
-    ).resolves.toMatchObject({ status: 200 });
+    await expect(requestJson(source.url, {}, small())).resolves.toMatchObject({
+      status: 200,
+    });
   });
 
   it('rejects one byte over the limit, with Content-Length', async () => {

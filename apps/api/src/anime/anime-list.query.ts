@@ -1,4 +1,9 @@
-import type { AnimeListKind } from '@otakuleague/shared-types';
+import type {
+  AnimeGenre,
+  AnimeListKind,
+  AnimeListSeason,
+  AnimeSeason,
+} from '@otakuleague/shared-types';
 import type { ListQuery } from './sources/anilist.adapter';
 import { LIST_PAGE_SIZE } from './sources/anilist.query';
 
@@ -34,15 +39,137 @@ const LISTS: Readonly<Record<AnimeListKind, ListSpec>> = {
     query: { sort: ['SCORE_DESC', 'POPULARITY_DESC'] },
     ttlMs: 24 * HOUR_MS,
   },
+  seasonal: {
+    query: { sort: ['POPULARITY_DESC'] },
+    ttlMs: 24 * HOUR_MS,
+  },
 };
 
-export function listSpec(kind: AnimeListKind): ListSpec {
-  return LISTS[kind];
+/** A list as asked for, defaults applied: what the cache key and the AniList query come from. */
+export type CatalogList =
+  | {
+      readonly kind: 'seasonal';
+      readonly season: AnimeListSeason;
+      readonly genre: AnimeGenre | null;
+    }
+  | {
+      readonly kind: Exclude<AnimeListKind, 'seasonal'>;
+      readonly season: null;
+      readonly genre: AnimeGenre | null;
+    };
+
+/** The request's filters as received (each already checked alone by the controller). */
+export interface ListFilters {
+  readonly season?: AnimeSeason;
+  readonly year?: number;
+  readonly genre?: AnimeGenre;
 }
 
-/** The cache key of a list; later filters (season, genre) become more parts. */
-export function listKey(kind: AnimeListKind): string {
-  return kind;
+export interface ListFilterIssue {
+  readonly field: 'season' | 'year';
+  readonly message: string;
+}
+
+export type CatalogListResolution =
+  | { readonly outcome: 'ok'; readonly list: CatalogList }
+  | {
+      readonly outcome: 'invalid';
+      readonly details: readonly ListFilterIssue[];
+    };
+
+function seasonOfMonth(monthIndex: number): AnimeSeason {
+  if (monthIndex < 3) return 'WINTER';
+  if (monthIndex < 6) return 'SPRING';
+  if (monthIndex < 9) return 'SUMMER';
+  return 'FALL';
+}
+
+/** UTC calendar quarters: Jan-Mar winter, Apr-Jun spring, Jul-Sep summer, Oct-Dec fall. */
+export function currentSeason(now: Date): AnimeListSeason {
+  return {
+    season: seasonOfMonth(now.getUTCMonth()),
+    year: now.getUTCFullYear(),
+  };
+}
+
+/**
+ * The rules that need more than one field or the clock (ADR 0016 addendum): season and year
+ * come together and only with `seasonal`; the year is at most next year (UTC); `seasonal`
+ * with neither is the current season. The violations of the one rule that fails are all
+ * reported (a season and a year on `top` name both fields).
+ */
+export function resolveCatalogList(
+  kind: AnimeListKind,
+  { season, year, genre }: ListFilters,
+  now: Date,
+): CatalogListResolution {
+  const details: ListFilterIssue[] = [];
+  if (kind !== 'seasonal') {
+    if (season !== undefined) {
+      details.push({
+        field: 'season',
+        message: 'season applies to the seasonal list only',
+      });
+    }
+    if (year !== undefined) {
+      details.push({
+        field: 'year',
+        message: 'year applies to the seasonal list only',
+      });
+    }
+  } else if (season !== undefined && year === undefined) {
+    details.push({ field: 'year', message: 'year is required with season' });
+  } else if (season === undefined && year !== undefined) {
+    details.push({ field: 'season', message: 'season is required with year' });
+  } else if (year !== undefined && year > now.getUTCFullYear() + 1) {
+    details.push({
+      field: 'year',
+      message: `year must be at most ${now.getUTCFullYear() + 1}`,
+    });
+  }
+  if (details.length > 0) return { outcome: 'invalid', details };
+  if (kind !== 'seasonal') {
+    return {
+      outcome: 'ok',
+      list: { kind, season: null, genre: genre ?? null },
+    };
+  }
+  return {
+    outcome: 'ok',
+    list: {
+      kind,
+      season:
+        season !== undefined && year !== undefined
+          ? { season, year }
+          : currentSeason(now),
+      genre: genre ?? null,
+    },
+  };
+}
+
+/**
+ * The cache key: the kind, then `|season=FALL|year=2026`, then `|genre=Drama`, each part only
+ * when set. The values come from closed sets without `|`, `=` or `#`.
+ */
+export function listKey({ kind, season, genre }: CatalogList): string {
+  return [
+    kind,
+    ...(season === null
+      ? []
+      : [`season=${season.season}`, `year=${season.year}`]),
+    ...(genre === null ? [] : [`genre=${genre}`]),
+  ].join('|');
+}
+
+/** What AniList is asked: the kind's fixed part plus the season and genre that are set. */
+export function listQuery({ kind, season, genre }: CatalogList): ListQuery {
+  return {
+    ...LISTS[kind].query,
+    ...(season === null
+      ? {}
+      : { season: season.season, seasonYear: season.year }),
+    ...(genre === null ? {} : { genre }),
+  };
 }
 
 export function isFresh(kind: AnimeListKind, fetchedAt: Date, now: Date) {

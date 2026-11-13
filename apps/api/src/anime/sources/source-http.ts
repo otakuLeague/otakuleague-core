@@ -100,17 +100,23 @@ export async function requestJson(
       throw new SourceUnavailableError(
         options.source,
         'cooling down after a failure',
+        attempt > 1,
       );
     }
     // A full queue is not the source's fault: refuse this call, do not start a cool-down.
     if (!(await options.limiter.acquire(options.maxQueueMs))) {
-      throw new SourceUnavailableError(options.source, 'queue full');
+      throw new SourceUnavailableError(
+        options.source,
+        'queue full',
+        attempt > 1,
+      );
     }
     // The source may have gone down while this call was queued.
     if (options.limiter.isDown()) {
       throw new SourceUnavailableError(
         options.source,
         'cooling down after a failure',
+        attempt > 1,
       );
     }
     let response: Response;
