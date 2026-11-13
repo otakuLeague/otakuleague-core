@@ -45,13 +45,13 @@ Consistency or availability: **availability**. A list that is an hour old, or sh
 
 **Lists** (one AniList `Page` query, `type: ANIME`, `isAdult: false`, `perPage: 50`; arguments per AniList's docs and the old site's queries, not called from this session, where graphql.anilist.co is blocked):
 
-| Kind | AniList filter and sort | TTL |
-| --- | --- | --- |
-| `trending` | sort `TRENDING_DESC, POPULARITY_DESC` | 1 h |
-| `airing` | status `RELEASING`, sort `POPULARITY_DESC` | 6 h |
+| Kind       | AniList filter and sort                           | TTL  |
+| ---------- | ------------------------------------------------- | ---- |
+| `trending` | sort `TRENDING_DESC, POPULARITY_DESC`             | 1 h  |
+| `airing`   | status `RELEASING`, sort `POPULARITY_DESC`        | 6 h  |
 | `upcoming` | status `NOT_YET_RELEASED`, sort `POPULARITY_DESC` | 24 h |
-| `top` | sort `SCORE_DESC, POPULARITY_DESC` | 24 h |
-| `seasonal` | `season`, `seasonYear`, sort `POPULARITY_DESC` | 24 h |
+| `top`      | sort `SCORE_DESC, POPULARITY_DESC`                | 24 h |
+| `seasonal` | `season`, `seasonYear`, sort `POPULARITY_DESC`    | 24 h |
 
 Home's "Trending now" row calls `airing` (owner decision on OTA-136); `trending` stays for Discover.
 
@@ -126,5 +126,12 @@ Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,50
 Too complicated, not built: a season calendar with per-zone boundaries (the old site used the visitor's zone; one UTC rule keeps the default cacheable and at worst shows the ending season for a few hours), totals, a `genres` endpoint (the constant ships in shared-types).
 
 Fixtures stay synthetic (see Operational notes): one new `lists/anilist-seasonal-fall-2026.json`, listed in the fixtures README as hand-built.
+
+Review follow-up (same PR):
+
+- **Cold-fetch budget.** About 8,500 keys are reachable and every unseen one is a `visitor` AniList fetch on the limiter shared with imports, so `ListFetchLimits` (`list-fetch-limits.ts`) is a process-wide token bucket, the shape of `ImportLimits` with the injected `Clock`: **6 tokens, one back every 10 seconds** (6 a minute sustained, 20% of AniList's 30 a minute, against the id route's 3 a minute: a list is what a visitor lands on, so it gets twice the budget, and a burst of 6 covers one browse session across kinds and a few genres). Taken once per new source fetch (joining a fetch already running is free), by a visitor's cold page and by a stale page's background refresh alike, so refreshes cannot take every slot: with the bucket empty a refresh is skipped silently and the stale page is served as before. A cold page with no token answers 429 `LIST_FETCH_LIMITED` (error envelope, no Retry-After, as the import route) and one warning a minute. Stored pages, fresh or stale, cost nothing. `queue full`, `cooling down` and `retry later` failures are no longer logged per request.
+- **Per-client limit: follow-up ticket.** The global bucket mitigates the enumeration cost but one client can still spend it all; a real per-client limit stays a follow-up. This replaces the gate stated above ("must ship before the Seasonal page is public") with the global bucket for this PR.
+- **Season rollover has no stale fallback (accepted).** At 00:00 UTC on 1 January, April, July and October the default `seasonal` key changes to a key with no stored page: the first visitor waits for one fetch (or gets 503/429 if AniList is down or the bucket is empty). Not worth a warm-up before measuring.
+- **`year`** is converted only from 4 plain digits (`2026`), so `2026.0`, `0x7EA` and `+2026` are 400.
 
 ## Learnings

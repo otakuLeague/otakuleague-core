@@ -60,6 +60,7 @@ import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
 const ID_PATTERN = /^[1-9]\d{0,8}$/;
+const YEAR_PATTERN = /^[1-9]\d{3}$/;
 const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
 
 class AnimeLookupParams {
@@ -138,9 +139,15 @@ class AnimeListQuery {
     description: 'seasonal only, together with season; at most next year.',
   })
   @IsOptional()
-  @Type(() => Number)
+  // Only plain digits become a number: 2026.0, 0x7EA and +2026 stay strings and fail IsInt.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && YEAR_PATTERN.test(value)
+      ? Number(value)
+      : value,
+  )
   @IsInt()
   @Min(ANIME_LIST_MIN_YEAR)
+  @Max(9999)
   readonly year?: number;
 
   @ApiPropertyOptional({

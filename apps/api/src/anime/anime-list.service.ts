@@ -14,6 +14,7 @@ import { ApiException } from '../common/api.exception';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS } from './cache-ttl';
+import { ListFetchLimits } from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
   assembleWindow,
@@ -48,6 +49,25 @@ const RETRY_AFTER_MS = 5 * 60 * 1000;
 const QUEUE_FULL = 'queue full';
 const COOLING_DOWN = 'cooling down';
 const RETRY_LATER = 'retry later';
+/** The fetch cap is logged at most this often. */
+const LIMIT_WARN_INTERVAL_MS = 60_000;
+
+/** Failures that are the limiter's or the retry delay's doing, not news: never logged. */
+function isQuietReason(error: SourceUnavailableError): boolean {
+  return (
+    error.reason === QUEUE_FULL ||
+    error.reason === RETRY_LATER ||
+    error.reason.startsWith(COOLING_DOWN)
+  );
+}
+
+function listFetchLimited(): ApiException {
+  return new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
+    code: 'LIST_FETCH_LIMITED',
+    message:
+      'Too many new lists are being loaded right now. Try again in a minute.',
+  });
+}
 
 /**
  * Catalog lists (ADR 0016): cache-aside over anime_list_page, stale-while-revalidate. A
@@ -63,12 +83,15 @@ export class AnimeListService implements OnModuleDestroy {
   /** When a block failed lately, until when it is not asked again (epoch ms). */
   private readonly retryAt = new Map<string, number>();
   private stopping = false;
+  /** When the fetch cap was last logged (epoch ms). */
+  private limitWarnedAt = 0;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly settings: AnimeSourceSettings,
     private readonly anilist: AniListAdapter,
+    private readonly limits: ListFetchLimits,
   ) {}
 
   /** Waits for every fetch in progress. */
@@ -169,6 +192,10 @@ export class AnimeListService implements OnModuleDestroy {
     const block = await this.stored(list, page);
     if (block === null) {
       if (!mayFetch) return null;
+      if (!this.mayStartFetch(list, page)) {
+        this.warnLimitReached();
+        throw listFetchLimited();
+      }
       try {
         return this.toWindowBlock(
           page,
@@ -177,15 +204,32 @@ export class AnimeListService implements OnModuleDestroy {
         );
       } catch (error) {
         if (!(error instanceof SourceUnavailableError)) throw error;
-        if (error.reason !== RETRY_LATER) this.logger.warn(error.message);
+        if (!isQuietReason(error)) this.logger.warn(error.message);
         throw sourceNotAvailable();
       }
     }
     const fresh = isFresh(list.kind, block.fetchedAt, this.clock.now());
-    if (!fresh && !this.stopping && !this.anilist.isDown()) {
+    if (
+      !fresh &&
+      !this.stopping &&
+      !this.anilist.isDown() &&
+      this.mayStartFetch(list, page)
+    ) {
       void this.fetchShared(list, page, 'background');
     }
     return this.toWindowBlock(page, block, fresh);
+  }
+
+  /** A fetch already running is joined for free; a new one takes a token from the shared bucket. */
+  private mayStartFetch(list: CatalogList, page: number): boolean {
+    return this.inFlight.has(`${listKey(list)}#${page}`) || this.limits.take();
+  }
+
+  private warnLimitReached(): void {
+    const now = this.clock.now().getTime();
+    if (now - this.limitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+    this.limitWarnedAt = now;
+    this.logger.warn('List fetch cap reached: new lists are refused.');
   }
 
   private toWindowBlock(
@@ -214,10 +258,9 @@ export class AnimeListService implements OnModuleDestroy {
     this.inFlight.set(key, task);
     if (wait === 'background') {
       task.catch((error: unknown) => {
-        const quiet =
-          error instanceof SourceUnavailableError &&
-          (error.reason === QUEUE_FULL || error.reason === RETRY_LATER);
-        if (!quiet) {
+        if (!(
+          error instanceof SourceUnavailableError && isQuietReason(error)
+        )) {
           this.logger.warn(`Refresh of ${key} failed: ${String(error)}`);
         }
       });
@@ -245,6 +288,11 @@ export class AnimeListService implements OnModuleDestroy {
         error.reason !== QUEUE_FULL &&
         !error.reason.startsWith(COOLING_DOWN)
       ) {
+        for (const [failed, until] of this.retryAt) {
+          if (until > now.getTime()) break;
+          this.retryAt.delete(failed);
+        }
+        this.retryAt.delete(key);
         this.retryAt.set(key, now.getTime() + RETRY_AFTER_MS);
       }
       throw error;

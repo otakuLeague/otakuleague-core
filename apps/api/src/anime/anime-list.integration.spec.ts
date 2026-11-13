@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { encodeCursor } from './anime-list.query';
+import { LIST_FETCH_BURST, LIST_FETCH_REFILL_MS } from './list-fetch-limits';
 import { AnimeListService } from './anime-list.service';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
@@ -201,7 +202,8 @@ describe('GET /anime/lists/:kind', () => {
         season: { season: 'FALL', year: 2026 },
         nextCursor: null,
       });
-      expect(bare.entries.length).toBeGreaterThan(0);
+      expect(ids(bare)).toEqual([900101, 900102, 900103]);
+      expect(bare.entries[2]).toMatchObject({ score: null, episodes: null });
       expect(explicit).toEqual(bare);
       expect(requests).toEqual([
         {
@@ -249,18 +251,58 @@ describe('GET /anime/lists/:kind', () => {
       expect(requests).toHaveLength(1);
     });
 
-    it('ends a seasonal list at its last page', async () => {
+    it('pages a seasonal genre list across two stored pages under one key', async () => {
       answer = (page) => ({
-        media: fullPage(page).slice(0, 2),
-        hasNextPage: false,
+        media: page === 1 ? fullPage(1) : fullPage(2).slice(0, 3),
+        hasNextPage: page === 1,
       });
+      const base = '/anime/lists/seasonal?season=SUMMER&year=2026&genre=Drama';
 
-      const last = await list(
-        `/anime/lists/seasonal?season=SUMMER&year=2026&cursor=${encodeCursor(0)}`,
+      const first = await list(`${base}&limit=30`);
+      const last = await list(`${base}&limit=30&cursor=${first.nextCursor}`);
+
+      expect(first.nextCursor).toBe(encodeCursor(30));
+      expect(last.entries).toHaveLength(23);
+      expect(last.nextCursor).toBeNull();
+      expect(last.season).toEqual({ season: 'SUMMER', year: 2026 });
+      expect(requests.map(({ page, genre }) => [page, genre])).toEqual([
+        [1, 'Drama'],
+        [2, 'Drama'],
+      ]);
+      expect(
+        (await prisma.animeListPage.findMany({ orderBy: { page: 'asc' } })).map(
+          ({ listKey }) => listKey,
+        ),
+      ).toEqual([
+        'seasonal|season=SUMMER|year=2026|genre=Drama',
+        'seasonal|season=SUMMER|year=2026|genre=Drama',
+      ]);
+    });
+
+    it('moves to the next season at the UTC year boundary, with a new source call and no stale fallback', async () => {
+      const before = await list('/anime/lists/seasonal');
+      clock.advance(
+        new Date('2027-01-01T00:00:00.000Z').getTime() - clock.now().getTime(),
       );
 
-      expect(last.entries).toHaveLength(2);
-      expect(last.nextCursor).toBeNull();
+      const after = await list('/anime/lists/seasonal');
+
+      expect(before.season).toEqual({ season: 'FALL', year: 2026 });
+      expect(after.season).toEqual({ season: 'WINTER', year: 2027 });
+      expect(
+        requests.map(({ season, seasonYear }) => [season, seasonYear]),
+      ).toEqual([
+        ['FALL', 2026],
+        ['WINTER', 2027],
+      ]);
+      expect(
+        (
+          await prisma.animeListPage.findMany({ orderBy: { listKey: 'asc' } })
+        ).map(({ listKey }) => listKey),
+      ).toEqual([
+        'seasonal|season=FALL|year=2026',
+        'seasonal|season=WINTER|year=2027',
+      ]);
     });
 
     it('serves a stored seasonal page, stale, while AniList is down', async () => {
@@ -291,6 +333,58 @@ describe('GET /anime/lists/:kind', () => {
           details: [{ field: 'season' }, { field: 'year' }],
         },
       });
+    });
+  });
+
+  describe('cold fetch budget', () => {
+    const genres = ['Action', 'Comedy', 'Drama', 'Ecchi', 'Horror', 'Music'];
+
+    it('refuses a new list with 429 once the budget is spent, while a stored one still answers 200', async () => {
+      expect(genres).toHaveLength(LIST_FETCH_BURST);
+      for (const genre of genres) await list(`/anime/lists/top?genre=${genre}`);
+
+      const refused = await get('/anime/lists/top?genre=Mecha').expect(429);
+      const stored = await list('/anime/lists/top?genre=Action');
+
+      expect(refused.body).toEqual({
+        error: {
+          code: 'LIST_FETCH_LIMITED',
+          message:
+            'Too many new lists are being loaded right now. Try again in a minute.',
+        },
+      });
+      expect(stored.freshness).toBe('fresh');
+      expect(requests).toHaveLength(LIST_FETCH_BURST);
+    });
+
+    it('gives a token back after the refill step', async () => {
+      for (const genre of genres) await list(`/anime/lists/top?genre=${genre}`);
+      await get('/anime/lists/top?genre=Mecha').expect(429);
+
+      clock.advance(LIST_FETCH_REFILL_MS);
+
+      expect(await list('/anime/lists/top?genre=Mecha')).toMatchObject({
+        freshness: 'fresh',
+      });
+    });
+
+    it('serves a stale page without refreshing it when the budget is spent', async () => {
+      await prisma.animeListPage.create({
+        data: {
+          listKey: 'trending',
+          page: 1,
+          fetchedAt: new Date(clock.now().getTime() - 2 * HOUR_MS),
+          hasNextPage: false,
+          entries: [],
+        },
+      });
+      for (const genre of genres) await list(`/anime/lists/top?genre=${genre}`);
+
+      const stale = await list('/anime/lists/trending');
+      await lists.settle();
+
+      expect(stale.freshness).toBe('stale');
+      expect(requests).toHaveLength(LIST_FETCH_BURST);
     });
   });
 
@@ -561,6 +655,9 @@ describe('GET /anime/lists/:kind', () => {
     ['year before 1917', '/anime/lists/seasonal?season=FALL&year=1916'],
     ['year after next year', '/anime/lists/seasonal?season=FALL&year=2028'],
     ['fractional year', '/anime/lists/seasonal?season=FALL&year=2026.5'],
+    ['year written 2026.0', '/anime/lists/seasonal?season=FALL&year=2026.0'],
+    ['year written in hex', '/anime/lists/seasonal?season=FALL&year=0x7EA'],
+    ['year with a plus sign', '/anime/lists/seasonal?season=FALL&year=%2B2026'],
     ['season without year', '/anime/lists/seasonal?season=FALL'],
     ['year without season', '/anime/lists/seasonal?year=2026'],
     ['season on another kind', '/anime/lists/top?season=FALL&year=2026'],

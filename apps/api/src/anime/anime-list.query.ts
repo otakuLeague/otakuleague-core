@@ -46,12 +46,17 @@ const LISTS: Readonly<Record<AnimeListKind, ListSpec>> = {
 };
 
 /** A list as asked for, defaults applied: what the cache key and the AniList query come from. */
-export interface CatalogList {
-  readonly kind: AnimeListKind;
-  /** Set for `seasonal` only. */
-  readonly season: AnimeListSeason | null;
-  readonly genre: AnimeGenre | null;
-}
+export type CatalogList =
+  | {
+      readonly kind: 'seasonal';
+      readonly season: AnimeListSeason;
+      readonly genre: AnimeGenre | null;
+    }
+  | {
+      readonly kind: Exclude<AnimeListKind, 'seasonal'>;
+      readonly season: null;
+      readonly genre: AnimeGenre | null;
+    };
 
 /** The request's filters as received (each already checked alone by the controller). */
 export interface ListFilters {
@@ -67,7 +72,10 @@ export interface ListFilterIssue {
 
 export type CatalogListResolution =
   | { readonly outcome: 'ok'; readonly list: CatalogList }
-  | { readonly outcome: 'invalid'; readonly details: ListFilterIssue[] };
+  | {
+      readonly outcome: 'invalid';
+      readonly details: readonly ListFilterIssue[];
+    };
 
 function seasonOfMonth(monthIndex: number): AnimeSeason {
   if (monthIndex < 3) return 'WINTER';
@@ -87,7 +95,8 @@ export function currentSeason(now: Date): AnimeListSeason {
 /**
  * The rules that need more than one field or the clock (ADR 0016 addendum): season and year
  * come together and only with `seasonal`; the year is at most next year (UTC); `seasonal`
- * with neither is the current season. Every violation is reported, not just the first.
+ * with neither is the current season. The violations of the one rule that fails are all
+ * reported (a season and a year on `top` name both fields).
  */
 export function resolveCatalogList(
   kind: AnimeListKind,
@@ -119,16 +128,20 @@ export function resolveCatalogList(
     });
   }
   if (details.length > 0) return { outcome: 'invalid', details };
+  if (kind !== 'seasonal') {
+    return {
+      outcome: 'ok',
+      list: { kind, season: null, genre: genre ?? null },
+    };
+  }
   return {
     outcome: 'ok',
     list: {
       kind,
       season:
-        kind !== 'seasonal'
-          ? null
-          : season !== undefined && year !== undefined
-            ? { season, year }
-            : currentSeason(now),
+        season !== undefined && year !== undefined
+          ? { season, year }
+          : currentSeason(now),
       genre: genre ?? null,
     },
   };

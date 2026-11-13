@@ -22,7 +22,7 @@ const HOUR_MS = 3_600_000;
 
 const NOV_2026 = new Date('2026-11-13T12:00:00Z');
 const FALL_2026 = { season: 'FALL', year: 2026 } as const;
-const plain = (kind: AnimeListKind): CatalogList => ({
+const plain = (kind: Exclude<AnimeListKind, 'seasonal'>): CatalogList => ({
   kind,
   season: null,
   genre: null,
@@ -31,13 +31,23 @@ const plain = (kind: AnimeListKind): CatalogList => ({
 describe('listQuery', () => {
   it('has the ADR 0016 filter and sort for every kind', () => {
     expect(
-      ANIME_LIST_KINDS.map((kind) => [kind, listQuery(plain(kind))]),
+      ANIME_LIST_KINDS.map((kind) => [
+        kind,
+        listQuery(
+          kind === 'seasonal'
+            ? { kind, season: FALL_2026, genre: null }
+            : plain(kind),
+        ),
+      ]),
     ).toEqual([
       ['trending', { sort: ['TRENDING_DESC', 'POPULARITY_DESC'] }],
       ['top', { sort: ['SCORE_DESC', 'POPULARITY_DESC'] }],
       ['upcoming', { sort: ['POPULARITY_DESC'], status: 'NOT_YET_RELEASED' }],
       ['airing', { sort: ['POPULARITY_DESC'], status: 'RELEASING' }],
-      ['seasonal', { sort: ['POPULARITY_DESC'] }],
+      [
+        'seasonal',
+        { sort: ['POPULARITY_DESC'], season: 'FALL', seasonYear: 2026 },
+      ],
     ]);
   });
 
