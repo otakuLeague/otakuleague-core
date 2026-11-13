@@ -123,6 +123,10 @@ Rejected for this slice: `genre_in` or several genres (the stored page is one An
 
 Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,500 counted under Consequences. The first page of any unseen key costs one AniList request and a waiting visitor's queue slot, so the per-client limit on list endpoints (OTA-173 follow-up) must ship before the Seasonal page is public. Not built here: it is its own decision and this slice has no room for it.
 
+**Claim scope (decision, until OTA-189).** Only lists without a genre, and the seasonal list of the current season, claim (`claimsSlugs`). A genre or past-season page is stored and served but its anime keep a null slug until they are claimed elsewhere. This bounds what a crawler can reserve before the per-client limit exists; remove the gate when OTA-189 ships.
+
+**Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one (an `imported_at` marker) is a future follow-up ticket, not built here.
+
 Too complicated, not built: a season calendar with per-zone boundaries (the old site used the visitor's zone; one UTC rule keeps the default cacheable and at worst shows the ending season for a few hours), totals, a `genres` endpoint (the constant ships in shared-types).
 
 Fixtures stay synthetic (see Operational notes): one new `lists/anilist-seasonal-fall-2026.json`, listed in the fixtures README as hand-built.
@@ -148,7 +152,7 @@ Non-functional, with numbers:
 
 1. Warm path unchanged: serving a stored page, fresh or stale, does no write and no extra query (requirement 1 of the Decision still holds).
 2. Source cost: 0 additional AniList requests; a claim takes no `ListFetchLimits` token.
-3. Cold cost: at most 1 + 6 × N statements for N unclaimed anime, N ≤ 50, so about 300 statements and 0.3 s at 1 ms each inside one zone, once per anime ever. A refresh that lists nothing new costs 1 query.
+3. Cold cost: at most 1 + 7 × N statements for N unclaimed anime (begin, identity read, owners read, three inserts, commit), N ≤ 50, so about 350 statements and 0.3 s at 1 ms each inside one zone, once per anime ever. A refresh that lists nothing new costs 1 query.
 4. Failure: a claim never changes the HTTP status; at most 3 attempts per anime per fetch; a failed one is tried again at the next fetch of any page listing it (within that list's TTL while it is read).
 5. Growth: at most 50 claims per fetch token, so 300 at once and 300 a minute sustained, and never more than AniList's catalogue (about 20,000 identities and 40,000 slugs, under 10 MB). The rows hold no AniList data beyond the slug (ADR 0006).
 
@@ -168,7 +172,7 @@ Consistency or availability: **availability** for the list answer (a null slug s
 
 - **Warm path (1).** Claims run only after a source fetch stored a page; `getList` on a stored page is the same three reads as before.
 - **Quota and terms (2, 5).** Nothing is fetched per anime, and the titles used are already in the stored page. Claims follow a fetch that took a token, so the bucket also bounds how fast permanent rows appear.
-- **Cold cost (3).** Per unclaimed anime: begin, one read, three inserts, commit. Sequential, so one connection per page being claimed and a deterministic order.
+- **Cold cost (3).** Per unclaimed anime: begin, two reads, three inserts, commit (7 with the commit). Sequential, so one connection per page being claimed and a deterministic order.
 - **Failure and races (4).** Two pages claimed at once in this process, or a page and an import, can collide on an identity or a slug; the primary keys decide and the loser retries. Claim order is list order inside one page; between pages it is fetch order.
 
 Rejected:

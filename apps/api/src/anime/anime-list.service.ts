@@ -19,6 +19,7 @@ import { ListFetchLimits } from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
   assembleWindow,
+  claimsSlugs,
   decodeCursor,
   encodeCursor,
   type CatalogList,
@@ -329,7 +330,7 @@ export class AnimeListService implements OnModuleDestroy {
       create: { listKey: listKey(list), page, ...row },
       update: row,
     });
-    await this.claims.claimListed(fetched.entries);
+    if (claimsSlugs(list, now)) await this.claims.claimListed(fetched.entries);
     return { ...fetched, fetchedAt: now };
   }
 

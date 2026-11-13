@@ -149,6 +149,18 @@ describe('slugSource', () => {
     ).toBeNull();
   });
 
+  it('ignores a year outside 1900-2100', () => {
+    expect(
+      slugSource(1, { ...fields, startDate: { year: 20 } }).year,
+    ).toBeNull();
+    expect(
+      slugSource(1, { ...fields, startDate: { year: 2101 } }).year,
+    ).toBeNull();
+    expect(slugSource(1, { ...fields, startDate: { year: 1900 } }).year).toBe(
+      1900,
+    );
+  });
+
   it('keeps both titles, the id and the format as they are', () => {
     expect(slugSource(16498, { ...fields, titleEnglish: null })).toEqual({
       anilistId: 16498,

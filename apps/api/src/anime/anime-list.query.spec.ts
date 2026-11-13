@@ -1,10 +1,12 @@
 import {
   ANIME_LIST_KINDS,
   type AnimeListKind,
+  type AnimeListSeason,
 } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
   assembleWindow,
+  claimsSlugs,
   decodeCursor,
   encodeCursor,
   type CatalogList,
@@ -328,5 +330,33 @@ describe('assembleWindow', () => {
     const window = assembleWindow([block(20, 50)], 999, 50);
 
     expect(window).toMatchObject({ entries: [999], nextOffset: null });
+  });
+});
+
+describe('claimsSlugs (until OTA-189)', () => {
+  const seasonal = (
+    season: AnimeListSeason,
+    genre: CatalogList['genre'] = null,
+  ): CatalogList => ({ kind: 'seasonal', season, genre });
+
+  it('claims for an unfiltered kind', () => {
+    expect(claimsSlugs(plain('top'), NOV_2026)).toBe(true);
+  });
+
+  it('claims for the current season, and not for another season or year', () => {
+    expect(claimsSlugs(seasonal(FALL_2026), NOV_2026)).toBe(true);
+    expect(
+      claimsSlugs(seasonal({ season: 'SUMMER', year: 2026 }), NOV_2026),
+    ).toBe(false);
+    expect(
+      claimsSlugs(seasonal({ season: 'FALL', year: 2025 }), NOV_2026),
+    ).toBe(false);
+  });
+
+  it('never claims for a genre list', () => {
+    expect(claimsSlugs({ ...plain('top'), genre: 'Mecha' }, NOV_2026)).toBe(
+      false,
+    );
+    expect(claimsSlugs(seasonal(FALL_2026, 'Drama'), NOV_2026)).toBe(false);
   });
 });

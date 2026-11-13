@@ -10,6 +10,12 @@ const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'myanimelist',
   'search',
   'new',
+  'lists',
+  'slugs',
+  'season',
+  'top',
+  'genres',
+  'random',
 ]);
 
 /**
@@ -92,6 +98,11 @@ export function romajiAlias(source: SlugSource): string | null {
   return slug === '' || RESERVED_SLUGS.has(slug) ? null : slug;
 }
 
+/** A year outside 1900-2100 is bad source data: no year rung. */
+function plausibleYear(year: number | null): number | null {
+  return year !== null && year >= 1900 && year <= 2100 ? year : null;
+}
+
 /** The slug inputs from an AniList title and date set: English, else romaji; start year, else season year. */
 export function slugSource(
   anilistId: number,
@@ -107,7 +118,7 @@ export function slugSource(
     anilistId,
     titleEnglish: fields.titleEnglish,
     titleRomaji: fields.titleRomaji,
-    year: fields.startDate?.year ?? fields.seasonYear,
+    year: plausibleYear(fields.startDate?.year ?? fields.seasonYear),
     format: fields.format,
   };
 }

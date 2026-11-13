@@ -14,6 +14,31 @@ import type { ListedAnime } from './sources/source.types';
 /** A claim that loses a race (unique violation) is read again and retried this often. */
 const CLAIM_ATTEMPTS = 3;
 
+class NoFreeSlugError extends Error {
+  constructor(anilistId: number) {
+    super(`No free slug for AniList ${anilistId}`);
+    this.name = 'NoFreeSlugError';
+  }
+}
+
+/** A unique violation or a write conflict: another claim got there first. */
+function isLostRace(error: unknown): boolean {
+  return isPrismaError(error, 'P2002') || isPrismaError(error, 'P2034');
+}
+
+/** Failures that belong to one anime: the loop goes on. Anything else stops it. */
+function isExpectedClaimFailure(error: unknown): boolean {
+  return error instanceof NoFreeSlugError || isLostRace(error);
+}
+
+/** Name and Prisma code only: a message can carry values from the query. */
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return 'unknown error';
+  const code =
+    'code' in error && typeof error.code === 'string' ? ` ${error.code}` : '';
+  return `${error.name}${code}`;
+}
+
 /**
  * ADR 0016 (slice 3): gives the anime of a stored list page an identity, a canonical slug and
  * its romaji alias, from the page's own titles: no anime row, no source call. An anime that
@@ -31,22 +56,37 @@ export class AnimeSlugClaimService {
   ) {}
 
   async claimListed(entries: readonly ListedAnime[]): Promise<void> {
-    const failed: number[] = [];
+    let unclaimed: ListedAnime[];
     try {
-      const unclaimed = await this.unclaimed(entries);
-      for (const entry of unclaimed) {
-        try {
-          await this.claimWithRetry(entry);
-        } catch {
-          failed.push(entry.anilistId);
+      unclaimed = await this.unclaimed(entries);
+    } catch (error) {
+      this.logger.warn(`Slug claim lookup failed: ${describeError(error)}`);
+      return;
+    }
+    const failed: number[] = [];
+    const notAttempted: number[] = [];
+    let firstError: unknown;
+    for (const [index, entry] of unclaimed.entries()) {
+      try {
+        await this.claimWithRetry(entry);
+      } catch (error) {
+        failed.push(entry.anilistId);
+        firstError ??= error;
+        if (!isExpectedClaimFailure(error)) {
+          notAttempted.push(
+            ...unclaimed.slice(index + 1).map(({ anilistId }) => anilistId),
+          );
+          break;
         }
       }
-    } catch {
-      failed.push(...entries.map(({ anilistId }) => anilistId));
     }
     if (failed.length > 0) {
+      const skipped =
+        notAttempted.length > 0
+          ? `; not attempted: ${notAttempted.join(', ')}`
+          : '';
       this.logger.warn(
-        `Slug claim failed for ${failed.length} listed anime: ${failed.join(', ')}`,
+        `Slug claim failed for ${failed.length} listed anime (${describeError(firstError)}): ${failed.join(', ')}${skipped}`,
       );
     }
   }
@@ -56,23 +96,25 @@ export class AnimeSlugClaimService {
     entries: readonly ListedAnime[],
   ): Promise<ListedAnime[]> {
     if (entries.length === 0) return [];
+    const listed = new Map<number, ListedAnime>();
+    for (const entry of entries) {
+      if (!listed.has(entry.anilistId)) listed.set(entry.anilistId, entry);
+    }
     const known = await this.prisma.animeIdentity.findMany({
-      where: { anilistId: { in: entries.map(({ anilistId }) => anilistId) } },
+      where: { anilistId: { in: [...listed.keys()] } },
       select: { anilistId: true },
     });
-    const skip = new Set(known.map(({ anilistId }) => anilistId));
-    return entries.filter(({ anilistId }) => {
-      if (skip.has(anilistId)) return false;
-      skip.add(anilistId);
-      return true;
-    });
+    const claimed = new Set(known.map(({ anilistId }) => anilistId));
+    return [...listed.values()].filter(
+      ({ anilistId }) => !claimed.has(anilistId),
+    );
   }
 
   private async claimWithRetry(entry: ListedAnime, attempt = 1): Promise<void> {
     try {
       await this.prisma.$transaction((tx) => this.claim(tx, entry));
     } catch (error) {
-      if (attempt < CLAIM_ATTEMPTS && isPrismaError(error, 'P2002')) {
+      if (attempt < CLAIM_ATTEMPTS && isLostRace(error)) {
         return this.claimWithRetry(entry, attempt + 1);
       }
       throw error;
@@ -97,15 +139,13 @@ export class AnimeSlugClaimService {
     const owners = new Map(taken.map((row) => [row.slug, row.anilistId]));
     const slug = pickCanonical(candidates, owners, anilistId);
     if (slug === undefined) {
-      throw new Error(`No free slug for AniList ${anilistId}`);
+      throw new NoFreeSlugError(anilistId);
     }
     const now = this.clock.now();
     await tx.animeIdentity.create({
       data: { anilistId, canonicalSlug: slug, createdAt: now },
     });
-    if (!owners.has(slug)) {
-      await tx.animeSlug.create({ data: { slug, anilistId, createdAt: now } });
-    }
+    await tx.animeSlug.create({ data: { slug, anilistId, createdAt: now } });
     const alias = romajiAlias(source);
     if (alias !== null) {
       await tx.animeSlug.createMany({

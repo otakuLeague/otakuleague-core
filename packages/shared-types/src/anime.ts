@@ -307,7 +307,7 @@ export const ANIME_LIST_DEFAULT_LIMIT = 24;
 /** One card of a list: what the card renders, plus where it links. */
 export interface AnimeListEntry {
   readonly anilistId: number;
-  /** Canonical slug, claimed when the page is stored; null only when that claim failed (retried at the next fetch): link /anime/anilist/{anilistId}. */
+  /** Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): link /anime/anilist/{anilistId}. */
   readonly slug: string | null;
   readonly titleEnglish: string | null;
   readonly titleRomaji: string | null;

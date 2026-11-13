@@ -660,33 +660,6 @@ describe('GET /anime/lists/:kind', () => {
     expect(requests).toHaveLength(1);
   });
 
-  it('joins slugs from known identities and drops removed anime', async () => {
-    answer = () => ({
-      media: [media(1), media(2), media(3)],
-      hasNextPage: false,
-    });
-    await prisma.animeIdentity.createMany({
-      data: [
-        { anilistId: 1, canonicalSlug: 'one', createdAt: clock.now() },
-        {
-          anilistId: 2,
-          canonicalSlug: 'two',
-          removedAt: clock.now(),
-          createdAt: clock.now(),
-        },
-      ],
-    });
-
-    const page = await list('/anime/lists/top');
-
-    expect(
-      page.entries.map(({ anilistId, slug }) => [anilistId, slug]),
-    ).toEqual([
-      [1, 'one'],
-      [3, 'synthetic-3'],
-    ]);
-  });
-
   describe('slug claims (OTA-190)', () => {
     afterEach(() => {
       vi.restoreAllMocks();
@@ -760,7 +733,12 @@ describe('GET /anime/lists/:kind', () => {
 
       const page = await list('/anime/lists/top');
 
-      expect(ids(page)).toEqual([1, 3]);
+      expect(
+        page.entries.map(({ anilistId, slug }) => [anilistId, slug]),
+      ).toEqual([
+        [1, 'one'],
+        [3, 'third'],
+      ]);
       expect(await claimed()).toEqual({ 1: 'one', 2: 'two', 3: 'third' });
       expect(
         await prisma.animeSlug.count({ where: { anilistId: { in: [1, 2] } } }),
@@ -796,7 +774,7 @@ describe('GET /anime/lists/:kind', () => {
 
       expect(await claimed()).toEqual({
         12: 'same-title',
-        11: 'same-title-11',
+        11: 'same-title-tv',
       });
     });
 
@@ -843,9 +821,22 @@ describe('GET /anime/lists/:kind', () => {
 
       expect(first.entries[0]?.slug).toBeNull();
       expect(warn).toHaveBeenCalledWith(
-        'Slug claim failed for 1 listed anime: 1',
+        'Slug claim failed for 1 listed anime (Error): 1',
       );
       expect(healed.entries[0]?.slug).toBe('heal-me');
+    });
+
+    it('stores the page but claims nothing for a genre or a past-season list (until OTA-189)', async () => {
+      answer = () => ({ media: [english(1, 'Gated')], hasNextPage: false });
+
+      const genre = await list('/anime/lists/top?genre=Drama');
+      const past = await list('/anime/lists/seasonal?season=SUMMER&year=2025');
+
+      expect(ids(genre)).toEqual([1]);
+      expect(past.entries[0]?.slug).toBeNull();
+      expect(genre.entries[0]?.slug).toBeNull();
+      expect(await prisma.animeListPage.count()).toBe(2);
+      expect(await prisma.animeIdentity.count()).toBe(0);
     });
 
     it('does no write when it serves a stored page', async () => {

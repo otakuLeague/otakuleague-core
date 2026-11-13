@@ -194,3 +194,7 @@ Risks we accept:
 - A "not found" that stops being true (a new AniList entry, an adult flag lifted) heals within the hour.
 - **Known limits.** The Railway API domain is publicly reachable, so the "API only sees Vercel" premise does not stop direct hits on it (follow-up, separate ticket: a web-to-API shared-secret guard). A crawler that follows the id-to-slug redirect still refreshes `lastViewedAt` through the slug page view.
 - Background refreshes of stale anime take only a free AniList slot (`maxQueueMs: 0`), so they never queue ahead of a cold import.
+
+## Update 2026-11-13: listed anime claim slugs (OTA-190)
+
+Anime on stored catalog lists get a permanent identity and two title-derived slugs without an import and without a source call. These rows hold no AniList data beyond the id and are never purged; see the slice 3 addendum of [ADR 0016](0016-catalog-lists.md) (claim scope, Terms).
