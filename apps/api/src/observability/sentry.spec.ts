@@ -169,17 +169,17 @@ describe('Sentry in the API', () => {
     }
   });
 
-  it.each<[string, Partial<Record<keyof EnvironmentVariables, string>>, number]>(
+  it.each<
+    [string, Partial<Record<keyof EnvironmentVariables, string>>, number]
+  >([
+    ['once in production without a key', { NODE_ENV: 'production' }, 1],
+    ['never in development without a key', { NODE_ENV: 'development' }, 0],
     [
-      ['once in production without a key', { NODE_ENV: 'production' }, 1],
-      ['never in development without a key', { NODE_ENV: 'development' }, 0],
-      [
-        'never in production with a key',
-        { NODE_ENV: 'production', INTERNAL_API_KEY: FAKE_KEY },
-        0,
-      ],
+      'never in production with a key',
+      { NODE_ENV: 'production', INTERNAL_API_KEY: FAKE_KEY },
+      0,
     ],
-  )(
+  ])(
     'sends the open-API warning at start %s',
     async (_, environment, expected) => {
       const { server, dsn, envelopes } = await startFakeSentry('answer');

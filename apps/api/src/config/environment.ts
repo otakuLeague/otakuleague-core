@@ -205,7 +205,8 @@ export class EnvironmentVariables {
     {
       name: 'differsFromProductionKeys',
       validator: {
-        validate: (value, args) => differsFromProductionKeys(value, args?.object),
+        validate: (value, args) =>
+          differsFromProductionKeys(value, args?.object),
       },
     },
     {
