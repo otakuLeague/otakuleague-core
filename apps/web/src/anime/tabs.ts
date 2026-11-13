@@ -1,4 +1,4 @@
-import type { AnimeFranchise } from '@otakuleague/shared-types';
+import type { AnimeFranchiseView } from '@otakuleague/shared-types';
 
 /** The anime page's tabs (OTA-97): each its own route under /anime/[slug]; Overview is bare. */
 export const ANIME_TABS = [
@@ -76,7 +76,7 @@ export function seasonHref(
 
 /** The selector's seasons, or null when the main line has no other season to switch to. */
 export function seasonOptions(
-  franchise: AnimeFranchise | null,
+  franchise: AnimeFranchiseView | null,
 ): readonly SeasonOption[] | null {
   if (franchise === null || franchise.state === 'unavailable') return null;
   if (franchise.mainLine.length < 2) return null;

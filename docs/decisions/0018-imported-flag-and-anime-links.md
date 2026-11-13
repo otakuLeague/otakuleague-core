@@ -90,3 +90,5 @@ Too complicated, not built: a migration or marker column, a link-kind union in t
 Slices: 1 = shared types, API, docs (this ADR); 2 = web. PR #80 (OTA-137) moves the card to `src/browse/anime-card.tsx` and still imports `cardHref`: whichever lands second switches that card to `animeLink`.
 
 ## Learnings
+
+(Filled in after slice 2.)

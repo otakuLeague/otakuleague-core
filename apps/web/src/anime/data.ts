@@ -1,7 +1,7 @@
 import {
   type AnimeBySlug,
   type AnimeDetails,
-  type AnimeFranchise,
+  type AnimeFranchiseView,
   type AnimeListKind,
   type AnimeListCardPage,
   type AnimeSlugResolution,
@@ -36,7 +36,7 @@ export const loadAnimeByAnilistId = cache(
 
 /** The season selector's main line (ADR 0008): stored data only, so a short timeout. */
 export const loadFranchise = cache(
-  (slug: string): Promise<ApiResult<AnimeFranchise>> =>
+  (slug: string): Promise<ApiResult<AnimeFranchiseView>> =>
     apiClient().call(`/anime/slugs/${encodeURIComponent(slug)}/franchise`, {
       timeoutMs: 2_000,
       // A drifted body is an invalid_response: it only hides the selector.

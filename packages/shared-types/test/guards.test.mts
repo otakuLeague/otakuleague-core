@@ -188,6 +188,31 @@ void describe('isAnimeFranchise', () => {
     }
   });
 
+  void it('validates each related entry like a main-line entry', () => {
+    const relatedEntry = { anilistId: 7, slug: 'spin-off', imported: false };
+    assert.equal(
+      isAnimeFranchise({
+        ...franchise,
+        related: [{ group: 'spin_off', entries: [relatedEntry], total: 1 }],
+      }),
+      true,
+    );
+    for (const bad of [
+      { ...relatedEntry, anilistId: '7' },
+      { ...relatedEntry, slug: 7 },
+      { ...relatedEntry, imported: 'yes' },
+    ]) {
+      assert.equal(
+        isAnimeFranchise({
+          ...franchise,
+          related: [{ group: 'spin_off', entries: [bad], total: 1 }],
+        }),
+        false,
+        JSON.stringify(bad),
+      );
+    }
+  });
+
   void it('rejects an unknown state, a malformed season or missing lists', () => {
     for (const value of [
       ...NOT_OBJECTS,

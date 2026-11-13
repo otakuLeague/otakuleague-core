@@ -251,6 +251,30 @@ export interface AnimeFranchise {
 }
 
 /**
+ * The franchise body as the web trusts it after `isAnimeFranchise` (ADR 0018). `imported` is
+ * optional here because an older API omits it and the guard accepts that; the API's
+ * `FranchiseEntry` keeps it required so every producer sets it. A missing flag means "not
+ * imported", so read it with `=== true`.
+ */
+export interface FranchiseSeasonView extends Omit<FranchiseSeason, 'imported'> {
+  readonly imported?: boolean;
+}
+
+export interface FranchiseRelatedGroupView {
+  readonly group: FranchiseRelatedGroupName;
+  readonly entries: readonly (Omit<FranchiseEntry, 'imported'> & {
+    readonly imported?: boolean;
+  })[];
+  readonly total: number;
+}
+
+export interface AnimeFranchiseView {
+  readonly state: FranchiseState;
+  readonly mainLine: readonly FranchiseSeasonView[];
+  readonly related: readonly FranchiseRelatedGroupView[];
+}
+
+/**
  * GET /anime/slugs/:slug/resolve (OTA-97): which anime a slug names, from the database only,
  * never a source call, so the web app can redirect before anything renders.
  */
