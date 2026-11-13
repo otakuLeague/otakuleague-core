@@ -4,7 +4,7 @@ Design review only. The detector, engine, browser overlay and snapshot persisten
 
 ### Purpose
 
-Resolve one stable target, run two independent assessments, synthesize a design critique, persist a snapshot, and ask the user what to improve next. The chat response is the primary deliverable; the snapshot is an archive of that run.
+Resolve one stable target, run two independent assessments, synthesize a design critique, and ask the user what to improve next. The chat response is the primary deliverable; the snapshot is an archive of that run.
 
 ### Hard Invariants
 
@@ -39,6 +39,7 @@ Resolve one stable target, run two independent assessments, synthesize a design 
 Delegate Assessment A and Assessment B to separate sub-agents. They must not see each other's output. Do not show findings to the user until synthesis.
 
 Sub-agent gate (all harnesses):
+- In this repo: Assessment B is not available, so no sub-agent pair is spawned.
 - Unless a harness-specific gate below overrides this, spawn A and B as two isolated, parallel sub-agents whenever a sub-agent/Task tool is exposed. This applies only where Assessment B is available.
 - Desktop apps (see **Desktop apps** under Assessment B) are the one exception to parallel: both sub-agents would drive the app's single window at once. Seed the window, spawn A, wait until it has finished and put the window back, then spawn B. They are still two isolated sub-agents, so this is not the degraded path.
 - "Unavailable" means exactly one thing: no sub-agent/Task tool is exposed in this session (or, on harnesses that ask, the user declined). It does not mean inconvenient.
@@ -62,12 +63,10 @@ Return: design-specificity verdict, heuristic scores, cognitive load, emotional 
 
 ### Assessment B: Detector + Browser Evidence
 
-The bundled detector and browser evidence are not available in this repo: skip them and say so. On web, Assessment B is not available in this repo (skip it and say so) until both are complete.
+The bundled detector and browser evidence are not available in this repo: skip them and say so. On web, Assessment B is not available in this repo (skip it and say so).
 
 CLI scan:
-```bash
-Not available in this repo, skip: impeccable detect --json [target]
-```
+Not available in this repo, skip: `impeccable detect --json [target]`
 
 - Pass markup files/directories as `[target]`; do not pass CSS-only files.
 - For URLs, skip CLI scan and use browser visualization.
@@ -107,6 +106,7 @@ Structure your feedback as a design director would:
 #### Report header provenance
 
 The report's first line MUST declare how the assessments were run, so a degraded run is never silent:
+- In this repo: `Method: design review only (detector not available in this repo)`. The dual-agent, degraded and native options are n/a here.
 - Dual-agent: `Method: dual-agent (A: <agent-id> · B: <agent-id>)`
 - Degraded: `⚠️ DEGRADED: single-context (<reason, e.g. no sub-agent tool exposed>)`
 - Native: `Method: design review only (detector not applicable, native platform)`
@@ -197,44 +197,9 @@ Write the full report into the chat response now, before any persistence work. T
 
 Do this first because the alternative is the most common way this command fails: the report gets composed once, straight into the persistence heredoc, and the run ends with a perfect archive nobody has read. Composing it into a file is not delivering it. If the report exists only in a file, the run produced nothing.
 
-Persistence is not the end of the run. After it, the response continues with the trend line and the close.
+The run ends with the close below.
 
-### Persist the Snapshot
-
-Once the report above is finalized, keep it in the chat so the user can refer back (writing snapshots is not available in this repo), and so `/impeccable polish` can pick up the priority issues without a copy-paste.
-
-Skip this step if the Setup slug was null (vague or root-level target).
-
-1. **Write the body to a temp file** so you can pipe it to the helper. Use the full critique report (heuristic table, design-specificity verdict, priority issues, persona red flags, minor observations, and questions), but stop before the "Ask the User" / "Recommended Actions" sections that come later.
-
-   This is a copy of the report you already delivered above, for later commands to read. It is not delivery. If you find yourself composing the report for the first time inside this heredoc, you have skipped Deliver the Report; go back and send it.
-
-2. **Pass the structured metadata** through `IMPECCABLE_CRITIQUE_META` (JSON), then run the write command:
-   ```bash
-   IMPECCABLE_CRITIQUE_META='{"target":"<user phrasing>","total_score":<n>,"max_score":<n>,"na_heuristics":"<comma-separated numbers, or empty>","p0_count":<n>,"p1_count":<n>}' \
-     Not available in this repo, skip: impeccable critique-storage write "<resolved target>" <body-file>
-   ```
-   `max_score` is the applicable maximum from the heuristic table (40 when every heuristic applied), so a later run can tell a renormalized total from a full one. For a local file target, the helper also records an exact content fingerprint so polish can distinguish the assessed bytes from later edits without relying on Git state or timestamps. The helper prints the absolute path it wrote. Leave that file on disk. Polish closes it; this run does not. `REPORTS OFF:` instead means the project opted out of saved reports: skip the trend read and carry on.
-
-3. **Delete the temp body file** after the write attempt completes, whether the write succeeded or failed. If deletion fails, mention `temp-file cleanup failed: <reason>` briefly in the final output, but do not block the critique.
-
-4. **Read the trend** for context:
-   ```bash
-   Not available in this repo, skip: impeccable critique-storage trend "<resolved target>" 5
-   ```
-   This returns a JSON array of the last 5 frontmatter entries (including the one you just wrote).
-
-5. **Append a single line to the user-visible output**, after the report and before the questions:
-
-   > **Trend for `<slug>` (last 5 runs): 24 → 28 → 32 → 29 → 32 (out of 40)**
-
-   Read `max_score` on each trend entry. When every entry shares one maximum, state it once as above. When they differ, print each score with its own denominator (`24/32 → 30/40`) and note that the runs scored different heuristic sets, so the line is not a like-for-like comparison. Treat a missing `max_score` on an older entry as 40.
-
-   If this is the first run for the slug, the trend is just one score; say so: "First run for this target, no trend yet."
-
-6. **Close the run.** Go to Ask the User below and emit the questions, or the `Questions skipped: <reason>` line when the count allows it. The run is not complete until you do. Persistence is bookkeeping and cleanup is not an ending; stopping here leaves the user with a report and no way forward, and leaves `/impeccable polish` with no priorities to inherit.
-
-This is fire-and-forget. Do not show the user the helper's JSON output; only the human-readable trend line and the written path. Failures here should not block the rest of the flow; print the error and move on.
+Not available in this repo: the report stays in chat, nothing is written.
 
 ### Ask the User
 

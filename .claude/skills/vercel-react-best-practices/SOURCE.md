@@ -2,7 +2,7 @@
 
 - Upstream repo: https://github.com/vercel-labs/agent-skills, path skills/react-best-practices/ (SKILL.md, rules/), commit 1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62
 - Folder renamed from react-best-practices to vercel-react-best-practices to match the frontmatter `name`.
-- License: MIT, per the upstream README "## License" section and SKILL.md frontmatter (`license: MIT`). Upstream has no LICENSE file, so `LICENSE` here is the standard MIT text with the copyright holder inferred as in slice 1, and a line naming the source commit.
+- License: MIT, per the upstream README "## License" section and SKILL.md frontmatter (`license: MIT`). Upstream has no LICENSE file, so `LICENSE` here is the standard MIT text with the copyright holder named Vercel, Inc. (as in slice 1), and a line naming the source commit.
 - Vendored date: 2026-11-13
 - Vendored in OTA-188
 

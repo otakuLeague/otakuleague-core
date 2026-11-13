@@ -32,7 +32,7 @@ To change something: open a session and say what you want ("make the home hero c
 1. `git pull && pnpm install` (also enables the git hooks).
 2. `brew install jq gh && gh auth login` if missing.
 3. `scripts/autopilot/install-mac.sh --run-now --with-design` (installs the digests, runs one now, installs Chromium for design screenshots).
-4. Optional: in Claude Code, `/plugin marketplace add pbakaus/impeccable` and install Impeccable (ADR 0011); add `"env": {"DO_NOT_TRACK": "1"}` to `~/.claude/settings.json`.
+4. Optional: Impeccable is vendored at `.claude/skills/impeccable/` (OTA-188). Do not install it as a plugin: that would bring its engine and hooks (ADR 0011); add `"env": {"DO_NOT_TRACK": "1"}` to `~/.claude/settings.json`.
 5. Optional: `claude setup-token` and save it as the repo secret `CLAUDE_CODE_OAUTH_TOKEN` to enable the GitHub Action.
 
 ## Human-only tickets

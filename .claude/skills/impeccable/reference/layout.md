@@ -24,9 +24,7 @@ When a sub-agent tool is available and permitted, run these independently; other
    - **Extremes:** Do long content, empty states, overlays, sticky elements, safe areas, and small touch targets expose structural failures?
 2. **Mechanical scan:** run:
 
-```bash
-Not available in this repo, skip: impeccable detect --json --scope layout [target files or dirs]
-```
+Not available in this repo, skip: `impeccable detect --json --scope layout [target files or dirs]`
 
 Also inspect arbitrary spacing, overflow, stacking, and container behavior the detector cannot resolve. Keep mechanical evidence out of the first assessment, then synthesize both passes before editing. A clean scan cannot prove hierarchy or rhythm.
 

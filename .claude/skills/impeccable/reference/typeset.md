@@ -23,9 +23,7 @@ When a sub-agent tool is available and permitted, run these independently; other
    - **Delivery:** Are only used assets loaded? Do fallback metrics, loading strategy, and variable-font settings avoid invisible text and disruptive reflow?
 2. **Mechanical scan:** run:
 
-```bash
-Not available in this repo, skip: impeccable detect --json --scope type [target files or dirs]
-```
+Not available in this repo, skip: `impeccable detect --json --scope type [target files or dirs]`
 
 Also inspect dynamic or arbitrary font values the detector cannot interpret. Synthesize both assessments before editing, noting what each caught alone. A clean scan is a floor, not proof of good typography.
 
