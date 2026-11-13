@@ -45,6 +45,7 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
+import { type ApiCaller, Caller } from '../common/api-caller';
 import {
   AnimeBySlugAnimeSchema,
   AnimeBySlugRedirectSchema,
@@ -62,6 +63,19 @@ import { AnimeFranchiseService } from './franchise.service';
 const ID_PATTERN = /^[1-9]\d{0,8}$/;
 const YEAR_PATTERN = /^[1-9]\d{3}$/;
 const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
+
+/** The 429 of a route that can start a cold import (OTA-173, ADR 0019 item 12). */
+const IMPORT_LIMIT_RESPONSE = {
+  description:
+    'A cold import was refused. An anime this route already serves is unaffected; one we store but whose switched-on sources have not linked it to the requested id still goes through the importer and can get this answer. ANIME_IMPORT_VISITOR_LIMIT_REACHED: this visitor started 5 new imports (one more every 40 s; web server calls only). ANIME_IMPORT_LIMIT_REACHED: too many new imports overall (global cap).',
+  headers: {
+    'Retry-After': {
+      description:
+        "Seconds to wait: until this visitor's next token (1 to 40), or 20 for the global cap.",
+      schema: { type: 'integer', minimum: 1, maximum: 40 },
+    },
+  },
+} as const;
 
 class AnimeLookupParams {
   @ApiProperty({ enum: ANIME_ID_SOURCES })
@@ -295,12 +309,12 @@ export class AnimeController {
     description:
       'The anime is not cached any more and its sources are down or rate-limited.',
   })
-  @ApiTooManyRequestsResponse({
-    description:
-      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
-  })
-  getBySlug(@Param() params: AnimeSlugParams): Promise<AnimeBySlug> {
-    return this.anime.getBySlug(params.slug);
+  @ApiTooManyRequestsResponse(IMPORT_LIMIT_RESPONSE)
+  getBySlug(
+    @Param() params: AnimeSlugParams,
+    @Caller() caller: ApiCaller,
+  ): Promise<AnimeBySlug> {
+    return this.anime.getBySlug(params.slug, caller);
   }
 
   // Three segments: cannot clash with the two-segment routes.
@@ -345,14 +359,14 @@ export class AnimeController {
     description:
       'We do not have this anime yet and its sources are down or rate-limited.',
   })
-  @ApiTooManyRequestsResponse({
-    description:
-      'Too many new anime are being imported right now (global cap); a stored anime is unaffected.',
-  })
-  get(@Param() params: AnimeLookupParams): Promise<AnimeDetails> {
-    return this.anime.getByExternalId({
-      source: params.idSource,
-      externalId: Number(params.externalId),
-    });
+  @ApiTooManyRequestsResponse(IMPORT_LIMIT_RESPONSE)
+  get(
+    @Param() params: AnimeLookupParams,
+    @Caller() caller: ApiCaller,
+  ): Promise<AnimeDetails> {
+    return this.anime.getByExternalId(
+      { source: params.idSource, externalId: Number(params.externalId) },
+      caller,
+    );
   }
 }

@@ -1,6 +1,11 @@
 import type { AnimeDataSource } from '@otakuleague/shared-types';
 import type { RateLimiter } from './rate-limiter';
-import { SourceUnavailableError, UnusableAnswerError } from './source.types';
+import {
+  COOLING_DOWN_REASON,
+  QUEUE_FULL_REASON,
+  SourceUnavailableError,
+  UnusableAnswerError,
+} from './source.types';
 
 export interface SourceHttpOptions {
   readonly source: AnimeDataSource;
@@ -99,7 +104,7 @@ export async function requestJson(
     if (options.limiter.isDown()) {
       throw new SourceUnavailableError(
         options.source,
-        'cooling down after a failure',
+        COOLING_DOWN_REASON,
         attempt > 1,
       );
     }
@@ -107,7 +112,7 @@ export async function requestJson(
     if (!(await options.limiter.acquire(options.maxQueueMs))) {
       throw new SourceUnavailableError(
         options.source,
-        'queue full',
+        QUEUE_FULL_REASON,
         attempt > 1,
       );
     }
@@ -115,7 +120,7 @@ export async function requestJson(
     if (options.limiter.isDown()) {
       throw new SourceUnavailableError(
         options.source,
-        'cooling down after a failure',
+        COOLING_DOWN_REASON,
         attempt > 1,
       );
     }

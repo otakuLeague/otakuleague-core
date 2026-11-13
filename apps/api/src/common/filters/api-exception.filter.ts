@@ -15,6 +15,15 @@ import { ApiException } from '../api.exception';
 export interface ErrorResponse {
   readonly status: number;
   readonly body: ApiError;
+  /** Sent as the Retry-After header; present only as a positive integer (ADR 0019). */
+  readonly retryAfterSeconds?: number;
+}
+
+/** A Retry-After the client can trust: a positive whole number of seconds, else none. */
+function validRetryAfter(seconds: number | undefined): number | undefined {
+  return seconds !== undefined && Number.isSafeInteger(seconds) && seconds > 0
+    ? seconds
+    : undefined;
 }
 
 const CLIENT_ERROR_CODES: Readonly<
@@ -91,7 +100,12 @@ const INTERNAL_ERROR: ErrorResponse = {
 /** Maps any thrown value to the envelope. Server faults never expose their message. */
 export function toErrorResponse(exception: unknown): ErrorResponse {
   if (exception instanceof ApiException) {
-    return { status: exception.getStatus(), body: { error: exception.error } };
+    const retryAfterSeconds = validRetryAfter(exception.retryAfterSeconds);
+    return {
+      status: exception.getStatus(),
+      body: { error: exception.error },
+      ...(retryAfterSeconds !== undefined && { retryAfterSeconds }),
+    };
   }
   if (exception instanceof HttpException) {
     const status = exception.getStatus();
@@ -117,7 +131,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const { status, body } = toErrorResponse(exception);
+    const { status, body, retryAfterSeconds } = toErrorResponse(exception);
     const http = host.switchToHttp();
     if (status >= 500) {
       // The real cause stays server-side; the client only gets the generic body.
@@ -135,6 +149,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       // Too late for an envelope; close the response so the client is not left hanging.
       response.end();
       return;
+    }
+    if (retryAfterSeconds !== undefined) {
+      response.setHeader('Retry-After', String(retryAfterSeconds));
     }
     response.status(status).json(body);
   }

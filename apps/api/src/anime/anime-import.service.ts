@@ -6,6 +6,12 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import type { AnimeDataSource } from '@otakuleague/shared-types';
+import {
+  type ApiCaller,
+  UNKNOWN_VISITOR_KEY,
+  type VisitorKey,
+  visitorKeyOf,
+} from '../common/api-caller';
 import { ApiException } from '../common/api.exception';
 import { Clock, Random } from '../common/clock-and-random.module';
 import { Prisma } from '../generated/prisma/client';
@@ -31,12 +37,14 @@ import {
   type AnimeRef,
   AnimeSourceAdapter,
   type AnimeSnapshot,
+  BACKED_OFF_REASON,
   type FetchPriority,
+  refusedBeforeSending,
   type SourceResult,
   SourceUnavailableError,
   UnusableAnswerError,
 } from './sources/source.types';
-import { ImportLimits } from './import-limits';
+import { IMPORT_REFILL_MS, ImportLimits } from './import-limits';
 import { backoffKey, SourceBackoff } from './source-backoff';
 
 export const ANIME_SOURCE_ADAPTERS = Symbol('ANIME_SOURCE_ADAPTERS');
@@ -57,12 +65,32 @@ export function sourceNotAvailable(): ApiException {
   });
 }
 
+/** The global cap: Retry-After is one refill step, 20 s (ADR 0019 item 12). */
 export function importLimitReached(): ApiException {
-  return new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
-    code: 'ANIME_IMPORT_LIMIT_REACHED',
-    message:
-      'Too many new anime are being imported right now. Try again in a minute.',
-  });
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_IMPORT_LIMIT_REACHED',
+      message:
+        'Too many new anime are being imported right now. Try again in a moment.',
+    },
+    { retryAfterSeconds: IMPORT_REFILL_MS / 1000 },
+  );
+}
+
+/** This visitor's cap: Retry-After is the seconds until its next token, 1 to 40 (ADR 0019). */
+export function visitorImportLimitReached(
+  retryAfterSeconds: number,
+): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_IMPORT_VISITOR_LIMIT_REACHED',
+      message:
+        'You opened many new anime in a short time. Try again in a moment.',
+    },
+    { retryAfterSeconds },
+  );
 }
 
 /** The source's own id first, so a refresh always asks about the same entry. */
@@ -108,6 +136,10 @@ export class AnimeImportService implements OnModuleDestroy {
   private readonly notFoundAt = new Map<string, number>();
   /** When the import cap was last logged: one warning per minute at most. */
   private limitWarnedAt = Number.NEGATIVE_INFINITY;
+  /** Same for the per-visitor cap: one warning per minute for all known visitors together. */
+  private visitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
+  /** The shared `unknown` key has its own: a missing client IP must not hide behind a visitor. */
+  private unknownVisitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -145,11 +177,28 @@ export class AnimeImportService implements OnModuleDestroy {
   /**
    * Imports an anime we do not have, from the first enabled source that knows it, then fills
    * in from the other sources in the background. Returns our anime id.
+   *
+   * ADR 0019 item 9: joining an import already running for this id is free. Otherwise a `web`
+   * caller's visitor token is taken before the shared import starts, so a 429 goes only to the
+   * visitor who caused it and never to others waiting on the same id; an `open` caller has no
+   * visitor bucket. The global token comes after, inside the import.
    */
-  importNew(ref: AnimeRef): Promise<string> {
-    return this.shared(`import:${ref.source}:${ref.externalId}`, () =>
-      this.runImport(ref),
-    );
+  importNew(ref: AnimeRef, caller: ApiCaller): Promise<string> {
+    const key = `import:${ref.source}:${ref.externalId}`;
+    const running = this.inFlight.get(key);
+    if (running) return running as Promise<string>;
+    const visitorKey = visitorKeyOf(caller);
+    if (visitorKey !== null) {
+      const take = this.limits.takeVisitorToken(visitorKey);
+      if (!take.taken) {
+        this.warnVisitorLimitReached(visitorKey);
+        return Promise.reject(
+          visitorImportLimitReached(take.retryAfterSeconds),
+        );
+      }
+    }
+    // No await since the in-flight check: this call starts the one shared import.
+    return this.shared(key, () => this.runImport(ref, visitorKey));
   }
 
   /** Starts background refreshes for the enabled sources whose data is missing or stale. */
@@ -254,61 +303,109 @@ export class AnimeImportService implements OnModuleDestroy {
     });
   }
 
-  private async runImport(ref: AnimeRef): Promise<string> {
-    // A request that missed the anime just before another import finished lands here after
-    // that import's key is gone: the database already has it, so no source call.
-    const linked = await this.prisma.animeExternalId.findUnique({
-      where: {
-        source_externalId: {
-          source: DB_ID_SOURCE[ref.source],
-          externalId: ref.externalId,
+  /**
+   * ADR 0019 item 10: a token is spent only when a source request was sent. Otherwise (stored,
+   * known missing, removed, no source, global bucket empty, every source refused before sending,
+   * or a database error first) the visitor token comes back, and the global one if it was taken.
+   */
+  private async runImport(
+    ref: AnimeRef,
+    visitorKey: VisitorKey | null,
+  ): Promise<string> {
+    let globalTaken = false;
+    let requestSent = false;
+    try {
+      // A request that missed the anime just before another import finished lands here after
+      // that import's key is gone: the database already has it, so no source call.
+      const linked = await this.prisma.animeExternalId.findUnique({
+        where: {
+          source_externalId: {
+            source: DB_ID_SOURCE[ref.source],
+            externalId: ref.externalId,
+          },
         },
-      },
-    });
-    if (linked) return linked.animeId;
-    if (this.limits.isKnownMissing(ref)) throw animeNotFound();
-    // ADR 0007: a removed anime costs no source call, however often its URL is hit.
-    if (await this.isRemoved([ref])) throw animeNotFound();
-    const candidates = this.enabledAdapters().filter((adapter) =>
-      adapter.lookups.includes(ref.source),
+      });
+      if (linked) return linked.animeId;
+      if (this.limits.isKnownMissing(ref)) throw animeNotFound();
+      // ADR 0007: a removed anime costs no source call, however often its URL is hit.
+      if (await this.isRemoved([ref])) throw animeNotFound();
+      const candidates = this.enabledAdapters().filter((adapter) =>
+        adapter.lookups.includes(ref.source),
+      );
+      if (candidates.length === 0) throw animeNotFound();
+      if (!this.limits.takeImportToken()) {
+        this.warnImportLimitReached();
+        throw importLimitReached();
+      }
+      globalTaken = true;
+      let unavailable = false;
+      for (const adapter of candidates) {
+        let result;
+        try {
+          result = await this.fetchFrom(adapter, ref);
+        } catch (error) {
+          // Only a refusal before the first attempt left nothing at the source.
+          if (
+            !(error instanceof SourceUnavailableError) ||
+            !refusedBeforeSending(error)
+          ) {
+            requestSent = true;
+          }
+          if (!(error instanceof SourceUnavailableError)) throw error;
+          // A refusal before sending costs nothing now: logging each one would flood the logs.
+          if (!refusedBeforeSending(error)) this.logger.warn(error.message);
+          unavailable = true;
+          continue;
+        }
+        requestSent = true;
+        if (result.kind === 'not_found') continue;
+        // Adult entries are neither stored nor shown (ADR 0006 update): same answer as unknown.
+        if (result.snapshot.adult) {
+          await this.remove(null, result.snapshot.ids);
+          this.limits.rememberMissing(ref);
+          throw animeNotFound();
+        }
+        const animeId = await this.store(adapter, result.snapshot);
+        // Registered before this import ends, so settle() never sees a gap between the two.
+        void this.shared(`fill:${animeId}`, () => this.fillFromOthers(animeId));
+        return animeId;
+      }
+      if (unavailable) throw sourceNotAvailable();
+      this.limits.rememberMissing(ref);
+      throw animeNotFound();
+    } finally {
+      if (!requestSent) {
+        if (visitorKey !== null) this.limits.giveBackVisitorToken(visitorKey);
+        if (globalTaken) this.limits.giveBackImportToken();
+      }
+    }
+  }
+
+  private warnImportLimitReached(): void {
+    const now = this.clock.now().getTime();
+    if (now - this.limitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+    this.limitWarnedAt = now;
+    this.logger.warn('Cold anime import cap reached: new imports are refused.');
+  }
+
+  /** Never logs the visitor key: it is a client IP (ADR 0019). Only whether it was the shared one. */
+  private warnVisitorLimitReached(visitorKey: VisitorKey): void {
+    const now = this.clock.now().getTime();
+    if (visitorKey === UNKNOWN_VISITOR_KEY) {
+      if (now - this.unknownVisitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) {
+        return;
+      }
+      this.unknownVisitorLimitWarnedAt = now;
+      this.logger.warn(
+        'Visitor import cap reached on the shared unknown visitor: web calls may arrive without a client IP.',
+      );
+      return;
+    }
+    if (now - this.visitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+    this.visitorLimitWarnedAt = now;
+    this.logger.warn(
+      "Visitor import cap reached: one visitor's new imports are refused.",
     );
-    if (candidates.length === 0) throw animeNotFound();
-    if (!this.limits.takeImportToken()) {
-      const now = this.clock.now().getTime();
-      if (now - this.limitWarnedAt >= LIMIT_WARN_INTERVAL_MS) {
-        this.limitWarnedAt = now;
-        this.logger.warn(
-          'Cold anime import cap reached: new imports are refused.',
-        );
-      }
-      throw importLimitReached();
-    }
-    let unavailable = false;
-    for (const adapter of candidates) {
-      let result;
-      try {
-        result = await this.fetchFrom(adapter, ref);
-      } catch (error) {
-        if (!(error instanceof SourceUnavailableError)) throw error;
-        this.logger.warn(error.message);
-        unavailable = true;
-        continue;
-      }
-      if (result.kind === 'not_found') continue;
-      // Adult entries are neither stored nor shown (ADR 0006 update): same answer as unknown.
-      if (result.snapshot.adult) {
-        await this.remove(null, result.snapshot.ids);
-        this.limits.rememberMissing(ref);
-        throw animeNotFound();
-      }
-      const animeId = await this.store(adapter, result.snapshot);
-      // Registered before this import ends, so settle() never sees a gap between the two.
-      void this.shared(`fill:${animeId}`, () => this.fillFromOthers(animeId));
-      return animeId;
-    }
-    if (unavailable) throw sourceNotAvailable();
-    this.limits.rememberMissing(ref);
-    throw animeNotFound();
   }
 
   /**
@@ -323,10 +420,7 @@ export class AnimeImportService implements OnModuleDestroy {
   ): Promise<SourceResult> {
     const key = backoffKey('anime', adapter.source, ref);
     if (this.backoff.isBackedOff(key)) {
-      throw new SourceUnavailableError(
-        adapter.source,
-        'backed off after an unusable answer',
-      );
+      throw new SourceUnavailableError(adapter.source, BACKED_OFF_REASON);
     }
     try {
       const result = await adapter.fetchAnime(ref, priority);

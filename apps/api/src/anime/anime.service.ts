@@ -4,6 +4,7 @@ import type {
   AnimeDetails,
   AnimeSlugResolution,
 } from '@otakuleague/shared-types';
+import type { ApiCaller } from '../common/api-caller';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -26,15 +27,22 @@ export class AnimeService {
     private readonly importer: AnimeImportService,
   ) {}
 
-  /** The core anime by a source id, when a switched-on source vouches for that id. */
-  async getByExternalId(ref: AnimeRef): Promise<AnimeDetails> {
+  /**
+   * The core anime by a source id, when a switched-on source vouches for that id. `caller` is
+   * who the guard says is calling (never from the request body): a cold import counts against
+   * that visitor (ADR 0019).
+   */
+  async getByExternalId(
+    ref: AnimeRef,
+    caller: ApiCaller,
+  ): Promise<AnimeDetails> {
     const anime = await this.findStored(ref);
     // With no enabled data at all, keep it: serve() then asks the enabled sources.
     const vouched =
       anime !== null &&
       (visibleIdSources(anime, this.importer.isEnabled).has(ref.source) ||
         !this.hasEnabledData(anime));
-    return this.serve(vouched ? anime : null, ref, 'id_lookup');
+    return this.serve(vouched ? anime : null, ref, 'id_lookup', caller);
   }
 
   /**
@@ -61,7 +69,7 @@ export class AnimeService {
    * identity, not through a source's ids, so a switched-off source never breaks the slug of a
    * cached anime.
    */
-  async getBySlug(requested: string): Promise<AnimeBySlug> {
+  async getBySlug(requested: string, caller: ApiCaller): Promise<AnimeBySlug> {
     // One lookup rule for the proxy (resolve) and the page (this).
     const { anilistId, canonicalSlug } = await this.resolveSlug(requested);
     if (requested !== canonicalSlug) return { kind: 'redirect', canonicalSlug };
@@ -70,6 +78,7 @@ export class AnimeService {
       await this.findStored(ref),
       ref,
       'page_view',
+      caller,
     );
     // A re-import can move the canonical (its title changed while it was purged).
     return anime.canonicalSlug !== null && anime.canonicalSlug !== requested
@@ -86,13 +95,14 @@ export class AnimeService {
     stored: StoredAnime | null,
     ref: AnimeRef,
     access: 'page_view' | 'id_lookup',
+    caller: ApiCaller,
   ): Promise<AnimeDetails> {
     let anime = stored;
     if (!anime) {
       // No enabled source can resolve this kind of id (e.g. AniList switched off).
       if (!this.importer.canLookUp(ref)) throw animeNotFound();
       anime = await this.importer.loadStored(
-        await this.importer.importNew(ref),
+        await this.importer.importNew(ref, caller),
       );
       if (!anime) throw animeNotFound();
     } else if (!this.hasEnabledData(anime)) {

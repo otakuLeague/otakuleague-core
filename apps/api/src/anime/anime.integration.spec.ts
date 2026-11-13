@@ -9,16 +9,37 @@ import type {
 } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import {
+  type ApiCaller,
+  OPEN_CALLER,
+  type VisitorKey,
+  visitorKeyFromClientIp,
+} from '../common/api-caller';
 import { Clock } from '../common/clock-and-random.module';
+import { InternalKeySettings } from '../common/internal-key.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp, SequentialRandom } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { AnimeImportService } from './anime-import.service';
-import { ImportLimits } from './import-limits';
+import { ImportLimits, type VisitorTake } from './import-limits';
+import { AniListAdapter } from './sources/anilist.adapter';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
-import type { AnimeRef } from './sources/source.types';
+import {
+  type AnimeRef,
+  COOLING_DOWN_REASON,
+  SourceUnavailableError,
+} from './sources/source.types';
 import {
   AnimeSourceSettings,
   type SourceSettings,
@@ -62,6 +83,30 @@ class ResettableImportLimits extends ImportLimits {
   override takeImportToken(): boolean {
     return this.current.takeImportToken();
   }
+
+  override giveBackImportToken(): void {
+    this.current.giveBackImportToken();
+  }
+
+  override takeVisitorToken(key: VisitorKey): VisitorTake {
+    return this.current.takeVisitorToken(key);
+  }
+
+  override giveBackVisitorToken(key: VisitorKey): void {
+    this.current.giveBackVisitorToken(key);
+  }
+
+  override visitorCount(): number {
+    return this.current.visitorCount();
+  }
+}
+
+/** Obvious fake of a valid shape (64 characters, like `openssl rand -hex 32`). */
+const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
+
+/** A web caller as the guard records it; documentation addresses only (RFC 5737, RFC 3849). */
+function webCaller(clientIp: string): ApiCaller {
+  return { kind: 'web', visitorKey: visitorKeyFromClientIp(clientIp) };
 }
 
 /** A local stand-in for one source, serving the recorded responses. */
@@ -336,14 +381,14 @@ describe('GET /anime/:idSource/:externalId', () => {
 
   it('does not call the source again for an import that starts just after another finished', async () => {
     // A request that missed the anime, then reached importNew once the first import was done.
-    const first = await importer.importNew({
-      source: 'myanimelist',
-      externalId: 52991,
-    });
-    const late = await importer.importNew({
-      source: 'myanimelist',
-      externalId: 52991,
-    });
+    const first = await importer.importNew(
+      { source: 'myanimelist', externalId: 52991 },
+      OPEN_CALLER,
+    );
+    const late = await importer.importNew(
+      { source: 'myanimelist', externalId: 52991 },
+      OPEN_CALLER,
+    );
     await importer.settle();
 
     expect(late).toBe(first);
@@ -1092,7 +1137,7 @@ describe('GET /anime/:idSource/:externalId', () => {
         error: {
           code: 'ANIME_IMPORT_LIMIT_REACHED',
           message:
-            'Too many new anime are being imported right now. Try again in a minute.',
+            'Too many new anime are being imported right now. Try again in a moment.',
         },
       });
 
@@ -1143,6 +1188,373 @@ describe('GET /anime/:idSource/:externalId', () => {
 
       await get('/anime/slugs/frieren-beyond-journeys-end').expect(200);
       expect(await viewedAt()).toEqual(clock.now());
+    });
+  });
+
+  describe('per-visitor import limit (ADR 0019)', () => {
+    const MISSING_ID = 889_001;
+    const ALICE_IP = '203.0.113.7';
+    const alice = webCaller(ALICE_IP);
+    const bob = webCaller('198.51.100.9');
+    const frieren: AnimeRef = { source: 'myanimelist', externalId: 52991 };
+    const missing = (offset: number): AnimeRef => ({
+      source: 'anilist',
+      externalId: MISSING_ID + offset,
+    });
+    const visitorLimited = {
+      error: { code: 'ANIME_IMPORT_VISITOR_LIMIT_REACHED' },
+    };
+    const notFound = { error: { code: 'ANIME_NOT_FOUND' } };
+    /** Spends what is left: only at the end of a test. */
+    const visitorTokensLeft = (clientIp: string) => {
+      const key = visitorKeyFromClientIp(clientIp);
+      let left = 0;
+      while (limits.takeVisitorToken(key).taken) left += 1;
+      return left;
+    };
+    const globalTokensLeft = () => {
+      let left = 0;
+      while (limits.takeImportToken()) left += 1;
+      return left;
+    };
+    const useUp = async (caller: ApiCaller) => {
+      for (let offset = 0; offset < 5; offset += 1) {
+        await expect(
+          importer.importNew(missing(offset), caller),
+        ).rejects.toMatchObject(notFound);
+      }
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("refuses a visitor's 6th cold import with its own code; another visitor still imports", async () => {
+      await useUp(alice);
+      const calls = anilist.calls;
+
+      await expect(importer.importNew(missing(5), alice)).rejects.toMatchObject(
+        { ...visitorLimited, retryAfterSeconds: 40 },
+      );
+      expect(anilist.calls).toBe(calls);
+      await expect(importer.importNew(frieren, bob)).resolves.toEqual(
+        expect.any(String),
+      );
+      await importer.settle();
+    });
+
+    it('skips the visitor bucket for an open caller; the global 429 carries Retry-After 20', async () => {
+      for (let offset = 0; offset < 10; offset += 1) {
+        await get(`/anime/anilist/${MISSING_ID + offset}`).expect(404);
+      }
+
+      const refused = await get(`/anime/anilist/${MISSING_ID + 10}`).expect(
+        429,
+      );
+      expect(refused.headers['retry-after']).toBe('20');
+      expect(refused.body).toMatchObject({
+        error: { code: 'ANIME_IMPORT_LIMIT_REACHED' },
+      });
+      expect(limits.visitorCount()).toBe(0);
+    });
+
+    it('lets a limited visitor join an import already running, for free', async () => {
+      await useUp(alice);
+
+      const started = importer.importNew(frieren, bob);
+      const joined = importer.importNew(frieren, alice);
+
+      const [startedId, joinedId] = await Promise.all([started, joined]);
+      expect(joinedId).toBe(startedId);
+      await importer.settle();
+    });
+
+    it("sends a limited starter's 429 to it alone: the next caller of that id imports", async () => {
+      await useUp(alice);
+
+      const refused = importer.importNew(frieren, alice);
+      const imported = importer.importNew(frieren, bob);
+
+      await expect(refused).rejects.toMatchObject(visitorLimited);
+      await expect(imported).resolves.toEqual(expect.any(String));
+      await importer.settle();
+    });
+
+    it('gives the visitor token back for a stored anime', async () => {
+      const id = await importer.importNew(frieren, OPEN_CALLER);
+      await importer.settle();
+
+      await expect(importer.importNew(frieren, alice)).resolves.toBe(id);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+    });
+
+    it('gives the visitor token back for an id known missing', async () => {
+      await expect(
+        importer.importNew(missing(0), OPEN_CALLER),
+      ).rejects.toMatchObject(notFound);
+      const calls = anilist.calls;
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toMatchObject(
+        notFound,
+      );
+      expect(anilist.calls).toBe(calls);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+    });
+
+    it('gives the visitor token back for a removed anime', async () => {
+      await prisma.animeIdentity.create({
+        data: {
+          anilistId: MISSING_ID,
+          canonicalSlug: 'removed-visitor-limit-test',
+          createdAt: clock.now(),
+          removedAt: clock.now(),
+        },
+      });
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toMatchObject(
+        notFound,
+      );
+      expect(anilist.calls).toBe(0);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+    });
+
+    it('gives the visitor token back when the global bucket is empty', async () => {
+      expect(globalTokensLeft()).toBe(10);
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toMatchObject(
+        {
+          error: { code: 'ANIME_IMPORT_LIMIT_REACHED' },
+          retryAfterSeconds: 20,
+        },
+      );
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+    });
+
+    it('gives both tokens back when AniList refuses before sending (cool-down)', async () => {
+      vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+        new SourceUnavailableError('anilist', COOLING_DOWN_REASON),
+      );
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toMatchObject(
+        { error: { code: 'ANIME_SOURCES_UNAVAILABLE' } },
+      );
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+      expect(globalTokensLeft()).toBe(10);
+    });
+
+    it('gives both tokens back for an entry backed off after an unusable answer', async () => {
+      // An id of its own: the backoff outlives this test (SourceBackoff is not reset).
+      const unusable = missing(50);
+      const media = record(record(fixture('anilist-frieren')).data).Media;
+      aniListExtra = [
+        {
+          data: {
+            Media: {
+              ...record(media),
+              id: unusable.externalId,
+              idMal: null,
+              isAdult: null,
+            },
+          },
+        },
+      ];
+      await expect(
+        importer.importNew(unusable, OPEN_CALLER),
+      ).rejects.toMatchObject({ error: { code: 'ANIME_SOURCES_UNAVAILABLE' } });
+      const calls = anilist.calls;
+
+      await expect(importer.importNew(unusable, alice)).rejects.toMatchObject({
+        error: { code: 'ANIME_SOURCES_UNAVAILABLE' },
+      });
+      expect(anilist.calls).toBe(calls);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+      // The first import sent its request: that one global token stays spent.
+      expect(globalTokensLeft()).toBe(9);
+    });
+
+    it('gives the visitor token back when the database fails before any source call', async () => {
+      vi.spyOn(prisma.animeExternalId, 'findUnique').mockRejectedValueOnce(
+        new Error('database lost'),
+      );
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toThrow(
+        'database lost',
+      );
+      expect(anilist.calls).toBe(0);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+      expect(globalTokensLeft()).toBe(10);
+    });
+
+    it('keeps both tokens spent when AniList refuses before sending but Jikan is asked', async () => {
+      vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+        new SourceUnavailableError('anilist', COOLING_DOWN_REASON),
+      );
+
+      // A MAL id: AniList first (refused, nothing sent), then Jikan (asked, answers 404).
+      // AniList never answered, so this is an outage, not a 404 (ADR 0006 item 2).
+      await expect(
+        importer.importNew(
+          { source: 'myanimelist', externalId: MISSING_ID },
+          alice,
+        ),
+      ).rejects.toMatchObject({ error: { code: 'ANIME_SOURCES_UNAVAILABLE' } });
+      expect(jikan.calls).toBe(1);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(4);
+      expect(globalTokensLeft()).toBe(9);
+    });
+
+    it.each<[string, () => void]>([
+      [
+        'the adapter throws a plain error',
+        () => {
+          vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+            new Error('mapper bug'),
+          );
+        },
+      ],
+      [
+        'AniList answers not found',
+        () => {
+          aniListExtra = [];
+        },
+      ],
+      [
+        'AniList answers HTTP 503',
+        () => {
+          anilist.up = false;
+        },
+      ],
+      [
+        'the source refuses on the retry after a 429',
+        () => {
+          vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+            new SourceUnavailableError('anilist', COOLING_DOWN_REASON, true),
+          );
+        },
+      ],
+    ])(
+      'keeps both tokens spent when a request was sent: %s',
+      async (_, arrange) => {
+        arrange();
+
+        await expect(importer.importNew(missing(0), alice)).rejects.toThrow();
+        expect(visitorTokensLeft(ALICE_IP)).toBe(4);
+        expect(globalTokensLeft()).toBe(9);
+      },
+    );
+
+    describe('over HTTP, with the internal key enforced', () => {
+      let keyedApp: INestApplication<App>;
+      let keyedImporter: AnimeImportService;
+      let keyedLimits: ResettableImportLimits;
+
+      const keyedGet = (path: string, clientIp?: string | string[]) => {
+        const call = request(keyedApp.getHttpServer())
+          .get(path)
+          .set('X-Internal-Api-Key', FAKE_KEY);
+        return clientIp === undefined
+          ? call
+          : call.set({ 'X-Client-Ip': clientIp });
+      };
+      const coldImport = (offset: number, clientIp?: string | string[]) =>
+        keyedGet(`/anime/anilist/${MISSING_ID + offset}`, clientIp);
+
+      beforeAll(async () => {
+        keyedLimits = new ResettableImportLimits(clock);
+        keyedApp = await createTestApp({
+          clock,
+          overrides: [
+            { provide: AnimeSourceSettings, useValue: settings },
+            { provide: ImportLimits, useValue: keyedLimits },
+            {
+              provide: InternalKeySettings,
+              useValue: {
+                get: () => ({ kind: 'enforced', acceptedKeys: [FAKE_KEY] }),
+              },
+            },
+          ],
+        });
+        keyedImporter = keyedApp.get(AnimeImportService);
+      });
+
+      beforeEach(() => {
+        keyedLimits.reset();
+      });
+
+      afterEach(async () => {
+        await keyedImporter.settle();
+      });
+
+      afterAll(async () => {
+        await keyedImporter.settle();
+        await keyedApp.close();
+      });
+
+      it("answers a visitor's 6th cold import with 429 and a whole-second Retry-After", async () => {
+        for (let offset = 0; offset < 5; offset += 1) {
+          await coldImport(offset, ALICE_IP).expect(404);
+        }
+
+        const refused = await coldImport(5, ALICE_IP).expect(429);
+        expect(refused.body).toEqual({
+          error: {
+            code: 'ANIME_IMPORT_VISITOR_LIMIT_REACHED',
+            message:
+              'You opened many new anime in a short time. Try again in a moment.',
+          },
+        });
+        expect(refused.headers['retry-after']).toBe('40');
+
+        clock.advance(39_001);
+        const later = await coldImport(5, ALICE_IP).expect(429);
+        expect(later.headers['retry-after']).toBe('1');
+        await coldImport(6, '198.51.100.9').expect(404);
+      });
+
+      it('still serves a stored anime to a limited visitor, by id and by slug', async () => {
+        await keyedGet('/anime/myanimelist/52991', '198.51.100.9').expect(200);
+        await keyedImporter.settle();
+        for (let offset = 0; offset < 5; offset += 1) {
+          await coldImport(offset, ALICE_IP).expect(404);
+        }
+        await coldImport(5, ALICE_IP).expect(429);
+
+        await keyedGet('/anime/myanimelist/52991', ALICE_IP).expect(200);
+        await keyedGet(
+          '/anime/slugs/frieren-beyond-journeys-end',
+          ALICE_IP,
+        ).expect(200);
+      });
+
+      it('puts calls without X-Client-Ip and with a list in it in one shared bucket', async () => {
+        for (let offset = 0; offset < 3; offset += 1) {
+          await coldImport(offset).expect(404);
+        }
+        await coldImport(3, '203.0.113.7, 198.51.100.9').expect(404);
+        await coldImport(4, ['203.0.113.7', '198.51.100.9']).expect(404);
+
+        const refused = await coldImport(5).expect(429);
+        expect(refused.body).toMatchObject(visitorLimited);
+      });
+
+      it('puts two hosts of one IPv6 /64 in one bucket, and the next /64 in another', async () => {
+        for (let offset = 0; offset < 3; offset += 1) {
+          await coldImport(offset, '2001:db8:1:2::a').expect(404);
+        }
+        await coldImport(3, '2001:DB8:1:2:ffff::b').expect(404);
+        await coldImport(4, '2001:0db8:0001:0002::c').expect(404);
+
+        await coldImport(5, '2001:db8:1:2::d').expect(429);
+        await coldImport(5, '2001:db8:1:3::a').expect(404);
+      });
+
+      it('puts an IPv4-mapped IPv6 in the bucket of the plain IPv4', async () => {
+        for (let offset = 0; offset < 5; offset += 1) {
+          await coldImport(offset, ALICE_IP).expect(404);
+        }
+
+        await coldImport(5, `::ffff:${ALICE_IP}`).expect(429);
+      });
     });
   });
 });
