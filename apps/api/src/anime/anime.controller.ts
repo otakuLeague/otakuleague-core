@@ -147,7 +147,6 @@ class AnimeListQuery {
   )
   @IsInt()
   @Min(ANIME_LIST_MIN_YEAR)
-  @Max(9999)
   readonly year?: number;
 
   @ApiPropertyOptional({
@@ -232,6 +231,10 @@ export class AnimeController {
   @ApiServiceUnavailableResponse({
     description:
       'AniList is switched off, or we do not hold this page and AniList is down or rate-limited.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new lists are being loaded right now (global cap); a stored page is unaffected.',
   })
   getList(
     @Param() params: AnimeListParams,

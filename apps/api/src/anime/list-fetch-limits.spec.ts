@@ -57,4 +57,32 @@ describe('ListFetchLimits', () => {
 
     expect(taken.filter(Boolean)).toHaveLength(LIST_FETCH_BURST);
   });
+
+  it('banks no partial step while the bucket is full', () => {
+    const clock = new MovableClock();
+    const limits = new ListFetchLimits(clock);
+
+    clock.advance(LIST_FETCH_REFILL_MS - 100);
+    limits.take();
+    for (let index = 1; index < LIST_FETCH_BURST; index += 1) limits.take();
+    expect(limits.take()).toBe(false);
+
+    clock.advance(LIST_FETCH_REFILL_MS - 1);
+    expect(limits.take()).toBe(false);
+    clock.advance(1);
+    expect(limits.take()).toBe(true);
+  });
+
+  it('takes a given-back token again, never above the burst', () => {
+    const limits = new ListFetchLimits(new MovableClock());
+    limits.take();
+    limits.giveBack();
+    limits.giveBack();
+
+    const taken = Array.from({ length: LIST_FETCH_BURST + 1 }, () =>
+      limits.take(),
+    );
+
+    expect(taken.filter(Boolean)).toHaveLength(LIST_FETCH_BURST);
+  });
 });

@@ -41,4 +41,9 @@ export class ListFetchLimits {
     this.tokens -= 1;
     return true;
   }
+
+  /** Returns a token taken for a fetch that never reached AniList (never above the burst). */
+  giveBack(): void {
+    this.tokens = Math.min(LIST_FETCH_BURST, this.tokens + 1);
+  }
 }

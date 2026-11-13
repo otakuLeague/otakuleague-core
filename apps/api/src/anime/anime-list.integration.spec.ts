@@ -279,7 +279,7 @@ describe('GET /anime/lists/:kind', () => {
       ]);
     });
 
-    it('moves to the next season at the UTC year boundary, with a new source call and no stale fallback', async () => {
+    it('moves to the next season at the UTC year boundary, with a new source call', async () => {
       const before = await list('/anime/lists/seasonal');
       clock.advance(
         new Date('2027-01-01T00:00:00.000Z').getTime() - clock.now().getTime(),
@@ -348,13 +348,39 @@ describe('GET /anime/lists/:kind', () => {
 
       expect(refused.body).toEqual({
         error: {
-          code: 'LIST_FETCH_LIMITED',
+          code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
           message:
             'Too many new lists are being loaded right now. Try again in a minute.',
         },
       });
       expect(stored.freshness).toBe('fresh');
       expect(requests).toHaveLength(LIST_FETCH_BURST);
+    });
+
+    it('does not spend tokens on a stale page in its retry delay', async () => {
+      await prisma.animeListPage.create({
+        data: {
+          listKey: 'trending',
+          page: 1,
+          fetchedAt: new Date(clock.now().getTime() - 2 * HOUR_MS),
+          hasNextPage: false,
+          entries: [],
+        },
+      });
+      failing = true;
+      await list('/anime/lists/trending');
+      await lists.settle();
+      failing = false;
+
+      for (let read = 0; read < LIST_FETCH_BURST + 2; read += 1) {
+        await list('/anime/lists/trending');
+      }
+      await lists.settle();
+
+      expect(requests).toHaveLength(1);
+      expect(await list('/anime/lists/top?genre=Mecha')).toMatchObject({
+        freshness: 'fresh',
+      });
     });
 
     it('gives a token back after the refill step', async () => {

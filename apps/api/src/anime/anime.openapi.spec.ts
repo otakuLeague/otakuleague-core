@@ -97,6 +97,9 @@ describe('anime OpenAPI schema', () => {
     expect(page.properties?.entries?.items).toEqual({
       $ref: '#/components/schemas/AnimeListEntrySchema',
     });
+    expect(
+      Object.keys(document.paths['/anime/lists/{kind}']?.get?.responses ?? {}),
+    ).toEqual(expect.arrayContaining(['200', '400', '429', '503']));
     const paths = Object.keys(document.paths);
     expect(paths).toContain('/anime/lists/{kind}');
     expect(paths.indexOf('/anime/lists/{kind}')).toBeLessThan(

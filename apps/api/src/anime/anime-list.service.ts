@@ -61,9 +61,14 @@ function isQuietReason(error: SourceUnavailableError): boolean {
   );
 }
 
+/** In-flight and retry-delay key of one stored block. */
+function blockKey(list: CatalogList, page: number): string {
+  return `${listKey(list)}#${page}`;
+}
+
 function listFetchLimited(): ApiException {
   return new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
-    code: 'LIST_FETCH_LIMITED',
+    code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
     message:
       'Too many new lists are being loaded right now. Try again in a minute.',
   });
@@ -189,40 +194,64 @@ export class AnimeListService implements OnModuleDestroy {
     page: number,
     mayFetch: boolean,
   ): Promise<WindowBlock<ListedAnime> | null> {
-    const block = await this.stored(list, page);
+    let block = await this.stored(list, page);
     if (block === null) {
       if (!mayFetch) return null;
-      if (!this.mayStartFetch(list, page)) {
-        this.warnLimitReached();
-        throw listFetchLimited();
+      // A fetch that just finished stored the page after our first read: no second token.
+      if (!this.inFlight.has(blockKey(list, page))) {
+        block = await this.stored(list, page);
       }
-      try {
-        return this.toWindowBlock(
-          page,
-          await this.fetchShared(list, page, 'visitor'),
-          true,
-        );
-      } catch (error) {
-        if (!(error instanceof SourceUnavailableError)) throw error;
-        if (!isQuietReason(error)) this.logger.warn(error.message);
-        throw sourceNotAvailable();
-      }
+      if (block === null) return this.fetchCold(list, page);
     }
     const fresh = isFresh(list.kind, block.fetchedAt, this.clock.now());
-    if (
-      !fresh &&
-      !this.stopping &&
-      !this.anilist.isDown() &&
-      this.mayStartFetch(list, page)
-    ) {
-      void this.fetchShared(list, page, 'background');
+    if (!fresh && !this.stopping && !this.anilist.isDown()) {
+      const start = this.startDecision(list, page);
+      if (start === 'join' || start === 'start') {
+        void this.fetchShared(list, page, 'background');
+      }
     }
     return this.toWindowBlock(page, block, fresh);
   }
 
-  /** A fetch already running is joined for free; a new one takes a token from the shared bucket. */
-  private mayStartFetch(list: CatalogList, page: number): boolean {
-    return this.inFlight.has(`${listKey(list)}#${page}`) || this.limits.take();
+  /** A page we do not hold: one AniList call for a visitor, within the cold-fetch budget. */
+  private async fetchCold(
+    list: CatalogList,
+    page: number,
+  ): Promise<WindowBlock<ListedAnime>> {
+    if (this.anilist.isDown()) throw sourceNotAvailable();
+    const start = this.startDecision(list, page);
+    if (start === 'limited') {
+      this.warnLimitReached();
+      throw listFetchLimited();
+    }
+    if (start === 'retry-later') throw sourceNotAvailable();
+    try {
+      return this.toWindowBlock(
+        page,
+        await this.fetchShared(list, page, 'visitor'),
+        true,
+      );
+    } catch (error) {
+      if (!(error instanceof SourceUnavailableError)) throw error;
+      if (!isQuietReason(error)) this.logger.warn(error.message);
+      throw sourceNotAvailable();
+    }
+  }
+
+  /**
+   * Joining a fetch already running is free; a block in its retry delay is not asked; a new
+   * fetch takes a token from the shared bucket (given back if no request was sent).
+   */
+  private startDecision(
+    list: CatalogList,
+    page: number,
+  ): 'join' | 'start' | 'retry-later' | 'limited' {
+    const key = blockKey(list, page);
+    if (this.inFlight.has(key)) return 'join';
+    if ((this.retryAt.get(key) ?? 0) > this.clock.now().getTime()) {
+      return 'retry-later';
+    }
+    return this.limits.take() ? 'start' : 'limited';
   }
 
   private warnLimitReached(): void {
@@ -249,7 +278,7 @@ export class AnimeListService implements OnModuleDestroy {
     page: number,
     wait: ListFetchWait,
   ): Promise<StoredListBlock> {
-    const key = `${listKey(list)}#${page}`;
+    const key = blockKey(list, page);
     const running = this.inFlight.get(key);
     if (running) return running;
     const task = this.fetchAndStore(list, page, key, wait).finally(() =>
@@ -283,6 +312,10 @@ export class AnimeListService implements OnModuleDestroy {
       fetched = await this.anilist.fetchList(listQuery(list), page, wait);
       await this.refuseEmptyReplacement(list, page, fetched);
     } catch (error) {
+      if (error instanceof SourceUnavailableError && isQuietReason(error)) {
+        // Queue full or cooling down: no request left, so the token was not spent.
+        this.limits.giveBack();
+      }
       if (
         error instanceof SourceUnavailableError &&
         error.reason !== QUEUE_FULL &&
