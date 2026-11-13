@@ -2,7 +2,7 @@
 
 Status: proposed (2026-11-13, OTA-182). Accepted when the web sends the key (slice 2) and the key is set in production. Builds the internal key of [ADR 0015](0015-authentication.md) earlier and for every route, with the same names. Changes one line of it: until OTA-139, production starts without the key (see Rollout).
 
-Built so far (OTA-182 PR A): items 1 to 6, the guard (`apps/api/src/common/internal-key.guard.ts`), off until `INTERNAL_API_KEY` is set. Next: items 7 to 12 (PR B), the web side (slice 2) and the Preview key (Consequences).
+Built so far: items 1 to 6 (OTA-182 PR A), the guard (`apps/api/src/common/internal-key.guard.ts`), off until `INTERNAL_API_KEY` is set; items 7 to 12 (PR B), `ApiCaller` (`apps/api/src/common/api-caller.ts`), the visitor buckets in `ImportLimits` and `Retry-After`. Next: PR C (the Preview key of Consequences and the `INTERNAL_API_KEY_REQUIRED` boot flag), then the web side (slice 2).
 
 ## Context
 
@@ -22,7 +22,7 @@ Non-functional, with numbers:
 
 1. Isolation: one visitor takes at most 5 cold imports at once and 1.5 a minute after that, which is half the global burst (10) and half the global refill (3 a minute). A caller without the key takes 0 once the check is on.
 2. Cost: the check adds no I/O and under 0.1 ms per request (one SHA-256 digest of at most 512 bytes and one constant-time compare per accepted key; the accepted keys are hashed once at start).
-3. Memory: at most 10,000 visitor entries (about 1.5 MB), each dropped 200 s after its last import.
+3. Memory: at most 10,000 visitor entries (about 1.5 MB), each expired 200 s after its last import and removed at the next granted import of any visitor.
 4. Rollout: 0 failed requests caused by deploy order. New API with the old web and no key set behaves exactly as today; a rotation has 0 refused requests.
 5. Secrecy: the key has 256 bits of randomness, lives only in env vars, and never appears in a log line, a URL, an error body or a test fixture.
 
@@ -71,9 +71,9 @@ sequenceDiagram
 **Then the per-visitor limit.**
 
 7. The guard records an `ApiCaller` for the request: `open` (no key configured), or `web` with a `visitorKey`. `X-Client-Ip` is read only for a `web` caller. A valid IPv4 is the key as it is; an IPv4-mapped IPv6 becomes the IPv4; an IPv6 is cut to its first 64 bits (one home line owns a whole /64). Missing or invalid (a list, a zone id, text): the shared key `unknown`, so a call site that forgets the header shows up as early 429s instead of having no limit.
-8. `ImportLimits` gains one bucket per visitor: 5 tokens, one back every 40 s. Entries are kept in last-used order, dropped once full again (200 s), and capped at 10,000 (the oldest goes first).
+8. `ImportLimits` gains one bucket per visitor: 5 tokens, one back every 40 s. Entries are kept in last-used order (only a granted take counts as use), expire once full again (200 s), and are capped at 10,000 (the oldest goes first). Removal is lazy: each granted take first drops the expired entries at the front, then the oldest over the cap; no timer. An expired entry is a full bucket, so keeping it a little longer changes no answer. The refill arithmetic is one pure function shared with the global bucket.
 9. Order in the importer. An import already running for that id is joined for free, as today. Otherwise the caller's visitor token is taken **before** the shared import starts, so the 429 goes only to the visitor who caused it and is never handed to the others waiting on the same id. Then the global token, as today.
-10. A token is spent only when a source request was sent. The visitor token comes back when the anime turned out to be stored, known missing, removed, or when the global bucket was empty; both tokens come back when every source refused before sending (cool-down, backoff, queue full: `requestSent` is false).
+10. A token is spent only when a source request was sent. The visitor token comes back when the anime turned out to be stored, known missing, removed, when no source can look it up, when the global bucket was empty, or when the database failed first; both tokens come back when every source refused before sending. "Refused before sending" is `requestSent` false **and** a pre-send reason (queue full, cooling down, backed off after an unusable answer): `requestSent` alone is not enough, because a failure after a real request (HTTP 5xx, timeout, non-JSON, `UnusableAnswerError`) also leaves it false (`refusedBeforeSending` in `sources/source.types.ts`). Any answer or any other error counts as sent. One `finally` in the import gives back.
 11. An `open` caller skips the visitor bucket: without the key nobody can be told apart, and a shared bucket of 5 would make the beta stricter than it is today.
 12. Answers: visitor limit 429 `ANIME_IMPORT_VISITOR_LIMIT_REACHED` with `Retry-After` set to the seconds until that visitor's next token (1 to 40); global limit 429 `ANIME_IMPORT_LIMIT_REACHED` with `Retry-After: 20`. `ApiException` gets a typed `retryAfterSeconds`; the filter sets the header. No free-form headers.
 
@@ -97,7 +97,7 @@ Rotation: set `INTERNAL_API_KEY_PREVIOUS` to the old key and `INTERNAL_API_KEY` 
 - **Many addresses still drain the global bucket.** This stops one crawler, not a botnet; the next step is a Vercel firewall rule, as ADR 0006 already says.
 - **In memory**: every deploy refills every bucket, and a second API instance doubles each limit. Same trade as OTA-173.
 - **A limited visitor asking for a known-missing id** gets 429 instead of 404 until a token is back.
-- The client IP is personal data: it lives in the API's memory for at most 200 s after an import and is never logged. The privacy page should say IPs are used for rate limiting (check with OTA-147).
+- The client IP is personal data: it lives only in the API's memory, from an import until the next import of any visitor at least 200 s later (or until 10,000 newer visitors push it out, or a restart), and is never logged; the refusal warning only says whether the shared `unknown` key was refused. The privacy page should say IPs are used for rate limiting (check with OTA-147).
 - ADR 0006 ("the API only sees Vercel's addresses", known limit) and ADR 0017 ("otherwise it counts its own peer IP") get a pointer here: without the key there is no per-visitor count, and once the check is on such a request is refused.
 
 **Too simple?** Yes in three places, accepted: open when unset (above), no check on unknown paths or before body parsing, and no limit per signed-in member (an IP is all we have before accounts). **Too complicated?** Three parts look optional and are not. The previous key: with a guard on every route, a rotation without overlap is a site-wide outage between two dashboards. The /64 cut: without it one IPv6 host has 2^64 visitor keys. The preview key: without it either previews break or preview code holds the production secret. Left out on purpose: Redis, a throttler library, request signing, a per-route allowlist of callers.
@@ -111,7 +111,7 @@ To fill in after the rollout.
 - **OTA-182 slice 2**: web sends the key and the client IP; `.claude/rules/web.md`; ADR 0003 addendum (shared with OTA-139).
 - **OTA-189**: per-visitor limit on list and search, reusing `ApiCaller` and the same bucket function.
 - **OTA-139**: key required in production; credential routes need a `web` caller.
-- **PR B (planned)**: an `INTERNAL_API_KEY_REQUIRED=true` boot flag that refuses to start without the key, and a Sentry message (not only a log line) when production starts open.
+- **PR C (planned)**: `INTERNAL_API_KEY_PREVIEW` (Consequences), an `INTERNAL_API_KEY_REQUIRED=true` boot flag that refuses to start without the key, and a Sentry message (not only a log line) when production starts open; `.env.example` with them.
 - Cache the `/health` result for about 1 s, so a public route cannot be used to load the database.
 - Swagger: an api-key security scheme for `X-Internal-Api-Key` and the 403 `INTERNAL_KEY_REQUIRED` answer on every route.
 - Not in this ADR (other nits in the OTA-182 notes): AniList 404 only when `data.Media === null`; remember every id on the adult path; `rel="nofollow"` on season links without a slug.
