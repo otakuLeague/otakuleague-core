@@ -12,6 +12,7 @@ import './globals.css';
 import { SiteFooter } from '../src/shell/site-footer';
 import { SiteHeader } from '../src/shell/site-header';
 import { robotsMetadata, SEARCH_INDEXING } from '../src/seo/indexing';
+import { SITE_URL } from '../src/seo/site';
 import { THEME_BOOT_SCRIPT } from '../src/shell/theme';
 
 // Self-hosted at build time by next/font; tokens.css reads these names (--font-*-face).
@@ -32,6 +33,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: APP_NAME, template: `%s | ${APP_NAME}` },
   description:
     'Track your anime and manga, explore their data, and play anime quizzes and games.',
