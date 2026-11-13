@@ -17,6 +17,7 @@ import {
   type AnimeLink,
   type AnimeNextEpisode,
   type AnimeScore,
+  type AnimeSeason,
   type AnimeSearchHit,
   type AnimeSearchPage,
   type AnimeTitleKind,
@@ -329,9 +330,22 @@ class AnimeListEntrySchema implements AnimeListEntry {
   readonly score!: AnimeListEntry['score'];
 }
 
+class AnimeListSeasonSchema {
+  @ApiProperty({ enum: ANIME_SEASONS })
+  readonly season!: AnimeSeason;
+  @ApiProperty({ type: 'integer' }) readonly year!: number;
+}
+
 export class AnimeListPageSchema implements AnimeListPage {
   @ApiProperty({ enum: ANIME_LIST_KINDS })
   readonly kind!: AnimeListPage['kind'];
+  @ApiProperty({
+    type: AnimeListSeasonSchema,
+    nullable: true,
+    description:
+      'The season shown: set for seasonal (the default season echoed back), null otherwise',
+  })
+  readonly season!: AnimeListPage['season'];
   @ApiProperty({
     type: [AnimeListEntrySchema],
     description:

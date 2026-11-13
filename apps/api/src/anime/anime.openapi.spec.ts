@@ -46,6 +46,7 @@ const ANIME_DETAILS_KEYS = {
 
 const ANIME_LIST_PAGE_KEYS = {
   kind: true,
+  season: true,
   entries: true,
   nextCursor: true,
   freshness: true,
@@ -92,6 +93,7 @@ describe('anime OpenAPI schema', () => {
     expect(Object.keys(page.properties ?? {}).toSorted()).toEqual(keys);
     expect(page.required?.toSorted()).toEqual(keys);
     expect(page.properties?.nextCursor?.nullable).toBe(true);
+    expect(page.properties?.season?.nullable).toBe(true);
     expect(page.properties?.entries?.items).toEqual({
       $ref: '#/components/schemas/AnimeListEntrySchema',
     });

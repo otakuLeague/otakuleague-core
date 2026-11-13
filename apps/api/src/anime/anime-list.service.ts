@@ -19,10 +19,13 @@ import {
   assembleWindow,
   decodeCursor,
   encodeCursor,
+  type CatalogList,
   isFresh,
   listKey,
-  listSpec,
+  listQuery,
+  type ListFilters,
   readWindow,
+  resolveCatalogList,
   type WindowBlock,
 } from './anime-list.query';
 import {
@@ -92,6 +95,7 @@ export class AnimeListService implements OnModuleDestroy {
 
   async getList(
     kind: AnimeListKind,
+    filters: ListFilters,
     cursor: string | undefined,
     limit = ANIME_LIST_DEFAULT_LIMIT,
   ): Promise<AnimeListPage> {
@@ -103,23 +107,33 @@ export class AnimeListService implements OnModuleDestroy {
         details: [{ field: 'cursor', message: 'cursor is not valid' }],
       });
     }
+    const resolution = resolveCatalogList(kind, filters, this.clock.now());
+    if (resolution.outcome === 'invalid') {
+      throw new ApiException(HttpStatus.BAD_REQUEST, {
+        code: 'VALIDATION_FAILED',
+        message: 'Request validation failed.',
+        details: resolution.details,
+      });
+    }
+    const { list } = resolution;
     if (!this.settings.get('anilist').enabled) throw sourceNotAvailable();
 
     const { firstPage, lastPage } = readWindow(offset, limit);
     const blocks: WindowBlock<ListedAnime>[] = [];
     const first = await this.readBlock(
-      kind,
+      list,
       firstPage,
-      firstPage === 1 || (await this.hasNextAfter(kind, firstPage - 1)),
+      firstPage === 1 || (await this.hasNextAfter(list, firstPage - 1)),
     );
     if (first !== null) blocks.push(first);
     if (first?.hasNextPage === true && lastPage > firstPage) {
-      const second = await this.readBlock(kind, lastPage, true);
+      const second = await this.readBlock(list, lastPage, true);
       if (second !== null) blocks.push(second);
     }
     const window = assembleWindow(blocks, offset, limit);
     return {
       kind,
+      season: list.season,
       entries: await this.withSlugs(window.entries),
       nextCursor:
         window.nextOffset === null ? null : encodeCursor(window.nextOffset),
@@ -130,35 +144,35 @@ export class AnimeListService implements OnModuleDestroy {
 
   /** True when the stored block `page` says another one follows. */
   private async hasNextAfter(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
   ): Promise<boolean> {
-    return (await this.stored(kind, page))?.hasNextPage === true;
+    return (await this.stored(list, page))?.hasNextPage === true;
   }
 
   private async stored(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
   ): Promise<StoredListBlock | null> {
     const row = await this.prisma.animeListPage.findUnique({
-      where: { listKey_page: { listKey: listKey(kind), page } },
+      where: { listKey_page: { listKey: listKey(list), page } },
     });
     return row === null ? null : fromListRow(row);
   }
 
   /** The block, or null when it is not stored and may not be fetched (past the list's end). */
   private async readBlock(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
     mayFetch: boolean,
   ): Promise<WindowBlock<ListedAnime> | null> {
-    const block = await this.stored(kind, page);
+    const block = await this.stored(list, page);
     if (block === null) {
       if (!mayFetch) return null;
       try {
         return this.toWindowBlock(
           page,
-          await this.fetchShared(kind, page, 'visitor'),
+          await this.fetchShared(list, page, 'visitor'),
           true,
         );
       } catch (error) {
@@ -167,9 +181,9 @@ export class AnimeListService implements OnModuleDestroy {
         throw sourceNotAvailable();
       }
     }
-    const fresh = isFresh(kind, block.fetchedAt, this.clock.now());
+    const fresh = isFresh(list.kind, block.fetchedAt, this.clock.now());
     if (!fresh && !this.stopping && !this.anilist.isDown()) {
-      void this.fetchShared(kind, page, 'background');
+      void this.fetchShared(list, page, 'background');
     }
     return this.toWindowBlock(page, block, fresh);
   }
@@ -187,14 +201,14 @@ export class AnimeListService implements OnModuleDestroy {
    * task's failure is logged here, once; a visitor handles the failure of the one it awaits.
    */
   private fetchShared(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
     wait: ListFetchWait,
   ): Promise<StoredListBlock> {
-    const key = `${listKey(kind)}#${page}`;
+    const key = `${listKey(list)}#${page}`;
     const running = this.inFlight.get(key);
     if (running) return running;
-    const task = this.fetchAndStore(kind, page, key, wait).finally(() =>
+    const task = this.fetchAndStore(list, page, key, wait).finally(() =>
       this.inFlight.delete(key),
     );
     this.inFlight.set(key, task);
@@ -212,7 +226,7 @@ export class AnimeListService implements OnModuleDestroy {
   }
 
   private async fetchAndStore(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
     key: string,
     wait: ListFetchWait,
@@ -223,8 +237,8 @@ export class AnimeListService implements OnModuleDestroy {
     }
     let fetched: ListBlock;
     try {
-      fetched = await this.anilist.fetchList(listSpec(kind).query, page, wait);
-      await this.refuseEmptyReplacement(kind, page, fetched);
+      fetched = await this.anilist.fetchList(listQuery(list), page, wait);
+      await this.refuseEmptyReplacement(list, page, fetched);
     } catch (error) {
       if (
         error instanceof SourceUnavailableError &&
@@ -238,8 +252,8 @@ export class AnimeListService implements OnModuleDestroy {
     this.retryAt.delete(key);
     const row = toListRow(fetched, now);
     await this.prisma.animeListPage.upsert({
-      where: { listKey_page: { listKey: listKey(kind), page } },
-      create: { listKey: listKey(kind), page, ...row },
+      where: { listKey_page: { listKey: listKey(list), page } },
+      create: { listKey: listKey(list), page, ...row },
       update: row,
     });
     return { ...fetched, fetchedAt: now };
@@ -247,12 +261,12 @@ export class AnimeListService implements OnModuleDestroy {
 
   /** An empty first page never replaces a page that has entries: that is a broken answer. */
   private async refuseEmptyReplacement(
-    kind: AnimeListKind,
+    list: CatalogList,
     page: number,
     fetched: ListBlock,
   ): Promise<void> {
     if (page !== 1 || fetched.entries.length > 0) return;
-    const current = await this.stored(kind, page);
+    const current = await this.stored(list, page);
     if (current !== null && current.entries.length > 0) {
       throw new UnusableAnswerError('anilist', 'empty first page of a list');
     }

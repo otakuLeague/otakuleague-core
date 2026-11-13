@@ -265,8 +265,41 @@ export const ANIME_LIST_KINDS = [
   'top',
   'upcoming',
   'airing',
+  'seasonal',
 ] as const;
 export type AnimeListKind = (typeof ANIME_LIST_KINDS)[number];
+
+/** AniList's genres without Hentai (OTA-177, ADR 0016); the `genre` filter takes exactly these. */
+export const ANIME_GENRES = [
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Drama',
+  'Ecchi',
+  'Fantasy',
+  'Horror',
+  'Mahou Shoujo',
+  'Mecha',
+  'Music',
+  'Mystery',
+  'Psychological',
+  'Romance',
+  'Sci-Fi',
+  'Slice of Life',
+  'Sports',
+  'Supernatural',
+  'Thriller',
+] as const;
+export type AnimeGenre = (typeof ANIME_GENRES)[number];
+
+/** The first year of anime on AniList: the lowest `year` of the seasonal list. */
+export const ANIME_LIST_MIN_YEAR = 1917;
+
+/** The season a `seasonal` list shows. */
+export interface AnimeListSeason {
+  readonly season: AnimeSeason;
+  readonly year: number;
+}
 
 export const ANIME_LIST_MAX_LIMIT = 50;
 export const ANIME_LIST_DEFAULT_LIMIT = 24;
@@ -301,6 +334,8 @@ export interface AnimeListEntry {
 /** GET /anime/lists/:kind. Only a null nextCursor means the end: a page may hold fewer than the limit. */
 export interface AnimeListPage {
   readonly kind: AnimeListKind;
+  /** The season shown: set for `seasonal` (the default season echoed back), null for other kinds. */
+  readonly season: AnimeListSeason | null;
   readonly entries: readonly AnimeListEntry[];
   readonly nextCursor: string | null;
   /** stale: older than its lifetime (a refresh may be running, or the source is down). */

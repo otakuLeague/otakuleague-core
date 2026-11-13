@@ -74,6 +74,30 @@ describe('AniListAdapter.fetchList', () => {
     ]);
   });
 
+  it('sends the season, its year and the genre as variables when set', async () => {
+    const query: ListQuery = {
+      sort: ['POPULARITY_DESC'],
+      season: 'FALL',
+      seasonYear: 2026,
+      genre: 'Slice of Life',
+    };
+
+    await adapter().fetchList(query, 1, 'visitor');
+
+    expect(variablesSeen).toEqual([{ page: 1, perPage: 50, ...query }]);
+  });
+
+  it('sends none of season, seasonYear and genre when unset', async () => {
+    await adapter().fetchList(airing, 1, 'visitor');
+
+    expect(Object.keys(variablesSeen[0] ?? {}).toSorted()).toEqual([
+      'page',
+      'perPage',
+      'sort',
+      'status',
+    ]);
+  });
+
   it('fails and cools down on an HTTP error', async () => {
     respond = (res) => void res.writeHead(500).end();
     const source = adapter(0, 60_000);
