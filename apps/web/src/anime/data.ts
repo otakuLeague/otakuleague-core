@@ -4,6 +4,7 @@ import {
   type AnimeFranchise,
   type AnimeListKind,
   type AnimeListCardPage,
+  type AnimeListSeason,
   type AnimeSlugResolution,
   isAnimeFranchise,
   isAnimeListPage,
@@ -44,13 +45,37 @@ export const loadFranchise = cache(
     }),
 );
 
-/** The first page of a catalog list (ADR 0016), card fields only. A drifted body is an invalid_response. */
+/** Which slice of a catalog list to ask for; season and year only go with `seasonal`. */
+export interface AnimeListPageRequest {
+  readonly season?: AnimeListSeason;
+  readonly cursor?: string | null;
+  readonly limit: number;
+}
+
+/** One page of a catalog list (ADR 0016), card fields only. A drifted body is an invalid_response. */
+export function loadAnimeListPage(
+  kind: AnimeListKind,
+  request: AnimeListPageRequest,
+): Promise<ApiResult<AnimeListCardPage>> {
+  const query = new URLSearchParams();
+  if (request.season !== undefined) {
+    query.set('season', request.season.season);
+    query.set('year', String(request.season.year));
+  }
+  if (request.cursor !== undefined && request.cursor !== null) {
+    query.set('cursor', request.cursor);
+  }
+  query.set('limit', String(request.limit));
+  return apiClient().call(
+    `/anime/lists/${encodeURIComponent(kind)}?${query.toString()}`,
+    { isExpectedBody: isAnimeListPage },
+  );
+}
+
+/** The first page of a catalog list: the home rows. */
 export function loadAnimeList(
   kind: AnimeListKind,
   limit: number,
 ): Promise<ApiResult<AnimeListCardPage>> {
-  return apiClient().call(
-    `/anime/lists/${encodeURIComponent(kind)}?limit=${limit}`,
-    { isExpectedBody: isAnimeListPage },
-  );
+  return loadAnimeListPage(kind, { limit });
 }
