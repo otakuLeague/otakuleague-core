@@ -1,2 +1,4 @@
 User-agent: *
 Disallow: /anime/anilist/
+# Until OTA-189 (per-client limit): a crawler walking every season would fetch every list page.
+Disallow: /season?

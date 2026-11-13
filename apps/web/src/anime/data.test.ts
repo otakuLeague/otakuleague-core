@@ -17,8 +17,8 @@ async function loadAnimeListWith(body: unknown) {
   vi.stubEnv('API_BASE_URL', 'http://api.test:4000');
   vi.stubGlobal('fetch', fetchFunction);
   vi.resetModules();
-  const { loadAnimeList } = await import('./data');
-  return { loadAnimeList, urls };
+  const { loadAnimeList, loadAnimeListPage } = await import('./data');
+  return { loadAnimeList, loadAnimeListPage, urls };
 }
 
 const page = {
@@ -61,5 +61,34 @@ describe('loadAnimeList', () => {
       ok: false,
       failure: { kind: 'invalid_response', status: 200 },
     });
+  });
+});
+
+describe('loadAnimeListPage', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the season upper case with its year, and the cursor encoded', async () => {
+    const { loadAnimeListPage, urls } = await loadAnimeListWith(page);
+
+    await loadAnimeListPage('seasonal', {
+      season: { season: 'FALL', year: 2025 },
+      cursor: 'a+b/c=',
+      limit: 48,
+    });
+
+    expect(urls).toEqual([
+      'http://api.test:4000/anime/lists/seasonal?season=FALL&year=2025&cursor=a%2Bb%2Fc%3D&limit=48',
+    ]);
+  });
+
+  it('leaves out the season and a null cursor', async () => {
+    const { loadAnimeListPage, urls } = await loadAnimeListWith(page);
+
+    await loadAnimeListPage('top', { cursor: null, limit: 24 });
+
+    expect(urls).toEqual(['http://api.test:4000/anime/lists/top?limit=24']);
   });
 });
