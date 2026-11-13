@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import { listEntries, listEntry, listResult } from './fixtures';
 import {
-  cardLink,
+  cardHref,
   cardTitle,
+  coverSrc,
   HOME_ROWS,
   HOME_ROW_MAX_CARDS,
   toHomeRowState,
@@ -34,10 +35,7 @@ describe('toHomeRowState', () => {
   ];
 
   it.each(failures)('fails the row on a $kind failure', (failure) => {
-    expect(toHomeRowState({ ok: false, failure })).toEqual({
-      kind: 'failed',
-      failure,
-    });
+    expect(toHomeRowState({ ok: false, failure })).toEqual({ kind: 'failed' });
   });
 
   it('is empty when the list has no entries', () => {
@@ -69,19 +67,27 @@ describe('toHomeRowState', () => {
   });
 });
 
-describe('cardLink', () => {
-  it('links the canonical slug, followable', () => {
-    expect(cardLink({ anilistId: 1, slug: 'monster' })).toEqual({
-      href: '/anime/monster',
-      rel: undefined,
-    });
+describe('cardHref', () => {
+  it('links the canonical slug, or the AniList id route when no slug is claimed', () => {
+    expect(cardHref({ anilistId: 1, slug: 'monster' })).toBe('/anime/monster');
+    expect(cardHref({ anilistId: 19, slug: null })).toBe('/anime/anilist/19');
   });
+});
 
-  it('links the AniList id route with nofollow when no slug is claimed', () => {
-    expect(cardLink({ anilistId: 19, slug: null })).toEqual({
-      href: '/anime/anilist/19',
-      rel: 'nofollow',
-    });
+describe('coverSrc', () => {
+  it('keeps only an absolute https URL', () => {
+    const https = 'https://s4.anilist.co/cover.jpg';
+    expect(coverSrc({ coverImageUrl: https })).toBe(https);
+    for (const coverImageUrl of [
+      null,
+      '',
+      'http://s4.anilist.co/cover.jpg',
+      'javascript:alert(1)',
+      '/cover.jpg',
+      '//evil.example/cover.jpg',
+    ]) {
+      expect(coverSrc({ coverImageUrl }), String(coverImageUrl)).toBeNull();
+    }
   });
 });
 
@@ -94,6 +100,15 @@ describe('cardTitle', () => {
       'Mushishi',
     );
     expect(cardTitle({ titleEnglish: null, titleRomaji: null })).toBe(
+      'Untitled',
+    );
+  });
+
+  it('treats a blank title as missing', () => {
+    expect(cardTitle({ titleEnglish: '  ', titleRomaji: 'Mushishi' })).toBe(
+      'Mushishi',
+    );
+    expect(cardTitle({ titleEnglish: '', titleRomaji: '\t' })).toBe(
       'Untitled',
     );
   });

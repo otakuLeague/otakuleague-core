@@ -1,11 +1,13 @@
-import type { AnimeListEntry } from '@otakuleague/shared-types';
+import type { AnimeListCard } from '@otakuleague/shared-types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { loadAnimeList } from '../src/anime/data';
 import {
-  cardLink,
+  cardHref,
   cardTitle,
+  coverSrc,
+  HOME_ROW_FETCH_LIMIT,
   HOME_ROW_MAX_CARDS,
   type HomeRowDefinition,
   type HomeRowState,
@@ -13,7 +15,7 @@ import {
 } from '../src/home/home-rows';
 
 function assertNever(value: never): never {
-  throw new Error(`Unhandled row state: ${JSON.stringify(value)}`);
+  throw new Error(`Unhandled row state: ${typeof value}`);
 }
 
 const SKELETON_SLOTS = Array.from(
@@ -36,7 +38,7 @@ export function HomeRow({ row }: { readonly row: HomeRowDefinition }) {
         </Link>
       </div>
       <div className="hm-row-slot">
-        <Suspense fallback={<HomeRowSkeleton />}>
+        <Suspense fallback={<HomeRowSkeleton title={row.title} />}>
           <HomeRowLoader row={row} />
         </Suspense>
       </div>
@@ -45,7 +47,9 @@ export function HomeRow({ row }: { readonly row: HomeRowDefinition }) {
 }
 
 async function HomeRowLoader({ row }: { readonly row: HomeRowDefinition }) {
-  const state = toHomeRowState(await loadAnimeList(row.kind));
+  const state = toHomeRowState(
+    await loadAnimeList(row.kind, HOME_ROW_FETCH_LIMIT),
+  );
   return <HomeRowView row={row} state={state} />;
 }
 
@@ -59,7 +63,7 @@ export function HomeRowView({
   switch (state.kind) {
     case 'loaded':
       return (
-        <ul className="br-row-scroll" aria-label={row.title}>
+        <ul className="br-row-scroll">
           {state.entries.map((entry) => (
             <li key={entry.anilistId}>
               <HomeCard entry={entry} />
@@ -70,10 +74,8 @@ export function HomeRowView({
     case 'empty':
       return (
         <div className="hm-empty">
-          <p>
-            <strong>Nothing here yet</strong>
-            This list fills up as soon as AniList has shows for it.
-          </p>
+          <p className="hm-empty__title">Nothing here yet</p>
+          <p>This list fills up as soon as AniList has shows for it.</p>
           <Link
             className="ol-btn ol-btn--secondary ol-btn--sm"
             href={row.href}
@@ -85,7 +87,7 @@ export function HomeRowView({
       );
     case 'failed':
       return (
-        <div className="br-inline-error" role="alert">
+        <div className="br-inline-error" role="status">
           <p>
             {row.title} didn&apos;t load. The rest of the page is fine. Reload
             to try again.
@@ -97,14 +99,21 @@ export function HomeRowView({
   }
 }
 
-function HomeCard({ entry }: { readonly entry: AnimeListEntry }) {
-  const { href, rel } = cardLink(entry);
+function HomeCard({ entry }: { readonly entry: AnimeListCard }) {
+  const src = coverSrc(entry);
   return (
-    <Link className="ol-anime-card" href={href} rel={rel} prefetch={false}>
+    // nofollow on every card until OTA-189/OTA-191: slugs are claimed before import (OTA-190), so
+    // a crawler following /anime/<slug> would trigger a cold import, like /anime/anilist/<id>.
+    <Link
+      className="ol-anime-card"
+      href={cardHref(entry)}
+      rel="nofollow"
+      prefetch={false}
+    >
       <div className="ol-anime-card__cover">
-        {entry.coverImageUrl !== null && (
+        {src !== null && (
           // Decorative: the title right below names the card.
-          <Image src={entry.coverImageUrl} alt="" width={176} height={264} />
+          <Image src={src} alt="" width={176} height={264} />
         )}
       </div>
       <h3 className="ol-anime-card__title">{cardTitle(entry)}</h3>
@@ -112,14 +121,18 @@ function HomeCard({ entry }: { readonly entry: AnimeListEntry }) {
   );
 }
 
-export function HomeRowSkeleton() {
+/** Announced once as text; the placeholder cards are hidden from assistive tech. */
+export function HomeRowSkeleton({ title }: { readonly title: string }) {
   return (
-    <ul className="br-row-scroll" aria-busy="true" aria-label="Loading">
-      {SKELETON_SLOTS.map((slot) => (
-        <li key={slot}>
-          <span className="ol-skel ol-skel--cover" />
-        </li>
-      ))}
-    </ul>
+    <div>
+      <p className="hm-sr">Loading {title}</p>
+      <ul className="br-row-scroll" aria-hidden="true">
+        {SKELETON_SLOTS.map((slot) => (
+          <li key={slot}>
+            <span className="ol-skel ol-skel--cover" />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -1,8 +1,10 @@
 import {
   ANIME_LIST_KINDS,
+  ANIME_LIST_MAX_LIMIT,
   ANIME_STATUSES,
+  CANONICAL_SLUG_PATTERN,
   type AnimeFranchise,
-  type AnimeListPage,
+  type AnimeListCardPage,
 } from './anime';
 
 export const APP_NAME = 'OtakuLeague';
@@ -137,25 +139,29 @@ function isStringOrNull(value: unknown): boolean {
   return value === null || typeof value === 'string';
 }
 
-/** The fields a list card reads and links with; the rest is display data. */
-function isListEntry(value: unknown): boolean {
+/** An AnimeListCard: a positive id and a well-formed slug, since both end up in a link. */
+function isListCard(value: unknown): boolean {
   return (
     isRecord(value) &&
-    Number.isInteger(value.anilistId) &&
-    isStringOrNull(value.slug) &&
+    Number.isSafeInteger(value.anilistId) &&
+    Number(value.anilistId) > 0 &&
+    (value.slug === null ||
+      (typeof value.slug === 'string' &&
+        CANONICAL_SLUG_PATTERN.test(value.slug))) &&
     isStringOrNull(value.titleEnglish) &&
     isStringOrNull(value.titleRomaji) &&
     isStringOrNull(value.coverImageUrl)
   );
 }
 
-/** True when `value` is a GET /anime/lists/:kind body (ADR 0016). */
-export function isAnimeListPage(value: unknown): value is AnimeListPage {
+/** True when `value` is a GET /anime/lists/:kind body, card fields only (ADR 0016). */
+export function isAnimeListPage(value: unknown): value is AnimeListCardPage {
   return (
     isRecord(value) &&
     ANIME_LIST_KINDS.some((kind) => kind === value.kind) &&
     Array.isArray(value.entries) &&
-    value.entries.every(isListEntry) &&
+    value.entries.length <= ANIME_LIST_MAX_LIMIT &&
+    value.entries.every(isListCard) &&
     isStringOrNull(value.nextCursor)
   );
 }

@@ -438,119 +438,6 @@ describe('call', () => {
   });
 });
 
-describe('getHealth', () => {
-  it('keeps only the contract fields of a health body', async () => {
-    const leakyHealth = {
-      status: 'error',
-      checks: { database: 'down', cause: 'connect ECONNREFUSED 10.0.0.5' },
-    };
-    const client = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(503, json(leakyHealth)).fetchFunction,
-    });
-
-    expect(await client.getHealth()).toEqual({
-      ok: true,
-      data: { status: 'error', checks: { database: 'down' } },
-    });
-  });
-
-  it.each([
-    [200, { status: 'error', checks: { database: 'down' } }],
-    [503, { status: 'ok', checks: { database: 'up' } }],
-  ])(
-    'maps a %i whose health body has the other status to invalid_response',
-    async (status, body) => {
-      const client = createApiClient({
-        baseUrl: BASE_URL,
-        fetch: fakeFetch(status, json(body)).fetchFunction,
-      });
-
-      expect(await client.getHealth()).toEqual({
-        ok: false,
-        failure: { kind: 'invalid_response', status },
-      });
-    },
-  );
-
-  it('returns ok: true with the body on 200', async () => {
-    const body = { status: 'ok', checks: { database: 'up' } };
-    const { fetchFunction, requests } = fakeFetch(200, json(body));
-    const client = createApiClient({ baseUrl: BASE_URL, fetch: fetchFunction });
-
-    expect(await client.getHealth()).toEqual({ ok: true, data: body });
-    expect(requests[0]?.url).toBe('http://127.0.0.1:3001/health');
-  });
-
-  it('returns ok: true on a 503 whose body is a valid health response (database down)', async () => {
-    const body = { status: 'error', checks: { database: 'down' } };
-    const client = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(503, json(body)).fetchFunction,
-    });
-
-    expect(await client.getHealth()).toEqual({ ok: true, data: body });
-  });
-
-  it('maps a 503 that is not a health body to the regular failure kinds', async () => {
-    const envelope = {
-      error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' },
-    };
-    const fromApi = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(503, json(envelope)).fetchFunction,
-    });
-    const fromProxy = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(503, '<h1>503</h1>').fetchFunction,
-    });
-
-    expect(await fromApi.getHealth()).toEqual({
-      ok: false,
-      failure: { kind: 'api_error', status: 503, error: envelope },
-    });
-    expect(await fromProxy.getHealth()).toEqual({
-      ok: false,
-      failure: { kind: 'invalid_response', status: 503 },
-    });
-  });
-
-  it('maps a 200 whose body contradicts itself to invalid_response', async () => {
-    const body = { status: 'ok', checks: { database: 'down' } };
-    const client = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(200, json(body)).fetchFunction,
-    });
-
-    expect(await client.getHealth()).toEqual({
-      ok: false,
-      failure: { kind: 'invalid_response', status: 200 },
-    });
-  });
-
-  it('maps a valid health body on a status other than 200 or 503 to invalid_response', async () => {
-    const body = { status: 'error', checks: { database: 'down' } };
-    const client = createApiClient({
-      baseUrl: BASE_URL,
-      fetch: fakeFetch(500, json(body)).fetchFunction,
-    });
-
-    expect(await client.getHealth()).toEqual({
-      ok: false,
-      failure: { kind: 'invalid_response', status: 500 },
-    });
-  });
-
-  it('maps a hanging API to timeout', async () => {
-    const client = createApiClient({ baseUrl: BASE_URL, fetch: hangingFetch });
-
-    expect(await client.getHealth({ timeoutMs: 5 })).toEqual({
-      ok: false,
-      failure: { kind: 'timeout' },
-    });
-  });
-});
-
 describe('apiClient', () => {
   // apiClient caches its instance in module state; a fresh module per test keeps tests independent.
   async function freshApiClient() {
@@ -574,7 +461,7 @@ describe('apiClient', () => {
     const apiClient = await freshApiClient();
 
     const first = apiClient();
-    await first.getHealth();
+    await first.call('/health');
 
     expect(requests[0]?.url).toBe('http://api.test:4000/health');
     expect(apiClient()).toBe(first);

@@ -3,7 +3,7 @@ import {
   type AnimeDetails,
   type AnimeFranchise,
   type AnimeListKind,
-  type AnimeListPage,
+  type AnimeListCardPage,
   type AnimeSlugResolution,
   isAnimeFranchise,
   isAnimeListPage,
@@ -44,11 +44,13 @@ export const loadFranchise = cache(
     }),
 );
 
-/** The first page of a catalog list (ADR 0016): one home row. A drifted body is an invalid_response. */
+/** The first page of a catalog list (ADR 0016), card fields only. A drifted body is an invalid_response. */
 export function loadAnimeList(
   kind: AnimeListKind,
-): Promise<ApiResult<AnimeListPage>> {
-  return apiClient().call(`/anime/lists/${kind}?limit=12`, {
-    isExpectedBody: isAnimeListPage,
-  });
+  limit: number,
+): Promise<ApiResult<AnimeListCardPage>> {
+  return apiClient().call(
+    `/anime/lists/${encodeURIComponent(kind)}?limit=${limit}`,
+    { isExpectedBody: isAnimeListPage },
+  );
 }

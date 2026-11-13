@@ -1,4 +1,7 @@
-import type { AnimeListEntry, AnimeListPage } from '@otakuleague/shared-types';
+import type {
+  AnimeListCardPage,
+  AnimeListEntry,
+} from '@otakuleague/shared-types';
 import type { ApiResult } from '../api/client';
 
 export function listEntry(
@@ -33,16 +36,13 @@ export function listEntries(count: number): readonly AnimeListEntry[] {
 
 export function listResult(
   entries: readonly AnimeListEntry[],
-): ApiResult<AnimeListPage> {
+): ApiResult<AnimeListCardPage> {
   return {
     ok: true,
     data: {
       kind: 'top',
-      season: null,
       entries,
       nextCursor: null,
-      freshness: 'fresh',
-      fetchedAt: '2026-11-13T00:00:00.000Z',
     },
   };
 }

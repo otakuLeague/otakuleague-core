@@ -331,6 +331,22 @@ export interface AnimeListEntry {
   } | null;
 }
 
+/** A canonical slug as the API mints it: lowercase words joined by single hyphens. */
+export const CANONICAL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** The fields a list card reads and links with: what `isAnimeListPage` actually checks. */
+export type AnimeListCard = Pick<
+  AnimeListEntry,
+  'anilistId' | 'slug' | 'titleEnglish' | 'titleRomaji' | 'coverImageUrl'
+>;
+
+/** A GET /anime/lists/:kind body as far as a card row trusts it. */
+export interface AnimeListCardPage {
+  readonly kind: AnimeListKind;
+  readonly entries: readonly AnimeListCard[];
+  readonly nextCursor: string | null;
+}
+
 /** GET /anime/lists/:kind. Only a null nextCursor means the end: a page may hold fewer than the limit. */
 export interface AnimeListPage {
   readonly kind: AnimeListKind;

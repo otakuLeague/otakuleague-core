@@ -218,12 +218,17 @@ void describe('isAnimeListPage', () => {
     );
   });
 
-  void it('rejects an unknown kind, a malformed entry or a missing list', () => {
+  void it('rejects an unknown kind, a bad id or slug, too many entries or a missing list', () => {
     for (const value of [
       ...NOT_OBJECTS,
       { ...page, kind: 'popular' },
       { ...page, entries: [{ ...entry, anilistId: '16498' }] },
+      { ...page, entries: [{ ...entry, anilistId: 0 }] },
+      { ...page, entries: [{ ...entry, anilistId: 2 ** 53 }] },
       { ...page, entries: [{ ...entry, slug: 7 }] },
+      { ...page, entries: [{ ...entry, slug: '../admin' }] },
+      { ...page, entries: [{ ...entry, slug: 'Attack-On-Titan' }] },
+      { ...page, entries: Array.from({ length: 51 }, () => entry) },
       { ...page, entries: [{ ...entry, titleEnglish: undefined }] },
       { ...page, nextCursor: 3 },
       { ...page, entries: undefined },

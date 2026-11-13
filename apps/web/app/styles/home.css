@@ -46,14 +46,6 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
-.hm-ctas .ol-btn {
-  text-decoration: none;
-}
-.hm-ctas .ol-btn:focus-visible,
-.hm-empty .ol-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
 /* Every row state has the same height, so nothing below shifts when a row resolves (CLS):
    264 px cover + title + scroll padding. */
@@ -75,13 +67,17 @@
   border: 1px dashed var(--border);
   border-radius: var(--radius-lg);
 }
-.hm-empty strong {
-  display: block;
+.hm-empty__title {
   color: var(--ink);
   font: 700 16px/22px var(--font-display);
 }
-.hm-empty .ol-btn {
-  text-decoration: none;
+.hm-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (max-width: 767.98px) {

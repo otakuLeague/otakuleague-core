@@ -1,8 +1,16 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import type { ComponentProps } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { listEntry } from '../src/home/fixtures';
 import type { HomeRowDefinition } from '../src/home/home-rows';
 import { HomeRowSkeleton, HomeRowView } from './home-row';
+
+// Exposes `prefetch`, which the real Link never renders.
+vi.mock('next/link', () => ({
+  default: ({ prefetch, ...props }: ComponentProps<'a'> & { prefetch?: boolean }) => (
+    <a data-prefetch={String(prefetch)} {...props} />
+  ),
+}));
 
 const row: HomeRowDefinition = {
   id: 'trending',
@@ -16,7 +24,7 @@ const row: HomeRowDefinition = {
 describe('HomeRowView', () => {
   afterEach(() => cleanup());
 
-  it('renders one linked card per entry with a decorative cover', () => {
+  it('renders one nofollow, never-prefetched card per entry with a decorative cover', () => {
     const { container } = render(
       <HomeRowView
         row={row}
@@ -30,12 +38,16 @@ describe('HomeRowView', () => {
       />,
     );
 
-    const cards = within(screen.getByRole('list', { name: row.title }))
+    const cards = within(screen.getByRole('list'))
       .getAllByRole('link')
-      .map((link) => [link.getAttribute('href'), link.getAttribute('rel')]);
+      .map((link) => [
+        link.getAttribute('href'),
+        link.getAttribute('rel'),
+        link.dataset.prefetch,
+      ]);
     expect(cards).toEqual([
-      ['/anime/frieren-beyond-journeys-end', null],
-      ['/anime/anilist/2', 'nofollow'],
+      ['/anime/frieren-beyond-journeys-end', 'nofollow', 'false'],
+      ['/anime/anilist/2', 'nofollow', 'false'],
     ]);
     expect(
       screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent),
@@ -70,15 +82,15 @@ describe('HomeRowView', () => {
     ).toBe(row.href);
   });
 
-  it('reports a failed row as an alert naming the row, without the API message', () => {
+  it('reports a failed row as a status naming the row', () => {
     render(
       <HomeRowView
         row={row}
-        state={{ kind: 'failed', failure: { kind: 'timeout' } }}
+        state={{ kind: 'failed' }}
       />,
     );
 
-    expect(screen.getByRole('alert').textContent).toBe(
+    expect(screen.getByRole('status').textContent).toBe(
       "Trending now didn't load. The rest of the page is fine. Reload to try again.",
     );
   });
@@ -87,11 +99,13 @@ describe('HomeRowView', () => {
 describe('HomeRowSkeleton', () => {
   afterEach(() => cleanup());
 
-  it('is a busy list of eight cover placeholders', () => {
-    render(<HomeRowSkeleton />);
+  it('announces the row once and hides its eight placeholders', () => {
+    const { container } = render(<HomeRowSkeleton title="Top rated" />);
 
-    const list = screen.getByRole('list');
-    expect(list.getAttribute('aria-busy')).toBe('true');
-    expect(within(list).getAllByRole('listitem')).toHaveLength(8);
+    expect(screen.getByText('Loading Top rated')).toBeDefined();
+    expect(screen.queryByRole('list')).toBeNull();
+    const list = container.querySelector('ul');
+    expect(list?.getAttribute('aria-hidden')).toBe('true');
+    expect(list?.children).toHaveLength(8);
   });
 });

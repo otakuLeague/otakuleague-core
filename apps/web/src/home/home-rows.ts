@@ -1,9 +1,9 @@
 import type {
-  AnimeListEntry,
+  AnimeListCard,
+  AnimeListCardPage,
   AnimeListKind,
-  AnimeListPage,
 } from '@otakuleague/shared-types';
-import type { ApiFailure, ApiResult } from '../api/client';
+import type { ApiResult } from '../api/client';
 
 /** One catalog row of the home page: which list it shows and where its "see all" link goes. */
 export interface HomeRowDefinition {
@@ -44,43 +44,58 @@ export const HOME_ROWS: readonly HomeRowDefinition[] = [
 
 /** Cards per row: two screens of a 1280 px column, the rest is behind "see all". */
 export const HOME_ROW_MAX_CARDS = 8;
+/** Asked for per row: room for repeats dropped by the dedupe, still one small page. */
+export const HOME_ROW_FETCH_LIMIT = 12;
 
 export type HomeRowState =
-  | { readonly kind: 'loaded'; readonly entries: readonly AnimeListEntry[] }
+  | { readonly kind: 'loaded'; readonly entries: readonly AnimeListCard[] }
   | { readonly kind: 'empty' }
-  | { readonly kind: 'failed'; readonly failure: ApiFailure };
+  | { readonly kind: 'failed' };
 
 /** The first page, deduplicated by AniList id (a page boundary can repeat one) and capped. */
-export function toHomeRowState(result: ApiResult<AnimeListPage>): HomeRowState {
+export function toHomeRowState(
+  result: ApiResult<AnimeListCardPage>,
+): HomeRowState {
   if (!result.ok) {
-    return { kind: 'failed', failure: result.failure };
+    return { kind: 'failed' };
   }
+  const seen = new Set<number>();
   const entries = result.data.entries
-    .filter(
-      (entry, index, all) =>
-        all.findIndex((other) => other.anilistId === entry.anilistId) ===
-        index,
-    )
+    .filter((entry) => {
+      if (seen.has(entry.anilistId)) return false;
+      seen.add(entry.anilistId);
+      return true;
+    })
     .slice(0, HOME_ROW_MAX_CARDS);
   return entries.length === 0 ? { kind: 'empty' } : { kind: 'loaded', entries };
 }
 
-export interface CardLink {
-  readonly href: string;
-  /** Set when the link imports the anime on a first visit: crawlers must not follow it (OTA-173). */
-  readonly rel: 'nofollow' | undefined;
+export function cardHref(entry: Pick<AnimeListCard, 'anilistId' | 'slug'>): string {
+  return entry.slug === null
+    ? `/anime/anilist/${entry.anilistId}`
+    : `/anime/${entry.slug}`;
 }
 
-export function cardLink(
-  entry: Pick<AnimeListEntry, 'anilistId' | 'slug'>,
-): CardLink {
-  return entry.slug === null
-    ? { href: `/anime/anilist/${entry.anilistId}`, rel: 'nofollow' }
-    : { href: `/anime/${encodeURIComponent(entry.slug)}`, rel: undefined };
+/** Only an absolute https URL is rendered; anything else leaves the empty cover frame. */
+export function coverSrc(entry: Pick<AnimeListCard, 'coverImageUrl'>): string | null {
+  if (entry.coverImageUrl === null || !URL.canParse(entry.coverImageUrl)) {
+    return null;
+  }
+  return new URL(entry.coverImageUrl).protocol === 'https:'
+    ? entry.coverImageUrl
+    : null;
+}
+
+function presentTitle(title: string | null): string | null {
+  return title === null || title.trim() === '' ? null : title;
 }
 
 export function cardTitle(
-  entry: Pick<AnimeListEntry, 'titleEnglish' | 'titleRomaji'>,
+  entry: Pick<AnimeListCard, 'titleEnglish' | 'titleRomaji'>,
 ): string {
-  return entry.titleEnglish ?? entry.titleRomaji ?? 'Untitled';
+  return (
+    presentTitle(entry.titleEnglish) ??
+    presentTitle(entry.titleRomaji) ??
+    'Untitled'
+  );
 }
