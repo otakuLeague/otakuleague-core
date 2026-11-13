@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import Home from './page';
+import Home, { metadata } from './page';
 
 // HomeRow streams an async Server Component, which jsdom cannot render; HomeRowView is tested on
 // its own. The Suspense fallbacks are checked by the build: `/` must stay Partial Prerender (ADR 0003).
@@ -44,5 +44,9 @@ describe('Home page', () => {
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
     ).toEqual(['Trending now', 'This season', 'Top rated']);
+  });
+
+  it('is its own canonical', () => {
+    expect(metadata.alternates?.canonical).toBe('/');
   });
 });
