@@ -12,6 +12,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,12 +21,14 @@ import { truncateAllTables } from '../testing/test-database';
 import { encodeCursor } from './anime-list.query';
 import { LIST_FETCH_BURST, LIST_FETCH_REFILL_MS } from './list-fetch-limits';
 import { AnimeListService } from './anime-list.service';
+import { AniListAdapter } from './sources/anilist.adapter';
 import { fixture } from './sources/fixtures';
 import { record } from './sources/parse';
 import {
   AnimeSourceSettings,
   type SourceSettings,
 } from './sources/source-settings';
+import { SourceUnavailableError } from './sources/source.types';
 
 const HOUR_MS = 3_600_000;
 
@@ -379,6 +382,35 @@ describe('GET /anime/lists/:kind', () => {
 
       expect(requests).toHaveLength(1);
       expect(await list('/anime/lists/top?genre=Mecha')).toMatchObject({
+        freshness: 'fresh',
+      });
+    });
+
+    it('gives tokens back for fetches the limiter refused, so cold lists keep answering', async () => {
+      const adapter = app.get(AniListAdapter);
+      const refusing = vi
+        .spyOn(adapter, 'fetchList')
+        .mockRejectedValue(new SourceUnavailableError('anilist', 'queue full'));
+      for (const genre of [...genres, 'Mecha']) {
+        await get(`/anime/lists/top?genre=${genre}`).expect(503);
+      }
+      refusing.mockRestore();
+
+      expect(await list('/anime/lists/top?genre=Mystery')).toMatchObject({
+        freshness: 'fresh',
+      });
+    });
+
+    it('answers 503 without a request or a token while AniList is cooling down', async () => {
+      const adapter = app.get(AniListAdapter);
+      const down = vi.spyOn(adapter, 'isDown').mockReturnValue(true);
+      for (const genre of [...genres, 'Mecha']) {
+        await get(`/anime/lists/top?genre=${genre}`).expect(503);
+      }
+      down.mockRestore();
+
+      expect(requests).toHaveLength(0);
+      expect(await list('/anime/lists/top?genre=Mystery')).toMatchObject({
         freshness: 'fresh',
       });
     });

@@ -48,17 +48,12 @@ const RETRY_AFTER_MS = 5 * 60 * 1000;
 /** Reasons (source-http.ts) that are not a failed list answer: no retry delay for the block. */
 const QUEUE_FULL = 'queue full';
 const COOLING_DOWN = 'cooling down';
-const RETRY_LATER = 'retry later';
 /** The fetch cap is logged at most this often. */
 const LIMIT_WARN_INTERVAL_MS = 60_000;
 
 /** Failures that are the limiter's or the retry delay's doing, not news: never logged. */
 function isQuietReason(error: SourceUnavailableError): boolean {
-  return (
-    error.reason === QUEUE_FULL ||
-    error.reason === RETRY_LATER ||
-    error.reason.startsWith(COOLING_DOWN)
-  );
+  return error.reason === QUEUE_FULL || error.reason.startsWith(COOLING_DOWN);
 }
 
 /** In-flight and retry-delay key of one stored block. */
@@ -218,7 +213,9 @@ export class AnimeListService implements OnModuleDestroy {
     list: CatalogList,
     page: number,
   ): Promise<WindowBlock<ListedAnime>> {
-    if (this.anilist.isDown()) throw sourceNotAvailable();
+    if (!this.inFlight.has(blockKey(list, page)) && this.anilist.isDown()) {
+      throw sourceNotAvailable();
+    }
     const start = this.startDecision(list, page);
     if (start === 'limited') {
       this.warnLimitReached();
@@ -304,23 +301,16 @@ export class AnimeListService implements OnModuleDestroy {
     wait: ListFetchWait,
   ): Promise<StoredListBlock> {
     const now = this.clock.now();
-    if ((this.retryAt.get(key) ?? 0) > now.getTime()) {
-      throw new SourceUnavailableError('anilist', RETRY_LATER);
-    }
     let fetched: ListBlock;
     try {
       fetched = await this.anilist.fetchList(listQuery(list), page, wait);
       await this.refuseEmptyReplacement(list, page, fetched);
     } catch (error) {
-      if (error instanceof SourceUnavailableError && isQuietReason(error)) {
-        // Queue full or cooling down: no request left, so the token was not spent.
-        this.limits.giveBack();
-      }
-      if (
-        error instanceof SourceUnavailableError &&
-        error.reason !== QUEUE_FULL &&
-        !error.reason.startsWith(COOLING_DOWN)
-      ) {
+      const refused =
+        error instanceof SourceUnavailableError && isQuietReason(error);
+      // Queue full or cooling down before any request left: the token was not spent.
+      if (refused && !error.requestSent) this.limits.giveBack();
+      if (error instanceof SourceUnavailableError && !refused) {
         for (const [failed, until] of this.retryAt) {
           if (until > now.getTime()) break;
           this.retryAt.delete(failed);
