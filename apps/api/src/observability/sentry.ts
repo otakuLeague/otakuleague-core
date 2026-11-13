@@ -52,6 +52,15 @@ export function initSentry({
   return true;
 }
 
+/**
+ * A configuration problem that leaves production unsafe, sent at start as an error-level message
+ * (a no-op without a DSN), so the default alert rules fire. The text must hold no secret: it
+ * goes through the same scrubbing, not around it.
+ */
+export function captureStartupError(message: string): void {
+  Sentry.captureMessage(message, 'error');
+}
+
 /** Queues the error for Sentry and returns at once: the request never waits for Sentry. */
 export function captureServerError(exception: unknown, request: Request): void {
   Sentry.captureException(exception, {

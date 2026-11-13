@@ -8,6 +8,7 @@ import {
 import type { AnimeDataSource } from '@otakuleague/shared-types';
 import {
   type ApiCaller,
+  PREVIEW_VISITOR_KEY,
   UNKNOWN_VISITOR_KEY,
   type VisitorKey,
   visitorKeyOf,
@@ -140,6 +141,8 @@ export class AnimeImportService implements OnModuleDestroy {
   private visitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
   /** The shared `unknown` key has its own: a missing client IP must not hide behind a visitor. */
   private unknownVisitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
+  /** So has the shared `preview` key: busy previews must not hide a visitor at its limit. */
+  private previewLimitWarnedAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -180,8 +183,9 @@ export class AnimeImportService implements OnModuleDestroy {
    *
    * ADR 0019 item 9: joining an import already running for this id is free. Otherwise a `web`
    * caller's visitor token is taken before the shared import starts, so a 429 goes only to the
-   * visitor who caused it and never to others waiting on the same id; an `open` caller has no
-   * visitor bucket. The global token comes after, inside the import.
+   * visitor who caused it and never to others waiting on the same id; every `preview` caller
+   * shares the one `preview` bucket; an `open` caller has no visitor bucket. The global token
+   * comes after, inside the import.
    */
   importNew(ref: AnimeRef, caller: ApiCaller): Promise<string> {
     const key = `import:${ref.source}:${ref.externalId}`;
@@ -388,9 +392,17 @@ export class AnimeImportService implements OnModuleDestroy {
     this.logger.warn('Cold anime import cap reached: new imports are refused.');
   }
 
-  /** Never logs the visitor key: it is a client IP (ADR 0019). Only whether it was the shared one. */
+  /** Never logs the visitor key: it is a client IP (ADR 0019). Only whether it was a shared one. */
   private warnVisitorLimitReached(visitorKey: VisitorKey): void {
     const now = this.clock.now().getTime();
+    if (visitorKey === PREVIEW_VISITOR_KEY) {
+      if (now - this.previewLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+      this.previewLimitWarnedAt = now;
+      this.logger.warn(
+        'Preview import cap reached: all preview deployments share one bucket.',
+      );
+      return;
+    }
     if (visitorKey === UNKNOWN_VISITOR_KEY) {
       if (now - this.unknownVisitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) {
         return;
