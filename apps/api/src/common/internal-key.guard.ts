@@ -15,6 +15,12 @@ import {
   type EnvironmentVariables,
   INTERNAL_API_KEY_MIN_LENGTH,
 } from '../config/environment';
+import {
+  CLIENT_IP_HEADER,
+  OPEN_CALLER,
+  recordCaller,
+  visitorKeyFromClientIp,
+} from './api-caller';
 import { ApiException } from './api.exception';
 
 /** Lower case: Node lower-cases incoming header names. Sent as X-Internal-Api-Key. */
@@ -103,8 +109,17 @@ export class InternalKeyGuard implements CanActivate {
         : { kind: 'enforced', acceptedDigests: check.acceptedKeys.map(sha256) };
   }
 
+  /**
+   * Also records who is calling (ADR 0019 item 7): `open` while no key is configured, without
+   * reading X-Client-Ip; `web` with its visitor key once the key matched. A @PublicRoute()
+   * handler and a refused request record nothing.
+   */
   canActivate(context: ExecutionContext): boolean {
-    if (this.state.kind === 'open') return true;
+    const request = context.switchToHttp().getRequest<Request>();
+    if (this.state.kind === 'open') {
+      recordCaller(request, OPEN_CALLER);
+      return true;
+    }
     if (
       this.reflector.get<unknown>(
         PUBLIC_ROUTE_METADATA,
@@ -113,13 +128,18 @@ export class InternalKeyGuard implements CanActivate {
     ) {
       return true;
     }
-    const { headers } = context.switchToHttp().getRequest<Request>();
+    const { headers } = request;
     if (
       isAcceptedKey(
         headers[INTERNAL_API_KEY_HEADER],
         this.state.acceptedDigests,
       )
     ) {
+      // Trusted only now: the key proves the web server wrote this header, not a browser.
+      recordCaller(request, {
+        kind: 'web',
+        visitorKey: visitorKeyFromClientIp(headers[CLIENT_IP_HEADER]),
+      });
       return true;
     }
     // One answer for missing, wrong, repeated and over-long: a prober learns nothing from the

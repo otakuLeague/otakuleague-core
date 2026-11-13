@@ -6,6 +6,7 @@ import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-hos
 import { redactText } from '@otakuleague/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EnvironmentVariables } from '../config/environment';
+import { CLIENT_IP_HEADER, callerOf } from './api-caller';
 import { ApiException } from './api.exception';
 import {
   EnvironmentInternalKeySettings,
@@ -51,14 +52,30 @@ function guardFor(check: InternalKeyCheck): InternalKeyGuard {
 function contextFor(
   handler: 'health' | 'search',
   headers: Record<string, string | string[]>,
+  request: object = { headers },
 ): ExecutionContextHost {
   const method: unknown = Reflect.get(SampleController.prototype, handler);
   if (typeof method !== 'function') throw new Error(`no handler ${handler}`);
   return new ExecutionContextHost(
-    [{ headers }, {}, () => undefined],
+    [request, {}, () => undefined],
     SampleController,
     method,
   );
+}
+
+/** A request whose header reads are listed, to prove which headers the guard looked at. */
+function watchedRequest(headers: Record<string, string>): {
+  request: { headers: Record<string, string> };
+  read: string[];
+} {
+  const read: string[] = [];
+  const watched = new Proxy(headers, {
+    get(target, name, receiver): unknown {
+      if (typeof name === 'string') read.push(name);
+      return Reflect.get(target, name, receiver);
+    },
+  });
+  return { request: { headers: watched }, read };
 }
 
 function refusal(
@@ -167,6 +184,69 @@ describe('InternalKeyGuard', () => {
     expect(isAcceptedKey('', [digest('')])).toBe(false);
     expect(isAcceptedKey('k'.repeat(42), [digest('k'.repeat(42))])).toBe(false);
     expect(isAcceptedKey('k'.repeat(43), [digest('k'.repeat(43))])).toBe(true);
+  });
+
+  it.each([
+    ['the current key', FAKE_KEY],
+    ['the previous key', FAKE_PREVIOUS_KEY],
+  ])('records a web caller keyed by its /64 for %s', (_, key) => {
+    const headers = {
+      [INTERNAL_API_KEY_HEADER]: key,
+      [CLIENT_IP_HEADER]: '2001:DB8:1:2::9',
+    };
+    const request = { headers };
+
+    guardFor(ENFORCED).canActivate(contextFor('search', headers, request));
+
+    expect(callerOf(request)).toEqual({
+      kind: 'web',
+      visitorKey: '2001:db8:1:2::/64',
+    });
+  });
+
+  it.each<[string, Record<string, string>]>([
+    ['no X-Client-Ip', {}],
+    ['a list in X-Client-Ip', { [CLIENT_IP_HEADER]: '203.0.113.7, 10.0.0.1' }],
+  ])('records the shared unknown visitor for a key with %s', (_, extra) => {
+    const headers = { [INTERNAL_API_KEY_HEADER]: FAKE_KEY, ...extra };
+    const request = { headers };
+
+    guardFor(ENFORCED).canActivate(contextFor('search', headers, request));
+
+    expect(callerOf(request)).toEqual({ kind: 'web', visitorKey: 'unknown' });
+  });
+
+  it('records no caller for a refused request, so no handler can treat it as open', () => {
+    const headers = { [CLIENT_IP_HEADER]: '203.0.113.7' };
+    const request = { headers };
+
+    refusal(guardFor(ENFORCED), contextFor('search', headers, request));
+
+    expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+  });
+
+  it('records no caller for a @PublicRoute() handler while the key is enforced', () => {
+    const headers = {
+      [INTERNAL_API_KEY_HEADER]: FAKE_KEY,
+      [CLIENT_IP_HEADER]: '203.0.113.7',
+    };
+    const request = { headers };
+
+    guardFor(ENFORCED).canActivate(contextFor('health', headers, request));
+
+    expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+  });
+
+  it('records an open caller without reading X-Client-Ip while no key is configured', () => {
+    const { request, read } = watchedRequest({
+      [INTERNAL_API_KEY_HEADER]: FAKE_KEY,
+      [CLIENT_IP_HEADER]: '203.0.113.7',
+    });
+
+    guardFor({ kind: 'open' }).canActivate(contextFor('search', {}, request));
+
+    expect(callerOf(request)).toEqual({ kind: 'open' });
+    expect(read).not.toContain(CLIENT_IP_HEADER);
   });
 
   it('lets every request through while no key is configured', () => {
