@@ -249,6 +249,18 @@ describe('InternalKeyGuard', () => {
     expect(read).not.toContain(CLIENT_IP_HEADER);
   });
 
+  it('records no caller for a @PublicRoute() handler while no key is configured', () => {
+    const headers = { [CLIENT_IP_HEADER]: '203.0.113.7' };
+    const request = { headers };
+
+    expect(
+      guardFor({ kind: 'open' }).canActivate(
+        contextFor('health', headers, request),
+      ),
+    ).toBe(true);
+    expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+  });
+
   it('lets every request through while no key is configured', () => {
     const guard = guardFor({ kind: 'open' });
 

@@ -112,20 +112,20 @@ export class InternalKeyGuard implements CanActivate {
   /**
    * Also records who is calling (ADR 0019 item 7): `open` while no key is configured, without
    * reading X-Client-Ip; `web` with its visitor key once the key matched. A @PublicRoute()
-   * handler and a refused request record nothing.
+   * handler (in either mode) and a refused request record nothing.
    */
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    if (this.state.kind === 'open') {
-      recordCaller(request, OPEN_CALLER);
-      return true;
-    }
     if (
       this.reflector.get<unknown>(
         PUBLIC_ROUTE_METADATA,
         context.getHandler(),
       ) === true
     ) {
+      return true;
+    }
+    const request = context.switchToHttp().getRequest<Request>();
+    if (this.state.kind === 'open') {
+      recordCaller(request, OPEN_CALLER);
       return true;
     }
     const { headers } = request;

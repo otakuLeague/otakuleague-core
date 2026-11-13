@@ -61,11 +61,13 @@ import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
 const ID_PATTERN = /^[1-9]\d{0,8}$/;
+const YEAR_PATTERN = /^[1-9]\d{3}$/;
+const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
 
 /** The 429 of a route that can start a cold import (OTA-173, ADR 0019 item 12). */
 const IMPORT_LIMIT_RESPONSE = {
   description:
-    'A cold import was refused; a stored anime is unaffected. ANIME_IMPORT_VISITOR_LIMIT_REACHED: this visitor started 5 new imports (one more every 40 s; web server calls only). ANIME_IMPORT_LIMIT_REACHED: too many new imports overall (global cap).',
+    'A cold import was refused. An anime this route already serves is unaffected; one we store but whose switched-on sources have not linked it to the requested id still goes through the importer and can get this answer. ANIME_IMPORT_VISITOR_LIMIT_REACHED: this visitor started 5 new imports (one more every 40 s; web server calls only). ANIME_IMPORT_LIMIT_REACHED: too many new imports overall (global cap).',
   headers: {
     'Retry-After': {
       description:
@@ -74,8 +76,6 @@ const IMPORT_LIMIT_RESPONSE = {
     },
   },
 } as const;
-const YEAR_PATTERN = /^[1-9]\d{3}$/;
-const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
 
 class AnimeLookupParams {
   @ApiProperty({ enum: ANIME_ID_SOURCES })

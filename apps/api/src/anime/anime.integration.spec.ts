@@ -1137,7 +1137,7 @@ describe('GET /anime/:idSource/:externalId', () => {
         error: {
           code: 'ANIME_IMPORT_LIMIT_REACHED',
           message:
-            'Too many new anime are being imported right now. Try again in a minute.',
+            'Too many new anime are being imported right now. Try again in a moment.',
         },
       });
 
@@ -1372,7 +1372,45 @@ describe('GET /anime/:idSource/:externalId', () => {
       expect(globalTokensLeft()).toBe(9);
     });
 
+    it('gives the visitor token back when the database fails before any source call', async () => {
+      vi.spyOn(prisma.animeExternalId, 'findUnique').mockRejectedValueOnce(
+        new Error('database lost'),
+      );
+
+      await expect(importer.importNew(missing(0), alice)).rejects.toThrow(
+        'database lost',
+      );
+      expect(anilist.calls).toBe(0);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(5);
+      expect(globalTokensLeft()).toBe(10);
+    });
+
+    it('keeps both tokens spent when AniList refuses before sending but Jikan is asked', async () => {
+      vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+        new SourceUnavailableError('anilist', COOLING_DOWN_REASON),
+      );
+
+      // A MAL id: AniList first (refused, nothing sent), then Jikan (asked, answers 404).
+      await expect(
+        importer.importNew(
+          { source: 'myanimelist', externalId: MISSING_ID },
+          alice,
+        ),
+      ).rejects.toMatchObject(notFound);
+      expect(jikan.calls).toBe(1);
+      expect(visitorTokensLeft(ALICE_IP)).toBe(4);
+      expect(globalTokensLeft()).toBe(9);
+    });
+
     it.each<[string, () => void]>([
+      [
+        'the adapter throws a plain error',
+        () => {
+          vi.spyOn(app.get(AniListAdapter), 'fetchAnime').mockRejectedValueOnce(
+            new Error('mapper bug'),
+          );
+        },
+      ],
       [
         'AniList answers not found',
         () => {

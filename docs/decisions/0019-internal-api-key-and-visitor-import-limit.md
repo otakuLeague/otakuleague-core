@@ -91,12 +91,14 @@ Rotation: set `INTERNAL_API_KEY_PREVIOUS` to the old key and `INTERNAL_API_KEY` 
 ## Consequences
 
 - **Vercel previews go dark the day the key is set.** Previews call the production API (`docs/deploy-vercel.md`) and ADR 0015 keeps the key out of the Preview environment. Decided: a third variable on the API, `INTERNAL_API_KEY_PREVIEW`, which passes the guard as a `preview` caller: never trusted for `X-Client-Ip` (all previews share one visitor bucket) and never for a credential route. Vercel's Preview environment holds that value under the same name `INTERNAL_API_KEY`, so the web needs no extra code. It must land before step 3. The production key must never go in Vercel's Preview environment (preview code would hold the production secret, and every preview build would carry it): the preview key lands first, and until it does previews stay dark.
+- **Rollout gate: both import routes must send `X-Client-Ip`.** Before step 3, check that the web sends it on `GET /anime/slugs/:slug` and `GET /anime/:idSource/:externalId` (a test in slice 2 and a look at production logs for the `unknown` visitor warning): a route that forgets it puts every visitor in the one shared `unknown` bucket of 5.
 - **Open by default is a failure mode.** A deleted variable, or a new Railway environment, silently reopens the API. The start-up warning is the only signal until step 4.
 - **A leaked key** lets its holder call the API and choose any `X-Client-Ip`. Rotate it; the global bucket still bounds imports.
 - **Shared addresses share a bucket**: a campus, a mobile carrier or a VPN exit gets 5 imports at once between all its users. Cached pages are unaffected.
 - **Many addresses still drain the global bucket.** This stops one crawler, not a botnet; the next step is a Vercel firewall rule, as ADR 0006 already says.
+- **Accepted risk: a large IPv6 allocation is many visitors.** The key is the /64, so whoever holds a /56 (256 keys) or a /48 (65,536 keys) gets that many visitor buckets of 5; only the global bucket bounds them. A coarser bucket per /48 in front is a follow-up (below).
 - **In memory**: every deploy refills every bucket, and a second API instance doubles each limit. Same trade as OTA-173.
-- **A limited visitor asking for a known-missing id** gets 429 instead of 404 until a token is back.
+- **A limited visitor asking for a known-missing id** gets 429 instead of 404 until a token is back. So does one asking, by an id we have not linked yet, for an anime we already store (e.g. stored from AniList without its MAL id, asked by MAL id): it goes through the importer, so it takes a visitor token first (given back once the import finds it stored).
 - The client IP is personal data: it lives only in the API's memory, from an import until the next import of any visitor at least 200 s later (or until 10,000 newer visitors push it out, or a restart), and is never logged; the refusal warning only says whether the shared `unknown` key was refused. The privacy page should say IPs are used for rate limiting (check with OTA-147).
 - ADR 0006 ("the API only sees Vercel's addresses", known limit) and ADR 0017 ("otherwise it counts its own peer IP") get a pointer here: without the key there is no per-visitor count, and once the check is on such a request is refused.
 
@@ -112,6 +114,7 @@ To fill in after the rollout.
 - **OTA-189**: per-visitor limit on list and search, reusing `ApiCaller` and the same bucket function.
 - **OTA-139**: key required in production; credential routes need a `web` caller.
 - **PR C (planned)**: `INTERNAL_API_KEY_PREVIEW` (Consequences), an `INTERNAL_API_KEY_REQUIRED=true` boot flag that refuses to start without the key, and a Sentry message (not only a log line) when production starts open; `.env.example` with them.
+- A coarser visitor bucket per IPv6 /48 in front of the /64 one, so one large allocation cannot take thousands of buckets (accepted risk above).
 - Cache the `/health` result for about 1 s, so a public route cannot be used to load the database.
 - Swagger: an api-key security scheme for `X-Internal-Api-Key` and the 403 `INTERNAL_KEY_REQUIRED` answer on every route.
 - Not in this ADR (other nits in the OTA-182 notes): AniList 404 only when `data.Media === null`; remember every id on the adult path; `rel="nofollow"` on season links without a slug.

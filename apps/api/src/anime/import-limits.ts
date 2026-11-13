@@ -58,13 +58,16 @@ export function refillBucket(
 }
 
 /** Whole seconds until an empty bucket's next token: 1 to refillMs / 1000, also if the clock jumped. */
-export function secondsUntilNextToken(
+function secondsUntilNextToken(
   bucket: TokenBucket,
   now: number,
   refillMs: number,
 ): number {
   const waitMs = bucket.refilledAt + refillMs - now;
-  return Math.min(refillMs / 1000, Math.max(1, Math.ceil(waitMs / 1000)));
+  return Math.min(
+    Math.ceil(refillMs / 1000),
+    Math.max(1, Math.ceil(waitMs / 1000)),
+  );
 }
 
 function missingKey(ref: AnimeRef): string {
@@ -165,6 +168,8 @@ export class ImportLimits {
   /** Returns a visitor token no request was spent on: never above 5, nothing for a dropped entry. */
   giveBackVisitorToken(key: VisitorKey): void {
     const stored = this.visitors.get(key);
+    // Evicted between take and give-back (10,000 newer visitors meanwhile): nothing to return,
+    // and nothing lost, since a visitor without an entry starts again from a full bucket.
     if (stored === undefined) return;
     const bucket = refillBucket(
       stored,

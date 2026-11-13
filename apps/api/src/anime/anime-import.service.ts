@@ -72,7 +72,7 @@ export function importLimitReached(): ApiException {
     {
       code: 'ANIME_IMPORT_LIMIT_REACHED',
       message:
-        'Too many new anime are being imported right now. Try again in a minute.',
+        'Too many new anime are being imported right now. Try again in a moment.',
     },
     { retryAfterSeconds: IMPORT_REFILL_MS / 1000 },
   );
@@ -136,8 +136,10 @@ export class AnimeImportService implements OnModuleDestroy {
   private readonly notFoundAt = new Map<string, number>();
   /** When the import cap was last logged: one warning per minute at most. */
   private limitWarnedAt = Number.NEGATIVE_INFINITY;
-  /** Same for the per-visitor cap: one warning per minute for all visitors together. */
+  /** Same for the per-visitor cap: one warning per minute for all known visitors together. */
   private visitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
+  /** The shared `unknown` key has its own: a missing client IP must not hide behind a visitor. */
+  private unknownVisitorLimitWarnedAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -350,7 +352,8 @@ export class AnimeImportService implements OnModuleDestroy {
             requestSent = true;
           }
           if (!(error instanceof SourceUnavailableError)) throw error;
-          this.logger.warn(error.message);
+          // A refusal before sending costs nothing now: logging each one would flood the logs.
+          if (!refusedBeforeSending(error)) this.logger.warn(error.message);
           unavailable = true;
           continue;
         }
@@ -388,12 +391,20 @@ export class AnimeImportService implements OnModuleDestroy {
   /** Never logs the visitor key: it is a client IP (ADR 0019). Only whether it was the shared one. */
   private warnVisitorLimitReached(visitorKey: VisitorKey): void {
     const now = this.clock.now().getTime();
+    if (visitorKey === UNKNOWN_VISITOR_KEY) {
+      if (now - this.unknownVisitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) {
+        return;
+      }
+      this.unknownVisitorLimitWarnedAt = now;
+      this.logger.warn(
+        'Visitor import cap reached on the shared unknown visitor: web calls may arrive without a client IP.',
+      );
+      return;
+    }
     if (now - this.visitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
     this.visitorLimitWarnedAt = now;
     this.logger.warn(
-      visitorKey === UNKNOWN_VISITOR_KEY
-        ? 'Visitor import cap reached on the shared unknown visitor: web calls may arrive without a client IP.'
-        : "Visitor import cap reached: one visitor's new imports are refused.",
+      "Visitor import cap reached: one visitor's new imports are refused.",
     );
   }
 
