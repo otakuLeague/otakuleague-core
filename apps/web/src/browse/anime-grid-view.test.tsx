@@ -12,7 +12,11 @@ vi.mock('next/link', () => ({
     scroll,
     ...props
   }: ComponentProps<'a'> & { prefetch?: boolean; scroll?: boolean }) => (
-    <a data-prefetch={String(prefetch)} data-scroll={String(scroll)} {...props} />
+    <a
+      data-prefetch={String(prefetch)}
+      data-scroll={String(scroll)}
+      {...props}
+    />
   ),
 }));
 
@@ -60,7 +64,7 @@ describe('AnimeGridView', () => {
   it('says where the list stops when capped', () => {
     renderGrid({ kind: 'loaded', entries: listEntries(2), more: 'capped' });
 
-    expect(screen.getByText('Showing the first 240.')).toBeTruthy();
+    expect(screen.getByText('Showing the first 2.')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull();
   });
 
@@ -68,12 +72,11 @@ describe('AnimeGridView', () => {
     renderGrid({ kind: 'loaded', entries: listEntries(2), more: 'failed' });
 
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2);
-    const status = screen.getByRole('status');
-    expect(
-      within(status)
-        .getByRole('link', { name: 'Retry loading more' })
-        .getAttribute('href'),
-    ).toBe(RETRY);
+    const retry = within(screen.getByRole('status')).getByRole('link', {
+      name: 'Retry loading more',
+    });
+    expect(retry.getAttribute('href')).toBe(RETRY);
+    expect(retry.getAttribute('rel')).toBe('nofollow');
   });
 
   it('renders the given empty state', () => {
@@ -86,15 +89,18 @@ describe('AnimeGridView', () => {
   it.each([
     ['busy', /Too many requests/],
     ['unavailable', /Something went wrong/],
-  ] as const)('shows a retry alert when the list failed (%s)', (reason, body) => {
-    renderGrid({ kind: 'failed', reason });
+  ] as const)(
+    'shows a retry alert when the list failed (%s)',
+    (reason, body) => {
+      renderGrid({ kind: 'failed', reason });
 
-    const alert = screen.getByRole('alert');
-    expect(within(alert).getByText(body)).toBeTruthy();
-    expect(
-      within(alert).getByRole('link', { name: 'Try again' }).getAttribute('href'),
-    ).toBe(RETRY);
-  });
+      const alert = screen.getByRole('alert');
+      expect(within(alert).getByText(body)).toBeTruthy();
+      const retry = within(alert).getByRole('link', { name: 'Try again' });
+      expect(retry.getAttribute('href')).toBe(RETRY);
+      expect(retry.getAttribute('rel')).toBe('nofollow');
+    },
+  );
 
   it('keeps a very long title whole in the card heading', () => {
     const title =

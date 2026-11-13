@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { AnimeCard } from './anime-card';
 import {
   type AnimeGridState,
-  GRID_MAX_PAGE,
   GRID_PAGE_SIZE,
   type GridMore,
 } from './anime-grid';
@@ -75,6 +74,7 @@ export function AnimeGridView({
           </ul>
           <GridMoreView
             more={state.more}
+            shown={state.entries.length}
             nextHref={nextHref}
             retryHref={retryHref}
           />
@@ -89,7 +89,11 @@ export function AnimeGridView({
           title="This list didn't load"
           body={FAILURE_BODY[state.reason]}
           action={
-            <a className="ol-btn ol-btn--secondary" href={retryHref}>
+            <a
+              className="ol-btn ol-btn--secondary"
+              href={retryHref}
+              rel="nofollow"
+            >
               Try again
             </a>
           }
@@ -102,10 +106,12 @@ export function AnimeGridView({
 
 function GridMoreView({
   more,
+  shown,
   nextHref,
   retryHref,
 }: {
   readonly more: GridMore;
+  readonly shown: number;
   readonly nextHref: string;
   readonly retryHref: string;
 }) {
@@ -128,7 +134,11 @@ function GridMoreView({
       return (
         <div className="br-more-wrap" role="status">
           <p>The next cards didn&apos;t load.</p>
-          <a className="ol-btn ol-btn--secondary br-more" href={retryHref}>
+          <a
+            className="ol-btn ol-btn--secondary br-more"
+            href={retryHref}
+            rel="nofollow"
+          >
             Retry loading more
           </a>
         </div>
@@ -136,7 +146,7 @@ function GridMoreView({
     case 'capped':
       return (
         <div className="br-more-wrap">
-          <p>Showing the first {GRID_MAX_PAGE * GRID_PAGE_SIZE}.</p>
+          <p>Showing the first {shown}.</p>
         </div>
       );
     case 'end':

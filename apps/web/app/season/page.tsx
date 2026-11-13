@@ -1,10 +1,13 @@
-import type { AnimeListSeason } from '@otakuleague/shared-types';
+import { ANIME_SEASONS, type AnimeListSeason } from '@otakuleague/shared-types';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { connection } from 'next/server';
-import { Suspense } from 'react';
+import { cache, Suspense } from 'react';
 import { loadAnimeListPage } from '../../src/anime/data';
-import { collectGridPages } from '../../src/browse/anime-grid';
+import {
+  type AnimeGridState,
+  collectGridPages,
+} from '../../src/browse/anime-grid';
 import {
   AnimeGridSkeleton,
   AnimeGridView,
@@ -22,15 +25,20 @@ import {
 } from '../../src/browse/season';
 import '../styles/browse.css';
 
-/** The request's season, read at request time: the current season depends on the clock. */
-async function readRequest(
-  searchParams: Promise<SearchParamsRecord>,
-): Promise<{ readonly request: SeasonRequest; readonly now: Date }> {
-  const params = await searchParams;
-  await connection();
-  const now = new Date();
-  return { request: parseSeasonRequest(params, now), now };
-}
+/**
+ * The request's season, read at request time (the current season depends on the clock). Cached per
+ * request, so the page and generateMetadata agree on `now`.
+ */
+const readRequest = cache(
+  async (
+    searchParams: Promise<SearchParamsRecord>,
+  ): Promise<{ readonly request: SeasonRequest; readonly now: Date }> => {
+    const params = await searchParams;
+    await connection();
+    const now = new Date();
+    return { request: parseSeasonRequest(params, now), now };
+  },
+);
 
 export async function generateMetadata({
   searchParams,
@@ -52,7 +60,14 @@ export async function generateMetadata({
 export default function SeasonPage({ searchParams }: PageProps<'/season'>) {
   return (
     <main className="br-page">
-      <Suspense fallback={<AnimeGridSkeleton label="this season" />}>
+      <Suspense
+        fallback={
+          <>
+            <div className="br-head br-head--placeholder" aria-hidden="true" />
+            <AnimeGridSkeleton label="anime" />
+          </>
+        }
+      >
         <SeasonContent searchParams={searchParams} />
       </Suspense>
     </main>
@@ -92,6 +107,29 @@ async function SeasonResults({
       loadAnimeListPage('seasonal', { season: request.season, cursor, limit }),
     request.page,
   );
+  return <SeasonResultsView state={state} request={request} now={now} />;
+}
+
+/** Copy for an empty season: a past season has nothing listed, a current or future one nothing announced yet. */
+function emptyTitle(season: AnimeListSeason, now: Date): string {
+  const thisSeason = currentSeason(now);
+  const isPast =
+    season.year * 4 + ANIME_SEASONS.indexOf(season.season) <
+    thisSeason.year * 4 + ANIME_SEASONS.indexOf(thisSeason.season);
+  return isPast
+    ? `No anime listed for ${seasonLabel(season)}`
+    : `Nothing announced for ${seasonLabel(season)} yet`;
+}
+
+export function SeasonResultsView({
+  state,
+  request,
+  now,
+}: {
+  readonly state: AnimeGridState;
+  readonly request: SeasonRequest;
+  readonly now: Date;
+}) {
   const thisSeason = currentSeason(now);
   return (
     <AnimeGridView
@@ -100,7 +138,7 @@ async function SeasonResults({
       retryHref={seasonHref(request.season, request.page)}
       empty={
         <GridStateCard
-          title={`Nothing announced for ${seasonLabel(request.season)} yet`}
+          title={emptyTitle(request.season, now)}
           body="Shows appear here as soon as AniList lists them for this season."
           action={
             isSameSeason(request.season, thisSeason) ? null : (
@@ -141,18 +179,18 @@ export function SeasonHead({
         </p>
       </div>
       <nav className="br-stepper" aria-label="Seasons">
-          <StepLink season={stepSeason(season, -1, now)} direction="Previous" />
-          {!isCurrent && (
-            <Link
-              className="ol-btn ol-btn--ghost ol-btn--sm"
-              href={seasonHref(currentSeason(now))}
-              prefetch={false}
-              rel="nofollow"
-            >
-              This season
-            </Link>
-          )}
-          <StepLink season={stepSeason(season, 1, now)} direction="Next" />
+        <StepLink season={stepSeason(season, -1, now)} direction="Previous" />
+        {!isCurrent && (
+          <Link
+            className="ol-btn ol-btn--ghost ol-btn--sm"
+            href={seasonHref(currentSeason(now))}
+            prefetch={false}
+            rel="nofollow"
+          >
+            This season
+          </Link>
+        )}
+        <StepLink season={stepSeason(season, 1, now)} direction="Next" />
       </nav>
     </header>
   );

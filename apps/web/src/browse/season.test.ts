@@ -17,8 +17,12 @@ describe('currentSeason', () => {
       season: 'WINTER',
       year: 2027,
     });
-    expect(currentSeason(new Date('2026-04-01T00:00:00Z')).season).toBe('SPRING');
-    expect(currentSeason(new Date('2026-09-30T23:59:59Z')).season).toBe('SUMMER');
+    expect(currentSeason(new Date('2026-04-01T00:00:00Z')).season).toBe(
+      'SPRING',
+    );
+    expect(currentSeason(new Date('2026-09-30T23:59:59Z')).season).toBe(
+      'SUMMER',
+    );
   });
 });
 
@@ -30,7 +34,13 @@ describe('parseSeasonRequest', () => {
   it('reads season case-insensitively and ignores old-site params', () => {
     expect(
       parseSeasonRequest(
-        { season: 'SuMmEr', year: '2025', sort: 'score', q: 'x', formats: 'TV' },
+        {
+          season: 'SuMmEr',
+          year: '2025',
+          sort: 'score',
+          q: 'x',
+          formats: 'TV',
+        },
         NOW,
       ),
     ).toEqual({ season: { season: 'SUMMER', year: 2025 }, page: 1 });
@@ -45,16 +55,21 @@ describe('parseSeasonRequest', () => {
     [{ season: 'fall', year: '2026.0' }],
     [{ season: 'fall', year: '0x7EA' }],
     [{ season: ['fall', 'winter'], year: '2025' }],
+    [{ season: 'ſpring', year: '2025' }],
   ])('falls back to the current season for %j', (params) => {
     expect(parseSeasonRequest(params, NOW).season).toEqual(FALL_2026);
   });
 
   it('accepts the bounds: Winter 1917 and next year', () => {
-    expect(parseSeasonRequest({ season: 'winter', year: '1917' }, NOW).season).toEqual({
+    expect(
+      parseSeasonRequest({ season: 'winter', year: '1917' }, NOW).season,
+    ).toEqual({
       season: 'WINTER',
       year: 1917,
     });
-    expect(parseSeasonRequest({ season: 'fall', year: '2027' }, NOW).season).toEqual({
+    expect(
+      parseSeasonRequest({ season: 'fall', year: '2027' }, NOW).season,
+    ).toEqual({
       season: 'FALL',
       year: 2027,
     });
@@ -79,8 +94,14 @@ describe('stepSeason', () => {
       season: 'FALL',
       year: 2025,
     });
-    expect(stepSeason(FALL_2026, 1, NOW)).toEqual({ season: 'WINTER', year: 2027 });
-    expect(stepSeason(FALL_2026, -1, NOW)).toEqual({ season: 'SUMMER', year: 2026 });
+    expect(stepSeason(FALL_2026, 1, NOW)).toEqual({
+      season: 'WINTER',
+      year: 2027,
+    });
+    expect(stepSeason(FALL_2026, -1, NOW)).toEqual({
+      season: 'SUMMER',
+      year: 2026,
+    });
   });
 
   it('stops at Winter 1917 and at Fall of next year', () => {
@@ -97,7 +118,9 @@ describe('seasonHref and seasonLabel', () => {
   it('lower-cases the season and omits page 1', () => {
     expect(seasonHref(FALL_2026)).toBe('/season?season=fall&year=2026');
     expect(seasonHref(FALL_2026, 1)).toBe('/season?season=fall&year=2026');
-    expect(seasonHref(FALL_2026, 2)).toBe('/season?season=fall&year=2026&page=2');
+    expect(seasonHref(FALL_2026, 2)).toBe(
+      '/season?season=fall&year=2026&page=2',
+    );
   });
 
   it('names the season for people', () => {

@@ -58,6 +58,10 @@ describe('public/robots.txt', () => {
     expect(robotsTxt).toMatch(/^Disallow: \/anime\/anilist\/$/m);
   });
 
+  it('keeps crawlers off the season pages until OTA-189', () => {
+    expect(robotsTxt).toMatch(/^Disallow: \/season\?$/m);
+  });
+
   it('never blocks the whole site, so crawlers can still read the noindex (OTA-134)', () => {
     expect(robotsTxt).not.toMatch(/^Disallow:\s*\/\s*$/m);
   });

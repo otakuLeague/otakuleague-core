@@ -83,8 +83,8 @@
 /* Visually hidden text for screen readers. */
 .br-sr {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
@@ -128,7 +128,7 @@
   /* A colour change: kept under reduced motion (ADR 0011). */
   transition: border-color var(--dur-press) var(--ease-enter);
 }
-.br-icon-btn:hover {
+.br-icon-btn:not([aria-disabled='true']):hover {
   border-color: color-mix(in oklab, var(--accent) 60%, transparent);
 }
 .br-icon-btn[aria-disabled='true'] {
@@ -149,7 +149,7 @@
   min-inline-size: 0;
 }
 .br-grid .ol-anime-card {
-  width: auto;
+  inline-size: auto;
 }
 
 .br-more-wrap {
@@ -194,12 +194,20 @@
   border-color: color-mix(in oklab, var(--bad) 40%, transparent);
 }
 
+/* Holds the head's place while the URL is read, so the grid below does not shift. */
+.br-head--placeholder {
+  min-block-size: 80px;
+}
+
 @media (max-width: 767.98px) {
   .br-page {
     padding: var(--space-6) var(--space-4) var(--space-16);
   }
   .br-head h1 {
     font-size: 30px;
+  }
+  .br-head--placeholder {
+    min-block-size: 150px;
   }
   .br-icon-btn {
     inline-size: 44px;

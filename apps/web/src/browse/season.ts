@@ -22,12 +22,14 @@ export function currentSeason(now: Date): AnimeListSeason {
   return { season, year: now.getUTCFullYear() };
 }
 
-function firstValue(value: string | string[] | undefined): string | undefined {
+function singleValue(value: string | string[] | undefined): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
 function parseSeason(value: string | undefined): AnimeSeason | null {
-  const upper = value?.toUpperCase();
+  // ASCII letters first: toUpperCase() maps "ſ" (long s) to "S", so "ſpring" would pass.
+  if (value === undefined || !/^[a-z]+$/i.test(value)) return null;
+  const upper = value.toUpperCase();
   return ANIME_SEASONS.find((season) => season === upper) ?? null;
 }
 
@@ -53,12 +55,12 @@ export function parseSeasonRequest(
   searchParams: SearchParamsRecord,
   now: Date,
 ): SeasonRequest {
-  const season = parseSeason(firstValue(searchParams.season));
-  const year = parseYear(firstValue(searchParams.year), now);
+  const season = parseSeason(singleValue(searchParams.season));
+  const year = parseYear(singleValue(searchParams.year), now);
   return {
     season:
       season === null || year === null ? currentSeason(now) : { season, year },
-    page: parsePage(firstValue(searchParams.page)),
+    page: parsePage(singleValue(searchParams.page)),
   };
 }
 

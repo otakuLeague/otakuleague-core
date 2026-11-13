@@ -5,7 +5,12 @@ import type {
 import { describe, expect, it } from 'vitest';
 import type { ApiFailure, ApiResult } from '../api/client';
 import { listEntries, listEntry } from '../home/fixtures';
-import { collectGridPages, type LoadGridPage } from './anime-grid';
+import { ANIME_LIST_MAX_LIMIT } from '@otakuleague/shared-types';
+import {
+  collectGridPages,
+  GRID_FETCH_LIMIT,
+  type LoadGridPage,
+} from './anime-grid';
 
 type Answer = ApiResult<AnimeListCardPage>;
 
@@ -141,16 +146,34 @@ describe('collectGridPages', () => {
     });
   });
 
-  it('makes at most one call per page when pages come back short', async () => {
-    const { loadPage, requests } = fakeLoader([
-      page(ids(2), 'c1'),
-      page(ids(2, 3), 'c2'),
-    ]);
+  it('stops after ceil(pages / 2) + 1 calls when pages come back short', async () => {
+    const answers = Array.from({ length: 10 }, (_, call) =>
+      page(ids(2, call * 2 + 1), `c${call + 1}`),
+    );
+    const { loadPage, requests } = fakeLoader(answers);
 
-    expect(await collectGridPages(loadPage, 2)).toMatchObject({
+    expect(await collectGridPages(loadPage, 3)).toMatchObject({
       kind: 'loaded',
       more: 'available',
     });
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
+  });
+
+  it.each([
+    [0, 24],
+    [-3, 24],
+    [Number.NaN, 24],
+    [1.9, 24],
+    [99, 48],
+  ])('clamps %d pages before asking (first limit %i)', async (pages, limit) => {
+    const { loadPage, requests } = fakeLoader([page(ids(1), null)]);
+
+    await collectGridPages(loadPage, pages);
+
+    expect(requests[0]?.limit).toBe(limit);
+  });
+
+  it('never asks for more than the API allows', () => {
+    expect(GRID_FETCH_LIMIT).toBeLessThanOrEqual(ANIME_LIST_MAX_LIMIT);
   });
 });
