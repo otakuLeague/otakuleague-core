@@ -12,17 +12,22 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import {
+  ANIME_GENRES,
   ANIME_ID_SOURCES,
   ANIME_LIST_DEFAULT_LIMIT,
   ANIME_LIST_KINDS,
   ANIME_LIST_MAX_LIMIT,
+  ANIME_LIST_MIN_YEAR,
+  ANIME_SEASONS,
   type AnimeBySlug,
   type AnimeDetails,
   type AnimeFranchise,
+  type AnimeGenre,
   type AnimeIdSource,
   type AnimeListKind,
   type AnimeListPage,
   type AnimeSearchPage,
+  type AnimeSeason,
   type AnimeSlugResolution,
 } from '@otakuleague/shared-types';
 import { Transform, Type } from 'class-transformer';
@@ -55,6 +60,7 @@ import { AnimeService } from './anime.service';
 import { AnimeFranchiseService } from './franchise.service';
 
 const ID_PATTERN = /^[1-9]\d{0,8}$/;
+const YEAR_PATTERN = /^[1-9]\d{3}$/;
 const SLUG_PATTERN = /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/;
 
 class AnimeLookupParams {
@@ -115,6 +121,43 @@ class AnimeListQuery {
   @Min(1)
   @Max(ANIME_LIST_MAX_LIMIT)
   readonly limit?: number;
+
+  @ApiPropertyOptional({
+    enum: ANIME_SEASONS,
+    description:
+      'seasonal only, together with year; both omitted: the current season (UTC).',
+  })
+  @IsOptional()
+  @IsIn(ANIME_SEASONS, {
+    message: `season must be one of: ${ANIME_SEASONS.join(', ')}`,
+  })
+  readonly season?: AnimeSeason;
+
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: ANIME_LIST_MIN_YEAR,
+    description: 'seasonal only, together with season; at most next year.',
+  })
+  @IsOptional()
+  // Only plain digits become a number: 2026.0, 0x7EA and +2026 stay strings and fail IsInt.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && YEAR_PATTERN.test(value)
+      ? Number(value)
+      : value,
+  )
+  @IsInt()
+  @Min(ANIME_LIST_MIN_YEAR)
+  readonly year?: number;
+
+  @ApiPropertyOptional({
+    enum: ANIME_GENRES,
+    description: 'One genre, exact spelling; any list kind.',
+  })
+  @IsOptional()
+  @IsIn(ANIME_GENRES, {
+    message: `genre must be one of: ${ANIME_GENRES.join(', ')}`,
+  })
+  readonly genre?: AnimeGenre;
 }
 
 const MAX_QUERY_LENGTH = 100;
@@ -179,20 +222,30 @@ export class AnimeController {
   @ApiOkResponse({
     type: AnimeListPageSchema,
     description:
-      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background.',
+      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background. A page that was just stored also claims a slug for each anime it lists (no source call), except on genre lists and past seasons (until OTA-189); a failed claim leaves that slug null.',
   })
   @ApiBadRequestResponse({
-    description: 'Unknown list, malformed cursor or limit out of range.',
+    description:
+      'Unknown list, malformed cursor, limit out of range, or an invalid season, year or genre.',
   })
   @ApiServiceUnavailableResponse({
     description:
       'AniList is switched off, or we do not hold this page and AniList is down or rate-limited.',
   })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Too many new lists are being loaded right now (global cap); a stored page is unaffected.',
+  })
   getList(
     @Param() params: AnimeListParams,
     @Query() query: AnimeListQuery,
   ): Promise<AnimeListPage> {
-    return this.lists.getList(params.kind, query.cursor, query.limit);
+    return this.lists.getList(
+      params.kind,
+      { season: query.season, year: query.year, genre: query.genre },
+      query.cursor,
+      query.limit,
+    );
   }
 
   // One segment: cannot clash with the two-segment routes below.

@@ -17,6 +17,7 @@ import {
   type AnimeLink,
   type AnimeNextEpisode,
   type AnimeScore,
+  type AnimeSeason,
   type AnimeSearchHit,
   type AnimeSearchPage,
   type AnimeTitleKind,
@@ -294,7 +295,7 @@ class AnimeListEntrySchema implements AnimeListEntry {
     type: String,
     nullable: true,
     description:
-      'Canonical slug when we know the anime; otherwise link /anime/anilist/{anilistId}',
+      'Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): then link /anime/anilist/{anilistId}',
   })
   readonly slug!: string | null;
   @ApiProperty({ type: String, nullable: true })
@@ -329,9 +330,22 @@ class AnimeListEntrySchema implements AnimeListEntry {
   readonly score!: AnimeListEntry['score'];
 }
 
+class AnimeListSeasonSchema {
+  @ApiProperty({ enum: ANIME_SEASONS })
+  readonly season!: AnimeSeason;
+  @ApiProperty({ type: 'integer' }) readonly year!: number;
+}
+
 export class AnimeListPageSchema implements AnimeListPage {
   @ApiProperty({ enum: ANIME_LIST_KINDS })
   readonly kind!: AnimeListPage['kind'];
+  @ApiProperty({
+    type: AnimeListSeasonSchema,
+    nullable: true,
+    description:
+      'The season shown: set for seasonal (the default season echoed back), null otherwise',
+  })
+  readonly season!: AnimeListPage['season'];
   @ApiProperty({
     type: [AnimeListEntrySchema],
     description:

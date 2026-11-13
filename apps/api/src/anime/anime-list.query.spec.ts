@@ -1,54 +1,180 @@
-import { ANIME_LIST_KINDS } from '@otakuleague/shared-types';
+import {
+  ANIME_LIST_KINDS,
+  type AnimeListKind,
+  type AnimeListSeason,
+} from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
   assembleWindow,
+  claimsSlugs,
   decodeCursor,
   encodeCursor,
+  type CatalogList,
+  currentSeason,
   isFresh,
   listKey,
-  listSpec,
+  listQuery,
+  type ListFilters,
   readWindow,
+  resolveCatalogList,
   type WindowBlock,
 } from './anime-list.query';
 
 const HOUR_MS = 3_600_000;
 
-describe('listSpec', () => {
-  it('has the ADR 0016 filter, sort and lifetime for every kind', () => {
-    expect(ANIME_LIST_KINDS.map((kind) => [kind, listSpec(kind)])).toEqual([
+const NOV_2026 = new Date('2026-11-13T12:00:00Z');
+const FALL_2026 = { season: 'FALL', year: 2026 } as const;
+const plain = (kind: Exclude<AnimeListKind, 'seasonal'>): CatalogList => ({
+  kind,
+  season: null,
+  genre: null,
+});
+
+describe('listQuery', () => {
+  it('has the ADR 0016 filter and sort for every kind', () => {
+    expect(
+      ANIME_LIST_KINDS.map((kind) => [
+        kind,
+        listQuery(
+          kind === 'seasonal'
+            ? { kind, season: FALL_2026, genre: null }
+            : plain(kind),
+        ),
+      ]),
+    ).toEqual([
+      ['trending', { sort: ['TRENDING_DESC', 'POPULARITY_DESC'] }],
+      ['top', { sort: ['SCORE_DESC', 'POPULARITY_DESC'] }],
+      ['upcoming', { sort: ['POPULARITY_DESC'], status: 'NOT_YET_RELEASED' }],
+      ['airing', { sort: ['POPULARITY_DESC'], status: 'RELEASING' }],
       [
-        'trending',
-        {
-          query: { sort: ['TRENDING_DESC', 'POPULARITY_DESC'] },
-          ttlMs: HOUR_MS,
-        },
-      ],
-      [
-        'top',
-        {
-          query: { sort: ['SCORE_DESC', 'POPULARITY_DESC'] },
-          ttlMs: 24 * HOUR_MS,
-        },
-      ],
-      [
-        'upcoming',
-        {
-          query: { sort: ['POPULARITY_DESC'], status: 'NOT_YET_RELEASED' },
-          ttlMs: 24 * HOUR_MS,
-        },
-      ],
-      [
-        'airing',
-        {
-          query: { sort: ['POPULARITY_DESC'], status: 'RELEASING' },
-          ttlMs: 6 * HOUR_MS,
-        },
+        'seasonal',
+        { sort: ['POPULARITY_DESC'], season: 'FALL', seasonYear: 2026 },
       ],
     ]);
   });
 
-  it('keys a list by its kind', () => {
-    expect(listKey('airing')).toBe('airing');
+  it('adds the season, its year and the genre only when set', () => {
+    expect(
+      listQuery({ kind: 'seasonal', season: FALL_2026, genre: 'Drama' }),
+    ).toEqual({
+      sort: ['POPULARITY_DESC'],
+      season: 'FALL',
+      seasonYear: 2026,
+      genre: 'Drama',
+    });
+    expect(listQuery({ ...plain('top'), genre: 'Sci-Fi' })).toEqual({
+      sort: ['SCORE_DESC', 'POPULARITY_DESC'],
+      genre: 'Sci-Fi',
+    });
+  });
+});
+
+describe('listKey', () => {
+  it('keeps the kind alone as the key of an unfiltered list', () => {
+    expect(listKey(plain('airing'))).toBe('airing');
+  });
+
+  it('appends season, year and genre in a fixed order', () => {
+    expect(listKey({ kind: 'seasonal', season: FALL_2026, genre: null })).toBe(
+      'seasonal|season=FALL|year=2026',
+    );
+    expect(listKey({ ...plain('top'), genre: 'Slice of Life' })).toBe(
+      'top|genre=Slice of Life',
+    );
+    expect(
+      listKey({ kind: 'seasonal', season: FALL_2026, genre: 'Drama' }),
+    ).toBe('seasonal|season=FALL|year=2026|genre=Drama');
+  });
+});
+
+describe('currentSeason', () => {
+  it.each([
+    ['2026-01-01T00:00:00Z', 'WINTER'],
+    ['2026-03-31T23:59:59Z', 'WINTER'],
+    ['2026-04-01T00:00:00Z', 'SPRING'],
+    ['2026-06-30T23:59:59Z', 'SPRING'],
+    ['2026-07-01T00:00:00Z', 'SUMMER'],
+    ['2026-09-30T23:59:59Z', 'SUMMER'],
+    ['2026-10-01T00:00:00Z', 'FALL'],
+    ['2026-12-31T23:59:59Z', 'FALL'],
+  ])('is the season of %s in UTC: %s', (instant, season) => {
+    expect(currentSeason(new Date(instant))).toEqual({ season, year: 2026 });
+  });
+});
+
+describe('resolveCatalogList', () => {
+  const resolve = (kind: AnimeListKind, filters: ListFilters) =>
+    resolveCatalogList(kind, filters, NOV_2026);
+
+  it('resolves an unfiltered kind with no season and no genre', () => {
+    expect(resolve('top', {})).toEqual({ outcome: 'ok', list: plain('top') });
+  });
+
+  it('keeps the genre of any kind', () => {
+    expect(resolve('airing', { genre: 'Mecha' })).toEqual({
+      outcome: 'ok',
+      list: { ...plain('airing'), genre: 'Mecha' },
+    });
+  });
+
+  it('defaults seasonal to the current UTC season', () => {
+    expect(resolve('seasonal', {})).toEqual({
+      outcome: 'ok',
+      list: { kind: 'seasonal', season: FALL_2026, genre: null },
+    });
+  });
+
+  it('resolves an explicit season to the same list as the default', () => {
+    expect(resolve('seasonal', { season: 'FALL', year: 2026 })).toEqual(
+      resolve('seasonal', {}),
+    );
+  });
+
+  it('accepts the lowest year and next year, but not the one after', () => {
+    expect(resolve('seasonal', { season: 'WINTER', year: 1917 }).outcome).toBe(
+      'ok',
+    );
+    expect(resolve('seasonal', { season: 'WINTER', year: 2027 }).outcome).toBe(
+      'ok',
+    );
+    expect(resolve('seasonal', { season: 'WINTER', year: 2028 })).toEqual({
+      outcome: 'invalid',
+      details: [{ field: 'year', message: 'year must be at most 2027' }],
+    });
+  });
+
+  it('follows the clock for the newest year', () => {
+    expect(
+      resolveCatalogList(
+        'seasonal',
+        { season: 'WINTER', year: 2028 },
+        new Date('2027-01-01T00:00:00Z'),
+      ).outcome,
+    ).toBe('ok');
+  });
+
+  it('refuses a season without a year and a year without a season', () => {
+    expect(resolve('seasonal', { season: 'FALL' })).toEqual({
+      outcome: 'invalid',
+      details: [{ field: 'year', message: 'year is required with season' }],
+    });
+    expect(resolve('seasonal', { year: 2026 })).toEqual({
+      outcome: 'invalid',
+      details: [{ field: 'season', message: 'season is required with year' }],
+    });
+  });
+
+  it('refuses season and year on any other kind, naming both', () => {
+    expect(resolve('top', { season: 'FALL', year: 2026 })).toEqual({
+      outcome: 'invalid',
+      details: [
+        {
+          field: 'season',
+          message: 'season applies to the seasonal list only',
+        },
+        { field: 'year', message: 'year applies to the seasonal list only' },
+      ],
+    });
   });
 });
 
@@ -69,6 +195,13 @@ describe('isFresh', () => {
     expect(
       isFresh('top', fetchedAt, new Date(fetchedAt.getTime() + 23 * HOUR_MS)),
     ).toBe(true);
+    expect(
+      isFresh(
+        'seasonal',
+        fetchedAt,
+        new Date(fetchedAt.getTime() + 24 * HOUR_MS),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -197,5 +330,33 @@ describe('assembleWindow', () => {
     const window = assembleWindow([block(20, 50)], 999, 50);
 
     expect(window).toMatchObject({ entries: [999], nextOffset: null });
+  });
+});
+
+describe('claimsSlugs (until OTA-189)', () => {
+  const seasonal = (
+    season: AnimeListSeason,
+    genre: CatalogList['genre'] = null,
+  ): CatalogList => ({ kind: 'seasonal', season, genre });
+
+  it('claims for an unfiltered kind', () => {
+    expect(claimsSlugs(plain('top'), NOV_2026)).toBe(true);
+  });
+
+  it('claims for the current season, and not for another season or year', () => {
+    expect(claimsSlugs(seasonal(FALL_2026), NOV_2026)).toBe(true);
+    expect(
+      claimsSlugs(seasonal({ season: 'SUMMER', year: 2026 }), NOV_2026),
+    ).toBe(false);
+    expect(
+      claimsSlugs(seasonal({ season: 'FALL', year: 2025 }), NOV_2026),
+    ).toBe(false);
+  });
+
+  it('never claims for a genre list', () => {
+    expect(claimsSlugs({ ...plain('top'), genre: 'Mecha' }, NOV_2026)).toBe(
+      false,
+    );
+    expect(claimsSlugs(seasonal(FALL_2026, 'Drama'), NOV_2026)).toBe(false);
   });
 });

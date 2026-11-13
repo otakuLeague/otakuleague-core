@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { AnimeGenre, AnimeSeason } from '@otakuleague/shared-types';
 import {
   mapAniListListBlock,
   mapAniListMedia,
@@ -34,6 +35,9 @@ export interface ListQuery {
     'TRENDING_DESC' | 'POPULARITY_DESC' | 'SCORE_DESC'
   )[];
   readonly status?: 'RELEASING' | 'NOT_YET_RELEASED';
+  readonly season?: AnimeSeason;
+  readonly seasonYear?: number;
+  readonly genre?: AnimeGenre;
 }
 
 /**

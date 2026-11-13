@@ -10,6 +10,12 @@ const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'myanimelist',
   'search',
   'new',
+  'lists',
+  'slugs',
+  'season',
+  'top',
+  'genres',
+  'random',
 ]);
 
 /**
@@ -90,4 +96,41 @@ export function canonicalCandidates(source: SlugSource): string[] {
 export function romajiAlias(source: SlugSource): string | null {
   const slug = fit(slugify(source.titleRomaji ?? ''), '');
   return slug === '' || RESERVED_SLUGS.has(slug) ? null : slug;
+}
+
+/** A year outside 1900-2100 is bad source data: no year rung. */
+function plausibleYear(year: number | null): number | null {
+  return year !== null && year >= 1900 && year <= 2100 ? year : null;
+}
+
+/** The slug inputs from an AniList title and date set: English, else romaji; start year, else season year. */
+export function slugSource(
+  anilistId: number,
+  fields: {
+    readonly titleEnglish: string | null;
+    readonly titleRomaji: string | null;
+    readonly startDate: { readonly year: number | null } | null;
+    readonly seasonYear: number | null;
+    readonly format: AnimeFormat | null;
+  },
+): SlugSource {
+  return {
+    anilistId,
+    titleEnglish: fields.titleEnglish,
+    titleRomaji: fields.titleRomaji,
+    year: plausibleYear(fields.startDate?.year ?? fields.seasonYear),
+    format: fields.format,
+  };
+}
+
+/** The first candidate that is free or already this anime's; undefined when every rung is taken. */
+export function pickCanonical(
+  candidates: readonly string[],
+  owners: ReadonlyMap<string, number>,
+  anilistId: number,
+): string | undefined {
+  return candidates.find((candidate) => {
+    const holder = owners.get(candidate);
+    return holder === undefined || holder === anilistId;
+  });
 }

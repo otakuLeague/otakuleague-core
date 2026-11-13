@@ -11,12 +11,14 @@ import {
   AnimeImportService,
 } from './anime-import.service';
 import { AnimeListService } from './anime-list.service';
+import { AnimeSlugClaimService } from './anime-slug-claim.service';
 import { AnimeSearchService } from './anime-search.service';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { FranchiseWalker } from './franchise-walker.service';
 import { AnimeFranchiseService } from './franchise.service';
 import { ImportLimits } from './import-limits';
+import { ListFetchLimits } from './list-fetch-limits';
 import { SourceBackoff } from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { JikanAdapter } from './sources/jikan.adapter';
@@ -98,10 +100,12 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     AnimeImportService,
     AnimeService,
     AnimeListService,
+    AnimeSlugClaimService,
     AnimeSearchService,
     FranchiseWalker,
     SourceBackoff,
     ImportLimits,
+    ListFetchLimits,
     AnimeFranchiseService,
     AnimePurgeScheduler,
   ],

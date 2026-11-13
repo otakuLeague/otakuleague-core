@@ -21,9 +21,10 @@ import {
 } from './anime.rows';
 import {
   canonicalCandidates,
+  pickCanonical,
   romajiAlias,
-  type SlugSource,
   slugify,
+  slugSource,
 } from './anime.slug';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
@@ -84,7 +85,7 @@ export function animeNotFound(
   });
 }
 
-function isPrismaError(error: unknown, code: string): boolean {
+export function isPrismaError(error: unknown, code: string): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
   );
@@ -514,13 +515,7 @@ export class AnimeImportService implements OnModuleDestroy {
     anilistId: number,
     now: Date,
   ): Promise<void> {
-    const source: SlugSource = {
-      anilistId,
-      titleEnglish: snapshot.titleEnglish,
-      titleRomaji: snapshot.titleRomaji,
-      year: snapshot.startDate?.year ?? snapshot.seasonYear,
-      format: snapshot.format,
-    };
+    const source = slugSource(anilistId, snapshot);
     const identity = await tx.animeIdentity.findUnique({
       where: { anilistId },
     });
@@ -535,10 +530,7 @@ export class AnimeImportService implements OnModuleDestroy {
         where: { slug: { in: candidates } },
       });
       const owner = new Map(taken.map((row) => [row.slug, row.anilistId]));
-      const slug = candidates.find((candidate) => {
-        const holder = owner.get(candidate);
-        return holder === undefined || holder === anilistId;
-      });
+      const slug = pickCanonical(candidates, owner, anilistId);
       if (slug === undefined) {
         throw new Error(`No free slug for AniList ${anilistId}`);
       }
