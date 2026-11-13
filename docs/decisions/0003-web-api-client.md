@@ -1,5 +1,5 @@
 # 0003: Web API client
-Status: accepted (2026-10-14, OTA-76)
+Status: accepted (2026-10-14, OTA-76). Superseded in part by ADR 0017 (2026-11-13): the browser may call same-origin route handlers, and `client.ts` will also run in the browser (code lands with OTA-142).
 
 ## Context
 Every page of the web app will call the API. Without one client, each page invents its own timeouts, error handling and caching. The API answers errors with the envelope from ADR 0002, except `GET /health`, whose 503 carries a `HealthResponse`. No runtime schema library is shared between API and clients (ADR 0002), so TypeScript types alone say nothing about what actually arrives. Pages are Next.js Server Components; the layout, error pages and caching flags are OTA-86.
