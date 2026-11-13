@@ -1,9 +1,4 @@
-import {
-  isApiError,
-  isHealthResponse,
-  type ApiError,
-  type HealthResponse,
-} from '@otakuleague/shared-types';
+import { isApiError, type ApiError } from '@otakuleague/shared-types';
 import { unstable_rethrow } from 'next/navigation';
 import { parseApiBaseUrl, readApiBaseUrl } from './config';
 
@@ -54,10 +49,6 @@ export interface ApiClientSettings {
 
 export interface ApiClient {
   call<T>(path: ApiPath, options?: CallOptions<T>): Promise<ApiResult<T>>;
-  /** 200 with ok/up and 503 with error/down are both answers, not failures (ADR 0002). */
-  getHealth(
-    options?: Pick<CallOptions<HealthResponse>, 'timeoutMs'>,
-  ): Promise<ApiResult<HealthResponse>>;
 }
 
 export const DEFAULT_TIMEOUT_MS = 5000;
@@ -139,12 +130,6 @@ function copyApiError({ error }: ApiError): ApiError {
         },
       }
     : { error: { code: error.code, message: error.message } };
-}
-
-function copyHealthResponse({ status }: HealthResponse): HealthResponse {
-  return status === 'ok'
-    ? { status: 'ok', checks: { database: 'up' } }
-    : { status: 'error', checks: { database: 'down' } };
 }
 
 /** Non-2xx: the error envelope if the body is one, otherwise invalid_response. The raw body is never kept. */
@@ -230,29 +215,7 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
     return { ok: true, data: parsedBody.body as T };
   }
 
-  async function getHealth(
-    options: Pick<CallOptions<HealthResponse>, 'timeoutMs'> = {},
-  ): Promise<ApiResult<HealthResponse>> {
-    const raw = await send('/health', options);
-    if (!raw.ok) {
-      return toFailureResult(raw.failure);
-    }
-    const { status, parsedBody } = raw;
-    if (parsedBody.kind === 'json' && isHealthResponse(parsedBody.body)) {
-      const health = parsedBody.body;
-      if (
-        (status === 200 && health.status === 'ok') ||
-        (status === 503 && health.status === 'error')
-      ) {
-        return { ok: true, data: copyHealthResponse(health) };
-      }
-    }
-    return status === 200
-      ? toFailureResult({ kind: 'invalid_response', status })
-      : toErrorResult(status, parsedBody);
-  }
-
-  return { call, getHealth };
+  return { call };
 }
 
 let defaultClient: ApiClient | undefined;

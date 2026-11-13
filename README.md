@@ -6,7 +6,7 @@ An all-in-one anime platform: visualize anime and manga data, track watchlists, 
 
 To put anime data, tracking and games in one place, and to own a real product end to end, from design to production. It is a solo project built the way a product team would build it: written decisions, tests on every change, CI on every PR ([engineering charter](docs/engineering-charter.md)).
 
-Today (end of Phase 0) it is the foundation only: a NestJS API with a health endpoint, a Next.js web app that shows the API status, PostgreSQL, error tracking and CI. No product features yet. See [docs/architecture.md](docs/architecture.md).
+Today it is in the v1 build: a NestJS API (health, anime data and catalog lists from AniList and MyAnimeList), a Next.js web app with the home page, anime pages and info pages, PostgreSQL, error tracking and CI. See [docs/architecture.md](docs/architecture.md).
 
 ## Run it locally (under 5 minutes)
 

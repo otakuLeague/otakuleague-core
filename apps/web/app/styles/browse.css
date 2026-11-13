@@ -1,0 +1,72 @@
+/* Catalog rows shared by home and the browse pages (design docs/design/browse/). Prefix: br-. */
+
+.br-section {
+  margin-block-end: var(--space-10);
+}
+.br-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-end: var(--space-4);
+}
+.br-section__head h2 {
+  margin: 0;
+  font: 700 22px/1.2 var(--font-display);
+  text-wrap: balance;
+}
+.br-section__head p {
+  margin-block-start: 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.br-section__all {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--accent-ink);
+  font: 600 14px/1 var(--font-sans);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.br-section__all:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* In the page column (no edge bleed yet); top padding keeps the hover lift and focus ring visible. */
+.br-row-scroll {
+  list-style: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 176px;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+.br-row-scroll > li {
+  scroll-snap-align: start;
+}
+.br-row-scroll .ol-anime-card {
+  width: auto;
+}
+
+.br-inline-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  text-align: center;
+  border: 1px solid color-mix(in oklab, var(--bad) 40%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--bad) 8%, var(--surface));
+}
+
+@media (max-width: 767.98px) {
+  .br-row-scroll {
+    grid-auto-columns: 148px;
+  }
+}

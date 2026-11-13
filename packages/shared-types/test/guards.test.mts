@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   isAnimeFranchise,
+  isAnimeListPage,
   isApiError,
   isHealthResponse,
 } from '@otakuleague/shared-types';
@@ -182,6 +183,57 @@ void describe('isAnimeFranchise', () => {
       { state: 'complete', mainLine: [] },
     ]) {
       assert.equal(isAnimeFranchise(value), false, JSON.stringify(value));
+    }
+  });
+});
+
+void describe('isAnimeListPage', () => {
+  const entry = {
+    anilistId: 16498,
+    slug: 'attack-on-titan',
+    titleEnglish: 'Attack on Titan',
+    titleRomaji: 'Shingeki no Kyojin',
+    coverImageUrl: 'https://s4.anilist.co/cover.jpg',
+  };
+  const page = {
+    kind: 'top',
+    season: null,
+    entries: [entry],
+    nextCursor: null,
+    freshness: 'fresh',
+    fetchedAt: '2026-11-13T00:00:00.000Z',
+  };
+
+  void it('accepts a page, empty or with unclaimed slugs, missing titles and covers', () => {
+    assert.equal(isAnimeListPage(page), true);
+    assert.equal(isAnimeListPage({ ...page, entries: [], nextCursor: 'c' }), true);
+    assert.equal(
+      isAnimeListPage({
+        ...page,
+        entries: [
+          { ...entry, slug: null, titleEnglish: null, titleRomaji: null, coverImageUrl: null },
+        ],
+      }),
+      true,
+    );
+  });
+
+  void it('rejects an unknown kind, a bad id or slug, too many entries or a missing list', () => {
+    for (const value of [
+      ...NOT_OBJECTS,
+      { ...page, kind: 'popular' },
+      { ...page, entries: [{ ...entry, anilistId: '16498' }] },
+      { ...page, entries: [{ ...entry, anilistId: 0 }] },
+      { ...page, entries: [{ ...entry, anilistId: 2 ** 53 }] },
+      { ...page, entries: [{ ...entry, slug: 7 }] },
+      { ...page, entries: [{ ...entry, slug: '../admin' }] },
+      { ...page, entries: [{ ...entry, slug: 'Attack-On-Titan' }] },
+      { ...page, entries: Array.from({ length: 51 }, () => entry) },
+      { ...page, entries: [{ ...entry, titleEnglish: undefined }] },
+      { ...page, nextCursor: 3 },
+      { ...page, entries: undefined },
+    ]) {
+      assert.equal(isAnimeListPage(value), false, JSON.stringify(value));
     }
   });
 });
