@@ -468,6 +468,35 @@ describe('FranchiseWalker', () => {
       ).toMatchObject({ mediaType: 'MANGA', slug: null });
     });
 
+    it('flags imported anime only: identity-only and manga entries are false (OTA-191)', async () => {
+      await identity(16498, 'attack-on-titan');
+      await identity(20958, 'attack-on-titan-season-2');
+      const animeId = '00000000-0000-4000-8000-000000016498';
+      await prisma.anime.create({
+        data: {
+          id: animeId,
+          createdAt: clock.now(),
+          lastViewedAt: clock.now(),
+        },
+      });
+      await prisma.animeExternalId.create({
+        data: { source: 'ANILIST', externalId: 16498, animeId },
+      });
+
+      await franchise('attack-on-titan');
+      await walker.settle();
+      const aot = await franchise('attack-on-titan');
+
+      expect(aot.mainLine.slice(0, 3)).toMatchObject([
+        { slug: 'attack-on-titan', imported: true },
+        { slug: 'attack-on-titan-season-2', imported: false },
+        { slug: null, imported: false },
+      ]);
+      expect(
+        aot.related.find(({ group }) => group === 'source')?.entries[0],
+      ).toMatchObject({ mediaType: 'MANGA', slug: null, imported: false });
+    });
+
     it('queues no walk while the rows are fresh, one when they are stale', async () => {
       await identity(5114, 'fullmetal-alchemist-brotherhood');
       await franchise('fullmetal-alchemist-brotherhood');
@@ -621,6 +650,7 @@ describe('FranchiseWalker', () => {
       const current = {
         anilistId: 121,
         slug: 'fullmetal-alchemist',
+        imported: true,
         title: 'Fullmetal Alchemist',
         label: 'Season 1',
         isCurrent: true,

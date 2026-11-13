@@ -171,6 +171,48 @@ void describe('isAnimeFranchise', () => {
     );
   });
 
+  void it('accepts an absent or boolean imported, rejects any other value', () => {
+    for (const imported of [undefined, true, false]) {
+      assert.equal(
+        isAnimeFranchise({ ...franchise, mainLine: [{ ...season, imported }] }),
+        true,
+        String(imported),
+      );
+    }
+    for (const imported of ['yes', 1, null]) {
+      assert.equal(
+        isAnimeFranchise({ ...franchise, mainLine: [{ ...season, imported }] }),
+        false,
+        String(imported),
+      );
+    }
+  });
+
+  void it('validates each related entry like a main-line entry', () => {
+    const relatedEntry = { anilistId: 7, slug: 'spin-off', imported: false };
+    assert.equal(
+      isAnimeFranchise({
+        ...franchise,
+        related: [{ group: 'spin_off', entries: [relatedEntry], total: 1 }],
+      }),
+      true,
+    );
+    for (const bad of [
+      { ...relatedEntry, anilistId: '7' },
+      { ...relatedEntry, slug: 7 },
+      { ...relatedEntry, imported: 'yes' },
+    ]) {
+      assert.equal(
+        isAnimeFranchise({
+          ...franchise,
+          related: [{ group: 'spin_off', entries: [bad], total: 1 }],
+        }),
+        false,
+        JSON.stringify(bad),
+      );
+    }
+  });
+
   void it('rejects an unknown state, a malformed season or missing lists', () => {
     for (const value of [
       ...NOT_OBJECTS,
@@ -206,16 +248,42 @@ void describe('isAnimeListPage', () => {
 
   void it('accepts a page, empty or with unclaimed slugs, missing titles and covers', () => {
     assert.equal(isAnimeListPage(page), true);
-    assert.equal(isAnimeListPage({ ...page, entries: [], nextCursor: 'c' }), true);
+    assert.equal(
+      isAnimeListPage({ ...page, entries: [], nextCursor: 'c' }),
+      true,
+    );
     assert.equal(
       isAnimeListPage({
         ...page,
         entries: [
-          { ...entry, slug: null, titleEnglish: null, titleRomaji: null, coverImageUrl: null },
+          {
+            ...entry,
+            slug: null,
+            titleEnglish: null,
+            titleRomaji: null,
+            coverImageUrl: null,
+          },
         ],
       }),
       true,
     );
+  });
+
+  void it('accepts an absent or boolean imported, rejects any other value', () => {
+    for (const imported of [undefined, true, false]) {
+      assert.equal(
+        isAnimeListPage({ ...page, entries: [{ ...entry, imported }] }),
+        true,
+        String(imported),
+      );
+    }
+    for (const imported of ['yes', 1, null]) {
+      assert.equal(
+        isAnimeListPage({ ...page, entries: [{ ...entry, imported }] }),
+        false,
+        String(imported),
+      );
+    }
   });
 
   void it('rejects an unknown kind, a bad id or slug, too many entries or a missing list', () => {

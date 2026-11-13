@@ -113,7 +113,7 @@ export interface RelationNode extends MediaSummaryFields, AnimeKind {
 }
 
 /** A list card as AniList describes it: the shared entry before our slug is joined. */
-export type ListedAnime = Omit<AnimeListEntry, 'slug'>;
+export type ListedAnime = Omit<AnimeListEntry, 'slug' | 'imported'>;
 
 /** One block of a catalog list (ADR 0016). Adult entries are already dropped. */
 export interface ListBlock {

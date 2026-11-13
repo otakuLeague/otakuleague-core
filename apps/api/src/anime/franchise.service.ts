@@ -7,6 +7,7 @@ import type {
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { animeNotFound } from './anime-import.service';
+import { findImportedAnilistIds } from './imported-anime';
 import { refreshTtlMs } from './cache-ttl';
 import { traverseFranchise } from './franchise-graph';
 import {
@@ -109,10 +110,13 @@ export class AnimeFranchiseService {
         ]),
       ),
     ];
-    const identities = await this.prisma.animeIdentity.findMany({
-      where: { anilistId: { in: shownIds } },
-      select: { anilistId: true, canonicalSlug: true, removedAt: true },
-    });
+    const [identities, imported] = await Promise.all([
+      this.prisma.animeIdentity.findMany({
+        where: { anilistId: { in: shownIds } },
+        select: { anilistId: true, canonicalSlug: true, removedAt: true },
+      }),
+      findImportedAnilistIds(this.prisma, shownIds),
+    ]);
     const removed = new Set(
       identities
         .filter(({ removedAt }) => removedAt !== null)
@@ -146,6 +150,7 @@ export class AnimeFranchiseService {
         entry.mediaType === 'ANIME'
           ? (slugs.get(entry.anilistId) ?? null)
           : null,
+      imported: entry.mediaType === 'ANIME' && imported.has(entry.anilistId),
     });
     // The anime being viewed is always in its own main line (owner decision): with no
     // relation row yet, from its core record, alone, so the selector hides itself.
@@ -192,6 +197,7 @@ export class AnimeFranchiseService {
         anilistId,
         mediaType: 'ANIME',
         slug,
+        imported: true,
         title:
           snapshot.titleEnglish ??
           snapshot.titleRomaji ??
