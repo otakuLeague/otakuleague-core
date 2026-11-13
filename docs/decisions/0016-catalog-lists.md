@@ -16,7 +16,7 @@ Functional:
 
 Non-functional, with numbers:
 
-1. Latency: a page we hold, fresh or stale, is answered from PostgreSQL alone in at most 3 primary-key queries and zero source calls (target p95 50 ms; the integration test asserts the zero).
+1. Latency: a page we hold, fresh or stale, is answered from PostgreSQL alone in at most 4 primary-key queries (3 before ADR 0018 added the `imported` lookup) and zero source calls (target p95 50 ms; the integration test asserts the zero).
 2. Quota: at most 1 AniList request per list and block of 50 entries per TTL, never one per anime. The three Home rows cost 6 requests a day out of 43,200.
 3. Availability: with AniList down, every page fetched in the last 30 days still answers 200, marked `stale`.
 4. Freshness: trending 1 h, airing 6 h, upcoming, top and seasonal 24 h.

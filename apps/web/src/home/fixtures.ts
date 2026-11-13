@@ -10,9 +10,11 @@ export function listEntry(
   return {
     anilistId: 154587,
     slug: 'frieren-beyond-journeys-end',
+    imported: true,
     titleEnglish: "Frieren: Beyond Journey's End",
     titleRomaji: 'Sousou no Frieren',
-    coverImageUrl: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587.jpg',
+    coverImageUrl:
+      'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587.jpg',
     coverColor: '#3a7d6b',
     format: 'TV',
     status: 'FINISHED',

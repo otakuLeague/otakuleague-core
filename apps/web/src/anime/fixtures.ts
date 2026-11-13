@@ -77,6 +77,7 @@ export function franchiseSeason(
     anilistId: 16498,
     mediaType: 'ANIME',
     slug: 'attack-on-titan',
+    imported: true,
     title: 'Attack on Titan',
     format: 'TV',
     status: 'FINISHED',

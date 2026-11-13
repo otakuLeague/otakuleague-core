@@ -109,13 +109,20 @@ const FRANCHISE_STATES: readonly unknown[] = [
   'unavailable',
 ];
 
+/** The `imported` flag of an older API is absent: accepted, read as false (ADR 0018). */
+function isAbsentOrBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean';
+}
+
 /** The main-line fields the season selector reads; the rest is display data. */
 function isFranchiseSeason(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  const { anilistId, slug, label, isCurrent, status, startDate } = value;
+  const { anilistId, slug, imported, label, isCurrent, status, startDate } =
+    value;
   return (
     Number.isInteger(anilistId) &&
     (slug === null || typeof slug === 'string') &&
+    isAbsentOrBoolean(imported) &&
     typeof label === 'string' &&
     typeof isCurrent === 'boolean' &&
     (status === null || ANIME_STATUSES.some((known) => known === status)) &&
@@ -148,6 +155,7 @@ function isListCard(value: unknown): boolean {
     (value.slug === null ||
       (typeof value.slug === 'string' &&
         CANONICAL_SLUG_PATTERN.test(value.slug))) &&
+    isAbsentOrBoolean(value.imported) &&
     isStringOrNull(value.titleEnglish) &&
     isStringOrNull(value.titleRomaji) &&
     isStringOrNull(value.coverImageUrl)

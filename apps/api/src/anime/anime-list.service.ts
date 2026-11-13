@@ -15,6 +15,7 @@ import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS } from './cache-ttl';
 import { AnimeSlugClaimService } from './anime-slug-claim.service';
+import { findImportedAnilistIds } from './imported-anime';
 import { ListFetchLimits } from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
@@ -347,22 +348,32 @@ export class AnimeListService implements OnModuleDestroy {
     }
   }
 
-  /** Slug from the identity when we know the anime; removed anime are dropped. */
+  /** Slug from the identity and the imported flag from the anime link; removed anime are dropped. */
   private async withSlugs(
     entries: readonly ListedAnime[],
   ): Promise<AnimeListEntry[]> {
     if (entries.length === 0) return [];
-    const identities = await this.prisma.animeIdentity.findMany({
-      where: { anilistId: { in: entries.map(({ anilistId }) => anilistId) } },
-      select: { anilistId: true, canonicalSlug: true, removedAt: true },
-    });
+    const anilistIds = entries.map(({ anilistId }) => anilistId);
+    const [identities, imported] = await Promise.all([
+      this.prisma.animeIdentity.findMany({
+        where: { anilistId: { in: anilistIds } },
+        select: { anilistId: true, canonicalSlug: true, removedAt: true },
+      }),
+      findImportedAnilistIds(this.prisma, anilistIds),
+    ]);
     const byId = new Map(
       identities.map((identity) => [identity.anilistId, identity]),
     );
     return entries.flatMap((entry) => {
       const identity = byId.get(entry.anilistId);
       if (identity !== undefined && identity.removedAt !== null) return [];
-      return [{ ...entry, slug: identity?.canonicalSlug ?? null }];
+      return [
+        {
+          ...entry,
+          slug: identity?.canonicalSlug ?? null,
+          imported: imported.has(entry.anilistId),
+        },
+      ];
     });
   }
 }

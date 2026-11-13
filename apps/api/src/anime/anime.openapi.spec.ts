@@ -190,6 +190,7 @@ describe('anime OpenAPI schema', () => {
       anilistId: true,
       mediaType: true,
       slug: true,
+      imported: true,
       title: true,
       format: true,
       status: true,
