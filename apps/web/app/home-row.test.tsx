@@ -24,7 +24,7 @@ const row: HomeRowDefinition = {
 describe('HomeRowView', () => {
   afterEach(() => cleanup());
 
-  it('renders one nofollow, never-prefetched card per entry with a decorative cover', () => {
+  it('renders one never-prefetched card per entry, nofollow unless imported, with a decorative cover', () => {
     const { container } = render(
       <HomeRowView
         row={row}
@@ -32,7 +32,8 @@ describe('HomeRowView', () => {
           kind: 'loaded',
           entries: [
             listEntry(),
-            listEntry({ anilistId: 2, slug: null, coverImageUrl: null }),
+            listEntry({ anilistId: 2, slug: null, imported: false, coverImageUrl: null }),
+            listEntry({ anilistId: 3, slug: 'monster', imported: false, coverImageUrl: null }),
           ],
         }}
       />,
@@ -46,13 +47,14 @@ describe('HomeRowView', () => {
         link.dataset.prefetch,
       ]);
     expect(cards).toEqual([
-      ['/anime/frieren-beyond-journeys-end', 'nofollow', 'false'],
+      ['/anime/frieren-beyond-journeys-end', null, 'false'],
       ['/anime/anilist/2', 'nofollow', 'false'],
+      ['/anime/anilist/3', 'nofollow', 'false'],
     ]);
     expect(
       screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent),
-    ).toEqual(["Frieren: Beyond Journey's End", "Frieren: Beyond Journey's End"]);
-    // One cover image: the entry without a cover keeps its empty frame.
+    ).toEqual(Array.from({ length: 3 }, () => "Frieren: Beyond Journey's End"));
+    // One cover image: the entries without a cover keep their empty frame.
     const images = container.querySelectorAll('img');
     expect(images).toHaveLength(1);
     expect(images[0]?.getAttribute('alt')).toBe('');

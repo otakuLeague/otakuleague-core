@@ -1,11 +1,7 @@
+import type { AnimeFranchiseView } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import { franchiseFixture as franchise, franchiseSeason } from './fixtures';
-import {
-  seasonHref,
-  seasonOptions,
-  tabSegmentFromParam,
-  tabSegmentOf,
-} from './tabs';
+import { seasonOptions, tabSegmentFromParam, tabSegmentOf } from './tabs';
 
 describe('tabSegmentOf', () => {
   it('finds the tab of a path, Overview for the bare slug or anything else', () => {
@@ -29,22 +25,6 @@ describe('tabSegmentFromParam', () => {
   });
 });
 
-describe('seasonHref', () => {
-  it('opens an imported season on its slug, on the same tab', () => {
-    const season = { anilistId: 20958, slug: 'aot-season-2' };
-    expect(seasonHref(season, 'cast')).toBe('/anime/aot-season-2/cast');
-    expect(seasonHref(season, '')).toBe('/anime/aot-season-2');
-  });
-
-  it('opens a season not imported yet through its AniList id, on the same tab', () => {
-    const season = { anilistId: 20958, slug: null };
-    expect(seasonHref(season, 'episodes')).toBe(
-      '/anime/anilist/20958/episodes',
-    );
-    expect(seasonHref(season, '')).toBe('/anime/anilist/20958');
-  });
-});
-
 describe('seasonOptions', () => {
   const two = [
     franchiseSeason({}),
@@ -63,6 +43,7 @@ describe('seasonOptions', () => {
       {
         anilistId: 16498,
         slug: 'attack-on-titan',
+        imported: true,
         label: 'Season 1',
         year: 2013,
         isCurrent: true,
@@ -71,6 +52,7 @@ describe('seasonOptions', () => {
       {
         anilistId: 20958,
         slug: 'aot-season-2',
+        imported: true,
         label: 'Season 2',
         year: null,
         isCurrent: false,
@@ -80,10 +62,26 @@ describe('seasonOptions', () => {
   });
 
   it('lists a season not imported yet, even when it is the only other one', () => {
-    const notImported = [two[0]!, { ...two[1]!, slug: null }];
+    const notImported = [two[0]!, { ...two[1]!, slug: null, imported: false }];
     expect(
       seasonOptions(franchise(notImported))?.map(({ slug }) => slug),
     ).toEqual(['attack-on-titan', null]);
+  });
+
+  it('reads the imported flag, a missing one (older API) as false', () => {
+    const legacy: AnimeFranchiseView = {
+      ...franchise(two),
+      mainLine: [
+        two[0]!,
+        { ...two[1]!, imported: false },
+        { ...two[1]!, imported: undefined },
+      ],
+    };
+    expect(seasonOptions(legacy)?.map(({ imported }) => imported)).toEqual([
+      true,
+      false,
+      false,
+    ]);
   });
 
   it('has nothing to show for one season, none, unavailable or no franchise', () => {
