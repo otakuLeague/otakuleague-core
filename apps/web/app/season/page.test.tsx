@@ -27,7 +27,6 @@ function renderHead(params: Record<string, string>) {
 
 function metadataFor(params: Record<string, string>) {
   return generateMetadata({
-    params: Promise.resolve({}),
     searchParams: Promise.resolve(params),
   });
 }

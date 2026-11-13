@@ -40,9 +40,14 @@ const readRequest = cache(
   },
 );
 
+// Explicit props instead of the generated PageProps: CI lints before `next typegen`.
+type SeasonPageProps = {
+  readonly searchParams: Promise<SearchParamsRecord>;
+};
+
 export async function generateMetadata({
   searchParams,
-}: PageProps<'/season'>): Promise<Metadata> {
+}: SeasonPageProps): Promise<Metadata> {
   const { request } = await readRequest(searchParams);
   const label = seasonLabel(request.season);
   const title = `${label} anime`;
@@ -57,7 +62,7 @@ export async function generateMetadata({
 }
 
 // The page shell is static; the head and results depend on the URL and the clock, so they stream.
-export default function SeasonPage({ searchParams }: PageProps<'/season'>) {
+export default function SeasonPage({ searchParams }: SeasonPageProps) {
   return (
     <main className="br-page">
       <Suspense
