@@ -172,7 +172,8 @@ export class EnvironmentVariables {
   )
   readonly JIKAN_API_URL?: string;
 
-  // Shared with the web server (ADR 0019). Optional until OTA-139: unset, every route is open.
+  // Shared with the web server (ADR 0019). Optional: unset, every route is open, unless
+  // INTERNAL_API_KEY_REQUIRED=true refuses the boot (below).
   @IsOptional()
   @ValidateBy(
     { name: 'isInternalApiKey', validator: { validate: isInternalApiKey } },

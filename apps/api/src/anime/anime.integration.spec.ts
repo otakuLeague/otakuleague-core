@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 import type {
   AnimeBySlug,
   AnimeDataSource,
@@ -22,6 +22,7 @@ import {
 import {
   type ApiCaller,
   OPEN_CALLER,
+  PREVIEW_CALLER,
   type VisitorKey,
   visitorKeyFromClientIp,
 } from '../common/api-caller';
@@ -1237,6 +1238,24 @@ describe('GET /anime/:idSource/:externalId', () => {
         { ...visitorLimited, retryAfterSeconds: 40 },
       );
       expect(anilist.calls).toBe(calls);
+      await expect(importer.importNew(frieren, bob)).resolves.toEqual(
+        expect.any(String),
+      );
+      await importer.settle();
+    });
+
+    it('puts every preview in one bucket: the 6th is refused with the preview warning, a web visitor still imports', async () => {
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+      await useUp(PREVIEW_CALLER);
+
+      await expect(
+        importer.importNew(missing(5), PREVIEW_CALLER),
+      ).rejects.toMatchObject(visitorLimited);
+      expect(warn).toHaveBeenCalledWith(
+        'Preview import cap reached: all preview deployments share one bucket.',
+      );
       await expect(importer.importNew(frieren, bob)).resolves.toEqual(
         expect.any(String),
       );

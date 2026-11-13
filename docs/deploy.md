@@ -90,11 +90,11 @@ Generate a key with `openssl rand -hex 32` on your own machine. Paste it only in
 
 One-time check before turning it on: Sentry → Alerts. The rule that emails on a new issue must also cover warning-level issues (no `level` filter at error or above), or the open-API warning raises an issue nobody is told about.
 
-Turn it on (once the web sends the key, OTA-182 slice 2):
+Turn it on once the web sends the key (OTA-182 slice 2) and both import routes send `X-Client-Ip`, `GET /anime/slugs/:slug` and `GET /anime/:idSource/:externalId` (the slice 2 test covers it). A route without it puts every visitor in one shared bucket of 5.
 1. Preview key, a second `openssl rand -hex 32` (never the production key): Railway → API → Variables: `INTERNAL_API_KEY_PREVIEW`. Nothing changes yet (inert without `INTERNAL_API_KEY`). Then Vercel → Settings → Environment Variables: `INTERNAL_API_KEY` for **Preview only**, that preview value, marked Sensitive.
 2. Vercel: `INTERNAL_API_KEY` for **Production only**, the production key, marked Sensitive. Redeploy the web.
 3. Railway → API → Variables: the same production `INTERNAL_API_KEY`. Railway restarts the API; from then on the check is on.
-4. Check: `curl -i '<api>/anime/search?q=a'` answers 403 `INTERNAL_KEY_REQUIRED`, `curl -i '<api>/health'` answers 200, the site loads an anime page and a PR preview loads one too. The start-up warning is gone from the API logs.
+4. Check: `curl -i '<api>/anime/search?q=a'` answers 403 `INTERNAL_KEY_REQUIRED`, `curl -i '<api>/health'` answers 200, the site loads an anime page, and so does a preview built or redeployed after step 1. The start-up warning is gone from the API logs. Over the next day, the API logs show no "Visitor import cap reached on the shared unknown visitor" warning (it would mean a route forgets `X-Client-Ip`).
 5. Railway: `INTERNAL_API_KEY_REQUIRED=true`. From now on a deploy without the key fails its boot (the old deployment keeps serving) instead of reopening the API. Then resolve the "INTERNAL_API_KEY is not set" issue in Sentry, so a new one means it happened again.
 
 Rotate (no refused request):
@@ -106,7 +106,7 @@ On a suspected leak, run the three steps back to back: the leaked key works unti
 
 A Vercel rollback (Instant Rollback, or redeploying an old deployment) keeps that deployment's variables, so it sends the key it was built with. Rolling the web back past a rotation sends the old key, refused once step 3 is done: set `INTERNAL_API_KEY_PREVIOUS` back to it on Railway first.
 
-Rotate the preview key (no overlap: there is no previous preview key): set the new `INTERNAL_API_KEY_PREVIEW` on Railway, then the new value in Vercel's Preview environment and redeploy the previews you still need. Previews built in between are refused (403) until rebuilt; production is never affected.
+Rotate the preview key (no overlap: there is no previous preview key): set the new `INTERNAL_API_KEY_PREVIEW` on Railway, then the new value in Vercel's Preview environment and redeploy the previews you still need. A preview built with the old value gets 403 until it is redeployed; production is never affected.
 
 Turn it off: first delete `INTERNAL_API_KEY_REQUIRED` on Railway (or set it to `false`), or the next step refuses to boot. Then delete `INTERNAL_API_KEY` (and `INTERNAL_API_KEY_PREVIOUS`) on Railway, then on Vercel. Before rolling the web back to a build older than slice 2, turn it off the same way.
 

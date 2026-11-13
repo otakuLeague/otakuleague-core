@@ -109,7 +109,7 @@ type GuardState =
   | {
       readonly kind: 'enforced';
       readonly acceptedDigests: readonly Buffer[];
-      readonly previewDigest: Buffer | null;
+      readonly previewDigest?: Buffer;
     };
 
 /** Global guard (APP_GUARD): every route needs the internal key once one is configured. */
@@ -130,7 +130,9 @@ export class InternalKeyGuard implements CanActivate {
             kind: 'enforced',
             acceptedDigests: check.acceptedKeys.map(sha256),
             previewDigest:
-              check.previewKey === undefined ? null : sha256(check.previewKey),
+              check.previewKey === undefined
+                ? undefined
+                : sha256(check.previewKey),
           };
   }
 
@@ -165,7 +167,10 @@ export class InternalKeyGuard implements CanActivate {
       return true;
     }
     const { previewDigest } = this.state;
-    if (previewDigest !== null && isAcceptedKey(presented, [previewDigest])) {
+    if (
+      previewDigest !== undefined &&
+      isAcceptedKey(presented, [previewDigest])
+    ) {
       recordCaller(request, PREVIEW_CALLER);
       return true;
     }

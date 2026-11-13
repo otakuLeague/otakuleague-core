@@ -13,8 +13,9 @@ const MAX_CLIENT_IP_LENGTH = 45;
 declare const visitorKeyBrand: unique symbol;
 
 /**
- * What one visitor's imports are counted under: an IPv4, an IPv6 /64 prefix, or `unknown`.
- * Branded: only visitorKeyFromClientIp makes one, so no raw header reaches a bucket.
+ * What one visitor's imports are counted under: an IPv4, an IPv6 /64 prefix, `unknown`, or
+ * `preview` (every preview deployment). Branded: only visitorKeyFromClientIp and
+ * PREVIEW_VISITOR_KEY make one, so no raw header reaches a bucket.
  */
 export type VisitorKey = string & { readonly [visitorKeyBrand]: true };
 
