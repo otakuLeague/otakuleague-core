@@ -7,6 +7,8 @@ tags: api-routes, server-actions, waterfalls, parallelization
 
 ## Prevent Waterfall Chains in API Routes
 
+> Project note (OTA-188): better-all is not in this repo. A new dependency needs a written justification first (CLAUDE.md). Until then, use Promise.all with explicit dependency order.
+
 In API routes and Server Actions, start independent operations immediately, even if you don't await them yet.
 
 **Incorrect (config waits for auth, data waits for both):**

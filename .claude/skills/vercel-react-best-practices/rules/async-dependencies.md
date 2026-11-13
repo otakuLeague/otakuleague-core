@@ -7,6 +7,8 @@ tags: async, parallelization, dependencies, better-all
 
 ## Dependency-Based Parallelization
 
+> Project note (OTA-188): better-all is not in this repo. A new dependency needs a written justification first (CLAUDE.md). Until then, use Promise.all with explicit dependency order.
+
 For operations with partial dependencies, use `better-all` to maximize parallelism. It automatically starts each task at the earliest possible moment.
 
 **Incorrect (profile waits for config unnecessarily):**

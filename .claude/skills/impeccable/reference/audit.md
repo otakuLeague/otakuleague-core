@@ -1,3 +1,7 @@
+## In this repo
+
+Design review only. The detector, engine, browser overlay and snapshot persistence steps are not available here, and a skipped engine step IS the complete run: no DEGRADED banner, no retry. Do not write snapshots to `.impeccable/`. The sub-agent gates below apply only where the text says they are needed for an available engine step.
+
 Run systematic **technical** quality checks and generate a comprehensive report. Don't fix issues; document them for other commands to address.
 
 This is a code-level audit, not a design critique. Check what's measurable and verifiable in the implementation.
@@ -64,7 +68,7 @@ On RTL-declared pages, each of the following is a signal to verify the rendered 
 
 ### 5. Implementation Integrity (CRITICAL)
 
-Run the bundled detector and verify each finding in context. Look for repeated implementation shortcuts, design-system drift, misleading or decorative content, and structure that is interchangeable with an unrelated product. Keep deterministic findings separate from visual judgment and call out false positives.
+The bundled detector is not available in this repo; skip it and say so, and verify each finding in context by reading the code. Look for repeated implementation shortcuts, design-system drift, misleading or decorative content, and structure that is interchangeable with an unrelated product. Keep deterministic findings separate from visual judgment and call out false positives.
 
 **Desktop apps** (Electron, NW.js, CEF, WebView2): launch the app with a local DevTools port (`--remote-debugging-port=9222`, or `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` for WebView2; keep it on 127.0.0.1, never exposed), seed the state to audit, keep the window on screen (a hidden one skips the pixel contrast reads), then run `impeccable detect --cdp 9222 --target <part of the page URL or title> --json` (not available in this repo; skip this step and say so). It returns the same JSON as a URL scan and leaves the window as found. Take screenshots through the harness's CDP tooling, and leave the window as you found it too. Tauri on macOS (WKWebView) and on Linux (WebKitGTK) expose no CDP: scan the source and say the rendered check did not run.
 

@@ -7,6 +7,8 @@ tags: server, cache, lru, cross-request
 
 ## Cross-Request LRU Caching
 
+> Project note (OTA-188): lru-cache is not in this repo; a new dependency needs a written justification first (CLAUDE.md). Redis is only after a measured need (CLAUDE.md), so do not add it for this rule. Typed code uses unknown, never any.
+
 `React.cache()` only works within one request. For data shared across sequential requests (user clicks button A then button B), use an LRU cache.
 
 **Implementation:**
@@ -14,7 +16,7 @@ tags: server, cache, lru, cross-request
 ```typescript
 import { LRUCache } from 'lru-cache'
 
-const cache = new LRUCache<string, any>({
+const cache = new LRUCache<string, unknown>({
   max: 1000,
   ttl: 5 * 60 * 1000  // 5 minutes
 })

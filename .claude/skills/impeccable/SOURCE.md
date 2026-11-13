@@ -1,29 +1,44 @@
 # Vendored skill: impeccable
 
-- Upstream repo: https://github.com/pbakaus/impeccable, path skill/ (SKILL.src.md, reference/, agents/), commit b4bff1626c344067788c2679f048a20057c7cc5a
-- License: Apache-2.0. LICENSE and NOTICE.md in this folder, copied verbatim from the repo root.
+- Upstream repo: https://github.com/pbakaus/impeccable, commit b4bff1626c344067788c2679f048a20057c7cc5a
+- Base: the official rendered Claude Code build, `.claude/skills/impeccable/` (SKILL.md v4.8.2, reference/). Not the `skill/SKILL.src.md` template.
+- License: Apache-2.0. LICENSE and NOTICE.md copied verbatim from the repo root.
 - Vendored date: 2026-11-13
 - Vendored in OTA-188
 
+## Left out
+
+- `scripts/` (12 files): launcher and binary selection/download, live browser JS (4 files), screenshot library, font and command data, checksums. Reason: runs or fetches code; the setup, detector and live steps depend on it.
+- `reference/hooks.md`, `doctor.md`, `live.md`, `live-setup.md`, `generate.md`: hook configuration, artifact repair, live browser mode. Reason: the design hook stays off (ADR 0011); the rest needs the engine.
+- `reference/component-review.md`, `region-map.md`, `visualize.md`: comp and image-generation build pipeline. Reason: drives the CLI and image tools.
+- `reference/degraded/` (4 files): fallback copies of the agent prompts. Reason: they exist only for the documenter, finish-reviewer, asset-producer and manual-edit agents, none of which is vendored.
+- agents (documenter, finish-reviewer, manual-edit-applier, asset-producer): not vendored. Claude Code loads agents only from `.claude/agents/`, and these would be inert text here.
+- `skill/hermes-plugin/` (another agent host's plugin); `skill/SKILL.src.md` (template, superseded by the rendered SKILL.md).
+
 ## Changes from upstream
 
-- SKILL.md: upstream has only the template `skill/SKILL.src.md` (no rendered SKILL.md), so it was copied as SKILL.md and rendered for Claude Code by hand: `{{model}}`, `{{config_file}}`, `{{command_prefix}}`, `{{ask_instruction}}`, `{{available_commands}}` and `{{reference_path}}` replaced; `claude-code-description`, `allowed-tools` (Bash patterns for the CLI) and the `argument-hint` placeholder removed or made generic in the frontmatter; Setup step 1 (the `impeccable context` launcher) replaced with a note that it is not available here, so the "Launcher unavailable" fallback applies; the `live` and `generate` rows removed from the Commands table; the Pin/Unpin, Hooks, Doctor and "Never repair drift" paragraphs replaced by one note that these are not available and the design hook stays off (ADR 0011).
-- reference/*.md (all kept files): every `{{scripts_path}}/impeccable` call and every backticked `impeccable <engine verb>` call (detect, critique-storage, concept-seed, build-phase, comp-spec, surface-brief, serve-question, live-server, pin and similar) now ends with "(not available in this repo; skip this step and say so)". The same placeholder rendering as SKILL.md applies to every file.
-- reference/typeset.md, layout.md, colorize.md: removed the sentence "Follow live.md's parameter contract." (live.md is not vendored).
-- reference/init.md: removed the "configure live mode" step and the "/impeccable live when configured" hand-off line (live is not vendored).
-- reference/routing.md: the `devServer.running` / live-and-generate menu line replaced by "Live mode and generate are not available in this repo; do not offer them."
-- reference/critique.md and polish.md: the critique-storage and live-server steps are marked not available (see above); polish.md still says "supplied by impeccable context and hooks", which the agent must treat as unavailable.
-- Left out, scripts/ and hermes-plugin/: `skill/scripts/` (the launcher, a binary download path, a live browser driver and its in-page JS, the screenshot library, font and command data). Reason: it runs or fetches code, and it is the engine that the setup, live and detect steps depend on. `skill/hermes-plugin/` (a plugin for another agent host).
-- Left out, reference/: hooks.md (configures and runs the design hook, which stays off per ADR 0011), doctor.md (repairs project artifacts via the CLI), live.md and live-setup.md (live browser mode, which needs the in-page JS and a dev server), generate.md (live browser variants), component-review.md, region-map.md and visualize.md (comp and image-generation build pipeline that drives the CLI and image tools).
-- Left out, agents/: impeccable-asset-producer.md (produces image plates through the CLI), impeccable-finish-reviewer.md and impeccable-manual-edit-applier.md (their work runs through the CLI and the live browser).
-- Open decision (not patched): reference/new-work.md still describes the comp-led build pipeline (concept-seed, build-phase, comp-spec, image generation, the finish reviewer) and links to the removed region-map.md and visualize.md. Those steps are marked unavailable, but the file is otherwise unchanged. Farouk to decide whether to drop the comp pipeline or keep the file as guidance.
+- SKILL.md frontmatter: `argument-hint` set to `[command] [target]`; `disable-model-invocation: true` added. The short Claude Code description is upstream's.
+- SKILL.md: "In this repo" block added before the first paragraph (use limits, precedence of CLAUDE.md, ADR 0011/0012, the design skill and `apps/web/app/styles/tokens.css`; no running, installing or fetching `impeccable`; no writes to `.impeccable/`; captures only via `node scripts/design/shots.mjs`; no overwrite of PRODUCT.md or DESIGN.md without asking).
+- SKILL.md Setup step 1 (the launcher): replaced with "not available in this repo; use the Launcher unavailable fallback".
+- SKILL.md Commands table: `live` and `generate` rows removed.
+- SKILL.md: Pin/Unpin, Hooks, Doctor and "Never repair drift" paragraphs replaced by one note: not available, design hook stays off (ADR 0011).
+- reference/*: every `.claude/skills/impeccable/scripts/impeccable <verb>` call, and every backticked engine verb (`detect`, `critique-storage`, `concept-seed`, `build-phase`, `comp-spec`, `surface-brief`, `serve-question`, `live-server`, `pin`, `embed-prompt`, `comp-diff` and similar), now ends "(not available in this repo; skip this step and say so)". Line-start commands are prefixed "Not available in this repo, skip:". `impeccable context` becomes "the context check (not available in this repo)". `npx impeccable` is rewritten the same way.
+- reference/critique.md: "In this repo" header (design review only; a skipped engine step is the complete run; no DEGRADED banner; no retry). Hard-invariant bullets on sub-agents, the DEGRADED banner and the skipped detector reworded. "is mandatory" and "Run the bundled detector and browser visualization evidence" reworded to not available. Snapshot writes to `.impeccable/critique/` removed (the report stays in the chat); the read of `.impeccable/critique/ignore.md` marked not available.
+- reference/audit.md: "In this repo" header; "Run the bundled detector and verify each finding in context" reworded to not available, verify by reading the code. Snapshot writes not made.
+- reference/polish.md: "quality guidance supplied by impeccable context and hooks" now reads "supplied by the impeccable context check (not available in this repo; skip it and say so)". No hooks reference. critique-storage steps marked not available.
+- reference/new-work.md: "In this repo" section added before section 1 (engine and comp pipeline, `.impeccable/` writes, and the documenter and reviewer agents are not available; new pages go through the `design` skill; no overwrite of DESIGN.md or PRODUCT.md without asking). Removed: the region-map sentence; the "Where the harness sandboxes its shell ... least-sandboxed command path" sentence; the "download them into the workspace" parenthetical; the whole "Comp-led" subsection (build-phase, comp-spec, plates, telemetry choice-ping paragraph); the "Act on the disposition word", "A rebuild and a fix round", "Then spawn the shipped finish reviewer" and "record the final review disposition" paragraphs. Reworded: "No substitute, no skip:" now says the unavailable step is said so, not substituted silently; the documenter spawn now reads "not available in this repo: follow document.md yourself, and only after the user's answer"; "[visualize.md]" links are plain text ("the comp round (not vendored)"); the finish reviewer audit clauses are marked not available. The comp-round trigger paragraph is marked not available.
+- reference/init.md: the image-generation sentence (it was garbled) now says the API fallback is not available in this repo, and the context check that would report it is not either. The live-mode setup step and the "/impeccable live" hand-off line removed. "Write the answer to `.impeccable/config.json`" now reports the answer in the reply.
+- reference/typeset.md, layout.md, colorize.md: removed "Follow [live.md](live.md)'s parameter contract."
+- reference/routing.md: live/generate menu line replaced with "not available in this repo; do not offer them". Impeccable.style link now plain text with "do not fetch; the vendored text is the spec".
+- reference/document.md: the DESIGN.md spec URL (raw.githubusercontent.com) is plain text with "do not fetch; the vendored text is the spec".
+- reference/mode-persuade.md: "visualize.md" reference is plain text ("the comp round (not vendored)"). mode-operate.md and mode-read.md unchanged apart from the CLI rewrite above; no links to removed files.
+- AskUserQuestion sentence (kept, per coordinator): "Ask with the AskUserQuestion tool and wait for the answer before continuing." now ends "(in an unattended autopilot run, decide and record the decision instead)". Exception: gates that overwrite DESIGN.md or PRODUCT.md (document.md, new-work.md) and overdrive.md now end "(in an unattended autopilot run, stop and record the question instead of deciding)".
 
-## Follow-up edits (coordinator decisions, OTA-188)
+## Behaviour change for Farouk to approve
 
-- reference/new-work.md: added an "In this repo" section at the top. The comp-led pipeline (concept-seed, build-phase, comp-spec, image generation and its API fallback, the finish reviewer agent) is not available; new pages and surfaces go through the project's `design` skill (.claude/skills/design/SKILL.md). The guidance in the file applies inside that workflow. Removed the links to region-map.md and visualize.md (now plain "not vendored, not available" text) and the link to the finish reviewer agent (now marked not available).
-- reference/init.md: the image-generation API fallback is marked not available in this repo.
-- reference/polish.md: "quality guidance supplied by impeccable context and hooks" now reads "supplied by the impeccable context check (not available in this repo; skip it and say so)". No hooks reference remains.
-- reference/mode-persuade.md, mode-operate.md, mode-read.md: kept unpatched. Grep found no link to a removed file in them.
-- Every reference that asks for a user decision (critique, quieter, bolder, distill, init, overdrive, new-work, extract, document): the AskUserQuestion wording is kept and now ends "(in an unattended autopilot run, decide and record the decision instead)".
-- Dangling-link grep across .claude/skills/impeccable for every removed filename (hooks, doctor, live, live-setup, generate, component-review, region-map, visualize, the three removed agents, hermes, scripts/): no links left. Remaining mentions are plain text in "not available" notes.
-- reference/new-work.md: the remaining links to visualize.md, region-map.md and component-review.md are now plain text ("the comp round (not vendored)" and similar). Zero Markdown links to removed files remain in the folder.
+The unattended-run text makes autopilot runs decide and record the decision for ordinary questions. The overwrite gates stop instead. Confirm this is wanted before merge.
+
+## Verification
+
+- No `<codex`, `<claude>`, `<!-- rule:` markers and no `{{` placeholders in the folder.
+- No Markdown link or "read X.md" pointer to a file outside the folder. No `scripts/`, `hooks`, `doctor`, `live`, `generate`, `visualize` or `degraded/` pointers remain except in "not available" text.

@@ -7,6 +7,8 @@ tags: bundle, third-party, analytics, defer
 
 ## Defer Non-Critical Third-Party Libraries
 
+> Project note (OTA-188): @vercel/analytics is not in this repo. Adding an analytics SDK needs a written justification and a privacy-page check first, because it collects visitor data (CLAUDE.md, no new dependency without justification).
+
 Analytics, logging, and error tracking don't block user interaction. Load them after hydration.
 
 **Incorrect (blocks initial bundle):**

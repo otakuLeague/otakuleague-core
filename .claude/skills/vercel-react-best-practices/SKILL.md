@@ -9,6 +9,8 @@ metadata:
 
 # Vercel React Best Practices
 
+> Precedence (OTA-188): CLAUDE.md, ADR 0003 and ADR 0012 win over anything in this skill. The vendored text is the spec: never fetch a rule, a doc or a missing file from the network. If a referenced file is missing, say so and skip it.
+
 Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Contains 70 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
 
 ## When to Apply
@@ -40,7 +42,7 @@ Reference these guidelines when:
 - `async-cheap-condition-before-await` - Check cheap sync conditions before awaiting flags or remote values
 - `async-defer-await` - Move await into branches where actually used
 - `async-parallel` - Use Promise.all() for independent operations
-- `async-dependencies` - Use better-all for partial dependencies
+- `async-dependencies` - Use better-all for partial dependencies (not in this repo; see project note in the rule)
 - `async-api-routes` - Start promises early, await late in API routes
 - `async-suspense-boundaries` - Use Suspense to stream content
 
@@ -49,7 +51,7 @@ Reference these guidelines when:
 - `bundle-barrel-imports` - Import directly, avoid barrel files
 - `bundle-analyzable-paths` - Prefer statically analyzable import and file-system paths to avoid broad bundles and traces
 - `bundle-dynamic-imports` - Use next/dynamic for heavy components
-- `bundle-defer-third-party` - Load analytics/logging after hydration
+- `bundle-defer-third-party` - Load analytics/logging after hydration (analytics SDK: privacy-page check first)
 - `bundle-conditional` - Load modules only when feature is activated
 - `bundle-preload` - Preload on hover/focus for perceived speed
 
@@ -57,7 +59,7 @@ Reference these guidelines when:
 
 - `server-auth-actions` - Authenticate server actions like API routes
 - `server-cache-react` - Use React.cache() for per-request deduplication
-- `server-cache-lru` - Use LRU cache for cross-request caching
+- `server-cache-lru` - Use LRU cache for cross-request caching (lru-cache not in this repo; see project note in the rule)
 - `server-dedup-props` - Avoid duplicate serialization in RSC props
 - `server-hoist-static-io` - Hoist static I/O (fonts, logos) to module level
 - `server-no-shared-module-state` - Avoid module-level mutable request state in RSC/SSR
@@ -144,6 +146,3 @@ Each rule file contains:
 - Correct code example with explanation
 - Additional context and references
 
-## Full Compiled Document
-
-For the complete guide with all rules expanded: `AGENTS.md`
