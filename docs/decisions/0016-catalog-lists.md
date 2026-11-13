@@ -134,4 +134,58 @@ Review follow-up (same PR):
 - **Season rollover has no stale fallback (accepted).** At 00:00 UTC on 1 January, April, July and October the default `seasonal` key changes to a key with no stored page: the first visitor waits for one fetch (or gets 503/429 if AniList is down or the bucket is empty). Not worth a warm-up before measuring.
 - **`year`** is converted only from 4 plain digits (`2026`), so `2026.0`, `0x7EA` and `+2026` are 400.
 
+## Addendum: slice 3, listed anime claim slugs (OTA-190, 2026-11-13)
+
+Slices 1 and 2 shipped the read side: `withSlugs` already joins `anime_identity` when serving and drops removed anime. This slice adds only the claim described under "Stubs and lazy import", and pins what that paragraph left open. No new table, no migration, no change to the response shape, no web change.
+
+**Requirements.** Functional:
+
+1. Every anime in a page we store gets an identity, a canonical slug and its romaji alias when free, with no `anime` row and no source call.
+2. The card link `/anime/<slug>` opens the anime: the first open imports it through the existing slug route.
+3. An anime that already has an identity (imported, claimed by another list, or removed) is left exactly as it is: no new alias, no moved canonical.
+
+Non-functional, with numbers:
+
+1. Warm path unchanged: serving a stored page, fresh or stale, does no write and no extra query (requirement 1 of the Decision still holds).
+2. Source cost: 0 additional AniList requests; a claim takes no `ListFetchLimits` token.
+3. Cold cost: at most 1 + 6 × N statements for N unclaimed anime, N ≤ 50, so about 300 statements and 0.3 s at 1 ms each inside one zone, once per anime ever. A refresh that lists nothing new costs 1 query.
+4. Failure: a claim never changes the HTTP status; at most 3 attempts per anime per fetch; a failed one is tried again at the next fetch of any page listing it (within that list's TTL while it is read).
+5. Growth: at most 50 claims per fetch token, so 300 at once and 300 a minute sustained, and never more than AniList's catalogue (about 20,000 identities and 40,000 slugs, under 10 MB). The rows hold no AniList data beyond the slug (ADR 0006).
+
+Consistency or availability: **availability** for the list answer (a null slug still links through `/anime/anilist/:id`), **consistency** for who owns a slug, which the two primary keys already enforce.
+
+**Core entities:** `AnimeIdentity`, `AnimeSlug`, `AnimeListPage`, `ListedAnime` (all exist); `AnimeSlugClaimService` (new, no table). **API:** unchanged; `AnimeListEntry.slug` is now set on the answer that first stores a page.
+
+**Design, simplest first.** `fetchAndStore` upserts the page, then awaits `claimListed(entries)` inside the same shared fetch, so the cold visitor's answer already carries the slugs and `settle()` and shutdown cover the claims with no second tracking structure. A background refresh runs the same code, off the request path.
+
+- One `anilist_id IN (...)` query finds the listed ids that have an identity; those are skipped, removed ones included. Empty page or nothing missing: stop.
+- The rest are claimed one after the other in list order (ids repeated in a page count once), each in its own transaction shaped like the importer's: read the owners of its candidates, take the first free one (`pickCanonical`, the same function the importer now uses), insert the identity, the canonical slug, and the alias with insert-or-skip.
+- The slug source is built by one function for the importer and the list (`slugSource`: English, else romaji title; year = start year, else season year; format), so a later import computes the same ladder and keeps the canonical.
+- A unique violation (`P2002`) is a lost race: read again and retry, 3 attempts in all. If the identity exists by then, an import or another page won: stop, touch nothing. Any other error, no free rung, or a third lost race is a failed claim: the loop goes on with the next anime, and one warning per page names the count and the ids.
+- No retry state is stored: an anime without an identity is by definition unclaimed, and the next stored page listing it tries again. Pages stored before this slice are claimed at their next refresh; no backfill.
+
+**Deep dives.**
+
+- **Warm path (1).** Claims run only after a source fetch stored a page; `getList` on a stored page is the same three reads as before.
+- **Quota and terms (2, 5).** Nothing is fetched per anime, and the titles used are already in the stored page. Claims follow a fetch that took a token, so the bucket also bounds how fast permanent rows appear.
+- **Cold cost (3).** Per unclaimed anime: begin, one read, three inserts, commit. Sequential, so one connection per page being claimed and a deterministic order.
+- **Failure and races (4).** Two pages claimed at once in this process, or a page and an import, can collide on an identity or a slug; the primary keys decide and the loser retries. Claim order is list order inside one page; between pages it is fetch order.
+
+Rejected:
+
+- **Claiming after the answer is sent.** Saves about 0.3 s once per page on a path that already waits for AniList, and costs an all-null first answer (which a cached Home render would keep), plus separate tracking for tests and shutdown.
+- **One transaction or one `createMany` per page.** One taken slug or one deadlock would abort 50 claims, and insert-or-skip cannot walk the ladder.
+- **Claiming in `withSlugs` when a slug is null.** A write on every warm read.
+
+Too simple, on purpose:
+
+- **A public endpoint now writes permanent rows.** Slugs are never reassigned, and between lists the first page fetched wins, so a crawler walking old seasons can hand a bare slug to the obscure one of two same-title anime before the popular one is listed, at up to 300 claims a minute against 3 imports a minute. The bucket bounds the rate, not the order. This raises the stake of OTA-189 (per-client limit, already required before the Seasonal page is public); the remedy for a wrong winner stays ADR 0007's admin override, not built.
+- **A failed claim waits for the next fetch**, up to the list's TTL, longer if nobody reads it. No timer, no status column.
+- **Swapped English and romaji slugs claimed at the same instant can deadlock** (as ADR 0007): Postgres aborts one, which is logged as a failed claim and heals at the next fetch.
+- **A click on a claimed slug is a cold import** and takes an `ImportLimits` token, as `/anime/anilist/:id` did. Card links must not be prefetched by the web (OTA-136, OTA-137), or one Home render spends the bucket.
+
+Too complicated, not built: a claim queue or outbox, a per-entry status, a backfill job, a process-wide lock around claiming (the retry covers it), and reading all candidates of a page in one query to plan in memory (saves about 50 of 300 statements on a first-seen page; not measured as a problem).
+
+Tests: the pure rules (`pickCanonical`, `slugSource`) are unit specs; everything that claims is an integration spec against real Postgres with the synthetic list fixtures, run in CI.
+
 ## Learnings
