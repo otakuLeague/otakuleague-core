@@ -222,7 +222,7 @@ export class AnimeController {
   @ApiOkResponse({
     type: AnimeListPageSchema,
     description:
-      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background.',
+      'One page of a catalog list (ADR 0016), from stored AniList pages. A stale page is served at once and refreshed in the background. A page that was just stored also claims a slug for each anime it lists (no source call); a failed claim leaves that slug null.',
   })
   @ApiBadRequestResponse({
     description:

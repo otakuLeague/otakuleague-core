@@ -14,6 +14,7 @@ import { ApiException } from '../common/api.exception';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS } from './cache-ttl';
+import { AnimeSlugClaimService } from './anime-slug-claim.service';
 import { ListFetchLimits } from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
@@ -92,6 +93,7 @@ export class AnimeListService implements OnModuleDestroy {
     private readonly settings: AnimeSourceSettings,
     private readonly anilist: AniListAdapter,
     private readonly limits: ListFetchLimits,
+    private readonly claims: AnimeSlugClaimService,
   ) {}
 
   /** Waits for every fetch in progress. */
@@ -327,6 +329,7 @@ export class AnimeListService implements OnModuleDestroy {
       create: { listKey: listKey(list), page, ...row },
       update: row,
     });
+    await this.claims.claimListed(fetched.entries);
     return { ...fetched, fetchedAt: now };
   }
 

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalCandidates,
   MAX_SLUG_LENGTH,
+  pickCanonical,
   romajiAlias,
   type SlugSource,
   slugify,
+  slugSource,
 } from './anime.slug';
 
 const source = (overrides: Partial<SlugSource>): SlugSource => ({
@@ -127,5 +129,59 @@ describe('romajiAlias', () => {
     expect(romajiAlias(source({ titleRomaji: null }))).toBeNull();
     expect(romajiAlias(source({ titleRomaji: '進撃' }))).toBeNull();
     expect(romajiAlias(source({ titleRomaji: 'New' }))).toBeNull();
+  });
+});
+
+describe('slugSource', () => {
+  const fields = {
+    titleEnglish: 'Attack on Titan',
+    titleRomaji: 'Shingeki no Kyojin',
+    startDate: { year: 2013 },
+    seasonYear: 2012,
+    format: 'TV' as const,
+  };
+
+  it('takes the start year, else the season year, else none', () => {
+    expect(slugSource(1, fields).year).toBe(2013);
+    expect(slugSource(1, { ...fields, startDate: null }).year).toBe(2012);
+    expect(
+      slugSource(1, { ...fields, startDate: null, seasonYear: null }).year,
+    ).toBeNull();
+  });
+
+  it('keeps both titles, the id and the format as they are', () => {
+    expect(slugSource(16498, { ...fields, titleEnglish: null })).toEqual({
+      anilistId: 16498,
+      titleEnglish: null,
+      titleRomaji: 'Shingeki no Kyojin',
+      year: 2013,
+      format: 'TV',
+    });
+  });
+});
+
+describe('pickCanonical', () => {
+  const candidates = ['a', 'a-2013', 'a-2013-tv', 'a-1'];
+
+  it('takes the first rung when nothing is taken', () => {
+    expect(pickCanonical(candidates, new Map(), 1)).toBe('a');
+  });
+
+  it('skips rungs another anime holds', () => {
+    const owners = new Map([
+      ['a', 2],
+      ['a-2013', 3],
+    ]);
+    expect(pickCanonical(candidates, owners, 1)).toBe('a-2013-tv');
+  });
+
+  it('takes a rung the same anime already holds', () => {
+    expect(pickCanonical(candidates, new Map([['a', 1]]), 1)).toBe('a');
+  });
+
+  it('answers undefined when every rung is taken, and for no candidates', () => {
+    const owners = new Map(candidates.map((slug) => [slug, 9]));
+    expect(pickCanonical(candidates, owners, 1)).toBeUndefined();
+    expect(pickCanonical([], new Map(), 1)).toBeUndefined();
   });
 });
