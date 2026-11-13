@@ -68,10 +68,7 @@ export class AnimeSlugClaimService {
     });
   }
 
-  private async claimWithRetry(
-    entry: ListedAnime,
-    attempt = 1,
-  ): Promise<void> {
+  private async claimWithRetry(entry: ListedAnime, attempt = 1): Promise<void> {
     try {
       await this.prisma.$transaction((tx) => this.claim(tx, entry));
     } catch (error) {
@@ -88,7 +85,9 @@ export class AnimeSlugClaimService {
     entry: ListedAnime,
   ): Promise<void> {
     const { anilistId } = entry;
-    const existing = await tx.animeIdentity.findUnique({ where: { anilistId } });
+    const existing = await tx.animeIdentity.findUnique({
+      where: { anilistId },
+    });
     if (existing !== null) return;
     const source = slugSource(anilistId, entry);
     const candidates = canonicalCandidates(source);
