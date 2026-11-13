@@ -3,11 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type FocusEvent, useEffect, useId, useRef, useState } from 'react';
-import {
-  type SeasonOption,
-  seasonHref,
-  tabSegmentOf,
-} from '../../../src/anime/tabs';
+import { animeLink } from '../../../src/anime/anime-link';
+import { type SeasonOption, tabSegmentOf } from '../../../src/anime/tabs';
 
 function seasonNote(season: SeasonOption): string {
   const year = season.year === null ? '' : String(season.year);
@@ -113,6 +110,9 @@ export function SeasonSelector({
           {seasons.map((season) => {
             const className = `ol-season__item${season.upcoming ? ' ol-season__item--upcoming' : ''}`;
             const note = seasonNote(season);
+            // Imported: its slug page. Otherwise (a slug alone is only claimed) the nofollow id
+            // route, which imports it and redirects on the same tab.
+            const { href, rel } = animeLink(season, segment);
             const content = (
               <>
                 <span className="ol-season__dot" aria-hidden="true" />
@@ -123,10 +123,9 @@ export function SeasonSelector({
             return (
               <li key={season.anilistId}>
                 <Link
-                  href={seasonHref(season, segment)}
+                  href={href}
                   prefetch={false}
-                  // Not imported yet: the id route imports it, then redirects to its page.
-                  rel={season.slug === null ? 'nofollow' : undefined}
+                  rel={rel}
                   aria-current={season.isCurrent ? 'true' : undefined}
                   className={className}
                   onClick={() => setOpen(false)}

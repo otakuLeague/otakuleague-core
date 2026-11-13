@@ -1,6 +1,6 @@
 # 0018: `imported` on listed and franchise entries, and which anime link the web renders
 
-Status: proposed (2026-11-13, OTA-191); accepted when slice 2 (web) merges. Amends ADR 0016 catalog lists (warm path: 3 queries become 4) and ADR 0008 item 9 (entry shape).
+Status: accepted (2026-11-13, OTA-191; slice 2 shipped). Amends ADR 0016 catalog lists (warm path: 3 queries become 4) and ADR 0008 item 9 (entry shape).
 
 ## Context
 
@@ -91,4 +91,6 @@ Slices: 1 = shared types, API, docs (this ADR); 2 = web. PR #80 (OTA-137) moves 
 
 ## Learnings
 
-(Filled in after slice 2.)
+- A claimed slug is not an import signal: since OTA-190 `slug !== null` only says a slug is reserved, so every web link reads `imported` through one helper, `animeLink()`, instead of each view testing the slug.
+- Normalise the optional flag once, at the boundary: `seasonOptions()` turns a missing `imported` (older API) into `false`, so `SeasonOption` carries a plain boolean and the selector never sees `undefined`.
+- Removing `cardHref` breaks any open branch that still uses it: PR #80 (browse and season lists) must switch its browse card to `animeLink()` when rebased.

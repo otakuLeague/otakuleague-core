@@ -1,12 +1,22 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SeasonOption } from '../../../src/anime/tabs';
 import { SeasonSelector } from './season-selector';
 
 let pathname = '/anime/aot-season-2/episodes';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+// Exposes `prefetch`, which the real Link never renders.
+vi.mock('next/link', () => ({
+  default: ({
+    prefetch,
+    ...props
+  }: ComponentProps<'a'> & { prefetch?: boolean }) => (
+    <a data-prefetch={String(prefetch)} {...props} />
+  ),
+}));
 
-const base = { year: 2013, isCurrent: false, upcoming: false };
+const base = { year: 2013, isCurrent: false, upcoming: false, imported: true };
 const SEASONS: readonly SeasonOption[] = [
   { ...base, anilistId: 1, slug: 'aot', label: 'Season 1' },
   {
@@ -17,7 +27,14 @@ const SEASONS: readonly SeasonOption[] = [
     year: 2017,
     isCurrent: true,
   },
-  { ...base, anilistId: 3, slug: null, label: 'Season 3' },
+  { ...base, anilistId: 3, slug: null, imported: false, label: 'Season 3' },
+  {
+    ...base,
+    anilistId: 5,
+    slug: 'aot-junior-high',
+    imported: false,
+    label: 'Season 5 (claimed)',
+  },
   {
     ...base,
     anilistId: 4,
@@ -101,7 +118,14 @@ describe('SeasonSelector', () => {
     const notImported = link(/^Season 3/);
     expect(notImported.getAttribute('href')).toBe('/anime/anilist/3/episodes');
     expect(notImported.getAttribute('rel')).toBe('nofollow');
+    // A claimed slug is not a page yet (OTA-190): still the id route.
+    const claimed = link(/Season 5/);
+    expect(claimed.getAttribute('href')).toBe('/anime/anilist/5/episodes');
+    expect(claimed.getAttribute('rel')).toBe('nofollow');
     expect(screen.getAllByRole('link')).toHaveLength(SEASONS.length);
+    expect(
+      screen.getAllByRole('link').map((season) => season.dataset.prefetch),
+    ).toEqual(SEASONS.map(() => 'false'));
     expect(document.querySelector('[aria-disabled]')).toBeNull();
   });
 
