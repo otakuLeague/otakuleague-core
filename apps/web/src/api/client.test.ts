@@ -1,7 +1,13 @@
 // @vitest-environment node
 import { notFound } from 'next/navigation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createApiClient, type ApiPath, type FetchFunction } from './client';
+import {
+  createApiClient,
+  type ApiPath,
+  type CallOptions,
+  type FetchFunction,
+} from './client';
+import { clientIpFromHeaders, type ClientIp } from './client-ip';
 
 const BASE_URL = 'http://127.0.0.1:3001';
 
@@ -438,6 +444,224 @@ describe('call', () => {
   });
 });
 
+// Obviously fake: 47 characters of the allowed alphabet, never a real key.
+const FAKE_KEY = 'fake-internal-api-key-for-tests-only-0123456789';
+const VISITOR_IP = '203.0.113.7';
+
+function visitorIp(value: string): ClientIp {
+  const ip = clientIpFromHeaders(new Headers({ 'x-forwarded-for': value }));
+  if (ip === undefined) {
+    throw new Error('test setup: not a single IP address');
+  }
+  return ip;
+}
+
+/** The headers of a recorded request, names lowercased. */
+function sentHeaders(request: RecordedRequest | undefined) {
+  return Object.fromEntries(new Headers(request?.init?.headers));
+}
+
+/** Everything an error or a result could show in a log, a page or a Sentry event. */
+function exposedText(value: unknown): string {
+  return value instanceof Error
+    ? `${String(value)} ${value.stack ?? ''}`
+    : JSON.stringify(value);
+}
+
+describe('internal key and client IP (ADR 0019)', () => {
+  it.each([
+    'https://api.otakuleague.example',
+    'http://127.0.0.1:3001',
+    'http://localhost:3001',
+    'http://[::1]:3001',
+  ])('sends the key on every call to %s', async (baseUrl) => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+    const client = createApiClient({
+      baseUrl,
+      fetch: fetchFunction,
+      internalApiKey: FAKE_KEY,
+    });
+
+    await client.call('/anime/search?q=a');
+    await client.call('/anime', { method: 'POST', body: { id: 1 } });
+
+    expect(sentHeaders(requests[0])).toEqual({
+      accept: 'application/json',
+      'x-internal-api-key': FAKE_KEY,
+    });
+    expect(sentHeaders(requests[1])).toEqual({
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-internal-api-key': FAKE_KEY,
+    });
+  });
+
+  it('sends the client IP next to the key, on an uncached call', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+    const client = createApiClient({
+      baseUrl: BASE_URL,
+      fetch: fetchFunction,
+      internalApiKey: FAKE_KEY,
+    });
+
+    await client.call('/anime/slugs/frieren', {
+      clientIp: visitorIp(VISITOR_IP),
+    });
+    await client.call('/anime/slugs/frieren', {
+      cache: 'no-store',
+      clientIp: visitorIp('2001:db8::7'),
+    });
+
+    expect(sentHeaders(requests[0])).toMatchObject({
+      'x-internal-api-key': FAKE_KEY,
+      'x-client-ip': VISITOR_IP,
+    });
+    expect(sentHeaders(requests[1])).toMatchObject({
+      'x-client-ip': '2001:db8::7',
+    });
+  });
+
+  it.each([undefined, '', '  '])(
+    'sends neither header when the key is %j, as before slice 2',
+    async (internalApiKey) => {
+      const { fetchFunction, requests } = fakeFetch(200, json({}));
+      const client = createApiClient({
+        baseUrl: 'http://api.test:4000',
+        fetch: fetchFunction,
+        internalApiKey,
+      });
+
+      await client.call('/anime/slugs/frieren', {
+        clientIp: visitorIp(VISITOR_IP),
+      });
+
+      expect(sentHeaders(requests[0])).toEqual({ accept: 'application/json' });
+    },
+  );
+
+  it.each([
+    'http://api.otakuleague.example',
+    'http://127.0.0.1.evil.example',
+    'http://10.0.0.5:3001',
+  ])(
+    'refuses to build a client that would send the key in clear to %s',
+    (baseUrl) => {
+      const build = () =>
+        createApiClient({ baseUrl, internalApiKey: FAKE_KEY });
+
+      expect(build).toThrow(
+        /^Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback/,
+      );
+      expect(build).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
+    },
+  );
+
+  it('validates the key it is given, like INTERNAL_API_KEY', () => {
+    expect(() =>
+      createApiClient({ baseUrl: BASE_URL, internalApiKey: 'too-short' }),
+    ).toThrow('INTERNAL_API_KEY is invalid');
+  });
+
+  it.each([
+    ['next.revalidate', { next: { revalidate: 60 } }],
+    ['next.revalidate 0', { next: { revalidate: 0 } }],
+    ['cache force-cache', { cache: 'force-cache' }],
+    ['cache default', { cache: 'default' }],
+  ] satisfies [string, CallOptions<unknown>][])(
+    'refuses a client IP on a cached call (%s), with or without a key',
+    async (_label, cacheOptions) => {
+      for (const internalApiKey of [FAKE_KEY, undefined]) {
+        const { fetchFunction, requests } = fakeFetch(200, json({}));
+        const client = createApiClient({
+          baseUrl: BASE_URL,
+          fetch: fetchFunction,
+          internalApiKey,
+        });
+
+        const call = client.call('/anime/slugs/frieren', {
+          ...cacheOptions,
+          clientIp: visitorIp(VISITOR_IP),
+        });
+
+        await expect(call).rejects.toThrow(
+          'clientIp is only allowed on an uncached (no-store) call',
+        );
+        await expect(call).rejects.toThrow(/^(?![\s\S]*203\.0\.113\.7)/);
+        expect(requests).toHaveLength(0);
+      }
+    },
+  );
+
+  it('keeps the key and the IP out of every failure it returns', async () => {
+    // A fetch whose error echoes the request, as some HTTP stacks do.
+    const echoingFetch: FetchFunction = (_input, init) =>
+      Promise.reject(
+        new TypeError(`fetch failed: ${JSON.stringify(init?.headers)}`),
+      );
+    const failures = [
+      createApiClient({
+        baseUrl: BASE_URL,
+        fetch: echoingFetch,
+        internalApiKey: FAKE_KEY,
+      }),
+      createApiClient({
+        baseUrl: BASE_URL,
+        fetch: hangingFetch,
+        internalApiKey: FAKE_KEY,
+        defaultTimeoutMs: 1,
+      }),
+      createApiClient({
+        baseUrl: BASE_URL,
+        fetch: fakeFetch(
+          404,
+          json({
+            error: { code: 'NOT_FOUND', message: 'Anime not found' },
+            echoed: { key: FAKE_KEY, ip: VISITOR_IP },
+          }),
+        ).fetchFunction,
+        internalApiKey: FAKE_KEY,
+      }),
+    ].map((client) =>
+      client.call('/anime/slugs/frieren', { clientIp: visitorIp(VISITOR_IP) }),
+    );
+
+    const results = await Promise.all(failures);
+
+    expect(results.map((result) => !result.ok && result.failure.kind)).toEqual([
+      'network',
+      'timeout',
+      'api_error',
+    ]);
+    for (const result of results) {
+      expect(exposedText(result)).not.toContain(FAKE_KEY);
+      expect(exposedText(result)).not.toContain(VISITOR_IP);
+    }
+  });
+
+  it('keeps the key out of every configuration error it throws', () => {
+    const errors = [
+      () =>
+        createApiClient({
+          baseUrl: 'http://api.test',
+          internalApiKey: FAKE_KEY,
+        }),
+      () =>
+        createApiClient({ baseUrl: BASE_URL, internalApiKey: `${FAKE_KEY}!` }),
+    ].map((build) => {
+      try {
+        build();
+      } catch (error) {
+        return error;
+      }
+      throw new Error('test setup: expected a throw');
+    });
+
+    for (const error of errors) {
+      expect(exposedText(error)).not.toContain(FAKE_KEY);
+    }
+  });
+});
+
 describe('apiClient', () => {
   // apiClient caches its instance in module state; a fresh module per test keeps tests independent.
   async function freshApiClient() {
@@ -453,6 +677,7 @@ describe('apiClient', () => {
 
   it('builds the client from API_BASE_URL on first use and reuses it', async () => {
     vi.stubEnv('API_BASE_URL', 'http://api.test:4000/');
+    vi.stubEnv('INTERNAL_API_KEY', '');
     const { fetchFunction, requests } = fakeFetch(
       200,
       json({ status: 'ok', checks: { database: 'up' } }),
@@ -469,6 +694,7 @@ describe('apiClient', () => {
 
   it('throws the configuration message when API_BASE_URL is missing', async () => {
     vi.stubEnv('API_BASE_URL', '');
+    vi.stubEnv('INTERNAL_API_KEY', '');
     const apiClient = await freshApiClient();
 
     expect(() => apiClient()).toThrow('API_BASE_URL is missing');
@@ -476,8 +702,37 @@ describe('apiClient', () => {
 
   it('throws the configuration message when API_BASE_URL is invalid', async () => {
     vi.stubEnv('API_BASE_URL', 'ftp://127.0.0.1');
+    vi.stubEnv('INTERNAL_API_KEY', '');
     const apiClient = await freshApiClient();
 
     expect(() => apiClient()).toThrow('API_BASE_URL is invalid');
+  });
+  it('sends INTERNAL_API_KEY from the environment on every call', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://api.test:4000');
+    vi.stubEnv('INTERNAL_API_KEY', FAKE_KEY);
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+    vi.stubGlobal('fetch', fetchFunction);
+    const apiClient = await freshApiClient();
+
+    await apiClient().call('/anime/lists/top');
+
+    expect(sentHeaders(requests[0])['x-internal-api-key']).toBe(FAKE_KEY);
+  });
+
+  it('throws a message naming INTERNAL_API_KEY, never its value, when it cannot be used', async () => {
+    vi.stubEnv('API_BASE_URL', 'http://api.test:4000');
+    vi.stubEnv('INTERNAL_API_KEY', FAKE_KEY);
+    const apiClient = await freshApiClient();
+
+    expect(() => apiClient()).toThrow(
+      'INTERNAL_API_KEY is set but API_BASE_URL',
+    );
+    expect(() => apiClient()).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
+
+    vi.stubEnv('API_BASE_URL', 'https://api.test:4000');
+    vi.stubEnv('INTERNAL_API_KEY', 'not a key');
+    const apiClientWithBadKey = await freshApiClient();
+
+    expect(() => apiClientWithBadKey()).toThrow('INTERNAL_API_KEY is invalid');
   });
 });

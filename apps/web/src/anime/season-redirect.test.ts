@@ -7,6 +7,10 @@ import { seasonRedirect } from './season-redirect';
 
 const call = vi.fn<() => Promise<ApiResult<AnimeDetails>>>();
 vi.mock('../api/client', () => ({ apiClient: () => ({ call }) }));
+// headers() needs a request; the IP itself is checked in data.test.ts.
+vi.mock('../api/client-ip', () => ({
+  readClientIp: () => Promise.resolve('203.0.113.7'),
+}));
 
 /** What Next attaches to the error redirect / notFound throw. */
 async function digestOf(promise: Promise<unknown>): Promise<string> {
@@ -39,6 +43,7 @@ describe('seasonRedirect (the season selector link to a season not imported yet)
     );
     expect(call).toHaveBeenCalledWith('/anime/anilist/20958', {
       timeoutMs: 15_000,
+      clientIp: '203.0.113.7',
     });
   });
 
