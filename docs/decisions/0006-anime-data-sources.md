@@ -198,3 +198,15 @@ Risks we accept:
 ## Update 2026-11-13: listed anime claim slugs (OTA-190)
 
 Anime on stored catalog lists get a permanent identity and two title-derived slugs without an import and without a source call. These rows hold no AniList data beyond the id and are never purged; see the slice 3 addendum of [ADR 0016](0016-catalog-lists.md) (claim scope, Terms).
+
+## Update 2026-11-13: deleting list-claimed identities (OTA-192)
+
+`anime_identity.imported_at` null means an anime row never held this AniList id. The runbook in the OTA-192 addendum of [ADR 0016](0016-catalog-lists.md) deletes those identities and their slugs in one transaction, by time window or all of them. Removed identities are kept.
+
+If AniList refuses us keeping even the id and two title-derived slugs:
+
+1. Set `ANIME_SOURCE_ANILIST_ENABLED=false` and restart the API, so nothing claims again.
+2. Run the runbook without a window.
+3. Run `DELETE FROM "anime_list_page";`, so no stored page keeps a slug for a deleted identity.
+
+Imported identities, their slugs and snapshots are part of the re-decision the Status line above requires.
