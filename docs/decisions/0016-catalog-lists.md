@@ -107,4 +107,24 @@ Operational notes:
 - The migration is written by hand to match Prisma's output (cloud sessions cannot run the schema engine): run `prisma migrate dev --create-only` once locally and confirm the diff is empty.
 - List fixtures cannot be recorded from a cloud session either. Until the owner records them, they are hand-built from the fields of the recorded walk fixtures and marked as such in the fixtures README.
 
+## Addendum: slice 2, seasonal and genre (OTA-177, 2026-11-13)
+
+Slice 1 shipped the four unfiltered kinds. Slice 2 adds `seasonal`, `season`, `year` and `genre` exactly as decided above: no new table, no migration, same cursor. It pins what the Decision left open.
+
+- **Genre applies to every kind**, one value, exact spelling from `ANIME_GENRES` (AniList's `GenreCollection` without Hentai: Action, Adventure, Comedy, Drama, Ecchi, Fantasy, Horror, Mahou Shoujo, Mecha, Music, Mystery, Psychological, Romance, Sci-Fi, Slice of Life, Sports, Supernatural, Thriller). The old site and the browse design filter by genre on every list, and a rule per kind would be more code than no rule. The list is written from AniList's documentation, not fetched (graphql.anilist.co is blocked in cloud sessions): confirm it with `{ GenreCollection }` when the fixtures are re-recorded. A genre AniList adds later is not filterable until the constant changes; entries still show it.
+- **Season spelling is `ANIME_SEASONS` (upper case), one spelling only.** It is the value entries and the echo already carry, so a client can send back what it read. The web's `/season?season=fall` is the web's URL and is mapped there. Rejected: lower case or any case, a second spelling of an enum that exists.
+- **Two validation layers.** The controller DTO checks each value alone (`season` and `genre` in their sets, `year` an integer from 1917). One pure function, `resolveCatalogList(kind, filters, now)`, owns the rules that need the other fields or the clock: `season` and `year` together or not at all; neither with another kind; `year` at most the clock's UTC year plus one; both omitted on `seasonal` means the current UTC season. All failures are 400 `VALIDATION_FAILED` naming the field. A repeated parameter (`genre=A&genre=B`) is an array and fails the set check.
+- **The key is built after defaults are applied**, parts in a fixed order: `kind`, then `|season=FALL|year=2026`, then `|genre=Slice of Life`. `seasonal` with nothing and `seasonal?season=FALL&year=2026` are one row in November 2026; a bare `seasonal` key never exists; slice-1 rows (`airing`, `top`...) keep their keys. Values come from closed sets with no `|`, `=` or `#`, so parts cannot collide.
+- **Echo.** `AnimeListPage.season` is `{ season, year }` for `seasonal` and null otherwise: one nullable object, not two nullable fields that could disagree. Always present, so the change is additive (no web reader yet). The genre is not echoed: the caller sent it.
+- **AniList variables** added to `ANILIST_LIST_QUERY`: `$season: MediaSeason`, `$seasonYear: Int`, `$genre: String`, left out of the request when unset (as `status` already is).
+- **Empty season** (a valid year with nothing announced): AniList answers an empty first page, which is stored and served as 200 with no entries and a null cursor for 24 h, so an empty season costs one request a day, not one per visit. The existing rule still refuses an empty page over a stored non-empty one.
+
+Rejected for this slice: `genre_in` or several genres (the stored page is one AniList result; OR across genres is OTA-137's open question above); a longer TTL for finished seasons (saves one request a day per read page; not measured as a problem).
+
+Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,500 counted under Consequences. The first page of any unseen key costs one AniList request and a waiting visitor's queue slot, so the per-client limit on list endpoints (OTA-173 follow-up) must ship before the Seasonal page is public. Not built here: it is its own decision and this slice has no room for it.
+
+Too complicated, not built: a season calendar with per-zone boundaries (the old site used the visitor's zone; one UTC rule keeps the default cacheable and at worst shows the ending season for a few hours), totals, a `genres` endpoint (the constant ships in shared-types).
+
+Fixtures stay synthetic (see Operational notes): one new `lists/anilist-seasonal-fall-2026.json`, listed in the fixtures README as hand-built.
+
 ## Learnings
