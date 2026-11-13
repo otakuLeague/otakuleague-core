@@ -2,10 +2,12 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Home from './page';
 
-// HealthStatus is an async Server Component, which jsdom cannot render; it is tested on its own.
-// The Suspense fallback is checked by the build: `/` must stay Partial Prerender (ADR 0003).
-vi.mock('./health-status', () => ({
-  HealthStatus: () => <p>mocked status</p>,
+// HomeRow streams an async Server Component, which jsdom cannot render; HomeRowView is tested on
+// its own. The Suspense fallbacks are checked by the build: `/` must stay Partial Prerender (ADR 0003).
+vi.mock('./home-row', () => ({
+  HomeRow: ({ row }: { readonly row: { readonly title: string } }) => (
+    <h2>{row.title}</h2>
+  ),
 }));
 
 describe('Home page', () => {
@@ -13,20 +15,34 @@ describe('Home page', () => {
     cleanup();
   });
 
-  it('shows the app name from shared-types as the level-1 heading', () => {
+  it('leads with the hero heading', () => {
     render(<Home />);
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'OtakuLeague',
+      'Track every anime. Earn XP. Top the season.',
     );
   });
 
-  it('renders the health status under the service status heading', () => {
+  it('links both calls to action to the auth page, like the header', () => {
     render(<Home />);
 
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(
-      'Service status',
-    );
-    expect(screen.getByRole('status').textContent).toBe('mocked status');
+    expect(
+      screen
+        .getByRole('link', { name: 'Create your account' })
+        .getAttribute('href'),
+    ).toBe('/auth?mode=sign-up');
+    expect(
+      screen
+        .getByRole('link', { name: 'I already have one' })
+        .getAttribute('href'),
+    ).toBe('/auth?mode=sign-in');
+  });
+
+  it('shows the three catalog rows in order', () => {
+    render(<Home />);
+
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
+    ).toEqual(['Trending now', 'This season', 'Top rated']);
   });
 });

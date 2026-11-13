@@ -2,8 +2,11 @@ import {
   type AnimeBySlug,
   type AnimeDetails,
   type AnimeFranchise,
+  type AnimeListKind,
+  type AnimeListPage,
   type AnimeSlugResolution,
   isAnimeFranchise,
+  isAnimeListPage,
 } from '@otakuleague/shared-types';
 import { cache } from 'react';
 import { apiClient, type ApiResult } from '../api/client';
@@ -40,3 +43,12 @@ export const loadFranchise = cache(
       isExpectedBody: isAnimeFranchise,
     }),
 );
+
+/** The first page of a catalog list (ADR 0016): one home row. A drifted body is an invalid_response. */
+export function loadAnimeList(
+  kind: AnimeListKind,
+): Promise<ApiResult<AnimeListPage>> {
+  return apiClient().call(`/anime/lists/${kind}?limit=12`, {
+    isExpectedBody: isAnimeListPage,
+  });
+}

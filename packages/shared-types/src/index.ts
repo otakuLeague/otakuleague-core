@@ -1,4 +1,9 @@
-import { ANIME_STATUSES, type AnimeFranchise } from './anime';
+import {
+  ANIME_LIST_KINDS,
+  ANIME_STATUSES,
+  type AnimeFranchise,
+  type AnimeListPage,
+} from './anime';
 
 export const APP_NAME = 'OtakuLeague';
 
@@ -125,6 +130,33 @@ export function isAnimeFranchise(value: unknown): value is AnimeFranchise {
     Array.isArray(value.mainLine) &&
     value.mainLine.every(isFranchiseSeason) &&
     Array.isArray(value.related)
+  );
+}
+
+function isStringOrNull(value: unknown): boolean {
+  return value === null || typeof value === 'string';
+}
+
+/** The fields a list card reads and links with; the rest is display data. */
+function isListEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Number.isInteger(value.anilistId) &&
+    isStringOrNull(value.slug) &&
+    isStringOrNull(value.titleEnglish) &&
+    isStringOrNull(value.titleRomaji) &&
+    isStringOrNull(value.coverImageUrl)
+  );
+}
+
+/** True when `value` is a GET /anime/lists/:kind body (ADR 0016). */
+export function isAnimeListPage(value: unknown): value is AnimeListPage {
+  return (
+    isRecord(value) &&
+    ANIME_LIST_KINDS.some((kind) => kind === value.kind) &&
+    Array.isArray(value.entries) &&
+    value.entries.every(isListEntry) &&
+    isStringOrNull(value.nextCursor)
   );
 }
 
