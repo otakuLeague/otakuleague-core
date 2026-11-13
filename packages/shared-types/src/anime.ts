@@ -203,7 +203,7 @@ export type FranchiseState =
 export interface FranchiseEntry {
   readonly anilistId: number;
   readonly mediaType: 'ANIME' | 'MANGA';
-  /** Null until the anime is imported (link /anime/anilist/:id then); always null for manga. */
+  /** Null until the anime has an identity (imported, or listed on a stored catalog page): link /anime/anilist/:id then; always null for manga. */
   readonly slug: string | null;
   /** English, else romaji. */
   readonly title: string;
@@ -307,7 +307,7 @@ export const ANIME_LIST_DEFAULT_LIMIT = 24;
 /** One card of a list: what the card renders, plus where it links. */
 export interface AnimeListEntry {
   readonly anilistId: number;
-  /** Canonical slug when we know the anime; null: link /anime/anilist/{anilistId}. */
+  /** Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): link /anime/anilist/{anilistId}. */
   readonly slug: string | null;
   readonly titleEnglish: string | null;
   readonly titleRomaji: string | null;

@@ -93,6 +93,20 @@ export function currentSeason(now: Date): AnimeListSeason {
 }
 
 /**
+ * Until OTA-189 (per-client limit): only the unfiltered lists and the current season claim
+ * slugs for the anime they list, so a crawler walking old seasons or genres cannot hand out
+ * slugs in bulk (ADR 0016 addendum, slice 3).
+ */
+export function claimsSlugs(list: CatalogList, now: Date): boolean {
+  if (list.genre !== null) return false;
+  if (list.kind !== 'seasonal') return true;
+  const current = currentSeason(now);
+  return (
+    list.season.season === current.season && list.season.year === current.year
+  );
+}
+
+/**
  * The rules that need more than one field or the clock (ADR 0016 addendum): season and year
  * come together and only with `seasonal`; the year is at most next year (UTC); `seasonal`
  * with neither is the current season. The violations of the one rule that fails are all

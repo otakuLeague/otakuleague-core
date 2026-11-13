@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 import type { AnimeDataSource, AnimeListPage } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -65,7 +65,7 @@ class TestSourceSettings extends AnimeSourceSettings {
 }
 
 /** A media object like AniList's, with only what the mapper needs. */
-const media = (id: number) => ({
+const media = (id: number, extra: Record<string, unknown> = {}) => ({
   id,
   isAdult: false,
   title: { romaji: `Synthetic ${id}`, english: null },
@@ -75,6 +75,7 @@ const media = (id: number) => ({
   genres: [],
   popularity: 10,
   averageScore: 70,
+  ...extra,
 });
 
 /** A full source page: ids page*1000 + 0..49. */
@@ -169,7 +170,7 @@ describe('GET /anime/lists/:kind', () => {
       fetchedAt: '2026-11-12T12:00:00.000Z',
     });
     expect(first.entries[0]).toMatchObject({
-      slug: null,
+      slug: 'synthetic-magic-academy',
       titleEnglish: 'Synthetic Magic Academy',
       score: { source: 'anilist', score: 81, scale: 100 },
     });
@@ -659,31 +660,208 @@ describe('GET /anime/lists/:kind', () => {
     expect(requests).toHaveLength(1);
   });
 
-  it('joins slugs from known identities and drops removed anime', async () => {
-    answer = () => ({
-      media: [media(1), media(2), media(3)],
-      hasNextPage: false,
-    });
-    await prisma.animeIdentity.createMany({
-      data: [
-        { anilistId: 1, canonicalSlug: 'one', createdAt: clock.now() },
-        {
-          anilistId: 2,
-          canonicalSlug: 'two',
-          removedAt: clock.now(),
-          createdAt: clock.now(),
-        },
-      ],
+  describe('slug claims (OTA-190)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
-    const page = await list('/anime/lists/top');
+    const english = (id: number, title: string, extra = {}) =>
+      media(id, {
+        title: { romaji: `Romaji ${id}`, english: title },
+        ...extra,
+      });
+    const claimed = async () =>
+      Object.fromEntries(
+        (await prisma.animeIdentity.findMany()).map((row) => [
+          row.anilistId,
+          row.canonicalSlug,
+        ]),
+      );
 
-    expect(
-      page.entries.map(({ anilistId, slug }) => [anilistId, slug]),
-    ).toEqual([
-      [1, 'one'],
-      [3, null],
-    ]);
+    it('claims a slug and the romaji alias for every listed anime on a cold page', async () => {
+      answer = () => ({
+        media: [english(1, 'First Show'), english(2, 'Second Show')],
+        hasNextPage: false,
+      });
+
+      const page = await list('/anime/lists/top');
+
+      expect(page.entries.map(({ slug }) => slug)).toEqual([
+        'first-show',
+        'second-show',
+      ]);
+      const slugs = await prisma.animeSlug.findMany({
+        orderBy: { slug: 'asc' },
+      });
+      expect(slugs.map(({ slug }) => slug)).toEqual([
+        'first-show',
+        'romaji-1',
+        'romaji-2',
+        'second-show',
+      ]);
+      expect(await prisma.anime.count()).toBe(0);
+    });
+
+    it('claims nothing for an empty page', async () => {
+      answer = () => ({ media: [], hasNextPage: false });
+
+      expect((await list('/anime/lists/top')).entries).toEqual([]);
+
+      expect(await prisma.animeIdentity.count()).toBe(0);
+    });
+
+    it('leaves an existing identity untouched and never re-claims a removed one', async () => {
+      await prisma.animeIdentity.createMany({
+        data: [
+          { anilistId: 1, canonicalSlug: 'one', createdAt: clock.now() },
+          {
+            anilistId: 2,
+            canonicalSlug: 'two',
+            removedAt: clock.now(),
+            createdAt: clock.now(),
+          },
+        ],
+      });
+      answer = () => ({
+        media: [
+          english(1, 'Brand New'),
+          english(2, 'Other'),
+          english(3, 'Third'),
+        ],
+        hasNextPage: false,
+      });
+
+      const page = await list('/anime/lists/top');
+
+      expect(
+        page.entries.map(({ anilistId, slug }) => [anilistId, slug]),
+      ).toEqual([
+        [1, 'one'],
+        [3, 'third'],
+      ]);
+      expect(await claimed()).toEqual({ 1: 'one', 2: 'two', 3: 'third' });
+      expect(
+        await prisma.animeSlug.count({ where: { anilistId: { in: [1, 2] } } }),
+      ).toBe(0);
+    });
+
+    it('takes the year rung when another anime holds the plain slug', async () => {
+      await prisma.animeIdentity.create({
+        data: { anilistId: 5, canonicalSlug: 'clash', createdAt: clock.now() },
+      });
+      await prisma.animeSlug.create({
+        data: { slug: 'clash', anilistId: 5, createdAt: clock.now() },
+      });
+      answer = () => ({
+        media: [
+          english(6, 'Clash', { startDate: { year: 2020, month: 1, day: 1 } }),
+        ],
+        hasNextPage: false,
+      });
+
+      const page = await list('/anime/lists/top');
+
+      expect(page.entries[0]?.slug).toBe('clash-2020');
+    });
+
+    it('claims in list order inside a page: the first of two equal titles gets the plain slug', async () => {
+      answer = () => ({
+        media: [english(12, 'Same Title'), english(11, 'Same Title')],
+        hasNextPage: false,
+      });
+
+      await list('/anime/lists/top');
+
+      expect(await claimed()).toEqual({
+        12: 'same-title',
+        11: 'same-title-tv',
+      });
+    });
+
+    it('survives two lists claiming the same anime at once', async () => {
+      const warn = vi.spyOn(Logger.prototype, 'warn');
+      answer = () => ({
+        media: [
+          english(1, 'Shared A'),
+          english(2, 'Shared B'),
+          english(3, 'Shared A'),
+        ],
+        hasNextPage: false,
+      });
+
+      const [top, airing] = await Promise.all([
+        list('/anime/lists/top'),
+        list('/anime/lists/airing'),
+      ]);
+
+      expect(await prisma.animeIdentity.count()).toBe(3);
+      expect(top.entries.map(({ slug }) => slug)).toEqual(
+        airing.entries.map(({ slug }) => slug),
+      );
+      expect(top.entries.every(({ slug }) => slug !== null)).toBe(true);
+      expect(new Set(top.entries.map(({ slug }) => slug)).size).toBe(3);
+      expect(warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Slug claim'),
+      );
+    });
+
+    it('answers 200 with null slugs when a claim fails, and heals at the next fetch', async () => {
+      const warn = vi.spyOn(Logger.prototype, 'warn');
+      answer = () => ({ media: [english(1, 'Heal Me')], hasNextPage: false });
+      const claimFailure = vi
+        .spyOn(prisma, '$transaction')
+        .mockRejectedValueOnce(new Error('boom'));
+
+      const first = await list('/anime/lists/trending');
+      claimFailure.mockRestore();
+      clock.advance(HOUR_MS);
+      await list('/anime/lists/trending');
+      await lists.settle();
+      const healed = await list('/anime/lists/trending');
+
+      expect(first.entries[0]?.slug).toBeNull();
+      expect(warn).toHaveBeenCalledWith(
+        'Slug claim failed for 1 listed anime (Error): 1',
+      );
+      expect(healed.entries[0]?.slug).toBe('heal-me');
+    });
+
+    it('stores the page but claims nothing for a genre or a past-season list (until OTA-189)', async () => {
+      answer = () => ({ media: [english(1, 'Gated')], hasNextPage: false });
+
+      const genre = await list('/anime/lists/top?genre=Drama');
+      const past = await list('/anime/lists/seasonal?season=SUMMER&year=2025');
+
+      expect(ids(genre)).toEqual([1]);
+      expect(past.entries[0]?.slug).toBeNull();
+      expect(genre.entries[0]?.slug).toBeNull();
+      expect(await prisma.animeListPage.count()).toBe(2);
+      expect(await prisma.animeIdentity.count()).toBe(0);
+    });
+
+    it('does no write when it serves a stored page', async () => {
+      await list('/anime/lists/top');
+      const transaction = vi.spyOn(prisma, '$transaction');
+
+      await list('/anime/lists/top');
+
+      expect(transaction).not.toHaveBeenCalled();
+    });
+
+    it('claims the new entries of a background refresh', async () => {
+      answer = () => ({ media: [english(1, 'Old One')], hasNextPage: false });
+      await list('/anime/lists/trending');
+      clock.advance(HOUR_MS);
+      answer = () => ({
+        media: [english(1, 'Old One'), english(2, 'New Two')],
+        hasNextPage: false,
+      });
+
+      await list('/anime/lists/trending');
+      await lists.settle();
+
+      expect(await claimed()).toEqual({ 1: 'old-one', 2: 'new-two' });
+    });
   });
 
   it('answers 503 without reading the cache while AniList is switched off, and recovers', async () => {

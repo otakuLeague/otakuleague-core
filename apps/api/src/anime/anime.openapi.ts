@@ -295,7 +295,7 @@ class AnimeListEntrySchema implements AnimeListEntry {
     type: String,
     nullable: true,
     description:
-      'Canonical slug when we know the anime; otherwise link /anime/anilist/{anilistId}',
+      'Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): then link /anime/anilist/{anilistId}',
   })
   readonly slug!: string | null;
   @ApiProperty({ type: String, nullable: true })
