@@ -185,6 +185,75 @@ describe('validateEnvironment', () => {
   });
 });
 
+describe('validateEnvironment: internal API key (ADR 0019)', () => {
+  const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
+  const FAKE_PREVIOUS_KEY = 'fake-previous-api-key-'.padEnd(64, '0');
+
+  it('leaves both keys unset when they are missing or empty (KEY= in .env)', () => {
+    for (const config of [
+      VALID_ENVIRONMENT,
+      {
+        ...VALID_ENVIRONMENT,
+        INTERNAL_API_KEY: '',
+        INTERNAL_API_KEY_PREVIOUS: '',
+      },
+    ]) {
+      const environment = validateEnvironment(config);
+      expect(environment.INTERNAL_API_KEY).toBeUndefined();
+      expect(environment.INTERNAL_API_KEY_PREVIOUS).toBeUndefined();
+    }
+  });
+
+  it.each([
+    ['openssl rand -hex 32', 'ab'.repeat(32)],
+    ['43 characters, the shortest', 'a'.repeat(43)],
+    ['128 characters, the longest', 'Z'.repeat(128)],
+    ['base64url with - and _', `${'x'.repeat(41)}-_`],
+  ])('accepts a key and a previous key: %s', (_, key) => {
+    const environment = validateEnvironment({
+      ...VALID_ENVIRONMENT,
+      INTERNAL_API_KEY: key,
+      INTERNAL_API_KEY_PREVIOUS: FAKE_PREVIOUS_KEY,
+    });
+
+    expect(environment.INTERNAL_API_KEY).toBe(key);
+    expect(environment.INTERNAL_API_KEY_PREVIOUS).toBe(FAKE_PREVIOUS_KEY);
+  });
+
+  it.each([
+    ['42 characters', 'k'.repeat(42)],
+    ['129 characters', 'k'.repeat(129)],
+    ['standard base64', `${'k'.repeat(42)}+/=`],
+    ['a space', `${'k'.repeat(42)} k`],
+    ['a non-ASCII letter', `${'k'.repeat(42)}é`],
+  ])('rejects a key with %s without echoing it', (_, key) => {
+    for (const variable of ['INTERNAL_API_KEY', 'INTERNAL_API_KEY_PREVIOUS']) {
+      const message = validationMessage({
+        ...VALID_ENVIRONMENT,
+        INTERNAL_API_KEY: FAKE_KEY,
+        [variable]: key,
+      });
+
+      expect(message).toContain(
+        `${variable} must be 43 to 128 characters of A-Z, a-z, 0-9, _ or -`,
+      );
+      expect(message).not.toContain(key);
+    }
+  });
+
+  it('refuses the previous key alone, naming the variables but not the value', () => {
+    const message = validationMessage({
+      ...VALID_ENVIRONMENT,
+      INTERNAL_API_KEY_PREVIOUS: FAKE_PREVIOUS_KEY,
+    });
+
+    expect(message).toContain(
+      'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY',
+    );
+    expect(message).not.toContain(FAKE_PREVIOUS_KEY);
+  });
+});
+
 describe('isInsideRepo', () => {
   it('finds the monorepo root from the config module', () => {
     expect(isInsideRepo()).toBe(true);
