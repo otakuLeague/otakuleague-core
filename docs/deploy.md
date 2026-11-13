@@ -89,12 +89,16 @@ Generate a key with `openssl rand -hex 32` on your own machine. Paste it only in
 Turn it on (once the web sends the key, OTA-182 slice 2, and the Preview decision of ADR 0019 is in place):
 1. Vercel → Settings → Environment Variables: `INTERNAL_API_KEY` for Production. Redeploy the web.
 2. Railway → API → Variables: the same `INTERNAL_API_KEY`. Railway restarts the API; from then on the check is on.
-3. Check: `curl -i <api>/anime/search?q=a` answers 403 `INTERNAL_KEY_REQUIRED`, `curl -i <api>/health` answers 200, and the site loads an anime page. The start-up warning is gone from the API logs.
+3. Check: `curl -i '<api>/anime/search?q=a'` answers 403 `INTERNAL_KEY_REQUIRED`, `curl -i '<api>/health'` answers 200, and the site loads an anime page. The start-up warning is gone from the API logs.
 
 Rotate (no refused request):
-1. Railway: set `INTERNAL_API_KEY_PREVIOUS` to the current key and `INTERNAL_API_KEY` to the new one. The API now accepts both.
+1. Railway: set `INTERNAL_API_KEY_PREVIOUS` to the current key first, or both variables in one staged change (one deploy). Then `INTERNAL_API_KEY` to the new one. The API now accepts both. Never change `INTERNAL_API_KEY` alone: until Vercel has the new key, every web request would be refused.
 2. Vercel: set `INTERNAL_API_KEY` to the new key and redeploy the web.
 3. Once that deploy is live, delete `INTERNAL_API_KEY_PREVIOUS` on Railway.
+
+On a suspected leak, run the three steps back to back: the leaked key works until step 3.
+
+A Vercel rollback (Instant Rollback, or redeploying an old deployment) keeps that deployment's variables, so it sends the key it was built with. Rolling the web back past a rotation sends the old key, refused once step 3 is done: set `INTERNAL_API_KEY_PREVIOUS` back to it on Railway first.
 
 Turn it off: delete `INTERNAL_API_KEY` (and `INTERNAL_API_KEY_PREVIOUS`) on Railway first, then on Vercel. Before rolling the web back to a build older than slice 2, turn it off the same way.
 

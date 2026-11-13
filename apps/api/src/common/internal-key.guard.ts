@@ -11,7 +11,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { EnvironmentVariables } from '../config/environment';
+import {
+  type EnvironmentVariables,
+  INTERNAL_API_KEY_MIN_LENGTH,
+} from '../config/environment';
 import { ApiException } from './api.exception';
 
 /** Lower case: Node lower-cases incoming header names. Sent as X-Internal-Api-Key. */
@@ -59,6 +62,7 @@ function sha256(value: string): Buffer {
 /**
  * Both sides are SHA-256 digests, so timingSafeEqual always compares 32 bytes and neither
  * the key's length nor its content leaks through timing. Every key is compared: no early exit.
+ * Too short for a valid key is refused too, so an empty accepted key could never match "".
  */
 export function isAcceptedKey(
   header: string | readonly string[] | undefined,
@@ -66,6 +70,7 @@ export function isAcceptedKey(
 ): boolean {
   if (
     typeof header !== 'string' ||
+    header.length < INTERNAL_API_KEY_MIN_LENGTH ||
     header.length > MAX_INTERNAL_KEY_HEADER_LENGTH
   ) {
     return false;
@@ -131,7 +136,7 @@ export class EnvironmentInternalKeySettings
   extends InternalKeySettings
   implements OnApplicationBootstrap
 {
-  private readonly logger = new Logger(InternalKeyGuard.name);
+  private readonly logger = new Logger(EnvironmentInternalKeySettings.name);
   private readonly check: InternalKeyCheck;
   private readonly production: boolean;
 

@@ -28,7 +28,23 @@ function appWith(check: InternalKeyCheck): Promise<INestApplication<App>> {
   });
 }
 
-/** `Controller.method` for every handler that carries @PublicRoute(). */
+/** Own and inherited methods of a controller, closest class first. */
+function methodsOf(prototype: object): Map<string, unknown> {
+  const methods = new Map<string, unknown>();
+  for (
+    let current: object | null = prototype;
+    current !== null && current !== Object.prototype;
+    current = Reflect.getPrototypeOf(current)
+  ) {
+    for (const name of Object.getOwnPropertyNames(current)) {
+      if (name === 'constructor' || methods.has(name)) continue;
+      methods.set(name, Object.getOwnPropertyDescriptor(current, name)?.value);
+    }
+  }
+  return methods;
+}
+
+/** `Controller.method` for every handler that carries @PublicRoute(), inherited ones included. */
 function publicHandlers(app: INestApplication<App>): string[] {
   const names: string[] = [];
   for (const moduleRef of app.get(ModulesContainer).values()) {
@@ -36,11 +52,7 @@ function publicHandlers(app: INestApplication<App>): string[] {
       if (metatype === null) continue;
       const prototype: unknown = Reflect.get(metatype, 'prototype');
       if (typeof prototype !== 'object' || prototype === null) continue;
-      for (const method of Object.getOwnPropertyNames(prototype)) {
-        const handler: unknown = Object.getOwnPropertyDescriptor(
-          prototype,
-          method,
-        )?.value;
+      for (const [method, handler] of methodsOf(prototype)) {
         if (
           typeof handler === 'function' &&
           Reflect.getMetadata(PUBLIC_ROUTE_METADATA, handler) === true

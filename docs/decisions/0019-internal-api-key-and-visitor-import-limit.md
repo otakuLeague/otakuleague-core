@@ -21,7 +21,7 @@ Functional:
 Non-functional, with numbers:
 
 1. Isolation: one visitor takes at most 5 cold imports at once and 1.5 a minute after that, which is half the global burst (10) and half the global refill (3 a minute). A caller without the key takes 0 once the check is on.
-2. Cost: the check adds no I/O and under 0.1 ms per request (two SHA-256 digests of at most 512 bytes and one constant-time compare per accepted key).
+2. Cost: the check adds no I/O and under 0.1 ms per request (one SHA-256 digest of at most 512 bytes and one constant-time compare per accepted key; the accepted keys are hashed once at start).
 3. Memory: at most 10,000 visitor entries (about 1.5 MB), each dropped 200 s after its last import.
 4. Rollout: 0 failed requests caused by deploy order. New API with the old web and no key set behaves exactly as today; a rotation has 0 refused requests.
 5. Secrecy: the key has 256 bits of randomness, lives only in env vars, and never appears in a log line, a URL, an error body or a test fixture.
@@ -83,14 +83,14 @@ sequenceDiagram
 
 1. API merged, key unset: nothing changes.
 2. Web slice 2 merged: sends the key when it has one.
-3. Farouk sets the key on Vercel and redeploys, then on Railway. From that restart the check is on. Check: `curl -i <api>/anime/search?q=a` answers 403, `/health` answers 200, the site loads.
+3. Farouk sets the key on Vercel and redeploys, then on Railway. From that restart the check is on. Check: `curl -i '<api>/anime/search?q=a'` answers 403, `curl -i '<api>/health'` answers 200, the site loads. The production key goes in Vercel's Production environment only.
 4. OTA-139 makes the key required in production (ADR 0015) and makes credential routes refuse an `open` caller whatever the guard's mode.
 
 Rotation: set `INTERNAL_API_KEY_PREVIOUS` to the old key and `INTERNAL_API_KEY` to the new one on Railway; change Vercel and redeploy; remove the previous key. Rolling the web back to a build older than slice 2: unset the key on Railway first.
 
 ## Consequences
 
-- **Vercel previews go dark the day the key is set.** Previews call the production API (`docs/deploy-vercel.md`) and ADR 0015 keeps the key out of the Preview environment. Decided: a third variable on the API, `INTERNAL_API_KEY_PREVIEW`, which passes the guard as a `preview` caller: never trusted for `X-Client-Ip` (all previews share one visitor bucket) and never for a credential route. Vercel's Preview environment holds that value under the same name `INTERNAL_API_KEY`, so the web needs no extra code. It must land before step 3. Zero-code fallback, Farouk's call: the production key in Preview until OTA-139.
+- **Vercel previews go dark the day the key is set.** Previews call the production API (`docs/deploy-vercel.md`) and ADR 0015 keeps the key out of the Preview environment. Decided: a third variable on the API, `INTERNAL_API_KEY_PREVIEW`, which passes the guard as a `preview` caller: never trusted for `X-Client-Ip` (all previews share one visitor bucket) and never for a credential route. Vercel's Preview environment holds that value under the same name `INTERNAL_API_KEY`, so the web needs no extra code. It must land before step 3. The production key must never go in Vercel's Preview environment (preview code would hold the production secret, and every preview build would carry it): the preview key lands first, and until it does previews stay dark.
 - **Open by default is a failure mode.** A deleted variable, or a new Railway environment, silently reopens the API. The start-up warning is the only signal until step 4.
 - **A leaked key** lets its holder call the API and choose any `X-Client-Ip`. Rotate it; the global bucket still bounds imports.
 - **Shared addresses share a bucket**: a campus, a mobile carrier or a VPN exit gets 5 imports at once between all its users. Cached pages are unaffected.
@@ -111,4 +111,7 @@ To fill in after the rollout.
 - **OTA-182 slice 2**: web sends the key and the client IP; `.claude/rules/web.md`; ADR 0003 addendum (shared with OTA-139).
 - **OTA-189**: per-visitor limit on list and search, reusing `ApiCaller` and the same bucket function.
 - **OTA-139**: key required in production; credential routes need a `web` caller.
+- **PR B (planned)**: an `INTERNAL_API_KEY_REQUIRED=true` boot flag that refuses to start without the key, and a Sentry message (not only a log line) when production starts open.
+- Cache the `/health` result for about 1 s, so a public route cannot be used to load the database.
+- Swagger: an api-key security scheme for `X-Internal-Api-Key` and the 403 `INTERNAL_KEY_REQUIRED` answer on every route.
 - Not in this ADR (other nits in the OTA-182 notes): AniList 404 only when `data.Media === null`; remember every id on the adult path; `rel="nofollow"` on season links without a slug.

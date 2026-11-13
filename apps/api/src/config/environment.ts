@@ -60,7 +60,10 @@ export function isHttpUrl(value: unknown): boolean {
 }
 
 // 43 characters of base64url is 256 bits; `openssl rand -hex 32` gives 64 hex characters (ADR 0019).
-const INTERNAL_API_KEY_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
+export const INTERNAL_API_KEY_MIN_LENGTH = 43;
+const INTERNAL_API_KEY_PATTERN = new RegExp(
+  `^[A-Za-z0-9_-]{${String(INTERNAL_API_KEY_MIN_LENGTH)},128}$`,
+);
 
 export function isInternalApiKey(value: unknown): boolean {
   return typeof value === 'string' && INTERNAL_API_KEY_PATTERN.test(value);
@@ -165,7 +168,8 @@ export class EnvironmentVariables {
     },
     {
       message:
-        'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY: set the new key too, or unset both',
+        // No ":" or "=" after a variable name: the log redaction would mask the words after it.
+        'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY; set the new key too, or unset both',
     },
   )
   @IsOptional()

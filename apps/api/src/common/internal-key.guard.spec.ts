@@ -1,15 +1,20 @@
+import { createHash } from 'node:crypto';
 import { HttpStatus, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
+import { redactText } from '@otakuleague/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EnvironmentVariables } from '../config/environment';
 import { ApiException } from './api.exception';
 import {
   EnvironmentInternalKeySettings,
+  INTERNAL_API_KEY_HEADER,
   type InternalKeyCheck,
   InternalKeyGuard,
   InternalKeySettings,
+  isAcceptedKey,
+  MAX_INTERNAL_KEY_HEADER_LENGTH,
   PublicRoute,
 } from './internal-key.guard';
 
@@ -76,40 +81,55 @@ describe('InternalKeyGuard', () => {
   ])('lets %s through', (_, key) => {
     expect(
       guardFor(ENFORCED).canActivate(
-        contextFor('search', { 'x-internal-api-key': key }),
+        contextFor('search', { [INTERNAL_API_KEY_HEADER]: key }),
       ),
     ).toBe(true);
   });
 
   it.each<[string, Record<string, string | string[]>]>([
     ['a missing header', {}],
-    ['an empty header', { 'x-internal-api-key': '' }],
+    ['an empty header', { [INTERNAL_API_KEY_HEADER]: '' }],
     [
       'a wrong key of the same length',
-      { 'x-internal-api-key': 'f'.repeat(64) },
+      { [INTERNAL_API_KEY_HEADER]: 'f'.repeat(64) },
     ],
     [
       'the key minus its last character',
-      { 'x-internal-api-key': FAKE_KEY.slice(0, -1) },
+      { [INTERNAL_API_KEY_HEADER]: FAKE_KEY.slice(0, -1) },
     ],
-    ['the key plus a character', { 'x-internal-api-key': `${FAKE_KEY}0` }],
-    ['the key in upper case', { 'x-internal-api-key': FAKE_KEY.toUpperCase() }],
+    ['the key plus a character', { [INTERNAL_API_KEY_HEADER]: `${FAKE_KEY}0` }],
+    [
+      'the key in upper case',
+      { [INTERNAL_API_KEY_HEADER]: FAKE_KEY.toUpperCase() },
+    ],
     [
       'the key with a space before it',
-      { 'x-internal-api-key': ` ${FAKE_KEY}` },
+      { [INTERNAL_API_KEY_HEADER]: ` ${FAKE_KEY}` },
     ],
     [
       'a repeated header (array)',
-      { 'x-internal-api-key': [FAKE_KEY, FAKE_KEY] },
+      { [INTERNAL_API_KEY_HEADER]: [FAKE_KEY, FAKE_KEY] },
     ],
     [
       'a repeated header (joined by Node)',
-      { 'x-internal-api-key': `${FAKE_KEY}, ${FAKE_KEY}` },
+      { [INTERNAL_API_KEY_HEADER]: `${FAKE_KEY}, ${FAKE_KEY}` },
     ],
-    ['513 characters', { 'x-internal-api-key': 'k'.repeat(513) }],
+    [
+      'one character over the cap',
+      {
+        [INTERNAL_API_KEY_HEADER]: 'k'.repeat(
+          MAX_INTERNAL_KEY_HEADER_LENGTH + 1,
+        ),
+      },
+    ],
     [
       'the key padded to 513 characters',
-      { 'x-internal-api-key': FAKE_KEY.padEnd(513, ' ') },
+      {
+        [INTERNAL_API_KEY_HEADER]: FAKE_KEY.padEnd(
+          MAX_INTERNAL_KEY_HEADER_LENGTH + 1,
+          ' ',
+        ),
+      },
     ],
     ['the key under another header', { authorization: `Bearer ${FAKE_KEY}` }],
   ])('refuses %s with the same 403 envelope', (_, headers) => {
@@ -125,7 +145,7 @@ describe('InternalKeyGuard', () => {
   it('refuses the previous key once it is no longer configured', () => {
     const guard = guardFor({ kind: 'enforced', acceptedKeys: [FAKE_KEY] });
     const context = contextFor('search', {
-      'x-internal-api-key': FAKE_PREVIOUS_KEY,
+      [INTERNAL_API_KEY_HEADER]: FAKE_PREVIOUS_KEY,
     });
 
     expect(refusal(guard, context).getStatus()).toBe(HttpStatus.FORBIDDEN);
@@ -133,11 +153,20 @@ describe('InternalKeyGuard', () => {
 
   it.each<[string, Record<string, string>]>([
     ['no key', {}],
-    ['a wrong key', { 'x-internal-api-key': 'f'.repeat(64) }],
+    ['a wrong key', { [INTERNAL_API_KEY_HEADER]: 'f'.repeat(64) }],
   ])('lets a @PublicRoute() handler answer with %s', (_, headers) => {
     expect(guardFor(ENFORCED).canActivate(contextFor('health', headers))).toBe(
       true,
     );
+  });
+
+  it('refuses a value too short to be a key, even if such a key were accepted', () => {
+    const digest = (value: string) =>
+      createHash('sha256').update(value, 'utf8').digest();
+
+    expect(isAcceptedKey('', [digest('')])).toBe(false);
+    expect(isAcceptedKey('k'.repeat(42), [digest('k'.repeat(42))])).toBe(false);
+    expect(isAcceptedKey('k'.repeat(43), [digest('k'.repeat(43))])).toBe(true);
   });
 
   it('lets every request through while no key is configured', () => {
@@ -146,7 +175,7 @@ describe('InternalKeyGuard', () => {
     expect(guard.canActivate(contextFor('search', {}))).toBe(true);
     expect(
       guard.canActivate(
-        contextFor('search', { 'x-internal-api-key': 'f'.repeat(64) }),
+        contextFor('search', { [INTERNAL_API_KEY_HEADER]: 'f'.repeat(64) }),
       ),
     ).toBe(true);
   });
@@ -155,8 +184,14 @@ describe('InternalKeyGuard', () => {
 function settingsFrom(
   environment: Partial<Record<keyof EnvironmentVariables, string>>,
 ): EnvironmentInternalKeySettings {
+  // Every variable the settings read is given, so nothing falls back to process.env.
   return new EnvironmentInternalKeySettings(
-    new ConfigService<EnvironmentVariables, true>(environment),
+    new ConfigService<EnvironmentVariables, true>({
+      NODE_ENV: 'development',
+      INTERNAL_API_KEY: '',
+      INTERNAL_API_KEY_PREVIOUS: '',
+      ...environment,
+    }),
   );
 }
 
@@ -199,9 +234,10 @@ describe('EnvironmentInternalKeySettings', () => {
     settingsFrom({ NODE_ENV: 'production' }).onApplicationBootstrap();
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      'INTERNAL_API_KEY is not set: the API answers any caller',
-    );
+    const warning = 'INTERNAL_API_KEY is not set: the API answers any caller';
+    expect(warn).toHaveBeenCalledWith(warning);
+    // The JSON logger redacts lines; this one must reach the logs readable.
+    expect(redactText(warning)).toBe(warning);
   });
 
   it.each([

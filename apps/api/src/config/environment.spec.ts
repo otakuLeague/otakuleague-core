@@ -1,3 +1,4 @@
+import { redactText } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import { isInsideRepo, validateEnvironment } from './environment';
 
@@ -248,9 +249,11 @@ describe('validateEnvironment: internal API key (ADR 0019)', () => {
     });
 
     expect(message).toContain(
-      'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY',
+      'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY; set the new key too',
     );
     expect(message).not.toContain(FAKE_PREVIOUS_KEY);
+    // Logged at boot through redaction: no ":" or "=" after a name, so it stays readable.
+    expect(redactText(message)).toBe(message);
   });
 });
 
