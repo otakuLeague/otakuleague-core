@@ -11,7 +11,7 @@ What shapes the design:
 - Vercel previews run unreviewed PR code against the production API (ADR 0009).
 - EU data (ADR 0009), free tools, no Redis, one API instance, code written by agents and reviewed by one person.
 - Assumption (old user count unknown until OTA-149): under 10,000 accounts and 1,000 sign-ins a day in the first months.
-- **Schedule.** `docs/ROADMAP.md` plans accounts for 2026-11-22 and launch for 2026-11-30; CLAUDE.md says launch 2026-12-28. Not resolved here; the triggers in the Decision use the ROADMAP dates.
+- **Schedule.** `docs/ROADMAP.md` plans accounts for 2026-11-22 and launch for 2026-11-30; CLAUDE.md said launch 2026-12-28. Resolved 2026-11-13 (Farouk, OTA-193): launch is 2026-11-30.
 
 **Functional.** Visitors should be able to (1) create an account (email, username, password) and confirm the email before any session exists; (2) sign in with email or username (then Google), stay signed in on that browser, and sign out; (3) reset a forgotten password from an emailed link, which signs out every device.
 

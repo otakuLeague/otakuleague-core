@@ -15,7 +15,7 @@ Mockups for `/leaderboard?season=&q=&page=`. Styles: `leaderboard.css` on top of
 - Removed: the whole-table client download and client-side search (PARITY 7: 1,000-row cap, no caching); search and paging run in the API.
 
 ## Decisions
-- **Per season** (Farouk, 2026-11-12): seasons follow anime quarters (Winter Jan–Mar, Spring Apr–Jun, Summer Jul–Sep, Fall Oct–Dec, UTC). A season board ranks XP earned inside the season (sum of XP events in the window). Default view: the live season. There is no Fall 2026 season: Winter 2027, the first season, runs from 2026-12-28T00:00Z (launch) to 2027-03-31T23:59:59Z; every later season uses the plain quarter boundaries.
+- **Per season** (Farouk, 2026-11-12): seasons follow anime quarters (Winter Jan–Mar, Spring Apr–Jun, Summer Jul–Sep, Fall Oct–Dec, UTC). A season board ranks XP earned inside the season (sum of XP events in the window). Default view: the live season. There is no Fall 2026 season: Winter 2027, the first season, runs from 2026-11-30T00:00Z (launch, OTA-193; was 2026-12-28) to 2027-03-31T23:59:59Z; every later season uses the plain quarter boundaries.
 - **"All time" kept** as the last switcher option: it is the old leaderboard (lifetime total XP, every profile with a username, 0 XP included), so parity holds and levels have a ranking too. Season boards only list players with season XP > 0 (otherwise every season starts with 12,000 players tied at 0).
 - **Ranking** (PARITY 5): XP desc, then account created_at asc, then username A–Z; rank = position, so equal XP still gets distinct ranks (#9 and #10 in the mockup). The caption says so.
 - **Podium**: top 3 on page 1 only; ranks 4–53 on page 1, then 50 per page (`?page=`). Hidden while searching.
@@ -42,7 +42,7 @@ Tested: 20-character usernames on the podium (wrap) and in rows (ellipsis on pho
 ## Build notes
 - API: `GET /leaderboard?season=spring-2027|all&q=&page=` (page size 50, max 50; page 1 also returns the top 3; total count), `GET /leaderboard/me?season=` (rank, XP, XP of the ranks just above and below). Season windows computed from an injected `Clock`. Season XP from an indexed aggregate over XP events (or a per-season total table written with each award); measure before adding a cache (ISR 60 s on the page is enough to start). Error code `LEADERBOARD_UNAVAILABLE`.
 - Web: server component reading search params; client islands only for the search input (debounced URL update) and the season disclosure (existing pattern). All calls through `apiClient()`.
-- Unit tests for season windows (injected `Clock`): 2026-12-27T23:59:59Z has no season, 2026-12-28T00:00Z and 2027-03-31T23:59:59Z are Winter 2027, 2027-04-01T00:00Z is Spring 2027.
+- Unit tests for season windows (injected `Clock`): 2026-11-29T23:59:59Z has no season, 2026-11-30T00:00Z and 2027-03-31T23:59:59Z are Winter 2027, 2027-04-01T00:00Z is Spring 2027.
 - Component tests: loading, live season, empty season, past season, All time, search hit, no match, tie order, your row on page / off page, unranked, guest, error.
 
 ## Open questions for Farouk (whole ticket)
