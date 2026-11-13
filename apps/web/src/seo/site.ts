@@ -10,7 +10,7 @@ export function absoluteUrl(path: string): string {
 }
 
 // Static pages only: anime pages are imported on demand and no DB-only list endpoint exists yet (ADR 0018).
-export const SITEMAP_PATHS: readonly string[] = [
+const SITEMAP_PATHS: readonly string[] = [
   '/',
   '/faq',
   ...LEGAL_PAGES.map((page) => page.path),

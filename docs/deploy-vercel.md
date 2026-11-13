@@ -39,7 +39,7 @@ With a cached install, the workspace `prepare` step that builds `shared-types` w
 
 At the launch cutover (OTA-149): change the constant to `'allowed'`, merge, and check on the real domain, on a page that returns 200: `curl -s <url> | grep -o '<meta name="robots"[^>]*>'` shows `index, follow`, and `curl -sI <url> | grep -i x-robots-tag` prints nothing. 404 pages keep Next's own noindex.
 
-Also at cutover: `curl -s https://otakuleague.com/robots.txt` shows `Disallow: /anime/anilist/` and a `Sitemap: https://otakuleague.com/sitemap.xml` line; `curl -s https://otakuleague.com/sitemap.xml` lists 5 URLs; each page's `<link rel="canonical">` is absolute on `otakuleague.com`; then submit the sitemap in Search Console (Farouk, manual).
+Also at cutover: `curl -s https://otakuleague.com/robots.txt` shows `Disallow: /anime/anilist/` and a `Sitemap: https://otakuleague.com/sitemap.xml` line; `curl -s https://otakuleague.com/sitemap.xml` lists the static pages (/, /faq and the legal pages); each page's `<link rel="canonical">` is absolute on `otakuleague.com`; then submit the sitemap in Search Console (Farouk, manual).
 
 ## Test plan
 

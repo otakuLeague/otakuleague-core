@@ -35,9 +35,11 @@ describe('robotsRules', () => {
   it.each(['blocked', 'allowed'] as const)(
     'never disallows the whole site when %s, so crawlers can read the noindex (OTA-134)',
     (indexing) => {
-      expect(JSON.stringify(robotsRules(indexing).rules)).not.toMatch(
-        /"disallow":"\/"/,
-      );
+      const disallowed = [robotsRules(indexing).rules]
+        .flat()
+        .flatMap((rule) => [rule.disallow ?? []].flat());
+
+      expect(disallowed).not.toContain('/');
     },
   );
 });
@@ -51,14 +53,6 @@ describe('sitemapEntries', () => {
       `${SITE_URL}/terms`,
       `${SITE_URL}/data-sources`,
     ]);
-  });
-
-  it('leaves out anime, debug and hikari pages', () => {
-    const urls = sitemapEntries().map((entry) => entry.url);
-
-    expect(urls.filter((url) => /\/(anime|debug|hikari)/.test(url))).toEqual(
-      [],
-    );
   });
 });
 
@@ -82,7 +76,7 @@ describe('page metadata', () => {
       )
       .filter(
         (file) =>
-          !/canonical|legalMetadata\(|tabMetadata\(/.test(
+          !/alternates:\s*\{\s*canonical:|legalMetadata\(|tabMetadata\(/.test(
             readFileSync(path.join(appDir, file), 'utf8'),
           ),
       );
