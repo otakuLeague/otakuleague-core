@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clientIpFromHeaders, readClientIp } from './client-ip';
 
 const incoming = vi.hoisted(() => ({ headers: new Headers() }));
@@ -54,11 +54,26 @@ describe('clientIpFromHeaders', () => {
 });
 
 describe('readClientIp', () => {
-  it('reads x-forwarded-for from the incoming request', async () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('reads x-forwarded-for from the incoming request on Vercel', async () => {
+    vi.stubEnv('VERCEL', '1');
     incoming.headers = new Headers({ 'x-forwarded-for': '2001:db8::7' });
     expect(await readClientIp()).toBe('2001:db8::7');
 
     incoming.headers = new Headers();
     expect(await readClientIp()).toBeUndefined();
   });
+
+  it.each([undefined, '', '0', 'true'])(
+    'gives nothing off Vercel (VERCEL=%j): anyone could set the header there',
+    async (vercel) => {
+      vi.stubEnv('VERCEL', vercel);
+      incoming.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
+
+      expect(await readClientIp()).toBeUndefined();
+    },
+  );
 });

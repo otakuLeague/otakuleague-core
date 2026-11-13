@@ -4,6 +4,7 @@ import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
+import { checkInternalApiKeyConfig } from './src/api/config';
 import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
 // Next reads .env files from apps/web only; the repo keeps a single .env at its root (ADR 0003).
@@ -32,6 +33,10 @@ if (insideRepo && existsSync(rootEnvFile)) {
     }
   }
 }
+
+// A set INTERNAL_API_KEY must be valid and go only to an https or loopback API_BASE_URL: checked
+// here so the deploy fails, not every request. Messages name variables, never values.
+checkInternalApiKeyConfig(process.env);
 
 // Local runs have no SENTRY_RELEASE; the commit is the release, as in the API (ADR 0004).
 function gitHeadSha(): string | undefined {

@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  checkInternalApiKeyConfig,
   isSecureApiBaseUrl,
   readApiBaseUrl,
   readInternalApiKey,
@@ -111,8 +112,6 @@ describe('isSecureApiBaseUrl', () => {
     'https://api.otakuleague.example',
     'https://api.otakuleague.example/v1',
     'http://127.0.0.1:3001',
-    'http://localhost:3001',
-    'http://LOCALHOST:3001',
     'http://[::1]:3001',
   ])('allows %j', (baseUrl) => {
     expect(isSecureApiBaseUrl(baseUrl)).toBe(true);
@@ -121,6 +120,7 @@ describe('isSecureApiBaseUrl', () => {
   it.each([
     'http://api.otakuleague.example',
     'http://127.0.0.1.evil.example',
+    'http://localhost:3001',
     'http://localhost.evil.example',
     'http://evil.example/127.0.0.1',
     'http://10.0.0.5:3001',
@@ -129,6 +129,49 @@ describe('isSecureApiBaseUrl', () => {
     'not a url',
   ])('refuses %j', (baseUrl) => {
     expect(isSecureApiBaseUrl(baseUrl)).toBe(false);
+  });
+});
+
+describe('checkInternalApiKeyConfig (next.config.ts, fails the deploy)', () => {
+  it('reads nothing when the key is unset, as before slice 2', () => {
+    expect(() =>
+      checkInternalApiKeyConfig({ INTERNAL_API_KEY: '', API_BASE_URL: '' }),
+    ).not.toThrow();
+  });
+
+  it('accepts a valid key with an https or loopback API_BASE_URL', () => {
+    for (const baseUrl of ['https://api.test', 'http://127.0.0.1:3001']) {
+      expect(() =>
+        checkInternalApiKeyConfig({
+          INTERNAL_API_KEY: FAKE_KEY,
+          API_BASE_URL: baseUrl,
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  it.each([
+    [
+      'an invalid key',
+      'not a key',
+      'https://api.test',
+      'INTERNAL_API_KEY is invalid',
+    ],
+    [
+      'a plain http API',
+      FAKE_KEY,
+      'http://api.test',
+      'neither https nor loopback',
+    ],
+    ['a missing API_BASE_URL', FAKE_KEY, '', 'API_BASE_URL is missing'],
+  ])('throws on %s, never echoing the key', (_label, key, baseUrl, message) => {
+    const check = () =>
+      checkInternalApiKeyConfig({
+        INTERNAL_API_KEY: key,
+        API_BASE_URL: baseUrl,
+      });
+    expect(check).toThrow(message);
+    expect(check).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
   });
 });
 
@@ -158,5 +201,19 @@ describe('the internal key in browser code', () => {
 
     expect(files).toContain(path.join('src', 'api', 'config.ts'));
     expect(offenders).toEqual([]);
+  });
+
+  it('is not in the env block of next.config.ts, which Next inlines in bundles', () => {
+    const nextConfig = readFileSync(
+      path.join(webDir, 'next.config.ts'),
+      'utf8',
+    );
+    const envBlock = /\n {2}env: \{\n([\s\S]*?)\n {2}\},\n/.exec(
+      nextConfig,
+    )?.[1];
+
+    expect(envBlock).toContain('SENTRY_RELEASE');
+    expect(envBlock).not.toContain('INTERNAL_API_KEY');
+    expect(nextConfig).toContain('checkInternalApiKeyConfig(process.env);');
   });
 });

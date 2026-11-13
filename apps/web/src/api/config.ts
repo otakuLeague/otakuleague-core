@@ -61,12 +61,9 @@ export function parseInternalApiKey(
   return key;
 }
 
-// Exact host names, so `127.0.0.1.evil.example` is not loopback. `URL` lowercases the host.
-const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
-  '127.0.0.1',
-  'localhost',
-  '[::1]',
-]);
+// Exact addresses, so `127.0.0.1.evil.example` is not loopback. Not `localhost`: a name is resolved
+// (hosts file, DNS), so it may not stay on this machine.
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['127.0.0.1', '[::1]']);
 
 /** Where the internal key may go: HTTPS, or plain HTTP that never leaves this machine. */
 export function isSecureApiBaseUrl(baseUrl: string): boolean {
@@ -76,4 +73,25 @@ export function isSecureApiBaseUrl(baseUrl: string): boolean {
     (url.protocol === 'https:' ||
       (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname)))
   );
+}
+
+/** Throws unless the key may be sent to `baseUrl`; the message never echoes the URL or the key. */
+export function assertKeyMayGoTo(baseUrl: string): void {
+  if (!isSecureApiBaseUrl(baseUrl)) {
+    throw new Error(
+      'Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback (127.0.0.1, [::1]).',
+    );
+  }
+}
+
+/**
+ * Run by next.config.ts, so a bad key or an insecure API_BASE_URL fails the deploy instead of every
+ * request. Key unset: nothing is read or checked, as before slice 2.
+ */
+export function checkInternalApiKeyConfig(
+  env: Readonly<Record<string, string | undefined>>,
+): void {
+  if (readInternalApiKey(env) !== undefined) {
+    assertKeyMayGoTo(readApiBaseUrl(env));
+  }
 }

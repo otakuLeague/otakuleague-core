@@ -32,7 +32,7 @@ With a cached install, the workspace `prepare` step that builds `shared-types` w
 | `INTERNAL_API_KEY` | not set yet (ADR 0019 rollout step 3) | Production only, marked Sensitive | Server-only, never `NEXT_PUBLIC_`. Same value as Railway's. Preview gets only the preview key of OTA-182 PR C under this name, never the production key |
 | `NEXT_PUBLIC_SENTRY_DSN` | not set yet | n/a | OTA-167 |
 
-With `INTERNAL_API_KEY` set, the web sends it on every API call and refuses an `API_BASE_URL` that is not https. It also sends the visitor's IP (`X-Client-Ip`) on the two calls that can import an anime, read from `x-forwarded-for`: trustworthy only on Vercel, which overwrites that header with the address it saw. Behind any other host or proxy a visitor could choose their own IP. Check after setting it: `/anime/<slug>` and `/` still load, and `curl -i '<api>/anime/search?q=a'` answers 403 once Railway has the key too.
+With `INTERNAL_API_KEY` set, the web sends it on every API call, and the build fails (`next.config.ts`) if the key is malformed or `API_BASE_URL` is not https: a bad value stops the deploy, never live requests. It also sends the visitor's IP (`X-Client-Ip`) on the two calls that can import an anime, read from `x-forwarded-for`, only when `VERCEL=1`: Vercel overwrites that header with the address it saw, so it is trustworthy only there. Keep "Automatically expose System Environment Variables" on, or no IP is sent and every visitor shares the API's `unknown` bucket. A CDN or proxy in front of Vercel needs its own decision first. Check after setting it: the deploy's build log is green, `/anime/<slug>` and `/` still load, and `curl -i '<api>/anime/search?q=a'` answers 403 once Railway has the key too.
 
 ## Search indexing
 

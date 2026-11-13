@@ -2,7 +2,7 @@ import { isApiError, type ApiError } from '@otakuleague/shared-types';
 import { unstable_rethrow } from 'next/navigation';
 import type { ClientIp } from './client-ip';
 import {
-  isSecureApiBaseUrl,
+  assertKeyMayGoTo,
   parseApiBaseUrl,
   parseInternalApiKey,
   readApiBaseUrl,
@@ -114,7 +114,7 @@ function assertClientIpUncached<T>(options: CallOptions<T>): void {
 }
 
 /** The client IP goes only with the key: the API ignores it from a caller it cannot trust. */
-function requestHeaders(
+function outgoingHeaders(
   hasBody: boolean,
   internalApiKey: string | undefined,
   clientIp: ClientIp | undefined,
@@ -196,11 +196,9 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
   const defaultTimeoutMs = settings.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
   assertTimeout(defaultTimeoutMs);
   const internalApiKey = parseInternalApiKey(settings.internalApiKey);
-  if (internalApiKey !== undefined && !isSecureApiBaseUrl(baseUrl)) {
+  if (internalApiKey !== undefined) {
     // Plain HTTP across a network would show the key to every hop on the way.
-    throw new Error(
-      'Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback (127.0.0.1, localhost, [::1]).',
-    );
+    assertKeyMayGoTo(baseUrl);
   }
 
   async function send<T>(
@@ -216,7 +214,7 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
       options.body === undefined ? undefined : JSON.stringify(options.body);
     const init: RequestInit = {
       method: options.method ?? 'GET',
-      headers: requestHeaders(
+      headers: outgoingHeaders(
         body !== undefined,
         internalApiKey,
         options.clientIp,

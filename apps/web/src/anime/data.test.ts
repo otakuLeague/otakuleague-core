@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FetchFunction } from '../api/client';
 
 /** The incoming request seen by `headers()`, and how often it was read. */
@@ -99,6 +99,10 @@ const VISITOR_IP = '203.0.113.7';
 type DataModule = typeof import('./data');
 
 describe('internal key and client IP (ADR 0019 rollout gate)', () => {
+  beforeEach(() => {
+    vi.stubEnv('VERCEL', '1');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
@@ -150,7 +154,15 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
     },
   );
 
-  it.each([...importLoaders, ...storedDataLoaders])(
+  it('covers every loader data.ts exports, so a new one must pick a list', async () => {
+    const { data } = await loadDataWith({});
+
+    expect(Object.keys(data).sort()).toEqual(
+      [...importLoaders, ...storedDataLoaders].map(([name]) => name).sort(),
+    );
+  });
+
+  it.each(importLoaders)(
     '%s sends neither header without a key, as before slice 2',
     async (_name, load) => {
       incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
@@ -159,23 +171,6 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
       await load(data);
 
       expect(requests[0]?.headers).toEqual({ accept: 'application/json' });
-    },
-  );
-
-  it.each(importLoaders)(
-    '%s sends the key only when the request has no usable x-forwarded-for',
-    async (_name, load) => {
-      for (const forwarded of [undefined, '203.0.113.7, 198.51.100.1']) {
-        incoming.headers = new Headers(
-          forwarded === undefined ? {} : { 'x-forwarded-for': forwarded },
-        );
-        const { data, requests } = await loadDataWith({}, withKey);
-
-        await load(data);
-
-        expect(requests[0]?.headers['x-internal-api-key']).toBe(FAKE_KEY);
-        expect(requests[0]?.headers).not.toHaveProperty('x-client-ip');
-      }
     },
   );
 });

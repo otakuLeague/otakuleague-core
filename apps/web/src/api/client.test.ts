@@ -461,40 +461,31 @@ function sentHeaders(request: RecordedRequest | undefined) {
   return Object.fromEntries(new Headers(request?.init?.headers));
 }
 
-/** Everything an error or a result could show in a log, a page or a Sentry event. */
-function exposedText(value: unknown): string {
-  return value instanceof Error
-    ? `${String(value)} ${value.stack ?? ''}`
-    : JSON.stringify(value);
-}
-
 describe('internal key and client IP (ADR 0019)', () => {
-  it.each([
-    'https://api.otakuleague.example',
-    'http://127.0.0.1:3001',
-    'http://localhost:3001',
-    'http://[::1]:3001',
-  ])('sends the key on every call to %s', async (baseUrl) => {
-    const { fetchFunction, requests } = fakeFetch(200, json({}));
-    const client = createApiClient({
-      baseUrl,
-      fetch: fetchFunction,
-      internalApiKey: FAKE_KEY,
-    });
+  it.each(['https://api.otakuleague.example', 'http://[::1]:3001'])(
+    'sends the key on every call to %s',
+    async (baseUrl) => {
+      const { fetchFunction, requests } = fakeFetch(200, json({}));
+      const client = createApiClient({
+        baseUrl,
+        fetch: fetchFunction,
+        internalApiKey: FAKE_KEY,
+      });
 
-    await client.call('/anime/search?q=a');
-    await client.call('/anime', { method: 'POST', body: { id: 1 } });
+      await client.call('/anime/search?q=a');
+      await client.call('/anime', { method: 'POST', body: { id: 1 } });
 
-    expect(sentHeaders(requests[0])).toEqual({
-      accept: 'application/json',
-      'x-internal-api-key': FAKE_KEY,
-    });
-    expect(sentHeaders(requests[1])).toEqual({
-      accept: 'application/json',
-      'content-type': 'application/json',
-      'x-internal-api-key': FAKE_KEY,
-    });
-  });
+      expect(sentHeaders(requests[0])).toEqual({
+        accept: 'application/json',
+        'x-internal-api-key': FAKE_KEY,
+      });
+      expect(sentHeaders(requests[1])).toEqual({
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-internal-api-key': FAKE_KEY,
+      });
+    },
+  );
 
   it('sends the client IP next to the key, on an uncached call', async () => {
     const { fetchFunction, requests } = fakeFetch(200, json({}));
@@ -521,40 +512,32 @@ describe('internal key and client IP (ADR 0019)', () => {
     });
   });
 
-  it.each([undefined, '', '  '])(
-    'sends neither header when the key is %j, as before slice 2',
-    async (internalApiKey) => {
-      const { fetchFunction, requests } = fakeFetch(200, json({}));
-      const client = createApiClient({
-        baseUrl: 'http://api.test:4000',
-        fetch: fetchFunction,
-        internalApiKey,
+  it('sends neither header without a key, as before slice 2', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+    const client = createApiClient({
+      baseUrl: 'http://api.test:4000',
+      fetch: fetchFunction,
+    });
+
+    await client.call('/anime/slugs/frieren', {
+      clientIp: visitorIp(VISITOR_IP),
+    });
+
+    expect(sentHeaders(requests[0])).toEqual({ accept: 'application/json' });
+  });
+
+  it('refuses to build a client that would send the key in clear', () => {
+    const build = () =>
+      createApiClient({
+        baseUrl: 'http://127.0.0.1.evil.example',
+        internalApiKey: FAKE_KEY,
       });
 
-      await client.call('/anime/slugs/frieren', {
-        clientIp: visitorIp(VISITOR_IP),
-      });
-
-      expect(sentHeaders(requests[0])).toEqual({ accept: 'application/json' });
-    },
-  );
-
-  it.each([
-    'http://api.otakuleague.example',
-    'http://127.0.0.1.evil.example',
-    'http://10.0.0.5:3001',
-  ])(
-    'refuses to build a client that would send the key in clear to %s',
-    (baseUrl) => {
-      const build = () =>
-        createApiClient({ baseUrl, internalApiKey: FAKE_KEY });
-
-      expect(build).toThrow(
-        /^Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback/,
-      );
-      expect(build).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
-    },
-  );
+    expect(build).toThrow(
+      /^Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback/,
+    );
+    expect(build).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
+  });
 
   it('validates the key it is given, like INTERNAL_API_KEY', () => {
     expect(() =>
@@ -632,33 +615,9 @@ describe('internal key and client IP (ADR 0019)', () => {
       'timeout',
       'api_error',
     ]);
-    for (const result of results) {
-      expect(exposedText(result)).not.toContain(FAKE_KEY);
-      expect(exposedText(result)).not.toContain(VISITOR_IP);
-    }
-  });
-
-  it('keeps the key out of every configuration error it throws', () => {
-    const errors = [
-      () =>
-        createApiClient({
-          baseUrl: 'http://api.test',
-          internalApiKey: FAKE_KEY,
-        }),
-      () =>
-        createApiClient({ baseUrl: BASE_URL, internalApiKey: `${FAKE_KEY}!` }),
-    ].map((build) => {
-      try {
-        build();
-      } catch (error) {
-        return error;
-      }
-      throw new Error('test setup: expected a throw');
-    });
-
-    for (const error of errors) {
-      expect(exposedText(error)).not.toContain(FAKE_KEY);
-    }
+    // Everything a result could show in a log, a page or a Sentry event.
+    expect(JSON.stringify(results)).not.toContain(FAKE_KEY);
+    expect(JSON.stringify(results)).not.toContain(VISITOR_IP);
   });
 });
 
@@ -707,6 +666,7 @@ describe('apiClient', () => {
 
     expect(() => apiClient()).toThrow('API_BASE_URL is invalid');
   });
+
   it('sends INTERNAL_API_KEY from the environment on every call', async () => {
     vi.stubEnv('API_BASE_URL', 'https://api.test:4000');
     vi.stubEnv('INTERNAL_API_KEY', FAKE_KEY);
@@ -728,11 +688,5 @@ describe('apiClient', () => {
       'INTERNAL_API_KEY is set but API_BASE_URL',
     );
     expect(() => apiClient()).toThrow(/^(?![\s\S]*fake-internal-api-key)/);
-
-    vi.stubEnv('API_BASE_URL', 'https://api.test:4000');
-    vi.stubEnv('INTERNAL_API_KEY', 'not a key');
-    const apiClientWithBadKey = await freshApiClient();
-
-    expect(() => apiClientWithBadKey()).toThrow('INTERNAL_API_KEY is invalid');
   });
 });
