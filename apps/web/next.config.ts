@@ -4,6 +4,7 @@ import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
+import { checkInternalApiKeyConfig } from './src/api/config';
 import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
 // Next reads .env files from apps/web only; the repo keeps a single .env at its root (ADR 0003).
@@ -11,8 +12,10 @@ import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 // Like the API (ADR 0002), the root is trusted only inside the repo checkout, so a deployed build
 // never picks up a stray .env from a parent folder. Only the web app's own variables are copied,
 // so the database credentials in the same file stay out of this process. Variables already set win.
+// INTERNAL_API_KEY is read at request time only: never add it to `env` below (inlined in bundles).
 const WEB_ENV_VARIABLES = [
   'API_BASE_URL',
+  'INTERNAL_API_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
   'SENTRY_ENVIRONMENT',
   'SENTRY_RELEASE',
@@ -30,6 +33,10 @@ if (insideRepo && existsSync(rootEnvFile)) {
     }
   }
 }
+
+// A set INTERNAL_API_KEY must be valid and go only to an https or loopback API_BASE_URL: checked
+// here so the deploy fails, not every request. Messages name variables, never values.
+checkInternalApiKeyConfig(process.env);
 
 // Local runs have no SENTRY_RELEASE; the commit is the release, as in the API (ADR 0004).
 function gitHeadSha(): string | undefined {
