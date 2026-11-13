@@ -11,8 +11,10 @@ import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 // Like the API (ADR 0002), the root is trusted only inside the repo checkout, so a deployed build
 // never picks up a stray .env from a parent folder. Only the web app's own variables are copied,
 // so the database credentials in the same file stay out of this process. Variables already set win.
+// INTERNAL_API_KEY is read at request time only: never add it to `env` below (inlined in bundles).
 const WEB_ENV_VARIABLES = [
   'API_BASE_URL',
+  'INTERNAL_API_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
   'SENTRY_ENVIRONMENT',
   'SENTRY_RELEASE',

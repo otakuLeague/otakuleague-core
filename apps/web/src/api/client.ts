@@ -1,6 +1,13 @@
 import { isApiError, type ApiError } from '@otakuleague/shared-types';
 import { unstable_rethrow } from 'next/navigation';
-import { parseApiBaseUrl, readApiBaseUrl } from './config';
+import type { ClientIp } from './client-ip';
+import {
+  isSecureApiBaseUrl,
+  parseApiBaseUrl,
+  parseInternalApiKey,
+  readApiBaseUrl,
+  readInternalApiKey,
+} from './config';
 
 // The only module in apps/web that touches the network (lint rule in eslint.config.mjs, ADR 0003).
 // Expected failures are returned, never thrown; a throw here is a programming or config error.
@@ -38,6 +45,12 @@ export interface CallOptions<T> {
   readonly next?: NextFetchRequestConfig;
   /** Checks a 2xx body. Without it the body is trusted by type (ADR 0003). */
   readonly isExpectedBody?: (body: unknown) => body is T;
+  /**
+   * The visitor's IP from `readClientIp()`, only on a call that can start an import (ADR 0019).
+   * Sent as X-Client-Ip only with the internal key. Refused on a cached call: a per-visitor header
+   * would split Next's data cache by visitor.
+   */
+  readonly clientIp?: ClientIp;
 }
 
 export interface ApiClientSettings {
@@ -45,6 +58,8 @@ export interface ApiClientSettings {
   readonly baseUrl: string;
   readonly fetch?: FetchFunction;
   readonly defaultTimeoutMs?: number;
+  /** INTERNAL_API_KEY, sent as X-Internal-Api-Key on every call; needs an HTTPS or loopback base URL. */
+  readonly internalApiKey?: string;
 }
 
 export interface ApiClient {
@@ -86,6 +101,34 @@ function assertTimeout(timeoutMs: number): void {
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
     throw new Error('API timeout must be a positive integer of milliseconds');
   }
+}
+
+/** Throws whether or not a key is set, so a test without one still catches the mistake. */
+function assertClientIpUncached<T>(options: CallOptions<T>): void {
+  const cached =
+    options.next?.revalidate !== undefined ||
+    (options.cache !== undefined && options.cache !== 'no-store');
+  if (options.clientIp !== undefined && cached) {
+    throw new Error('clientIp is only allowed on an uncached (no-store) call');
+  }
+}
+
+/** The client IP goes only with the key: the API ignores it from a caller it cannot trust. */
+function requestHeaders(
+  hasBody: boolean,
+  internalApiKey: string | undefined,
+  clientIp: ClientIp | undefined,
+): Record<string, string> {
+  return {
+    accept: 'application/json',
+    ...(hasBody ? { 'content-type': 'application/json' } : {}),
+    ...(internalApiKey === undefined
+      ? {}
+      : {
+          'x-internal-api-key': internalApiKey,
+          ...(clientIp === undefined ? {} : { 'x-client-ip': clientIp }),
+        }),
+  };
 }
 
 /** An empty body is valid only on 204 and 205, which carry none by definition. */
@@ -152,12 +195,20 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
   const fetchFunction = settings.fetch ?? fetch;
   const defaultTimeoutMs = settings.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
   assertTimeout(defaultTimeoutMs);
+  const internalApiKey = parseInternalApiKey(settings.internalApiKey);
+  if (internalApiKey !== undefined && !isSecureApiBaseUrl(baseUrl)) {
+    // Plain HTTP across a network would show the key to every hop on the way.
+    throw new Error(
+      'Invalid web configuration: INTERNAL_API_KEY is set but API_BASE_URL is neither https nor loopback (127.0.0.1, localhost, [::1]).',
+    );
+  }
 
   async function send<T>(
     path: ApiPath,
     options: CallOptions<T>,
   ): Promise<RawResponse> {
     assertSafePath(path);
+    assertClientIpUncached(options);
     const timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
     assertTimeout(timeoutMs);
     // Built before the try: a body that cannot be serialized is a programming error, not a network one.
@@ -165,10 +216,11 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
       options.body === undefined ? undefined : JSON.stringify(options.body);
     const init: RequestInit = {
       method: options.method ?? 'GET',
-      headers:
-        body === undefined
-          ? { accept: 'application/json' }
-          : { accept: 'application/json', 'content-type': 'application/json' },
+      headers: requestHeaders(
+        body !== undefined,
+        internalApiKey,
+        options.clientIp,
+      ),
       body,
       cache:
         options.cache ??
@@ -220,8 +272,11 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
 
 let defaultClient: ApiClient | undefined;
 
-/** The app-wide client, built on first use so a missing API_BASE_URL fails with its own message. */
+/** The app-wide client, built on first use so a missing or invalid variable fails with its own message. */
 export function apiClient(): ApiClient {
-  defaultClient ??= createApiClient({ baseUrl: readApiBaseUrl(process.env) });
+  defaultClient ??= createApiClient({
+    baseUrl: readApiBaseUrl(process.env),
+    internalApiKey: readInternalApiKey(process.env),
+  });
   return defaultClient;
 }

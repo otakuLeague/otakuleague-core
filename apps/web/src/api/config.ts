@@ -34,3 +34,46 @@ export function parseApiBaseUrl(rawValue: string | undefined): string {
   }
   return `${baseUrl.origin}${baseUrl.pathname.replace(/\/+$/, '')}`;
 }
+
+// The API's own rule (ADR 0019 item 1); `openssl rand -hex 32` gives 64 characters.
+const INTERNAL_API_KEY_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
+
+/** Reads INTERNAL_API_KEY (ADR 0019): server-only, never inlined in a bundle. Unset means no key. */
+export function readInternalApiKey(
+  env: Readonly<Record<string, string | undefined>>,
+): string | undefined {
+  return parseInternalApiKey(env.INTERNAL_API_KEY);
+}
+
+/** Empty means unset. The message names the variable and never echoes the value, a secret. */
+export function parseInternalApiKey(
+  rawValue: string | undefined,
+): string | undefined {
+  const key = rawValue?.trim();
+  if (key === undefined || key === '') {
+    return undefined;
+  }
+  if (!INTERNAL_API_KEY_PATTERN.test(key)) {
+    throw new Error(
+      'Invalid web configuration: INTERNAL_API_KEY is invalid. Use 43 to 128 characters of A-Z a-z 0-9 _ - (openssl rand -hex 32), or leave it empty.',
+    );
+  }
+  return key;
+}
+
+// Exact host names, so `127.0.0.1.evil.example` is not loopback. `URL` lowercases the host.
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
+  '127.0.0.1',
+  'localhost',
+  '[::1]',
+]);
+
+/** Where the internal key may go: HTTPS, or plain HTTP that never leaves this machine. */
+export function isSecureApiBaseUrl(baseUrl: string): boolean {
+  const url = URL.parse(baseUrl);
+  return (
+    url !== null &&
+    (url.protocol === 'https:' ||
+      (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname)))
+  );
+}
