@@ -15,7 +15,7 @@ import {
   type EnvironmentVariables,
   INTERNAL_API_KEY_MIN_LENGTH,
 } from '../config/environment';
-import { captureStartupWarning } from '../observability/sentry';
+import { captureStartupError } from '../observability/sentry';
 import {
   CLIENT_IP_HEADER,
   OPEN_CALLER,
@@ -27,6 +27,9 @@ import { ApiException } from './api.exception';
 
 /** Lower case: Node lower-cases incoming header names. Sent as X-Internal-Api-Key. */
 export const INTERNAL_API_KEY_HEADER = 'x-internal-api-key';
+
+/** The only methods the preview key passes (ADR 0019): previews read, never write. */
+const PREVIEW_METHODS: readonly string[] = ['GET', 'HEAD'];
 
 /** Longer values are refused unhashed; a valid key is at most 128 characters. */
 export const MAX_INTERNAL_KEY_HEADER_LENGTH = 512;
@@ -139,8 +142,8 @@ export class InternalKeyGuard implements CanActivate {
   /**
    * Also records who is calling (ADR 0019 item 7): `open` while no key is configured, without
    * reading X-Client-Ip; `web` with its visitor key once the key matched; `preview` for the
-   * preview key, without reading X-Client-Ip (preview code is unreviewed). A @PublicRoute()
-   * handler (in either mode) and a refused request record nothing.
+   * preview key on GET or HEAD only, without reading X-Client-Ip (preview code is unreviewed).
+   * A @PublicRoute() handler (in either mode) and a refused request record nothing.
    */
   canActivate(context: ExecutionContext): boolean {
     if (
@@ -167,7 +170,9 @@ export class InternalKeyGuard implements CanActivate {
       return true;
     }
     const { previewDigest } = this.state;
+    // Read-only: unreviewed preview code never writes. Any other method gets the same 403.
     if (
+      PREVIEW_METHODS.includes(request.method) &&
       previewDigest !== undefined &&
       isAcceptedKey(presented, [previewDigest])
     ) {
@@ -214,7 +219,7 @@ export class EnvironmentInternalKeySettings
   onApplicationBootstrap(): void {
     if (this.production && this.check.kind === 'open') {
       this.logger.warn(OPEN_IN_PRODUCTION_WARNING);
-      captureStartupWarning(OPEN_IN_PRODUCTION_WARNING);
+      captureStartupError(OPEN_IN_PRODUCTION_WARNING);
     }
   }
 }

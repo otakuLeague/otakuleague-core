@@ -206,7 +206,7 @@ describe('Sentry in the API', () => {
       });
       expect(events).toEqual(
         Array.from({ length: expected }, () => ({
-          level: 'warning',
+          level: 'error',
           message: 'INTERNAL_API_KEY is not set: the API answers any caller',
         })),
       );

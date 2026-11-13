@@ -59,7 +59,7 @@ function guardFor(check: InternalKeyCheck): InternalKeyGuard {
 function contextFor(
   handler: 'health' | 'search',
   headers: Record<string, string | string[]>,
-  request: object = { headers },
+  request: object = { method: 'GET', headers },
 ): ExecutionContextHost {
   const method: unknown = Reflect.get(SampleController.prototype, handler);
   if (typeof method !== 'function') throw new Error(`no handler ${handler}`);
@@ -71,8 +71,11 @@ function contextFor(
 }
 
 /** A request whose header reads are listed, to prove which headers the guard looked at. */
-function watchedRequest(headers: Record<string, string>): {
-  request: { headers: Record<string, string> };
+function watchedRequest(
+  headers: Record<string, string>,
+  method = 'GET',
+): {
+  request: { method: string; headers: Record<string, string> };
   read: string[];
 } {
   const read: string[] = [];
@@ -82,7 +85,7 @@ function watchedRequest(headers: Record<string, string>): {
       return Reflect.get(target, name, receiver);
     },
   });
-  return { request: { headers: watched }, read };
+  return { request: { method, headers: watched }, read };
 }
 
 function refusal(
@@ -305,7 +308,7 @@ describe('InternalKeyGuard', () => {
 
   it('refuses the preview key, recording nothing, when no preview key is configured', () => {
     const headers = { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY };
-    const request = { headers };
+    const request = { method: 'GET', headers };
 
     const error = refusal(
       guardFor(ENFORCED),
@@ -314,6 +317,46 @@ describe('InternalKeyGuard', () => {
 
     expect(error.getStatus()).toBe(HttpStatus.FORBIDDEN);
     expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+  });
+
+  it.each(['GET', 'HEAD'])('records the preview caller on %s', (method) => {
+    const { request } = watchedRequest(
+      { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY },
+      method,
+    );
+
+    guardFor(WITH_PREVIEW).canActivate(contextFor('search', {}, request));
+
+    expect(callerOf(request)).toEqual({ kind: 'preview' });
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'get'])(
+    'refuses the preview key on %s with the same 403, recording nothing',
+    (method) => {
+      const { request } = watchedRequest(
+        { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY },
+        method,
+      );
+
+      const error = refusal(
+        guardFor(WITH_PREVIEW),
+        contextFor('search', {}, request),
+      );
+
+      expect(error.error.code).toBe('INTERNAL_KEY_REQUIRED');
+      expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+    },
+  );
+
+  it('still lets the web key through on POST', () => {
+    const { request } = watchedRequest(
+      { [INTERNAL_API_KEY_HEADER]: FAKE_KEY },
+      'POST',
+    );
+
+    guardFor(WITH_PREVIEW).canActivate(contextFor('search', {}, request));
+
+    expect(callerOf(request)).toMatchObject({ kind: 'web' });
   });
 
   it.each<[string, Record<string, string>]>([
