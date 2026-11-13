@@ -82,4 +82,5 @@ flowchart LR
 - [ADR 0013: Screenshots of the real pages on every web PR](decisions/0013-pr-screenshots.md)
 - [ADR 0015: Authentication](decisions/0015-authentication.md) (proposed, not built yet: sessions in Postgres, cookie on the web origin only, Brevo for email)
 - [ADR 0016: Anime search](decisions/0016-anime-search.md) (accepted, slice 1 built: trigram matching with `pg_trgm`)
+- [ADR 0019: Internal API key and per-visitor import limit](decisions/0019-internal-api-key-and-visitor-import-limit.md) (proposed, OTA-182: the API guard is built and open until `INTERNAL_API_KEY` is set; the web side and the per-visitor limit follow)
 - [ADR template](decisions/0000-template.md)

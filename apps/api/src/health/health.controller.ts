@@ -6,6 +6,7 @@ import {
 } from '@nestjs/swagger';
 import type { HealthResponse } from '@otakuleague/shared-types';
 import type { Response } from 'express';
+import { PublicRoute } from '../common/internal-key.guard';
 import { HealthService } from './health.service';
 
 function healthSchema(status: 'ok' | 'error', database: 'up' | 'down') {
@@ -29,6 +30,8 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
+  // Railway's deploy gate and monitors call it without the internal key (ADR 0019).
+  @PublicRoute()
   @ApiOkResponse({
     description: 'The API and its database are up.',
     schema: healthSchema('ok', 'up'),
