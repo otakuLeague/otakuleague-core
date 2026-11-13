@@ -87,7 +87,7 @@ describe('collectGridPages', () => {
       failure({
         kind: 'api_error',
         status: 429,
-        error: { code: 'RATE_LIMITED', message: 'Slow down' },
+        error: { error: { code: 'CLIENT_ERROR', message: 'Slow down' } },
       }),
     ]);
     const down = fakeLoader([failure({ kind: 'timeout' })]);
