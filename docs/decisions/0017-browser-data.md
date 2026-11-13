@@ -51,7 +51,7 @@ flowchart LR
 - Success: the data. `api_error`: the same status and the rebuilt envelope, with `Retry-After` re-sent on a 429. `invalid_response`: 502, as the `/hikari` tunnel answers a bad upstream (ADR 0003). `network`: 503. `timeout`: 504. All three carry `SERVICE_UNAVAILABLE`.
 - The handler's own refusals use the same envelope through the same helper: 400 `VALIDATION_FAILED` for bad input, 401 `UNAUTHORIZED` (the code comes with OTA-139) for a member route without a cookie, with no API call, and 403 for a foreign `Origin`. `API_ERROR_CODES` has no 403 code today; slice 2 adds one.
 - A 401 from the API deletes the stale cookie, and the browser clears its cache (see Provider).
-- **Client IP.** The handler takes it only from Vercel's `x-forwarded-for` (Vercel overwrites it), never from a browser header or the body. The API honours `X-Client-Ip` only with a valid `X-Internal-Api-Key`; otherwise it counts its own peer IP.
+- **Client IP.** The handler takes it only from Vercel's `x-forwarded-for` (Vercel overwrites it), never from a browser header or the body. The API honours `X-Client-Ip` only with a valid `X-Internal-Api-Key`; otherwise it counts its own peer IP. Superseded on this point by [ADR 0019](0019-internal-api-key-and-visitor-import-limit.md): without the key there is no per-visitor count, and once the key is set such a request is refused.
 - Always `Cache-Control: private, no-store`. TanStack's cache is the only cache.
 - Every non-GET handler calls `assertSameOrigin()`, and a GET never changes state. No CSRF token and no CORS, as in ADR 0015.
 
