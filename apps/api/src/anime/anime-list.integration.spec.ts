@@ -678,6 +678,9 @@ describe('GET /anime/lists/:kind', () => {
         ]),
       );
 
+    const importedAts = async () =>
+      (await prisma.animeIdentity.findMany()).map((row) => row.importedAt);
+
     it('claims a slug and the romaji alias for every listed anime on a cold page', async () => {
       answer = () => ({
         media: [english(1, 'First Show'), english(2, 'Second Show')],
@@ -700,6 +703,7 @@ describe('GET /anime/lists/:kind', () => {
         'second-show',
       ]);
       expect(await prisma.anime.count()).toBe(0);
+      expect(await importedAts()).toEqual([null, null]);
     });
 
     it('claims nothing for an empty page', async () => {
@@ -861,6 +865,7 @@ describe('GET /anime/lists/:kind', () => {
       await lists.settle();
 
       expect(await claimed()).toEqual({ 1: 'old-one', 2: 'new-two' });
+      expect(await importedAts()).toEqual([null, null]);
     });
   });
 

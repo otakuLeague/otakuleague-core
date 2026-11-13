@@ -125,7 +125,7 @@ Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,50
 
 **Claim scope (decision, until OTA-189).** Only lists without a genre, and the seasonal list of the current season, claim (`claimsSlugs`). A genre or past-season page is stored and served but its anime keep a null slug until they are claimed elsewhere. This bounds what a crawler can reserve before the per-client limit exists; remove the gate when OTA-189 ships.
 
-**Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one (an `imported_at` marker) is a future follow-up ticket, not built here.
+**Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one is the OTA-192 addendum below.
 
 Too complicated, not built: a season calendar with per-zone boundaries (the old site used the visitor's zone; one UTC rule keeps the default cacheable and at worst shows the ending season for a few hours), totals, a `genres` endpoint (the constant ships in shared-types).
 
@@ -191,5 +191,84 @@ Too simple, on purpose:
 Too complicated, not built: a claim queue or outbox, a per-entry status, a backfill job, a process-wide lock around claiming (the retry covers it), and reading all candidates of a page in one query to plan in memory (saves about 50 of 300 statements on a first-seen page; not measured as a problem).
 
 Tests: the pure rules (`pickCanonical`, `slugSource`) are unit specs; everything that claims is an integration spec against real Postgres with the synthetic list fixtures, run in CI.
+
+## Addendum: deleting never-imported identities (OTA-192, 2026-11-13)
+
+Slice 3 left list claims indistinguishable from identities whose anime was purged, so the Terms paragraph above owed a way to delete a claim and could not give one. This addendum adds the marker and names the delete path.
+
+**Requirements.** Functional:
+
+1. The importer records the first time an anime row held an AniList id, in the transaction that stores it.
+2. Identities that were ever imported before this change read as imported.
+3. An operator can release the never-imported identities and their slugs, in a time window or all of them.
+
+Non-functional, with numbers:
+
+1. Cost: one nullable column, no index, a backfill of at most about 20,000 rows; one extra primary-key `UPDATE` per stored AniList snapshot.
+2. Safety: the runbook never deletes an identity with `imported_at` set, with `removed_at` set, or with an `anime` row now. It runs in one transaction with a `SHARE MODE` lock on `anime_external_id` and `FOR UPDATE` locks on the rows; the `Restrict` foreign key aborts it if a slug is left behind.
+3. Deploy: the old API runs on the new schema, because the column is nullable and has no default.
+
+**Meaning of `imported_at`.** The first time an `anime` row held this AniList id. Set once, never cleared, and kept through purge, removal and re-import. It is not the derived `imported` flag of ADR 0018, which says whether an anime row exists now.
+
+**Design.**
+
+- `store()` marks the AniList identity in the same transaction as the slug claim: `UPDATE ... WHERE imported_at IS NULL`, with the injected clock. An import through Jikan alone has no AniList identity and marks nothing.
+- The migration backfills in two steps. Identities created before 2026-11-13 06:01:15 UTC (the OTA-190 merge, when list claims began) were created by an import, so they get `created_at`. Any other identity with an `anime` row now gets the later of that anime's `created_at` and its own `created_at`, so `imported_at` is never before the identity existed.
+- The delete path is a SQL runbook, run by hand through a temporary Railway TCP proxy (docs/deploy.md). There is no endpoint and no script.
+
+Runbook. Run it in `psql`, statement by statement. `<from>` and `<to>` bound `created_at`, ISO 8601 with offset, for example `2026-11-13 06:01:15+00`. The block ends with `ROLLBACK`: check that each `DELETE` count equals the `SELECT` row count, then run it a second time with `COMMIT` in place of `ROLLBACK`.
+
+```sql
+BEGIN;
+LOCK TABLE "anime_external_id" IN SHARE MODE;
+UPDATE "anime_identity" AS i
+SET "imported_at" = GREATEST(a."created_at", i."created_at")
+FROM "anime_external_id" AS e
+JOIN "anime" AS a ON a."id" = e."anime_id"
+WHERE e."source" = 'ANILIST'
+  AND e."external_id" = i."anilist_id"
+  AND i."imported_at" IS NULL;
+SELECT anilist_id, canonical_slug, created_at FROM anime_identity i
+WHERE i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>'
+FOR UPDATE;
+DELETE FROM anime_slug s USING anime_identity i
+WHERE s.anilist_id = i.anilist_id
+  AND i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
+DELETE FROM anime_identity i
+WHERE i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
+ROLLBACK;
+```
+
+The lock waits for imports in flight and blocks new ones until the end of the transaction. The first `UPDATE` repeats the migration's second backfill (safe to run again), so anime imported by the old API during the deploy window are marked before anything is released. For an AniList refusal (ADR 0006), drop the `AND i."created_at" ...` line in each statement to release every never-imported identity. After a release, list pages answer `slug: null` for those anime (the card links through the nofollow id route, ADR 0018), and a list that still lists one claims it again at its next fetch.
+
+Rollback: revert the code only; never drop `imported_at` (a re-run backfill cannot rebuild the marks of identities imported and purged since).
+
+**Deep dives.**
+
+- **Safety (2).** The race is an import whose `anime_external_id` insert is not committed yet: `NOT EXISTS` cannot see it. The `SHARE MODE` lock waits for that import to commit, and blocks new ones until the runbook ends, so the predicate sees every anime row. An import cannot sneak in between the `SELECT` and the `DELETE`.
+- **Backfill (1).** Two `UPDATE`s over a table of at most about 20,000 rows, once. The cutoff is a deploy fact, not a guess: nothing but an import created identities before it.
+- **Import cost (1).** One more statement by primary key per stored AniList snapshot, next to the 5 to 10 the importer already runs.
+
+Rejected:
+
+- **Clearing the marker on purge.** It would turn a purged import into a deletable identity, and its slug could then go to another anime while a link to it still exists.
+- **A `claim_origin` enum.** Same answer as a nullable timestamp, plus a value to keep in sync, and it loses when it happened.
+- **An admin endpoint or a `scripts/` command.** Used a few times at most, and each one needs auth or a release for no gain over a reviewed query.
+
+Too simple, on purpose:
+
+- **A re-imported identity whose anime was purged before the migration** gets the latest `anime.created_at` as `imported_at`, not the first. The marker only guards against release, so this is harmless.
+- **The runbook is not run in CI.** It was checked by hand once with five seeded identities (list claim, imported, purged import, removed, held but unmarked): only the list claim was returned and deleted. It was checked once on a local Postgres 16 and must be re-checked on the Postgres 18 dev database before its first use on production.
+
+Too complicated, not built: an index on `imported_at`, a scheduled job that releases old claims, a `released_at` tombstone, and deleting list pages together with their identities.
 
 ## Learnings

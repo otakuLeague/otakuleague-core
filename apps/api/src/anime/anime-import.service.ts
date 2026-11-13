@@ -398,7 +398,8 @@ export class AnimeImportService implements OnModuleDestroy {
    * conflict is flagged, never resolved by moving the id (ADR 0006). Another process importing
    * the same anime at once makes the insert of the own id fail (P2002): the retry then finds
    * that anime; so does a slug taken by a concurrent import (ADR 0007). A purge deleting it
-   * mid-way (P2003) is retried too.
+   * mid-way (P2003) is retried too. Marks the AniList identity imported
+   * (`imported_at`, set once) in the same transaction (OTA-192).
    */
   private async store(
     adapter: AnimeSourceAdapter,
@@ -453,6 +454,10 @@ export class AnimeImportService implements OnModuleDestroy {
         await this.warnOnIdConflicts(tx, id, snapshot);
         if (own.source === 'anilist') {
           await this.claimSlugs(tx, snapshot, own.externalId, now);
+          await tx.animeIdentity.updateMany({
+            where: { anilistId: own.externalId, importedAt: null },
+            data: { importedAt: now },
+          });
         }
         return id;
       });
