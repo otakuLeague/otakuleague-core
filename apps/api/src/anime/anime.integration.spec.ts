@@ -638,6 +638,7 @@ describe('GET /anime/:idSource/:externalId', () => {
     aniListByMalId.set(2963, fixture('anilist-minami-ke'));
     await get('/anime/myanimelist/2963').expect(200);
     await importer.settle();
+    const importedAt = clock.now();
     expect(await slugsOf(2963)).toEqual({
       canonical: 'minami-ke',
       all: ['minami-ke'],
@@ -663,6 +664,10 @@ describe('GET /anime/:idSource/:externalId', () => {
       canonical: 'the-minami-family',
       all: ['minami-ke', 'the-minami-family'],
     });
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 2963 } }))
+        ?.importedAt,
+    ).toEqual(importedAt);
     // The former canonical now redirects through the endpoint.
     expect((await get('/anime/slugs/minami-ke').expect(200)).body).toEqual({
       kind: 'redirect',

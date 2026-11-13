@@ -205,7 +205,7 @@ Slice 3 left list claims indistinguishable from identities whose anime was purge
 Non-functional, with numbers:
 
 1. Cost: one nullable column, no index, a backfill of at most about 20,000 rows; one extra primary-key `UPDATE` per stored AniList snapshot.
-2. Safety: the runbook never deletes an identity with `imported_at` set, with `removed_at` set, or with an `anime` row now. It runs in one transaction with `FOR UPDATE` locks; the `Restrict` foreign key aborts it if a slug is left behind.
+2. Safety: the runbook never deletes an identity with `imported_at` set, with `removed_at` set, or with an `anime` row now. It runs in one transaction with a `SHARE MODE` lock on `anime_external_id` and `FOR UPDATE` locks on the rows; the `Restrict` foreign key aborts it if a slug is left behind.
 3. Deploy: the old API runs on the new schema, because the column is nullable and has no default.
 
 **Meaning of `imported_at`.** The first time an `anime` row held this AniList id. Set once, never cleared, and kept through purge, removal and re-import. It is not the derived `imported` flag of ADR 0018, which says whether an anime row exists now.
@@ -213,38 +213,48 @@ Non-functional, with numbers:
 **Design.**
 
 - `store()` marks the AniList identity in the same transaction as the slug claim: `UPDATE ... WHERE imported_at IS NULL`, with the injected clock. An import through Jikan alone has no AniList identity and marks nothing.
-- The migration backfills in two steps. Identities created before 2026-11-13 06:01:15 UTC (the OTA-190 merge, when list claims began) were created by an import, so they get `created_at`. Any other identity with an `anime` row now gets that anime's `created_at`.
+- The migration backfills in two steps. Identities created before 2026-11-13 06:01:15 UTC (the OTA-190 merge, when list claims began) were created by an import, so they get `created_at`. Any other identity with an `anime` row now gets the later of that anime's `created_at` and its own `created_at`, so `imported_at` is never before the identity existed.
 - The delete path is a SQL runbook, run by hand through a temporary Railway TCP proxy (docs/deploy.md). There is no endpoint and no script.
 
-Runbook. Run the `SELECT` first and read the rows; `<from>` and `<to>` bound `created_at`.
+Runbook. Run it in `psql`, statement by statement. `<from>` and `<to>` bound `created_at`, ISO 8601 with offset, for example `2026-11-13 06:01:15+00`. The block ends with `ROLLBACK`: check that each `DELETE` count equals the `SELECT` row count, then run it a second time with `COMMIT` in place of `ROLLBACK`.
 
 ```sql
 BEGIN;
+LOCK TABLE "anime_external_id" IN SHARE MODE;
+UPDATE "anime_identity" AS i
+SET "imported_at" = GREATEST(a."created_at", i."created_at")
+FROM "anime_external_id" AS e
+JOIN "anime" AS a ON a."id" = e."anime_id"
+WHERE e."source" = 'ANILIST'
+  AND e."external_id" = i."anilist_id"
+  AND i."imported_at" IS NULL;
 SELECT anilist_id, canonical_slug, created_at FROM anime_identity i
 WHERE i.imported_at IS NULL AND i.removed_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM anime_external_id e
                   WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
-  AND i.created_at >= '<from>' AND i.created_at < '<to>'
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>'
 FOR UPDATE;
 DELETE FROM anime_slug s USING anime_identity i
 WHERE s.anilist_id = i.anilist_id
   AND i.imported_at IS NULL AND i.removed_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM anime_external_id e
                   WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
-  AND i.created_at >= '<from>' AND i.created_at < '<to>';
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
 DELETE FROM anime_identity i
 WHERE i.imported_at IS NULL AND i.removed_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM anime_external_id e
                   WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
-  AND i.created_at >= '<from>' AND i.created_at < '<to>';
-COMMIT;
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
+ROLLBACK;
 ```
 
-For an AniList refusal (ADR 0006), drop the two `created_at` lines in each statement to release every never-imported identity. After a release, list pages answer `slug: null` for those anime (the card links through the nofollow id route, ADR 0018), and a list that still lists one claims it again at its next fetch.
+The lock waits for imports in flight and blocks new ones until the end of the transaction. The first `UPDATE` repeats the migration's second backfill (safe to run again), so anime imported by the old API during the deploy window are marked before anything is released. For an AniList refusal (ADR 0006), drop the `AND i."created_at" ...` line in each statement to release every never-imported identity. After a release, list pages answer `slug: null` for those anime (the card links through the nofollow id route, ADR 0018), and a list that still lists one claims it again at its next fetch.
+
+Rollback: revert the code only; never drop `imported_at` (a re-run backfill cannot rebuild the marks of identities imported and purged since).
 
 **Deep dives.**
 
-- **Safety (2).** An import takes a row lock on the identity in its transaction, so the runbook either waits for it or sees `imported_at` set. An anime imported between the `SELECT` and the `DELETE` has an `anime` row and is skipped by the predicate.
+- **Safety (2).** The race is an import whose `anime_external_id` insert is not committed yet: `NOT EXISTS` cannot see it. The `SHARE MODE` lock waits for that import to commit, and blocks new ones until the runbook ends, so the predicate sees every anime row. An import cannot sneak in between the `SELECT` and the `DELETE`.
 - **Backfill (1).** Two `UPDATE`s over a table of at most about 20,000 rows, once. The cutoff is a deploy fact, not a guess: nothing but an import created identities before it.
 - **Import cost (1).** One more statement by primary key per stored AniList snapshot, next to the 5 to 10 the importer already runs.
 
@@ -256,8 +266,8 @@ Rejected:
 
 Too simple, on purpose:
 
-- **During the deploy window the old API imports without marking.** Such an identity stays null until its next store, so the runbook's `anime_external_id` check, not the marker alone, protects it. A re-imported identity whose anime was purged before the migration gets the latest `anime.created_at` as `imported_at`, not the first.
-- **The runbook is not run in CI.** It was checked by hand once on a local Postgres 16 with five seeded identities (list claim, imported, purged import, removed, held but unmarked): only the list claim was returned and deleted. Check it again on the dev database before its first use on production.
+- **A re-imported identity whose anime was purged before the migration** gets the latest `anime.created_at` as `imported_at`, not the first. The marker only guards against release, so this is harmless.
+- **The runbook is not run in CI.** It was checked by hand once with five seeded identities (list claim, imported, purged import, removed, held but unmarked): only the list claim was returned and deleted. It was checked once on a local Postgres 16 and must be re-checked on the Postgres 18 dev database before its first use on production.
 
 Too complicated, not built: an index on `imported_at`, a scheduled job that releases old claims, a `released_at` tombstone, and deleting list pages together with their identities.
 

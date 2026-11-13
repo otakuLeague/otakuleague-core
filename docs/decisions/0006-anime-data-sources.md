@@ -207,6 +207,6 @@ If AniList refuses us keeping even the id and two title-derived slugs:
 
 1. Set `ANIME_SOURCE_ANILIST_ENABLED=false` and restart the API, so nothing claims again.
 2. Run the runbook without a window.
-3. Run `DELETE FROM "anime_list_page";`, so no stored page keeps a slug for a deleted identity.
+3. Run `DELETE FROM "anime_list_page";`, because stored pages hold AniList titles and covers (list slugs are joined from `anime_identity` when served, not stored in the page).
 
 Imported identities, their slugs and snapshots are part of the re-decision the Status line above requires.
