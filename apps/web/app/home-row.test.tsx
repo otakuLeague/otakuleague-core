@@ -34,6 +34,8 @@ describe('HomeRowView', () => {
             listEntry(),
             listEntry({ anilistId: 2, slug: null, imported: false, coverImageUrl: null }),
             listEntry({ anilistId: 3, slug: 'monster', imported: false, coverImageUrl: null }),
+            // An older API sends no flag (ADR 0018): read as not imported.
+            { ...listEntry({ anilistId: 4, slug: 'pluto', coverImageUrl: null }), imported: undefined },
           ],
         }}
       />,
@@ -50,10 +52,11 @@ describe('HomeRowView', () => {
       ['/anime/frieren-beyond-journeys-end', null, 'false'],
       ['/anime/anilist/2', 'nofollow', 'false'],
       ['/anime/anilist/3', 'nofollow', 'false'],
+      ['/anime/anilist/4', 'nofollow', 'false'],
     ]);
     expect(
       screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent),
-    ).toEqual(Array.from({ length: 3 }, () => "Frieren: Beyond Journey's End"));
+    ).toEqual(Array.from({ length: 4 }, () => "Frieren: Beyond Journey's End"));
     // One cover image: the entries without a cover keep their empty frame.
     const images = container.querySelectorAll('img');
     expect(images).toHaveLength(1);

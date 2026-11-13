@@ -110,8 +110,8 @@ export function SeasonSelector({
           {seasons.map((season) => {
             const className = `ol-season__item${season.upcoming ? ' ol-season__item--upcoming' : ''}`;
             const note = seasonNote(season);
-            // Never imported (a slug alone is only claimed): the nofollow id route imports it,
-            // then redirects to its page on the same tab.
+            // Imported: its slug page. Otherwise (a slug alone is only claimed) the nofollow id
+            // route, which imports it and redirects on the same tab.
             const { href, rel } = animeLink(season, segment);
             const content = (
               <>

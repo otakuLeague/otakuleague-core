@@ -7,7 +7,7 @@ import { tabHref, tabSegmentFromParam } from './tabs';
 const ANILIST_ID = /^[1-9]\d{0,8}$/;
 
 /**
- * The season selector's link to a season not imported yet (OTA-172): imports it through the
+ * Any `animeLink()` id-route link (season selector, cards) to an anime not imported yet (OTA-172): imports it through the
  * API, then a temporary redirect to its canonical slug on the same tab. Not permanent: the
  * slug can still change, and the page itself is noindex (X-Robots-Tag on /anime/anilist/*).
  * A 429 (too many new anime importing at once, OTA-173) is expected: the page shows a calm

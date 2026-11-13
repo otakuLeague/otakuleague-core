@@ -1,10 +1,20 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SeasonOption } from '../../../src/anime/tabs';
 import { SeasonSelector } from './season-selector';
 
 let pathname = '/anime/aot-season-2/episodes';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+// Exposes `prefetch`, which the real Link never renders.
+vi.mock('next/link', () => ({
+  default: ({
+    prefetch,
+    ...props
+  }: ComponentProps<'a'> & { prefetch?: boolean }) => (
+    <a data-prefetch={String(prefetch)} {...props} />
+  ),
+}));
 
 const base = { year: 2013, isCurrent: false, upcoming: false, imported: true };
 const SEASONS: readonly SeasonOption[] = [
@@ -113,6 +123,9 @@ describe('SeasonSelector', () => {
     expect(claimed.getAttribute('href')).toBe('/anime/anilist/5/episodes');
     expect(claimed.getAttribute('rel')).toBe('nofollow');
     expect(screen.getAllByRole('link')).toHaveLength(SEASONS.length);
+    expect(
+      screen.getAllByRole('link').map((season) => season.dataset.prefetch),
+    ).toEqual(SEASONS.map(() => 'false'));
     expect(document.querySelector('[aria-disabled]')).toBeNull();
   });
 
