@@ -15,9 +15,11 @@ import {
   type EnvironmentVariables,
   INTERNAL_API_KEY_MIN_LENGTH,
 } from '../config/environment';
+import { captureStartupWarning } from '../observability/sentry';
 import {
   CLIENT_IP_HEADER,
   OPEN_CALLER,
+  PREVIEW_CALLER,
   recordCaller,
   visitorKeyFromClientIp,
 } from './api-caller';
@@ -42,6 +44,8 @@ export type InternalKeyCheck =
   | {
       readonly kind: 'enforced';
       readonly acceptedKeys: readonly [string, ...string[]];
+      /** Vercel previews' key: passes as a `preview` caller, never as `web`. */
+      readonly previewKey?: string;
     };
 
 /** The accepted keys; tests replace this provider with their own values. */
@@ -49,16 +53,28 @@ export abstract class InternalKeySettings {
   abstract get(): InternalKeyCheck;
 }
 
-/** Validated at boot (`environment.ts`); an empty value counts as unset. */
+/** Logged and sent to Sentry once at start; no ":" or "=" right after a name (log redaction). */
+export const OPEN_IN_PRODUCTION_WARNING =
+  'INTERNAL_API_KEY is not set: the API answers any caller';
+
+function isSet(value: string | undefined): value is string {
+  return value !== undefined && value !== '';
+}
+
+/**
+ * Validated at boot (`environment.ts`); an empty value counts as unset. The preview key alone
+ * changes nothing: the check stays open and the preview key is dropped.
+ */
 function configuredKeys(
   values: readonly (string | undefined)[],
+  previewKey: string | undefined,
 ): InternalKeyCheck {
-  const [first, ...rest] = values.filter(
-    (value): value is string => value !== undefined && value !== '',
-  );
-  return first === undefined
-    ? { kind: 'open' }
-    : { kind: 'enforced', acceptedKeys: [first, ...rest] };
+  const [first, ...rest] = values.filter(isSet);
+  if (first === undefined) return { kind: 'open' };
+  const acceptedKeys: [string, ...string[]] = [first, ...rest];
+  return isSet(previewKey)
+    ? { kind: 'enforced', acceptedKeys, previewKey }
+    : { kind: 'enforced', acceptedKeys };
 }
 
 function sha256(value: string): Buffer {
@@ -90,7 +106,11 @@ export function isAcceptedKey(
 
 type GuardState =
   | { readonly kind: 'open' }
-  | { readonly kind: 'enforced'; readonly acceptedDigests: readonly Buffer[] };
+  | {
+      readonly kind: 'enforced';
+      readonly acceptedDigests: readonly Buffer[];
+      readonly previewDigest: Buffer | null;
+    };
 
 /** Global guard (APP_GUARD): every route needs the internal key once one is configured. */
 @Injectable()
@@ -106,12 +126,18 @@ export class InternalKeyGuard implements CanActivate {
     this.state =
       check.kind === 'open'
         ? check
-        : { kind: 'enforced', acceptedDigests: check.acceptedKeys.map(sha256) };
+        : {
+            kind: 'enforced',
+            acceptedDigests: check.acceptedKeys.map(sha256),
+            previewDigest:
+              check.previewKey === undefined ? null : sha256(check.previewKey),
+          };
   }
 
   /**
    * Also records who is calling (ADR 0019 item 7): `open` while no key is configured, without
-   * reading X-Client-Ip; `web` with its visitor key once the key matched. A @PublicRoute()
+   * reading X-Client-Ip; `web` with its visitor key once the key matched; `preview` for the
+   * preview key, without reading X-Client-Ip (preview code is unreviewed). A @PublicRoute()
    * handler (in either mode) and a refused request record nothing.
    */
   canActivate(context: ExecutionContext): boolean {
@@ -129,17 +155,18 @@ export class InternalKeyGuard implements CanActivate {
       return true;
     }
     const { headers } = request;
-    if (
-      isAcceptedKey(
-        headers[INTERNAL_API_KEY_HEADER],
-        this.state.acceptedDigests,
-      )
-    ) {
+    const presented = headers[INTERNAL_API_KEY_HEADER];
+    if (isAcceptedKey(presented, this.state.acceptedDigests)) {
       // Trusted only now: the key proves the web server wrote this header, not a browser.
       recordCaller(request, {
         kind: 'web',
         visitorKey: visitorKeyFromClientIp(headers[CLIENT_IP_HEADER]),
       });
+      return true;
+    }
+    const { previewDigest } = this.state;
+    if (previewDigest !== null && isAcceptedKey(presented, [previewDigest])) {
+      recordCaller(request, PREVIEW_CALLER);
       return true;
     }
     // One answer for missing, wrong, repeated and over-long: a prober learns nothing from the
@@ -162,10 +189,13 @@ export class EnvironmentInternalKeySettings
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     super();
-    this.check = configuredKeys([
-      config.get('INTERNAL_API_KEY', { infer: true }),
-      config.get('INTERNAL_API_KEY_PREVIOUS', { infer: true }),
-    ]);
+    this.check = configuredKeys(
+      [
+        config.get('INTERNAL_API_KEY', { infer: true }),
+        config.get('INTERNAL_API_KEY_PREVIOUS', { infer: true }),
+      ],
+      config.get('INTERNAL_API_KEY_PREVIEW', { infer: true }),
+    );
     this.production = config.get('NODE_ENV', { infer: true }) === 'production';
   }
 
@@ -173,13 +203,13 @@ export class EnvironmentInternalKeySettings
     return this.check;
   }
 
-  // Production still starts: a refused boot would fail Railway's health gate on every deploy.
-  // Never logs the key or a header, only that none is set.
+  // Production still starts unless INTERNAL_API_KEY_REQUIRED=true (environment.ts): a refused
+  // boot would fail Railway's health gate on every deploy. Never logs the key or a header, only
+  // that none is set. Sentry too, so an API reopened by a deleted variable raises an issue.
   onApplicationBootstrap(): void {
     if (this.production && this.check.kind === 'open') {
-      this.logger.warn(
-        'INTERNAL_API_KEY is not set: the API answers any caller',
-      );
+      this.logger.warn(OPEN_IN_PRODUCTION_WARNING);
+      captureStartupWarning(OPEN_IN_PRODUCTION_WARNING);
     }
   }
 }

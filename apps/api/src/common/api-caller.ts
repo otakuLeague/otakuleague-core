@@ -18,12 +18,26 @@ declare const visitorKeyBrand: unique symbol;
  */
 export type VisitorKey = string & { readonly [visitorKeyBrand]: true };
 
-/** Who the guard decided is calling (ADR 0019 item 7). Never read from a body. */
+function asVisitorKey(value: string): VisitorKey {
+  return value as VisitorKey;
+}
+
+/** The one bucket every Vercel preview shares (ADR 0019). Never an IP, so no visitor gets it. */
+export const PREVIEW_VISITOR_KEY = asVisitorKey('preview');
+
+/**
+ * Who the guard decided is calling (ADR 0019 item 7). Never read from a body. `preview` is a
+ * preview deployment's key: no X-Client-Ip trusted. A credential route (OTA-139) must allowlist
+ * `web` only, so `open` and `preview` callers are refused there.
+ */
 export type ApiCaller =
   | { readonly kind: 'open' }
-  | { readonly kind: 'web'; readonly visitorKey: VisitorKey };
+  | { readonly kind: 'web'; readonly visitorKey: VisitorKey }
+  | { readonly kind: 'preview' };
 
 export const OPEN_CALLER: ApiCaller = { kind: 'open' };
+
+export const PREVIEW_CALLER: ApiCaller = { kind: 'preview' };
 
 /** The per-visitor bucket this caller's imports use; null when nobody can be told apart. */
 export function visitorKeyOf(caller: ApiCaller): VisitorKey | null {
@@ -32,15 +46,13 @@ export function visitorKeyOf(caller: ApiCaller): VisitorKey | null {
       return null;
     case 'web':
       return caller.visitorKey;
+    case 'preview':
+      return PREVIEW_VISITOR_KEY;
     default: {
       const unreachable: never = caller;
       return unreachable;
     }
   }
-}
-
-function asVisitorKey(value: string): VisitorKey {
-  return value as VisitorKey;
 }
 
 /** The 8 groups of a valid IPv6 without a zone id (checked by the caller). */

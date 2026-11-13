@@ -22,6 +22,7 @@ import {
 // Obvious fakes of a valid shape (64 characters, like `openssl rand -hex 32`).
 const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
 const FAKE_PREVIOUS_KEY = 'fake-previous-api-key-'.padEnd(64, '0');
+const FAKE_PREVIEW_KEY = 'fake-preview-api-key-'.padEnd(64, '0');
 
 class FixedKeySettings extends InternalKeySettings {
   constructor(private readonly check: InternalKeyCheck) {
@@ -43,6 +44,12 @@ class SampleController {
 const ENFORCED: InternalKeyCheck = {
   kind: 'enforced',
   acceptedKeys: [FAKE_KEY, FAKE_PREVIOUS_KEY],
+};
+
+const WITH_PREVIEW: InternalKeyCheck = {
+  kind: 'enforced',
+  acceptedKeys: [FAKE_KEY],
+  previewKey: FAKE_PREVIEW_KEY,
 };
 
 function guardFor(check: InternalKeyCheck): InternalKeyGuard {
@@ -261,6 +268,85 @@ describe('InternalKeyGuard', () => {
     expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
   });
 
+  it.each<[string, Record<string, string>]>([
+    ['no X-Client-Ip', {}],
+    ['an IPv4', { [CLIENT_IP_HEADER]: '203.0.113.7' }],
+    ['an IPv6', { [CLIENT_IP_HEADER]: '2001:db8:1:2::9' }],
+  ])(
+    'records the preview caller for the preview key with %s, never reading X-Client-Ip',
+    (_, extra) => {
+      const { request, read } = watchedRequest({
+        [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY,
+        ...extra,
+      });
+
+      expect(
+        guardFor(WITH_PREVIEW).canActivate(contextFor('search', {}, request)),
+      ).toBe(true);
+      expect(callerOf(request)).toEqual({ kind: 'preview' });
+      expect(read).not.toContain(CLIENT_IP_HEADER);
+    },
+  );
+
+  it('still records a web caller with its visitor for the key when a preview key is configured', () => {
+    const headers = {
+      [INTERNAL_API_KEY_HEADER]: FAKE_KEY,
+      [CLIENT_IP_HEADER]: '203.0.113.7',
+    };
+    const request = { headers };
+
+    guardFor(WITH_PREVIEW).canActivate(contextFor('search', headers, request));
+
+    expect(callerOf(request)).toEqual({
+      kind: 'web',
+      visitorKey: '203.0.113.7',
+    });
+  });
+
+  it('refuses the preview key, recording nothing, when no preview key is configured', () => {
+    const headers = { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY };
+    const request = { headers };
+
+    const error = refusal(
+      guardFor(ENFORCED),
+      contextFor('search', headers, request),
+    );
+
+    expect(error.getStatus()).toBe(HttpStatus.FORBIDDEN);
+    expect(() => callerOf(request)).toThrow('No ApiCaller recorded');
+  });
+
+  it.each<[string, Record<string, string>]>([
+    ['a wrong key', { [INTERNAL_API_KEY_HEADER]: 'f'.repeat(64) }],
+    [
+      'the preview key minus its last character',
+      { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY.slice(0, -1) },
+    ],
+    [
+      'the preview key in upper case',
+      { [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY.toUpperCase() },
+    ],
+  ])('refuses %s when a preview key is configured', (_, headers) => {
+    const error = refusal(
+      guardFor(WITH_PREVIEW),
+      contextFor('search', headers),
+    );
+
+    expect(error.getStatus()).toBe(HttpStatus.FORBIDDEN);
+  });
+
+  it('records an open caller for the preview key while no key is configured', () => {
+    const { request, read } = watchedRequest({
+      [INTERNAL_API_KEY_HEADER]: FAKE_PREVIEW_KEY,
+      [CLIENT_IP_HEADER]: '203.0.113.7',
+    });
+
+    guardFor({ kind: 'open' }).canActivate(contextFor('search', {}, request));
+
+    expect(callerOf(request)).toEqual({ kind: 'open' });
+    expect(read).not.toContain(CLIENT_IP_HEADER);
+  });
+
   it('lets every request through while no key is configured', () => {
     const guard = guardFor({ kind: 'open' });
 
@@ -282,6 +368,7 @@ function settingsFrom(
       NODE_ENV: 'development',
       INTERNAL_API_KEY: '',
       INTERNAL_API_KEY_PREVIOUS: '',
+      INTERNAL_API_KEY_PREVIEW: '',
       ...environment,
     }),
   );
@@ -318,12 +405,34 @@ describe('EnvironmentInternalKeySettings', () => {
     });
   });
 
-  it('warns once at start in production when no key is set', () => {
+  it('adds the preview key only next to the key, and stays open with the preview key alone', () => {
+    expect(
+      settingsFrom({
+        INTERNAL_API_KEY: FAKE_KEY,
+        INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY,
+      }).get(),
+    ).toEqual({
+      kind: 'enforced',
+      acceptedKeys: [FAKE_KEY],
+      previewKey: FAKE_PREVIEW_KEY,
+    });
+    expect(
+      settingsFrom({ INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY }).get(),
+    ).toEqual({ kind: 'open' });
+  });
+
+  it.each([
+    ['no key', {}],
+    ['only the preview key', { INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY }],
+  ])('warns once at start in production with %s', (_, environment) => {
     const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => {});
 
-    settingsFrom({ NODE_ENV: 'production' }).onApplicationBootstrap();
+    settingsFrom({
+      NODE_ENV: 'production',
+      ...environment,
+    }).onApplicationBootstrap();
 
     expect(warn).toHaveBeenCalledTimes(1);
     const warning = 'INTERNAL_API_KEY is not set: the API answers any caller';

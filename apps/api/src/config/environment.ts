@@ -69,11 +69,31 @@ export function isInternalApiKey(value: unknown): boolean {
   return typeof value === 'string' && INTERNAL_API_KEY_PATTERN.test(value);
 }
 
+/** Another variable of the object being validated; undefined when unset (empty counts as unset). */
+function variableOf(
+  environment: unknown,
+  name: keyof EnvironmentVariables,
+): unknown {
+  return typeof environment === 'object' && environment !== null
+    ? Reflect.get(environment, name)
+    : undefined;
+}
+
 function hasInternalApiKey(environment: unknown): boolean {
+  return variableOf(environment, 'INTERNAL_API_KEY') !== undefined;
+}
+
+/**
+ * Plain ===, not timingSafeEqual: both sides are our own variables, compared once at boot and
+ * never against a request. A shared value would let preview code hold a production key.
+ */
+function differsFromProductionKeys(
+  value: unknown,
+  environment: unknown,
+): boolean {
   return (
-    typeof environment === 'object' &&
-    environment !== null &&
-    Reflect.get(environment, 'INTERNAL_API_KEY') !== undefined
+    value !== variableOf(environment, 'INTERNAL_API_KEY') &&
+    value !== variableOf(environment, 'INTERNAL_API_KEY_PREVIOUS')
   );
 }
 
@@ -178,6 +198,48 @@ export class EnvironmentVariables {
     { message: `INTERNAL_API_KEY_PREVIOUS ${INTERNAL_API_KEY_RULE}` },
   )
   readonly INTERNAL_API_KEY_PREVIOUS?: string;
+
+  // Vercel previews' own key: a `preview` caller, one shared visitor bucket, never trusted for
+  // X-Client-Ip. Inert while INTERNAL_API_KEY is unset (the check stays open). Bottom-up, like PORT.
+  @ValidateBy(
+    {
+      name: 'differsFromProductionKeys',
+      validator: {
+        validate: (value, args) => differsFromProductionKeys(value, args?.object),
+      },
+    },
+    {
+      message:
+        'INTERNAL_API_KEY_PREVIEW is the same as INTERNAL_API_KEY or INTERNAL_API_KEY_PREVIOUS; give previews their own key',
+    },
+  )
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isInternalApiKey', validator: { validate: isInternalApiKey } },
+    { message: `INTERNAL_API_KEY_PREVIEW ${INTERNAL_API_KEY_RULE}` },
+  )
+  readonly INTERNAL_API_KEY_PREVIEW?: string;
+
+  // "true" refuses to boot without INTERNAL_API_KEY, in any NODE_ENV; the preview key alone does
+  // not count. Unset or "false": the API starts open while no key is set. Bottom-up, like PORT.
+  @ValidateBy(
+    {
+      name: 'requiredKeyIsSet',
+      validator: {
+        validate: (value, args) =>
+          value !== 'true' || hasInternalApiKey(args?.object),
+      },
+    },
+    {
+      message:
+        'INTERNAL_API_KEY_REQUIRED is true but INTERNAL_API_KEY is not set (the preview key does not count); set the key, or unset INTERNAL_API_KEY_REQUIRED to start open',
+    },
+  )
+  @IsOptional()
+  @IsIn(BOOLEAN_STRINGS, {
+    message: 'INTERNAL_API_KEY_REQUIRED must be true or false',
+  })
+  readonly INTERNAL_API_KEY_REQUIRED?: (typeof BOOLEAN_STRINGS)[number];
 }
 
 // Messages name the variable and the rule, never the value: DATABASE_URL holds a password.

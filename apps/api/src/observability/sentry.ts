@@ -52,6 +52,14 @@ export function initSentry({
   return true;
 }
 
+/**
+ * A configuration problem worth an issue, sent at start as a warning-level message (a no-op
+ * without a DSN). The text must hold no secret: it goes through the same scrubbing, not around it.
+ */
+export function captureStartupWarning(message: string): void {
+  Sentry.captureMessage(message, 'warning');
+}
+
 /** Queues the error for Sentry and returns at once: the request never waits for Sentry. */
 export function captureServerError(exception: unknown, request: Request): void {
   Sentry.captureException(exception, {

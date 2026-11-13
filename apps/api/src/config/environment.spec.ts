@@ -190,18 +190,104 @@ describe('validateEnvironment: internal API key (ADR 0019)', () => {
   const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
   const FAKE_PREVIOUS_KEY = 'fake-previous-api-key-'.padEnd(64, '0');
 
-  it('leaves both keys unset when they are missing or empty (KEY= in .env)', () => {
+  const FAKE_PREVIEW_KEY = 'fake-preview-api-key-'.padEnd(64, '0');
+
+  it('leaves every key variable unset when missing or empty (KEY= in .env)', () => {
     for (const config of [
       VALID_ENVIRONMENT,
       {
         ...VALID_ENVIRONMENT,
         INTERNAL_API_KEY: '',
         INTERNAL_API_KEY_PREVIOUS: '',
+        INTERNAL_API_KEY_PREVIEW: '',
+        INTERNAL_API_KEY_REQUIRED: '',
       },
     ]) {
       const environment = validateEnvironment(config);
       expect(environment.INTERNAL_API_KEY).toBeUndefined();
       expect(environment.INTERNAL_API_KEY_PREVIOUS).toBeUndefined();
+      expect(environment.INTERNAL_API_KEY_PREVIEW).toBeUndefined();
+      expect(environment.INTERNAL_API_KEY_REQUIRED).toBeUndefined();
+    }
+  });
+
+  it('accepts a preview key next to the key and the previous key, or alone (inert)', () => {
+    const withKeys = validateEnvironment({
+      ...VALID_ENVIRONMENT,
+      INTERNAL_API_KEY: FAKE_KEY,
+      INTERNAL_API_KEY_PREVIOUS: FAKE_PREVIOUS_KEY,
+      INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY,
+    });
+    const alone = validateEnvironment({
+      ...VALID_ENVIRONMENT,
+      INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY,
+    });
+
+    expect(withKeys.INTERNAL_API_KEY_PREVIEW).toBe(FAKE_PREVIEW_KEY);
+    expect(alone.INTERNAL_API_KEY_PREVIEW).toBe(FAKE_PREVIEW_KEY);
+  });
+
+  it.each(['INTERNAL_API_KEY', 'INTERNAL_API_KEY_PREVIOUS'])(
+    'refuses a preview key equal to %s, naming the variables but not the value',
+    (variable) => {
+      const message = validationMessage({
+        ...VALID_ENVIRONMENT,
+        INTERNAL_API_KEY: FAKE_KEY,
+        INTERNAL_API_KEY_PREVIOUS: FAKE_PREVIOUS_KEY,
+        INTERNAL_API_KEY_PREVIEW:
+          variable === 'INTERNAL_API_KEY' ? FAKE_KEY : FAKE_PREVIOUS_KEY,
+      });
+
+      expect(message).toContain(
+        'INTERNAL_API_KEY_PREVIEW is the same as INTERNAL_API_KEY or INTERNAL_API_KEY_PREVIOUS',
+      );
+      expect(message).not.toContain(FAKE_KEY);
+      expect(message).not.toContain(FAKE_PREVIOUS_KEY);
+      expect(redactText(message)).toBe(message);
+    },
+  );
+
+  it.each<[string, Record<string, string>, string | null]>([
+    [
+      'true without a key',
+      { INTERNAL_API_KEY_REQUIRED: 'true' },
+      'INTERNAL_API_KEY_REQUIRED is true but INTERNAL_API_KEY is not set',
+    ],
+    [
+      'true with only the preview key',
+      {
+        INTERNAL_API_KEY_REQUIRED: 'true',
+        INTERNAL_API_KEY_PREVIEW: FAKE_PREVIEW_KEY,
+      },
+      'INTERNAL_API_KEY_REQUIRED is true but INTERNAL_API_KEY is not set',
+    ],
+    [
+      'true with the key',
+      { INTERNAL_API_KEY_REQUIRED: 'true', INTERNAL_API_KEY: FAKE_KEY },
+      null,
+    ],
+    ['false without a key', { INTERNAL_API_KEY_REQUIRED: 'false' }, null],
+    ['unset without a key', {}, null],
+    [
+      'yes',
+      { INTERNAL_API_KEY_REQUIRED: 'yes' },
+      'INTERNAL_API_KEY_REQUIRED must be true or false',
+    ],
+  ])('INTERNAL_API_KEY_REQUIRED %s', (_, variables, expected) => {
+    for (const nodeEnvironment of ['development', 'test', 'production']) {
+      const config = {
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: nodeEnvironment,
+        ...variables,
+      };
+      if (expected === null) {
+        expect(() => validateEnvironment(config)).not.toThrow();
+        continue;
+      }
+      const message = validationMessage(config);
+      expect(message).toContain(expected);
+      expect(message).not.toContain(FAKE_PREVIEW_KEY);
+      expect(redactText(message)).toBe(message);
     }
   });
 
@@ -228,7 +314,11 @@ describe('validateEnvironment: internal API key (ADR 0019)', () => {
     ['a space', `${'k'.repeat(42)} k`],
     ['a non-ASCII letter', `${'k'.repeat(42)}é`],
   ])('rejects a key with %s without echoing it', (_, key) => {
-    for (const variable of ['INTERNAL_API_KEY', 'INTERNAL_API_KEY_PREVIOUS']) {
+    for (const variable of [
+      'INTERNAL_API_KEY',
+      'INTERNAL_API_KEY_PREVIOUS',
+      'INTERNAL_API_KEY_PREVIEW',
+    ]) {
       const message = validationMessage({
         ...VALID_ENVIRONMENT,
         INTERNAL_API_KEY: FAKE_KEY,
