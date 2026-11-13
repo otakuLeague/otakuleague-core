@@ -1391,12 +1391,13 @@ describe('GET /anime/:idSource/:externalId', () => {
       );
 
       // A MAL id: AniList first (refused, nothing sent), then Jikan (asked, answers 404).
+      // AniList never answered, so this is an outage, not a 404 (ADR 0006 item 2).
       await expect(
         importer.importNew(
           { source: 'myanimelist', externalId: MISSING_ID },
           alice,
         ),
-      ).rejects.toMatchObject(notFound);
+      ).rejects.toMatchObject({ error: { code: 'ANIME_SOURCES_UNAVAILABLE' } });
       expect(jikan.calls).toBe(1);
       expect(visitorTokensLeft(ALICE_IP)).toBe(4);
       expect(globalTokensLeft()).toBe(9);
