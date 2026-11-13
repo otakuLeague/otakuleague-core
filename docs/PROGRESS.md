@@ -23,7 +23,6 @@ OTA-166 slice 1 (open, draft then ready): vendored GSAP, `vercel-react-view-tran
 - Cloud runs have Node 22 (repo wants 24): install with `pnpm install --frozen-lockfile --config.engine-strict=false --ignore-scripts`, then build shared-types. Cloud runs have no Prisma engines, so API typecheck and integration specs run in CI only.
 - Google Fonts are blocked in cloud runs: `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` works. The proxy blocks `*.up.railway.app` and `beta.otakuleague.com`.
 - `scripts/design/shots.mjs` can't find Playwright in cloud runs (ESM ignores `NODE_PATH`): run a copy next to a symlinked `node_modules`. Fix belongs in a protected-path PR.
-- Launch date: docs/ROADMAP.md (2026-11-30) and CLAUDE.md (2026-12-28) disagree. Farouk to settle.
 - ADR 0015 auth needs Brevo account and DNS (Farouk) before OTA-139 email flows.
 
 ## Known bugs

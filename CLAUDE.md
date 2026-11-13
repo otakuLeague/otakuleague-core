@@ -1,6 +1,6 @@
 # OtakuLeague
 
-All-in-one anime platform: anime data, watchlists, XP and leaderboards, later games and quizzes. Solo project, built like a real product. v1 (parity with the old otakuleague.com) launches **2026-12-28**: see docs/ROADMAP.md.
+All-in-one anime platform: anime data, watchlists, XP and leaderboards, later games and quizzes. Solo project, built like a real product. v1 (parity with the old otakuleague.com) launches **2026-11-30**: see docs/ROADMAP.md.
 
 **Start every session with docs/PROGRESS.md** (current state, next tasks) and the per-ticket notes in `docs/progress/`, which are newer. Don't re-explore the repo to find out where we are.
 
