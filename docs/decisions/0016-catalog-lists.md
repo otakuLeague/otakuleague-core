@@ -134,7 +134,7 @@ Fixtures stay synthetic (see Operational notes): one new `lists/anilist-seasonal
 Review follow-up (same PR):
 
 - **Cold-fetch budget.** About 8,500 keys are reachable and every unseen one is a `visitor` AniList fetch on the limiter shared with imports, so `ListFetchLimits` (`list-fetch-limits.ts`) is a process-wide token bucket, the shape of `ImportLimits` with the injected `Clock`: **6 tokens, one back every 10 seconds** (6 a minute sustained, 20% of AniList's 30 a minute, against the id route's 3 a minute: a list is what a visitor lands on, so it gets twice the budget, and a burst of 6 covers one browse session across kinds and a few genres). Taken once per new source fetch (joining a fetch already running is free), by a visitor's cold page and by a stale page's background refresh alike, so refreshes cannot take every slot: with the bucket empty a refresh is skipped silently and the stale page is served as before. A cold page with no token answers 429 `ANIME_LIST_FETCH_LIMIT_REACHED` (error envelope, no Retry-After, as the import route) and one warning a minute. A fetch that sent no request (limiter queue full or cooling down on the first attempt) gives its token back, and a block in its 5-minute retry delay takes none. Stored pages, fresh or stale, cost nothing. `queue full`, `cooling down` and `retry later` failures are no longer logged per request.
-- **Per-client limit: OTA-189.** The global bucket mitigates the enumeration cost but one client can still spend it all; a real per-client limit is OTA-189. For this PR the global bucket stands in for it; the gate above still holds, as OTA-189: it must ship before the Seasonal page is public (OTA-137).
+- **Per-client limit: OTA-189.** The global bucket mitigates the enumeration cost but one client can still spend it all; a real per-client limit is OTA-189. For this PR the global bucket stands in for it; the gate above still holds, as OTA-189: it must ship before launch; the Seasonal page may go public earlier behind the interim controls in the 2026-11-14 amendment (OTA-137).
 - **Season rollover has no stale fallback (accepted).** At 00:00 UTC on 1 January, April, July and October the default `seasonal` key changes to a key with no stored page: the first visitor waits for one fetch (or gets 503/429 if AniList is down or the bucket is empty). Not worth a warm-up before measuring.
 - **`year`** is converted only from 4 plain digits (`2026`), so `2026.0`, `0x7EA` and `+2026` are 400.
 
@@ -193,3 +193,7 @@ Too complicated, not built: a claim queue or outbox, a per-entry status, a backf
 Tests: the pure rules (`pickCanonical`, `slugSource`) are unit specs; everything that claims is an integration spec against real Postgres with the synthetic list fixtures, run in CI.
 
 ## Learnings
+
+## Amendment (2026-11-14, Farouk): Seasonal page before OTA-189
+
+Decision by Farouk: the Seasonal page (OTA-137) may go public on the beta before OTA-189 ships, behind these interim controls: `Disallow: /season?` in `robots.txt`; every card, season stepper, "Show more" and retry link is `rel="nofollow"` and not prefetched; lists stop at page 10. The global import bucket and the claim scope above still hold. OTA-189 is still required before launch and lifts these controls when it ships.
