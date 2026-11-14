@@ -15,6 +15,10 @@ const clone = `${clonePrefix(templateUrl)}${process.env.VITEST_WORKER_ID ?? '0'}
 
 // Set before the test file imports AppModule, which reads it at import time.
 process.env.DATABASE_URL = withDatabase(templateUrl, clone).href;
+// Same moment: a key in a local .env must not switch the internal key check on (ADR 0019).
+// A spec that tests the real wiring sets its own fake key with vi.hoisted.
+process.env.INTERNAL_API_KEY = '';
+process.env.INTERNAL_API_KEY_PREVIOUS = '';
 
 beforeAll(async () => {
   const maintenance = connectMaintenance(templateUrl);
