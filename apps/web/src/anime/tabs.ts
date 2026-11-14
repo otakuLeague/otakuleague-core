@@ -1,4 +1,4 @@
-import type { AnimeFranchise } from '@otakuleague/shared-types';
+import type { AnimeFranchiseView } from '@otakuleague/shared-types';
 
 /** The anime page's tabs (OTA-97): each its own route under /anime/[slug]; Overview is bare. */
 export const ANIME_TABS = [
@@ -53,36 +53,26 @@ export function tabSegmentFromParam(
 /** One main-line entry of the season selector, trimmed from the franchise (OTA-97). */
 export interface SeasonOption {
   readonly anilistId: number;
-  /** Null until imported: linked through /anime/anilist/[id], which imports it (OTA-172). */
+  /** Null until claimed (OTA-190); a claimed slug is linked only once imported (`animeLink`). */
   readonly slug: string | null;
+  /** False for a missing flag (older API, ADR 0018). */
+  readonly imported: boolean;
   readonly label: string;
   readonly year: number | null;
   readonly isCurrent: boolean;
   readonly upcoming: boolean;
 }
 
-/**
- * Where a season opens on this tab: its page once imported, else the AniList id route, which
- * imports it and redirects to the canonical slug on the same tab (OTA-172).
- */
-export function seasonHref(
-  season: Pick<SeasonOption, 'anilistId' | 'slug'>,
-  segment: AnimeTabSegment,
-): string {
-  if (season.slug !== null) return tabHref(season.slug, segment);
-  const base = `/anime/anilist/${season.anilistId}`;
-  return segment === '' ? base : `${base}/${segment}`;
-}
-
 /** The selector's seasons, or null when the main line has no other season to switch to. */
 export function seasonOptions(
-  franchise: AnimeFranchise | null,
+  franchise: AnimeFranchiseView | null,
 ): readonly SeasonOption[] | null {
   if (franchise === null || franchise.state === 'unavailable') return null;
   if (franchise.mainLine.length < 2) return null;
   return franchise.mainLine.map((season) => ({
     anilistId: season.anilistId,
     slug: season.slug,
+    imported: season.imported === true,
     label: season.label,
     year: season.startDate?.year ?? null,
     isCurrent: season.isCurrent,

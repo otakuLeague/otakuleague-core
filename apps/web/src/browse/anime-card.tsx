@@ -1,7 +1,8 @@
 import type { AnimeListCard } from '@otakuleague/shared-types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { cardHref, cardTitle, coverSrc } from '../home/home-rows';
+import { animeLink } from '../anime/anime-link';
+import { cardTitle, coverSrc } from '../home/home-rows';
 
 /** A list card: cover and title. `h2` on list pages, `h3` under a section heading (home, Discover). */
 export function AnimeCard({
@@ -13,15 +14,11 @@ export function AnimeCard({
 }) {
   const src = coverSrc(entry);
   const Heading = headingLevel;
+  // An imported card links its page; any other goes through the nofollow id route, since a slug
+  // is claimed before import (OTA-190) and following it would start a cold import (ADR 0018).
+  const { href, rel } = animeLink(entry);
   return (
-    // nofollow on every card until OTA-189/OTA-191: slugs are claimed before import (OTA-190), so
-    // a crawler following /anime/<slug> would trigger a cold import, like /anime/anilist/<id>.
-    <Link
-      className="ol-anime-card"
-      href={cardHref(entry)}
-      rel="nofollow"
-      prefetch={false}
-    >
+    <Link className="ol-anime-card" href={href} rel={rel} prefetch={false}>
       <div className="ol-anime-card__cover">
         {src !== null && (
           // Decorative: the title right below names the card.

@@ -3,7 +3,7 @@ import {
   ANIME_LIST_MAX_LIMIT,
   ANIME_STATUSES,
   CANONICAL_SLUG_PATTERN,
-  type AnimeFranchise,
+  type AnimeFranchiseView,
   type AnimeListCardPage,
 } from './anime';
 
@@ -109,13 +109,26 @@ const FRANCHISE_STATES: readonly unknown[] = [
   'unavailable',
 ];
 
+/** The `imported` flag of an older API is absent: accepted, read as false (ADR 0018). */
+function isAbsentOrBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean';
+}
+
+/** The id, slug and imported flag every franchise entry links with (ADR 0008, 0018). */
+function isFranchiseEntry(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Number.isInteger(value.anilistId) &&
+    (value.slug === null || typeof value.slug === 'string') &&
+    isAbsentOrBoolean(value.imported)
+  );
+}
+
 /** The main-line fields the season selector reads; the rest is display data. */
 function isFranchiseSeason(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const { anilistId, slug, label, isCurrent, status, startDate } = value;
+  if (!isFranchiseEntry(value) || !isRecord(value)) return false;
+  const { label, isCurrent, status, startDate } = value;
   return (
-    Number.isInteger(anilistId) &&
-    (slug === null || typeof slug === 'string') &&
     typeof label === 'string' &&
     typeof isCurrent === 'boolean' &&
     (status === null || ANIME_STATUSES.some((known) => known === status)) &&
@@ -124,14 +137,24 @@ function isFranchiseSeason(value: unknown): boolean {
   );
 }
 
+/** A related group: its entries link like main-line entries do (ADR 0018). */
+function isFranchiseRelatedGroup(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.entries) &&
+    value.entries.every(isFranchiseEntry)
+  );
+}
+
 /** True when `value` is a GET /anime/slugs/:slug/franchise body (ADR 0008). */
-export function isAnimeFranchise(value: unknown): value is AnimeFranchise {
+export function isAnimeFranchise(value: unknown): value is AnimeFranchiseView {
   return (
     isRecord(value) &&
     FRANCHISE_STATES.includes(value.state) &&
     Array.isArray(value.mainLine) &&
     value.mainLine.every(isFranchiseSeason) &&
-    Array.isArray(value.related)
+    Array.isArray(value.related) &&
+    value.related.every(isFranchiseRelatedGroup)
   );
 }
 
@@ -148,6 +171,7 @@ function isListCard(value: unknown): boolean {
     (value.slug === null ||
       (typeof value.slug === 'string' &&
         CANONICAL_SLUG_PATTERN.test(value.slug))) &&
+    isAbsentOrBoolean(value.imported) &&
     isStringOrNull(value.titleEnglish) &&
     isStringOrNull(value.titleRomaji) &&
     isStringOrNull(value.coverImageUrl)

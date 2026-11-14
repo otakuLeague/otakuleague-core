@@ -16,4 +16,10 @@ describe('root layout metadata', () => {
 
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
+
+  it('resolves relative URLs against the canonical site, not the deploy URL', async () => {
+    const { metadata } = await import('./layout');
+
+    expect(String(metadata.metadataBase)).toBe('https://otakuleague.com/');
+  });
 });

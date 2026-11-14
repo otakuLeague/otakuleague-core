@@ -864,6 +864,90 @@ describe('GET /anime/lists/:kind', () => {
     });
   });
 
+  describe('imported flag (OTA-191)', () => {
+    const importAnime = async (anilistId: number) => {
+      const animeId = `00000000-0000-4000-8000-${String(anilistId).padStart(12, '0')}`;
+      await prisma.anime.create({
+        data: {
+          id: animeId,
+          createdAt: clock.now(),
+          lastViewedAt: clock.now(),
+        },
+      });
+      await prisma.animeExternalId.create({
+        data: { source: 'ANILIST', externalId: anilistId, animeId },
+      });
+      return animeId;
+    };
+    const flags = (page: AnimeListPage) =>
+      page.entries.map(({ anilistId, slug, imported }) => [
+        anilistId,
+        slug,
+        imported,
+      ]);
+    const twoEntries = () => ({
+      media: [
+        media(1, { title: { romaji: 'Alpha', english: null } }),
+        media(2, { title: { romaji: 'Beta', english: null } }),
+      ],
+      hasNextPage: false,
+    });
+
+    it('is false for an anime that only has a claimed slug, true once it is imported', async () => {
+      answer = twoEntries;
+
+      expect(flags(await list('/anime/lists/top'))).toEqual([
+        [1, 'alpha', false],
+        [2, 'beta', false],
+      ]);
+      await importAnime(2);
+
+      expect(flags(await list('/anime/lists/top'))).toEqual([
+        [1, 'alpha', false],
+        [2, 'beta', true],
+      ]);
+    });
+
+    it('goes back to false when the anime is purged, the slug unchanged', async () => {
+      answer = twoEntries;
+      const animeId = await importAnime(1);
+      expect(flags(await list('/anime/lists/top'))[0]).toEqual([
+        1,
+        'alpha',
+        true,
+      ]);
+
+      await prisma.anime.delete({ where: { id: animeId } });
+
+      expect(flags(await list('/anime/lists/top'))[0]).toEqual([
+        1,
+        'alpha',
+        false,
+      ]);
+    });
+
+    it('ignores an anime linked only through another source id', async () => {
+      answer = twoEntries;
+      const animeId = await importAnime(2);
+      await prisma.animeExternalId.create({
+        data: { source: 'MYANIMELIST', externalId: 1, animeId },
+      });
+
+      expect(flags(await list('/anime/lists/top'))).toEqual([
+        [1, 'alpha', false],
+        [2, 'beta', true],
+      ]);
+    });
+
+    it('answers an empty page without asking the database for links', async () => {
+      answer = () => ({ media: [], hasNextPage: false });
+      const findMany = vi.spyOn(prisma.animeExternalId, 'findMany');
+
+      expect((await list('/anime/lists/top')).entries).toEqual([]);
+      expect(findMany).not.toHaveBeenCalled();
+    });
+  });
+
   it('answers 503 without reading the cache while AniList is switched off, and recovers', async () => {
     await list('/anime/lists/airing');
     settings.anilistEnabled = false;

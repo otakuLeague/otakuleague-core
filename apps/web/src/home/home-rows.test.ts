@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import { listEntries, listEntry, listResult } from './fixtures';
 import {
-  cardHref,
   cardTitle,
   coverSrc,
   HOME_ROWS,
@@ -64,13 +63,6 @@ describe('toHomeRowState', () => {
     expect(state.kind === 'loaded' && state.entries.map((e) => e.anilistId)).toEqual(
       [1, 2, 3, 4, 5, 6, 7, 8],
     );
-  });
-});
-
-describe('cardHref', () => {
-  it('links the canonical slug, or the AniList id route when no slug is claimed', () => {
-    expect(cardHref({ anilistId: 1, slug: 'monster' })).toBe('/anime/monster');
-    expect(cardHref({ anilistId: 19, slug: null })).toBe('/anime/anilist/19');
   });
 });
 

@@ -203,8 +203,10 @@ export type FranchiseState =
 export interface FranchiseEntry {
   readonly anilistId: number;
   readonly mediaType: 'ANIME' | 'MANGA';
-  /** Null until the anime has an identity (imported, or listed on a stored catalog page): link /anime/anilist/:id then; always null for manga. */
+  /** Null until the anime has an identity (imported, or listed on a stored catalog page); always null for manga. Link /anime/<slug> only when `imported` too. */
   readonly slug: string | null;
+  /** True when an anime row is linked to this AniList id now (ADR 0018): its slug page costs no import. False for manga. */
+  readonly imported: boolean;
   /** English, else romaji. */
   readonly title: string;
   readonly format: MediaFormat | null;
@@ -246,6 +248,30 @@ export interface AnimeFranchise {
   /** Always holds the anime being viewed once it is cached (alone while it has no relations). */
   readonly mainLine: readonly FranchiseSeason[];
   readonly related: readonly FranchiseRelatedGroup[];
+}
+
+/**
+ * The franchise body as the web trusts it after `isAnimeFranchise` (ADR 0018). `imported` is
+ * optional here because an older API omits it and the guard accepts that; the API's
+ * `FranchiseEntry` keeps it required so every producer sets it. A missing flag means "not
+ * imported", so read it with `=== true`.
+ */
+export interface FranchiseSeasonView extends Omit<FranchiseSeason, 'imported'> {
+  readonly imported?: boolean;
+}
+
+export interface FranchiseRelatedGroupView {
+  readonly group: FranchiseRelatedGroupName;
+  readonly entries: readonly (Omit<FranchiseEntry, 'imported'> & {
+    readonly imported?: boolean;
+  })[];
+  readonly total: number;
+}
+
+export interface AnimeFranchiseView {
+  readonly state: FranchiseState;
+  readonly mainLine: readonly FranchiseSeasonView[];
+  readonly related: readonly FranchiseRelatedGroupView[];
 }
 
 /**
@@ -309,6 +335,8 @@ export interface AnimeListEntry {
   readonly anilistId: number;
   /** Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): link /anime/anilist/{anilistId}. */
   readonly slug: string | null;
+  /** True when an anime row is linked to this AniList id now (ADR 0018): link /anime/<slug> then, else /anime/anilist/{anilistId} with nofollow. */
+  readonly imported: boolean;
   readonly titleEnglish: string | null;
   readonly titleRomaji: string | null;
   readonly coverImageUrl: string | null;
@@ -338,7 +366,10 @@ export const CANONICAL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export type AnimeListCard = Pick<
   AnimeListEntry,
   'anilistId' | 'slug' | 'titleEnglish' | 'titleRomaji' | 'coverImageUrl'
->;
+> & {
+  /** Optional: an older API does not send it, and a missing flag means not imported (ADR 0018). */
+  readonly imported?: boolean;
+};
 
 /** A GET /anime/lists/:kind body as far as a card row trusts it. */
 export interface AnimeListCardPage {

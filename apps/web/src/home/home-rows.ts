@@ -70,12 +70,6 @@ export function toHomeRowState(
   return entries.length === 0 ? { kind: 'empty' } : { kind: 'loaded', entries };
 }
 
-export function cardHref(entry: Pick<AnimeListCard, 'anilistId' | 'slug'>): string {
-  return entry.slug === null
-    ? `/anime/anilist/${entry.anilistId}`
-    : `/anime/${entry.slug}`;
-}
-
 /** Only an absolute https URL is rendered; anything else leaves the empty cover frame. */
 export function coverSrc(entry: Pick<AnimeListCard, 'coverImageUrl'>): string | null {
   if (entry.coverImageUrl === null || !URL.canParse(entry.coverImageUrl)) {

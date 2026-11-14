@@ -230,9 +230,14 @@ class FranchiseEntrySchema implements FranchiseEntry {
     type: String,
     nullable: true,
     description:
-      'Null until the anime is imported (link /anime/anilist/{id} then); always null for manga',
+      'Null until the anime has an identity (imported, or listed on a stored catalog page); always null for manga. Link /anime/{slug} only when imported too',
   })
   readonly slug!: string | null;
+  @ApiProperty({
+    description:
+      'True when an anime row is linked to this AniList id now, so its slug page costs no import; false for manga',
+  })
+  readonly imported!: boolean;
   @ApiProperty({ description: 'English, else romaji' }) readonly title!: string;
   @ApiProperty({ enum: MEDIA_FORMATS, nullable: true })
   readonly format!: MediaFormat | null;
@@ -298,6 +303,11 @@ class AnimeListEntrySchema implements AnimeListEntry {
       'Canonical slug; null when not claimed yet (page stored before slugs were claimed, a list outside the claim scope, or a failed claim): then link /anime/anilist/{anilistId}',
   })
   readonly slug!: string | null;
+  @ApiProperty({
+    description:
+      'True when an anime row is linked to this AniList id now: link /anime/{slug} then; otherwise /anime/anilist/{anilistId} with rel=nofollow',
+  })
+  readonly imported!: boolean;
   @ApiProperty({ type: String, nullable: true })
   readonly titleEnglish!: string | null;
   @ApiProperty({ type: String, nullable: true })

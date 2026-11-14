@@ -16,7 +16,7 @@ Functional:
 
 Non-functional, with numbers:
 
-1. Latency: a page we hold, fresh or stale, is answered from PostgreSQL alone in at most 3 primary-key queries and zero source calls (target p95 50 ms; the integration test asserts the zero).
+1. Latency: a page we hold, fresh or stale, is answered from PostgreSQL alone in at most 4 primary-key queries (3 before ADR 0018 added the `imported` lookup) and zero source calls (target p95 50 ms; the integration test asserts the zero).
 2. Quota: at most 1 AniList request per list and block of 50 entries per TTL, never one per anime. The three Home rows cost 6 requests a day out of 43,200.
 3. Availability: with AniList down, every page fetched in the last 30 days still answers 200, marked `stale`.
 4. Freshness: trending 1 h, airing 6 h, upcoming, top and seasonal 24 h.
@@ -196,4 +196,4 @@ Tests: the pure rules (`pickCanonical`, `slugSource`) are unit specs; everything
 
 ## Amendment (2026-11-14, Farouk): Seasonal page before OTA-189
 
-Decision by Farouk: the Seasonal page (OTA-137) may go public on the beta before OTA-189 ships, behind these interim controls: `Disallow: /season?` in `robots.txt`; every card, season stepper, "Show more" and retry link is `rel="nofollow"` and not prefetched; lists stop at page 10. The global import bucket and the claim scope above still hold. OTA-189 is still required before launch and lifts these controls when it ships.
+Decision by Farouk: the Seasonal page (OTA-137) may go public on the beta before OTA-189 ships, behind these interim controls: `Disallow: /season?` in `robotsRules()`; card links come from `animeLink()` (never-imported anime use the nofollow id route) and are not prefetched; every season stepper, "Show more" and retry link is `rel="nofollow"` and not prefetched; lists stop at page 10. The global import bucket and the claim scope above still hold. OTA-189 is still required before launch and lifts these controls when it ships.
