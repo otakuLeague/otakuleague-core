@@ -163,6 +163,12 @@
 .br-more {
   min-inline-size: 220px;
 }
+/* While the next page loads (OTA-194): the label swaps to "Loading more…", nothing animates, so
+   reduced motion needs no override. Focus then uses the browser's default scroll, instant here since
+   browse pages set no smooth scroll-behavior. */
+.br-more[aria-disabled='true'] {
+  pointer-events: none;
+}
 
 .br-state {
   display: grid;

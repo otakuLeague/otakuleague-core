@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listEntries } from '../../src/home/fixtures';
+import { listEntries } from '../../src/browse/fixtures';
 import { parseSeasonRequest } from '../../src/browse/season';
 import { generateMetadata, SeasonHead, SeasonResultsView } from './page';
 
@@ -13,6 +13,7 @@ vi.mock('next/link', () => ({
   }: ComponentProps<'a'> & { prefetch?: boolean }) => (
     <a data-prefetch={String(prefetch)} {...props} />
   ),
+  useLinkStatus: () => ({ pending: false }),
 }));
 
 // The results stream from an async Server Component, which jsdom cannot render: their states are

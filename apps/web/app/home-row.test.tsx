@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listEntry } from '../src/home/fixtures';
+import { listEntry } from '../src/browse/fixtures';
 import type { HomeRowDefinition } from '../src/home/home-rows';
 import { HomeRowSkeleton, HomeRowView } from './home-row';
 

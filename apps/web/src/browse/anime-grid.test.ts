@@ -4,7 +4,7 @@ import type {
 } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import type { ApiFailure, ApiResult } from '../api/client';
-import { listEntries, listEntry } from '../home/fixtures';
+import { listEntries, listEntry } from './fixtures';
 import { ANIME_LIST_MAX_LIMIT } from '@otakuleague/shared-types';
 import {
   collectGridPages,
