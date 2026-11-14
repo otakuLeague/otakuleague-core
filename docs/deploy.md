@@ -136,9 +136,9 @@ Hardening for Farouk (not done yet):
 - [ ] A dedicated read-only role for the dump (`GRANT pg_read_all_data`, a low `CONNECTION LIMIT`) instead of the superuser in `DATABASE_PUBLIC_URL`, so a leaked secret can only read.
 - [ ] Protect `main` and add a CODEOWNERS entry for `.github/`, so no workflow change reaches the secrets unreviewed.
 
-Restore a dump into a throwaway local database, never production. **Not yet tested (Farouk, after the first nightly run).** Needs `gh`, `age`, Docker and the root `.env`.
+Restore a dump into a throwaway local database, never production. **Tested 2026-11-14** (Farouk, run 43649106041: decrypted, restored with no errors, `anime` rows present). Needs `gh`, `age`, Docker and the root `.env`.
 1. `gh run list --workflow db-backup.yml --status success --limit 5`, then `gh run download <run-id> -n db-backup -D backup` (or download `db-backup` from the run page and unzip it).
-2. `age -d -i <private key file> -o backup/otakuleague.dump backup/otakuleague-<stamp>.dump.age`. Keep the plaintext out of synced folders.
+2. `age -d -i <private key file> -o backup/otakuleague.dump backup/otakuleague-<stamp>.dump.age`. Keep the plaintext out of synced folders. The identity file must hold only the `AGE-SECRET-KEY-1…` line: a line with the `age1…` public key makes age fail ("apparent recipient found in identities file").
 3. `pnpm db:up` (Postgres 18, as production), then `docker compose exec -T db createdb -U otakuleague restore_drill` and `docker compose exec -T db pg_restore --no-owner --no-privileges -U otakuleague -d restore_drill < backup/otakuleague.dump` (user: `POSTGRES_USER` from `.env`). It should print no `error:` line.
 4. `docker compose exec -T db psql -U otakuleague -d restore_drill -tAc 'select count(*) from anime'` returns a non-zero count close to production's; `anime_source_snapshot` is empty on purpose.
 5. `docker compose exec -T db dropdb -U otakuleague restore_drill`, `rm -r backup`, and replace "Not yet tested" with the date.
