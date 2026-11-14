@@ -41,6 +41,7 @@ interface SeedOptions {
   readonly token?: string;
   readonly userEpoch?: number;
   readonly expiresAt?: Date;
+  readonly verified?: boolean;
 }
 
 async function seed(prisma: PrismaService, options: SeedOptions = {}) {
@@ -53,6 +54,7 @@ async function seed(prisma: PrismaService, options: SeedOptions = {}) {
       username: name,
       usernameKey: name.toLowerCase(),
       passwordHash: '$argon2id$fake',
+      emailVerifiedAt: options.verified === false ? null : at(-9 * DAY),
       sessionEpoch: options.userEpoch ?? 0,
       createdAt: at(-10 * DAY),
       updatedAt: at(-10 * DAY),
@@ -144,6 +146,7 @@ describe('GET /me', () => {
   it.each<[string, SeedOptions]>([
     ['a raised user epoch (revoked)', { userEpoch: 1 }],
     ['an expired session (expiresAt = now)', { expiresAt: NOW }],
+    ['an unverified email', { verified: false }],
   ])('answers 401 UNAUTHORIZED to %s, replayed or not', async (_, options) => {
     await seed(prisma, options);
 
@@ -191,7 +194,7 @@ describe('GET /me, with no internal key configured', () => {
     await app.close();
   });
 
-  it('answers 401 to an open caller holding a valid session', async () => {
+  it('answers 403 INTERNAL_KEY_REQUIRED, not a sign-out, to an open caller', async () => {
     const prisma = app.get(PrismaService);
     await truncateAllTables(prisma);
     await seed(prisma);
@@ -199,8 +202,13 @@ describe('GET /me, with no internal key configured', () => {
     const response = await request(app.getHttpServer())
       .get('/me')
       .set('Authorization', `Bearer ${TOKEN}`)
-      .expect(401);
+      .expect(403);
 
-    expect(response.body).toEqual(UNAUTHORIZED);
+    expect(response.body).toEqual({
+      error: {
+        code: 'INTERNAL_KEY_REQUIRED',
+        message: 'This API answers only the OtakuLeague web server.',
+      },
+    });
   });
 });

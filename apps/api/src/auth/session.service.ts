@@ -12,10 +12,9 @@ export interface SignedInSession {
 
 export type SessionResolution =
   | { readonly kind: 'signed_in'; readonly session: SignedInSession }
-  | {
-      readonly kind: 'signed_out';
-      readonly reason: 'unknown' | 'expired' | 'revoked';
-    };
+  | { readonly kind: 'signed_out' };
+
+const SIGNED_OUT: SessionResolution = { kind: 'signed_out' };
 
 interface SessionRow {
   readonly id: string;
@@ -35,9 +34,10 @@ export class SessionService {
   ) {}
 
   /**
-   * One lookup by the token's digest (unique index) joined to its user, then at most one
-   * conditional write when renewal is due. Database errors propagate (503), never a sign-out.
-   * Nothing here logs: the token and its digest never reach a log line.
+   * One lookup by the token's digest (unique index) joined to its user, verified users only
+   * (hard verification, ADR 0015, checked again here), then at most one conditional write when
+   * renewal is due. Database errors propagate (503), never a sign-out. Nothing here logs: the
+   * token and its digest never reach a log line.
    */
   async resolve(token: string): Promise<SessionResolution> {
     const [row] = await this.prisma.$queryRaw<SessionRow[]>`
@@ -45,21 +45,24 @@ export class SessionService {
         s.expires_at AS "expiresAt", u.id AS "userId", u.username,
         u.session_epoch AS "userSessionEpoch"
       FROM auth_session s JOIN app_user u ON u.id = s.user_id
-      WHERE s.token_hash = ${Buffer.from(hashSessionToken(token))}`;
-    if (row === undefined) return { kind: 'signed_out', reason: 'unknown' };
+      WHERE s.token_hash = ${hashSessionToken(token)}
+        AND u.email_verified_at IS NOT NULL`;
+    if (row === undefined) return SIGNED_OUT;
     const validity = sessionValidity(
       row,
       { sessionEpoch: row.userSessionEpoch },
       this.clock.now(),
     );
-    if (validity.kind !== 'valid') {
-      return { kind: 'signed_out', reason: validity.kind };
-    }
+    if (validity.kind !== 'valid') return SIGNED_OUT;
     if (validity.renewTo !== null) {
-      // Only ever forward: two requests racing write once. Renewal never restores a session the
-      // epoch check refuses, and a deleted row updates nothing.
+      // Compare-and-set on what was just read: a concurrent renewal, a later shortening (sign
+      // out) or a raised user epoch makes it update nothing, so renewal never revives a session.
       await this.prisma.session.updateMany({
-        where: { id: row.id, expiresAt: { lt: validity.renewTo } },
+        where: {
+          id: row.id,
+          expiresAt: row.expiresAt,
+          user: { sessionEpoch: row.userSessionEpoch },
+        },
         data: { expiresAt: validity.renewTo },
       });
     }

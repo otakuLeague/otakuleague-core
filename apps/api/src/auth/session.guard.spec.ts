@@ -37,10 +37,13 @@ function setup(resolve: () => Promise<SessionResolution>) {
   return { resolveSpy, run };
 }
 
-async function expectUnauthorized(result: Promise<boolean>): Promise<void> {
+async function expectRefused(
+  result: Promise<boolean>,
+  status: HttpStatus = HttpStatus.UNAUTHORIZED,
+): Promise<void> {
   const error: unknown = await result.catch((caught: unknown) => caught);
   expect(error).toBeInstanceOf(ApiException);
-  expect(toErrorResponse(error).status).toBe(HttpStatus.UNAUTHORIZED);
+  expect(toErrorResponse(error).status).toBe(status);
 }
 
 describe('SessionGuard', () => {
@@ -60,27 +63,28 @@ describe('SessionGuard', () => {
   ])('answers 401 to %s without a database call', async (_, header) => {
     const { resolveSpy, run } = setup(() => Promise.resolve(SIGNED_IN));
 
-    await expectUnauthorized(run(WEB, header).result);
+    await expectRefused(run(WEB, header).result);
     expect(resolveSpy).not.toHaveBeenCalled();
   });
 
-  it.each([OPEN_CALLER, PREVIEW_CALLER])(
-    'answers 401 to an $kind caller without a database call',
-    async (caller) => {
+  it.each([
+    [OPEN_CALLER, HttpStatus.FORBIDDEN],
+    [PREVIEW_CALLER, HttpStatus.UNAUTHORIZED],
+  ])(
+    'refuses a %o caller with %i, without a database call',
+    async (caller, status) => {
       const { resolveSpy, run } = setup(() => Promise.resolve(SIGNED_IN));
 
-      await expectUnauthorized(run(caller, `Bearer ${TOKEN}`).result);
+      await expectRefused(run(caller, `Bearer ${TOKEN}`).result, status);
       expect(resolveSpy).not.toHaveBeenCalled();
     },
   );
 
   it('answers 401 to a signed-out token and records nothing', async () => {
-    const { run } = setup(() =>
-      Promise.resolve({ kind: 'signed_out', reason: 'revoked' }),
-    );
+    const { run } = setup(() => Promise.resolve({ kind: 'signed_out' }));
     const { request, result } = run(WEB, `Bearer ${TOKEN}`);
 
-    await expectUnauthorized(result);
+    await expectRefused(result);
     expect(() => currentSessionOf(request)).toThrow();
   });
 

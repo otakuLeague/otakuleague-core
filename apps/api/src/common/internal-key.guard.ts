@@ -180,12 +180,17 @@ export class InternalKeyGuard implements CanActivate {
       return true;
     }
     // One answer for missing, wrong, repeated and over-long: a prober learns nothing from the
-    // difference. 403, never 401: on this API a 401 will mean "signed out" (ADR 0015, 0017).
-    throw new ApiException(HttpStatus.FORBIDDEN, {
-      code: 'INTERNAL_KEY_REQUIRED',
-      message: 'This API answers only the OtakuLeague web server.',
-    });
+    // difference.
+    throw internalKeyRequired();
   }
+}
+
+/** 403, never 401: on this API a 401 means "signed out" (ADR 0015, 0017). */
+export function internalKeyRequired(): ApiException {
+  return new ApiException(HttpStatus.FORBIDDEN, {
+    code: 'INTERNAL_KEY_REQUIRED',
+    message: 'This API answers only the OtakuLeague web server.',
+  });
 }
 
 @Injectable()

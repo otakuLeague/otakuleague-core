@@ -8,6 +8,7 @@ import {
 import type { Request } from 'express';
 import { callerOf } from '../common/api-caller';
 import { ApiException } from '../common/api.exception';
+import { internalKeyRequired } from '../common/internal-key.guard';
 import { sessionTokenFromHeader } from './session-rules';
 import { type SignedInSession, SessionService } from './session.service';
 
@@ -41,9 +42,10 @@ export const CurrentSession = createParamDecorator(
 
 /**
  * Route guard (`@UseGuards(SessionGuard)`), after the global InternalKeyGuard. Only a `web`
- * caller (production key matched) may present a session: `open` and `preview` get the 401
- * without a lookup, as does a missing or malformed header. Database errors are not caught: the
- * filter answers 503, so an outage never looks like a sign-out.
+ * caller (production key matched) may present a session, all without a lookup otherwise: `open`
+ * (no key configured) gets 403 INTERNAL_KEY_REQUIRED, so a key missing on the API never looks
+ * like a sign-out and the web keeps the cookie (ADR 0017); `preview` and a missing or malformed
+ * header get the 401. Database errors are not caught: the filter answers 503, never 401.
  */
 @Injectable()
 export class SessionGuard implements CanActivate {
@@ -51,7 +53,9 @@ export class SessionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    if (callerOf(request).kind !== 'web') throw unauthorized();
+    const caller = callerOf(request);
+    if (caller.kind === 'open') throw internalKeyRequired();
+    if (caller.kind !== 'web') throw unauthorized();
     const token = sessionTokenFromHeader(request.headers.authorization);
     if (token === null) throw unauthorized();
     const resolution = await this.sessions.resolve(token);

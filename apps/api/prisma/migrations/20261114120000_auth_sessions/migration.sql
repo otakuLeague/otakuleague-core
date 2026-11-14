@@ -39,3 +39,8 @@ CREATE INDEX "auth_session_user_id_idx" ON "auth_session"("user_id");
 
 -- AddForeignKey
 ALTER TABLE "auth_session" ADD CONSTRAINT "auth_session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Not modelled by Prisma (ADR 0015): emails are stored normalised, so the unique index is the
+-- duplicate check; a token hash is a SHA-256 digest, never a token.
+ALTER TABLE "app_user" ADD CONSTRAINT "app_user_email_lower_check" CHECK ("email" = lower("email"));
+ALTER TABLE "auth_session" ADD CONSTRAINT "auth_session_token_hash_length_check" CHECK (octet_length("token_hash") = 32);

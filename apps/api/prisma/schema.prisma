@@ -236,6 +236,7 @@ model AnimeFranchiseOverride {
 }
 
 // --- Accounts (OTA-139, ADR 0015) -----------------------------------------------------------
+// CHECK constraints (migration auth_sessions): email in lower case, token_hash of 32 bytes.
 
 model User {
   id              String    @id @db.Uuid
