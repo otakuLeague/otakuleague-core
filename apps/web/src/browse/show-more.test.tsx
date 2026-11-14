@@ -101,6 +101,17 @@ describe('Show more', () => {
     expect(document.activeElement).toBe(document.body);
   });
 
+  it.each([
+    ['ctrl', { ctrlKey: true }],
+    ['meta', { metaKey: true }],
+    ['middle button', { button: 1 }],
+  ])('moves no focus after a %s click when the list later grows', (_, init) => {
+    const { rerender } = render(grid(48, 'available'));
+    fireEvent.click(showMore(), init);
+    rerender(grid(72, 'available'));
+    expect(document.activeElement).toBe(document.body);
+  });
+
   it('focuses the retry link when the next page failed', () => {
     const { rerender } = render(grid(48, 'available'));
     fireEvent.click(showMore());

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import type { GridMore } from './anime-grid';
 
 interface ShowMoreContextValue {
   readonly pending: boolean;
@@ -31,14 +32,18 @@ function useShowMore(): ShowMoreContextValue {
  * The card grid plus its "Show more" area. While the next page loads the grid is `aria-busy`
  * and the button reads "Loading more…". After a click, focus moves to the first new card, or
  * to the retry link when no card arrived; on a first load or a direct URL nothing moves.
- * Reduced motion: nothing here animates (a text swap only) and the focus scroll is instant.
+ * Reduced motion: nothing here animates (a text swap only); focus uses the browser's default
+ * scroll, which is instant because browse pages set no smooth `scroll-behavior`.
  */
 export function ShowMoreRegion({
   entryCount,
+  moreKind,
   more,
   children,
 }: {
   readonly entryCount: number;
+  /** The slot's state; re-runs the focus check when a failed page swaps in the retry. */
+  readonly moreKind: GridMore;
   readonly more: ReactNode;
   readonly children: ReactNode;
 }) {
@@ -46,7 +51,7 @@ export function ShowMoreRegion({
   const focusFromIndex = useRef<number | null>(null);
   const gridRef = useRef<HTMLUListElement>(null);
 
-  // `more` is a dependency too: a failed page keeps the same count but swaps the slot to a retry.
+  // `moreKind` is a dependency too: a failed page keeps the same count but swaps in a retry.
   useEffect(() => {
     const from = focusFromIndex.current;
     if (from === null) return;
@@ -62,7 +67,7 @@ export function ShowMoreRegion({
       focusFromIndex.current = null;
       retry.focus();
     }
-  }, [entryCount, more]);
+  }, [entryCount, moreKind]);
 
   return (
     <ShowMoreContext.Provider
@@ -98,7 +103,10 @@ export function ShowMoreLink({ href }: { readonly href: string }) {
           event.preventDefault();
           return;
         }
-        markClicked();
+        // A modified or non-primary click opens elsewhere (Link doesn't navigate here): no focus.
+        const modified =
+          event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+        if (event.button === 0 && !modified) markClicked();
       }}
     >
       <ShowMoreLabel />

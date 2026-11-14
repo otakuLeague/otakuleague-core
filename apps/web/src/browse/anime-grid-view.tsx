@@ -66,6 +66,7 @@ export function AnimeGridView({
       return (
         <ShowMoreRegion
           entryCount={state.entries.length}
+          moreKind={state.more}
           more={
             <GridMoreView
               more={state.more}
