@@ -234,3 +234,38 @@ model AnimeFranchiseOverride {
 
   @@map("anime_franchise_override")
 }
+
+// --- Accounts (OTA-139, ADR 0015) -----------------------------------------------------------
+
+model User {
+  id              String    @id @db.Uuid
+  // Stored normalised, so the unique index is the duplicate check.
+  email           String    @unique
+  // As typed; usernameKey (lower case) is what must be unique.
+  username        String
+  usernameKey     String    @unique @map("username_key")
+  // argon2id PHC string, never the password.
+  passwordHash    String    @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  // Raised to sign out every device: a session is valid only while it holds this value.
+  sessionEpoch    Int       @default(0) @map("session_epoch")
+  createdAt       DateTime  @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @map("updated_at") @db.Timestamptz(3)
+  sessions        Session[]
+
+  @@map("app_user")
+}
+
+// Only the SHA-256 of the token is stored; the token itself lives in the member's cookie.
+model Session {
+  id           String   @id @db.Uuid
+  tokenHash    Bytes    @unique @map("token_hash")
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionEpoch Int      @map("session_epoch")
+  createdAt    DateTime @map("created_at") @db.Timestamptz(3)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("auth_session")
+}
