@@ -70,3 +70,151 @@
     grid-auto-columns: 148px;
   }
 }
+
+/* ---------- List pages (OTA-137): /season, later /top/anime and /discover/* ---------- */
+.br-page {
+  flex: 1;
+  inline-size: 100%;
+  max-inline-size: 1280px;
+  margin-inline: auto;
+  padding: var(--space-10) var(--space-6) var(--space-16);
+}
+
+/* Visually hidden text for screen readers. */
+.br-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.br-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+  margin-block-end: var(--space-6);
+}
+.br-head h1 {
+  margin: 0;
+  font: 700 40px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.br-head p {
+  margin-block-start: var(--space-2);
+  color: var(--muted);
+  max-inline-size: 60ch;
+}
+.br-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.br-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  min-block-size: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 18px/1 var(--font-sans);
+  text-decoration: none;
+  /* A colour change: kept under reduced motion (ADR 0011). */
+  transition: border-color var(--dur-press) var(--ease-enter);
+}
+.br-icon-btn:not([aria-disabled='true']):hover {
+  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.br-icon-btn[aria-disabled='true'] {
+  opacity: 0.4;
+}
+.br-icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.br-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--space-6) var(--space-4);
+}
+.br-grid > li {
+  min-inline-size: 0;
+}
+.br-grid .ol-anime-card {
+  inline-size: auto;
+}
+
+.br-more-wrap {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-10);
+  color: var(--muted);
+  font-size: 13px;
+}
+.br-more {
+  min-inline-size: 220px;
+}
+
+.br-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-16) var(--space-6);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+.br-state h2 {
+  margin: 0;
+  font: 700 22px/1.2 var(--font-display);
+}
+.br-state p {
+  margin: 0;
+  color: var(--muted);
+  max-inline-size: 46ch;
+}
+.br-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.br-state--error {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--bad) 40%, transparent);
+}
+
+/* Holds the head's place while the URL is read, so the grid below does not shift. */
+.br-head--placeholder {
+  min-block-size: 80px;
+}
+
+@media (max-width: 767.98px) {
+  .br-page {
+    padding: var(--space-6) var(--space-4) var(--space-16);
+  }
+  .br-head h1 {
+    font-size: 30px;
+  }
+  .br-head--placeholder {
+    min-block-size: 150px;
+  }
+  .br-icon-btn {
+    inline-size: 44px;
+    min-block-size: 44px;
+  }
+  .br-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-3);
+  }
+}

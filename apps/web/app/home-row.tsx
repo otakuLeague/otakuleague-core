@@ -1,12 +1,8 @@
-import type { AnimeListCard } from '@otakuleague/shared-types';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { animeLink } from '../src/anime/anime-link';
 import { loadAnimeList } from '../src/anime/data';
+import { AnimeCard } from '../src/browse/anime-card';
 import {
-  cardTitle,
-  coverSrc,
   HOME_ROW_FETCH_LIMIT,
   HOME_ROW_MAX_CARDS,
   type HomeRowDefinition,
@@ -66,7 +62,7 @@ export function HomeRowView({
         <ul className="br-row-scroll">
           {state.entries.map((entry) => (
             <li key={entry.anilistId}>
-              <HomeCard entry={entry} />
+              <AnimeCard entry={entry} headingLevel="h3" />
             </li>
           ))}
         </ul>
@@ -97,24 +93,6 @@ export function HomeRowView({
     default:
       return assertNever(state);
   }
-}
-
-function HomeCard({ entry }: { readonly entry: AnimeListCard }) {
-  const src = coverSrc(entry);
-  // An imported card links its page; any other goes through the nofollow id route, since a slug
-  // is claimed before import (OTA-190) and following it would start a cold import (ADR 0018).
-  const { href, rel } = animeLink(entry);
-  return (
-    <Link className="ol-anime-card" href={href} rel={rel} prefetch={false}>
-      <div className="ol-anime-card__cover">
-        {src !== null && (
-          // Decorative: the title right below names the card.
-          <Image src={src} alt="" width={176} height={264} />
-        )}
-      </div>
-      <h3 className="ol-anime-card__title">{cardTitle(entry)}</h3>
-    </Link>
-  );
 }
 
 /** Announced once as text; the placeholder cards are hidden from assistive tech. */

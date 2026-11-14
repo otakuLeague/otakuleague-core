@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { HOME_ROWS } from '../src/home/home-rows';
 import { HomeRow } from './home-row';
 import './styles/browse.css';
 import './styles/home.css';
+
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 // Static hero (the LCP h1 ships with the prerendered shell); each row streams on its own (ADR 0003).
 export default function Home() {
