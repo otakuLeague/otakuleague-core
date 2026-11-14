@@ -40,6 +40,7 @@ import {
 import { AniListAdapter, type ListFetchWait } from './sources/anilist.adapter';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
+  isQuietReason,
   type ListBlock,
   type ListedAnime,
   SourceUnavailableError,
@@ -48,16 +49,8 @@ import {
 
 /** After a failed fetch of a block nobody asks AniList for it again for this long. */
 const RETRY_AFTER_MS = 5 * 60 * 1000;
-/** Reasons (source-http.ts) that are not a failed list answer: no retry delay for the block. */
-const QUEUE_FULL = 'queue full';
-const COOLING_DOWN = 'cooling down';
 /** The fetch cap is logged at most this often. */
 const LIMIT_WARN_INTERVAL_MS = 60_000;
-
-/** Failures that are the limiter's or the retry delay's doing, not news: never logged. */
-function isQuietReason(error: SourceUnavailableError): boolean {
-  return error.reason === QUEUE_FULL || error.reason.startsWith(COOLING_DOWN);
-}
 
 /** In-flight and retry-delay key of one stored block. */
 function blockKey(list: CatalogList, page: number): string {

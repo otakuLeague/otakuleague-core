@@ -94,6 +94,35 @@ describe('toErrorResponse', () => {
     expect(response.body.error).not.toHaveProperty('details');
   });
 
+  const limited = (retryAfterSeconds?: number) =>
+    new ApiException(
+      HttpStatus.TOO_MANY_REQUESTS,
+      { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' },
+      retryAfterSeconds === undefined ? {} : { retryAfterSeconds },
+    );
+
+  it.each([1, 20, 40])('keeps a Retry-After of %i seconds', (seconds) => {
+    expect(toErrorResponse(limited(seconds))).toEqual({
+      status: 429,
+      body: { error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' } },
+      retryAfterSeconds: seconds,
+    });
+  });
+
+  it.each([
+    ['none', undefined],
+    ['zero', 0],
+    ['a negative number', -5],
+    ['a fraction', 1.5],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['an unsafe integer', Number.MAX_SAFE_INTEGER + 1],
+  ])('drops a Retry-After of %s', (_, seconds) => {
+    expect(toErrorResponse(limited(seconds))).not.toHaveProperty(
+      'retryAfterSeconds',
+    );
+  });
+
   it.each([
     [
       new NotFoundException('Cannot GET /nope'),
@@ -263,6 +292,7 @@ describe('ApiExceptionFilter', () => {
   function httpHost(headersSent = false) {
     const response = {
       headersSent,
+      setHeader: vi.fn().mockReturnThis(),
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
       end: vi.fn(),
@@ -288,6 +318,50 @@ describe('ApiExceptionFilter', () => {
     expect(response.json).toHaveBeenCalledWith({
       error: { code: 'NOT_FOUND', message: 'Cannot GET /nope' },
     });
+  });
+
+  it('sets Retry-After from a typed ApiException', () => {
+    const { host, response } = httpHost();
+
+    new ApiExceptionFilter().catch(
+      new ApiException(
+        HttpStatus.TOO_MANY_REQUESTS,
+        { code: 'ANIME_IMPORT_VISITOR_LIMIT_REACHED', message: 'Wait.' },
+        { retryAfterSeconds: 37 },
+      ),
+      host,
+    );
+
+    expect(response.setHeader).toHaveBeenCalledExactlyOnceWith(
+      'Retry-After',
+      '37',
+    );
+    expect(response.status).toHaveBeenCalledWith(429);
+  });
+
+  it.each([
+    [
+      'an ApiException without one',
+      new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
+        code: 'ANIME_IMPORT_LIMIT_REACHED',
+        message: 'Busy.',
+      }),
+    ],
+    [
+      'an ApiException with a zero',
+      new ApiException(
+        HttpStatus.TOO_MANY_REQUESTS,
+        { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' },
+        { retryAfterSeconds: 0 },
+      ),
+    ],
+    ['a Nest exception', new NotFoundException()],
+  ])('sets no Retry-After for %s', (_, exception) => {
+    const { host, response } = httpHost();
+
+    new ApiExceptionFilter().catch(exception, host);
+
+    expect(response.setHeader).not.toHaveBeenCalled();
   });
 
   it('logs the real error server-side for a 500 but sends only the generic body', () => {

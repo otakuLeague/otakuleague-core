@@ -13,6 +13,7 @@ import { backoffKey, SourceBackoff } from './source-backoff';
 import { AniListAdapter, RELATIONS_PAGE_SIZE } from './sources/anilist.adapter';
 import { AnimeSourceSettings } from './sources/source-settings';
 import {
+  QUEUE_FULL_REASON,
   type RelationNode,
   SourceUnavailableError,
   UnusableAnswerError,
@@ -250,7 +251,7 @@ export class FranchiseWalker implements OnModuleDestroy {
       } catch (error) {
         const queueFull =
           error instanceof SourceUnavailableError &&
-          error.reason === 'queue full';
+          error.reason === QUEUE_FULL_REASON;
         if (!queueFull || attempt >= QUEUE_FULL_ATTEMPTS || this.stopping) {
           throw error;
         }

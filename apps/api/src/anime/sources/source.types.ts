@@ -151,6 +151,32 @@ export class UnusableAnswerError extends SourceUnavailableError {
   }
 }
 
+/** requestJson (source-http.ts) refused the call: no free rate-limit slot in time. */
+export const QUEUE_FULL_REASON = 'queue full';
+/** requestJson refused the call: the source is in its cool-down after a failure. */
+export const COOLING_DOWN_REASON = 'cooling down after a failure';
+/** The import service did not ask: this entry is backed off after an unusable answer (ADR 0008). */
+export const BACKED_OFF_REASON = 'backed off after an unusable answer';
+
+/** The limiter's doing, not a failed answer: the list service neither logs nor delays a retry. */
+export function isQuietReason(error: SourceUnavailableError): boolean {
+  return (
+    error.reason === QUEUE_FULL_REASON || error.reason === COOLING_DOWN_REASON
+  );
+}
+
+/**
+ * True only when no request left for this call (ADR 0019 item 10): queue full or cooling down
+ * before the first attempt, or a backed-off entry. `requestSent` alone is not enough: a failure
+ * after a real request (HTTP 5xx, timeout, non-JSON, unusable answer) leaves it false too.
+ */
+export function refusedBeforeSending(error: SourceUnavailableError): boolean {
+  return (
+    !error.requestSent &&
+    (isQuietReason(error) || error.reason === BACKED_OFF_REASON)
+  );
+}
+
 export type FetchPriority = 'interactive' | 'background';
 
 /** One data source behind the common interface (ADR 0006 update). */
