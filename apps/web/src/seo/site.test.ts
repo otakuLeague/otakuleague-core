@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { SearchIndexing } from './indexing';
 import { absoluteUrl, robotsRules, SITE_URL, sitemapEntries } from './site';
 
 describe('absoluteUrl', () => {
@@ -13,13 +14,24 @@ describe('absoluteUrl', () => {
   });
 });
 
+function disallowedPaths(indexing: SearchIndexing): string[] {
+  return [robotsRules(indexing).rules]
+    .flat()
+    .flatMap((rule) => [rule.disallow ?? []].flat());
+}
+
 describe('robotsRules', () => {
   it('keeps crawlers out of the AniList id route, which imports on first visit (OTA-173)', () => {
-    expect(robotsRules('blocked').rules).toEqual({
-      userAgent: '*',
-      disallow: '/anime/anilist/',
-    });
+    expect(robotsRules('blocked').rules).toMatchObject({ userAgent: '*' });
+    expect(disallowedPaths('blocked')).toContain('/anime/anilist/');
   });
+
+  it.each(['blocked', 'allowed'] as const)(
+    'keeps crawlers off the season pages until OTA-189 (%s)',
+    (indexing) => {
+      expect(disallowedPaths(indexing)).toContain('/season?');
+    },
+  );
 
   it('has no Sitemap line while blocked', () => {
     expect(robotsRules('blocked').sitemap).toBeUndefined();
@@ -35,11 +47,7 @@ describe('robotsRules', () => {
   it.each(['blocked', 'allowed'] as const)(
     'never disallows the whole site when %s, so crawlers can read the noindex (OTA-134)',
     (indexing) => {
-      const disallowed = [robotsRules(indexing).rules]
-        .flat()
-        .flatMap((rule) => [rule.disallow ?? []].flat());
-
-      expect(disallowed).not.toContain('/');
+      expect(disallowedPaths(indexing)).not.toContain('/');
     },
   );
 });

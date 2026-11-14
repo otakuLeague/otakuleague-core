@@ -17,7 +17,11 @@ const SITEMAP_PATHS: readonly string[] = [
 ];
 
 export function robotsRules(indexing: SearchIndexing): MetadataRoute.Robots {
-  const rules = { userAgent: '*', disallow: '/anime/anilist/' };
+  const rules = {
+    userAgent: '*',
+    // `/season?`: until OTA-189 (per-client limit), a crawler walking every season would fetch every list page.
+    disallow: ['/anime/anilist/', '/season?'],
+  };
   return indexing === 'allowed'
     ? { rules, sitemap: absoluteUrl('/sitemap.xml') }
     : { rules };
