@@ -167,7 +167,11 @@ void describe('redactValue', () => {
     const key = 'fake-internal-api-key-'.padEnd(64, '0');
     const masked = redactValue({
       headers: { 'x-internal-api-key': key },
-      env: { INTERNAL_API_KEY: key, INTERNAL_API_KEY_PREVIOUS: key },
+      env: {
+        INTERNAL_API_KEY: key,
+        INTERNAL_API_KEY_PREVIOUS: key,
+        INTERNAL_API_KEY_PREVIEW: key,
+      },
       line: `X-Internal-Api-Key: ${key}`,
     });
 

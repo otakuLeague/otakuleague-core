@@ -3,6 +3,7 @@ import {
   type ApiCaller,
   callerOf,
   OPEN_CALLER,
+  PREVIEW_CALLER,
   recordCaller,
   UNKNOWN_VISITOR_KEY,
   visitorKeyFromClientIp,
@@ -105,6 +106,11 @@ describe('visitorKeyOf', () => {
     const visitorKey = visitorKeyFromClientIp('203.0.113.7');
 
     expect(visitorKeyOf({ kind: 'web', visitorKey })).toBe(visitorKey);
+  });
+
+  it('puts every preview in the one preview bucket, which no client IP can name', () => {
+    expect(visitorKeyOf(PREVIEW_CALLER)).toBe('preview');
+    expect(visitorKeyFromClientIp('preview')).toBe(UNKNOWN_VISITOR_KEY);
   });
 });
 

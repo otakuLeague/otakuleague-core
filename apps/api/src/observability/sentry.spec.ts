@@ -6,14 +6,21 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/nestjs';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EnvironmentInternalKeySettings } from '../common/internal-key.guard';
+import type { EnvironmentVariables } from '../config/environment';
 import { createTestApp } from '../testing/test-app';
 import { initSentry } from './sentry';
+
+// An obvious fake of a valid shape (64 characters, like `openssl rand -hex 32`).
+const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
 
 // Registered only in this test module, never in production code.
 @Controller('test-only')
@@ -77,6 +84,7 @@ describe('Sentry in the API', () => {
   let fakeSentry: Server | undefined;
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await Sentry.close(100);
     fakeSentry?.closeAllConnections();
     fakeSentry?.close();
@@ -160,6 +168,50 @@ describe('Sentry in the API', () => {
       await app.close();
     }
   });
+
+  it.each<
+    [string, Partial<Record<keyof EnvironmentVariables, string>>, number]
+  >([
+    ['once in production without a key', { NODE_ENV: 'production' }, 1],
+    ['never in development without a key', { NODE_ENV: 'development' }, 0],
+    [
+      'never in production with a key',
+      { NODE_ENV: 'production', INTERNAL_API_KEY: FAKE_KEY },
+      0,
+    ],
+  ])(
+    'sends the open-API warning at start %s',
+    async (_, environment, expected) => {
+      const { server, dsn, envelopes } = await startFakeSentry('answer');
+      fakeSentry = server;
+      initSentry({ dsn, environment: 'test', release: undefined });
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+      const settings = new EnvironmentInternalKeySettings(
+        new ConfigService<EnvironmentVariables, true>({
+          INTERNAL_API_KEY: '',
+          INTERNAL_API_KEY_PREVIOUS: '',
+          INTERNAL_API_KEY_PREVIEW: '',
+          ...environment,
+        }),
+      );
+
+      settings.onApplicationBootstrap();
+      await Sentry.flush(2000);
+
+      const events = errorEvents(envelopes).map((envelope) => {
+        const { level, message } = JSON.parse(
+          envelope.split('\n')[2] ?? '{}',
+        ) as { level?: string; message?: string };
+        return { level, message };
+      });
+      expect(events).toEqual(
+        Array.from({ length: expected }, () => ({
+          level: 'error',
+          message: 'INTERNAL_API_KEY is not set: the API answers any caller',
+        })),
+      );
+    },
+  );
 
   it.each([
     ['accepts the connection and never answers', 'hang'],

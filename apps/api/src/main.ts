@@ -19,6 +19,7 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
   const config =
     app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
+  // Keep before listen(): listen() runs onApplicationBootstrap, whose start-up warnings go to Sentry.
   initSentry({
     dsn: config.get('SENTRY_DSN', { infer: true }),
     environment:
