@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listEntries, listEntry } from '../home/fixtures';
+import { listEntries, listEntry } from './fixtures';
 import type { AnimeGridState } from './anime-grid';
 import { AnimeGridSkeleton, AnimeGridView } from './anime-grid-view';
 
@@ -18,6 +18,7 @@ vi.mock('next/link', () => ({
       {...props}
     />
   ),
+  useLinkStatus: () => ({ pending: false }),
 }));
 
 const NEXT = '/season?season=fall&year=2026&page=2';

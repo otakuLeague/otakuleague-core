@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AnimeCard } from './anime-card';
 import {
@@ -6,6 +5,7 @@ import {
   GRID_PAGE_SIZE,
   type GridMore,
 } from './anime-grid';
+import { ShowMoreLink, ShowMoreRegion } from './show-more';
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled grid state: ${typeof value}`);
@@ -64,21 +64,23 @@ export function AnimeGridView({
   switch (state.kind) {
     case 'loaded':
       return (
-        <>
-          <ul className="br-grid">
-            {state.entries.map((entry) => (
-              <li key={entry.anilistId}>
-                <AnimeCard entry={entry} headingLevel="h2" />
-              </li>
-            ))}
-          </ul>
-          <GridMoreView
-            more={state.more}
-            shown={state.entries.length}
-            nextHref={nextHref}
-            retryHref={retryHref}
-          />
-        </>
+        <ShowMoreRegion
+          entryCount={state.entries.length}
+          more={
+            <GridMoreView
+              more={state.more}
+              shown={state.entries.length}
+              nextHref={nextHref}
+              retryHref={retryHref}
+            />
+          }
+        >
+          {state.entries.map((entry) => (
+            <li key={entry.anilistId}>
+              <AnimeCard entry={entry} headingLevel="h2" />
+            </li>
+          ))}
+        </ShowMoreRegion>
       );
     case 'empty':
       return empty;
@@ -119,15 +121,7 @@ function GridMoreView({
     case 'available':
       return (
         <div className="br-more-wrap">
-          <Link
-            className="ol-btn ol-btn--secondary br-more"
-            href={nextHref}
-            scroll={false}
-            prefetch={false}
-            rel="nofollow"
-          >
-            Show more
-          </Link>
+          <ShowMoreLink href={nextHref} />
         </div>
       );
     case 'failed':
@@ -138,6 +132,7 @@ function GridMoreView({
             className="ol-btn ol-btn--secondary br-more"
             href={retryHref}
             rel="nofollow"
+            data-more-retry
           >
             Retry loading more
           </a>

@@ -2,7 +2,7 @@ import type { AnimeListCard } from '@otakuleague/shared-types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { animeLink } from '../anime/anime-link';
-import { cardTitle, coverSrc } from '../home/home-rows';
+import { cardTitle, coverSrc } from './anime-card-facts';
 
 /** A list card: cover and title. `h2` on list pages, `h3` under a section heading (home, Discover). */
 export function AnimeCard({

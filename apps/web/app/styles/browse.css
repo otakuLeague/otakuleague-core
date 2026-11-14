@@ -163,6 +163,11 @@
 .br-more {
   min-inline-size: 220px;
 }
+/* While the next page loads (OTA-194): the label swaps to "Loading more…", nothing animates, so
+   reduced motion needs no override; focus then jumps to the first new card with an instant scroll. */
+.br-more[aria-disabled='true'] {
+  pointer-events: none;
+}
 
 .br-state {
   display: grid;

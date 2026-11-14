@@ -69,27 +69,3 @@ export function toHomeRowState(
     .slice(0, HOME_ROW_MAX_CARDS);
   return entries.length === 0 ? { kind: 'empty' } : { kind: 'loaded', entries };
 }
-
-/** Only an absolute https URL is rendered; anything else leaves the empty cover frame. */
-export function coverSrc(entry: Pick<AnimeListCard, 'coverImageUrl'>): string | null {
-  if (entry.coverImageUrl === null || !URL.canParse(entry.coverImageUrl)) {
-    return null;
-  }
-  return new URL(entry.coverImageUrl).protocol === 'https:'
-    ? entry.coverImageUrl
-    : null;
-}
-
-function presentTitle(title: string | null): string | null {
-  return title === null || title.trim() === '' ? null : title;
-}
-
-export function cardTitle(
-  entry: Pick<AnimeListCard, 'titleEnglish' | 'titleRomaji'>,
-): string {
-  return (
-    presentTitle(entry.titleEnglish) ??
-    presentTitle(entry.titleRomaji) ??
-    'Untitled'
-  );
-}
