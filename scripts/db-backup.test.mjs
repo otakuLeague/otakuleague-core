@@ -148,6 +148,10 @@ test('workflow: only schedule and manual triggers, no token, secrets only in the
     WORKFLOW.filter((line) => line.includes('permissions:')),
     ['permissions: {}'],
   );
+  assert.deepEqual(
+    WORKFLOW.filter((line) => line.includes('environment:')),
+    ['    environment: db-backup'],
+  );
   const secretLines = WORKFLOW.flatMap((line, index) =>
     line.includes('secrets.') ? [index] : [],
   );

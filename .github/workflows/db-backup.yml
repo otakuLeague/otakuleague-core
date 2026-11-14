@@ -26,6 +26,8 @@ jobs:
     # Pinned, not -latest: the image decides the apt age version, which decides the key formats.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Secrets live in this environment, which only main may use (OTA-170 hardening).
+    environment: db-backup
     steps:
       - name: Install age
         run: |
