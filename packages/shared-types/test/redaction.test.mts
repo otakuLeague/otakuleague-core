@@ -163,6 +163,17 @@ void describe('redactValue', () => {
     );
   });
 
+  void it('masks the internal API key under its header and env names (ADR 0015, 0019)', () => {
+    const key = 'fake-internal-api-key-'.padEnd(64, '0');
+    const masked = redactValue({
+      headers: { 'x-internal-api-key': key },
+      env: { INTERNAL_API_KEY: key, INTERNAL_API_KEY_PREVIOUS: key },
+      line: `X-Internal-Api-Key: ${key}`,
+    });
+
+    assert.doesNotMatch(JSON.stringify(masked), /fake-internal-api-key/);
+  });
+
   void it('redacts strings inside arrays and nested objects', () => {
     assert.deepEqual(redactValue({ list: ['mail me at a@b.co', 1, null] }), {
       list: ['mail me at [email]', 1, null],

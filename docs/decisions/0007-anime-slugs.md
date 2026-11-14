@@ -58,3 +58,7 @@ A canonical candidate taken by another anime, as its alias or its canonical, mov
 
 ## Learnings
 - A slug that outlives the cache also outlives deletions: permanence needed an explicit "removed" state, or the purge and takedowns would silently stop working.
+
+## Addendum: never-imported slugs can be released (OTA-192, 2026-11-13)
+
+"Never reassigned" holds for every identity that was ever imported. A list claim that never was (`imported_at` null, `removed_at` null, no `anime` row) never rendered an anime page, so the runbook of [ADR 0016](0016-catalog-lists.md) may delete it with its slugs, and another anime can then claim them. Removed identities are never released.

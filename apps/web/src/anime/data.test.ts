@@ -44,7 +44,11 @@ async function loadDataWith(
 
 async function loadAnimeListWith(body: unknown) {
   const { data, requests } = await loadDataWith(body);
-  return { loadAnimeList: data.loadAnimeList, requests };
+  return {
+    loadAnimeList: data.loadAnimeList,
+    loadAnimeListPage: data.loadAnimeListPage,
+    requests,
+  };
 }
 
 const page = {
@@ -92,6 +96,37 @@ describe('loadAnimeList', () => {
   });
 });
 
+describe('loadAnimeListPage', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends the season upper case with its year, and the cursor encoded', async () => {
+    const { loadAnimeListPage, requests } = await loadAnimeListWith(page);
+
+    await loadAnimeListPage('seasonal', {
+      season: { season: 'FALL', year: 2025 },
+      cursor: 'a+b/c=',
+      limit: 48,
+    });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      'http://api.test:4000/anime/lists/seasonal?season=FALL&year=2025&cursor=a%2Bb%2Fc%3D&limit=48',
+    ]);
+  });
+
+  it('leaves out the season and a null cursor', async () => {
+    const { loadAnimeListPage, requests } = await loadAnimeListWith(page);
+
+    await loadAnimeListPage('top', { cursor: null, limit: 24 });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      'http://api.test:4000/anime/lists/top?limit=24',
+    ]);
+  });
+});
+
 // Obviously fake: 47 characters of the allowed alphabet, never a real key.
 const FAKE_KEY = 'fake-internal-api-key-for-tests-only-0123456789';
 const VISITOR_IP = '203.0.113.7';
@@ -122,6 +157,11 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
       ['resolveAnimeSlug', (data) => data.resolveAnimeSlug('frieren')],
       ['loadFranchise', (data) => data.loadFranchise('frieren')],
       ['loadAnimeList', (data) => data.loadAnimeList('top', 12)],
+      [
+        'loadAnimeListPage',
+        (data) =>
+          data.loadAnimeListPage('seasonal', { cursor: 'c1', limit: 48 }),
+      ],
     ];
 
   it.each(importLoaders)(

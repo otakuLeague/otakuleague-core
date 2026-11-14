@@ -125,7 +125,7 @@ Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,50
 
 **Claim scope (decision, until OTA-189).** Only lists without a genre, and the seasonal list of the current season, claim (`claimsSlugs`). A genre or past-season page is stored and served but its anime keep a null slug until they are claimed elsewhere. This bounds what a crawler can reserve before the per-client limit exists; remove the gate when OTA-189 ships.
 
-**Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one (an `imported_at` marker) is a future follow-up ticket, not built here.
+**Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one is the OTA-192 addendum below.
 
 Too complicated, not built: a season calendar with per-zone boundaries (the old site used the visitor's zone; one UTC rule keeps the default cacheable and at worst shows the ending season for a few hours), totals, a `genres` endpoint (the constant ships in shared-types).
 
@@ -134,7 +134,7 @@ Fixtures stay synthetic (see Operational notes): one new `lists/anilist-seasonal
 Review follow-up (same PR):
 
 - **Cold-fetch budget.** About 8,500 keys are reachable and every unseen one is a `visitor` AniList fetch on the limiter shared with imports, so `ListFetchLimits` (`list-fetch-limits.ts`) is a process-wide token bucket, the shape of `ImportLimits` with the injected `Clock`: **6 tokens, one back every 10 seconds** (6 a minute sustained, 20% of AniList's 30 a minute, against the id route's 3 a minute: a list is what a visitor lands on, so it gets twice the budget, and a burst of 6 covers one browse session across kinds and a few genres). Taken once per new source fetch (joining a fetch already running is free), by a visitor's cold page and by a stale page's background refresh alike, so refreshes cannot take every slot: with the bucket empty a refresh is skipped silently and the stale page is served as before. A cold page with no token answers 429 `ANIME_LIST_FETCH_LIMIT_REACHED` (error envelope, no Retry-After, as the import route) and one warning a minute. A fetch that sent no request (limiter queue full or cooling down on the first attempt) gives its token back, and a block in its 5-minute retry delay takes none. Stored pages, fresh or stale, cost nothing. `queue full`, `cooling down` and `retry later` failures are no longer logged per request.
-- **Per-client limit: OTA-189.** The global bucket mitigates the enumeration cost but one client can still spend it all; a real per-client limit is OTA-189. For this PR the global bucket stands in for it; the gate above still holds, as OTA-189: it must ship before the Seasonal page is public (OTA-137).
+- **Per-client limit: OTA-189.** The global bucket mitigates the enumeration cost but one client can still spend it all; a real per-client limit is OTA-189. For this PR the global bucket stands in for it; the gate above still holds, as OTA-189: it must ship before launch; the Seasonal page may go public earlier behind the interim controls in the 2026-11-14 amendment (OTA-137).
 - **Season rollover has no stale fallback (accepted).** At 00:00 UTC on 1 January, April, July and October the default `seasonal` key changes to a key with no stored page: the first visitor waits for one fetch (or gets 503/429 if AniList is down or the bucket is empty). Not worth a warm-up before measuring.
 - **`year`** is converted only from 4 plain digits (`2026`), so `2026.0`, `0x7EA` and `+2026` are 400.
 
@@ -192,4 +192,87 @@ Too complicated, not built: a claim queue or outbox, a per-entry status, a backf
 
 Tests: the pure rules (`pickCanonical`, `slugSource`) are unit specs; everything that claims is an integration spec against real Postgres with the synthetic list fixtures, run in CI.
 
+## Addendum: deleting never-imported identities (OTA-192, 2026-11-13)
+
+Slice 3 left list claims indistinguishable from identities whose anime was purged, so the Terms paragraph above owed a way to delete a claim and could not give one. This addendum adds the marker and names the delete path.
+
+**Requirements.** Functional:
+
+1. The importer records the first time an anime row held an AniList id, in the transaction that stores it.
+2. Identities that were ever imported before this change read as imported.
+3. An operator can release the never-imported identities and their slugs, in a time window or all of them.
+
+Non-functional, with numbers:
+
+1. Cost: one nullable column, no index, a backfill of at most about 20,000 rows; one extra primary-key `UPDATE` per stored AniList snapshot.
+2. Safety: the runbook never deletes an identity with `imported_at` set, with `removed_at` set, or with an `anime` row now. It runs in one transaction with a `SHARE MODE` lock on `anime_external_id` and `FOR UPDATE` locks on the rows; the `Restrict` foreign key aborts it if a slug is left behind.
+3. Deploy: the old API runs on the new schema, because the column is nullable and has no default.
+
+**Meaning of `imported_at`.** The first time an `anime` row held this AniList id. Set once, never cleared, and kept through purge, removal and re-import. It is not the derived `imported` flag of ADR 0018, which says whether an anime row exists now.
+
+**Design.**
+
+- `store()` marks the AniList identity in the same transaction as the slug claim: `UPDATE ... WHERE imported_at IS NULL`, with the injected clock. An import through Jikan alone has no AniList identity and marks nothing.
+- The migration backfills in two steps. Identities created before 2026-11-13 06:01:15 UTC (the OTA-190 merge, when list claims began) were created by an import, so they get `created_at`. Any other identity with an `anime` row now gets the later of that anime's `created_at` and its own `created_at`, so `imported_at` is never before the identity existed.
+- The delete path is a SQL runbook, run by hand through a temporary Railway TCP proxy (docs/deploy.md). There is no endpoint and no script.
+
+Runbook. Run it in `psql`, statement by statement. `<from>` and `<to>` bound `created_at`, ISO 8601 with offset, for example `2026-11-13 06:01:15+00`. The block ends with `ROLLBACK`: check that each `DELETE` count equals the `SELECT` row count, then run it a second time with `COMMIT` in place of `ROLLBACK`.
+
+```sql
+BEGIN;
+LOCK TABLE "anime_external_id" IN SHARE MODE;
+UPDATE "anime_identity" AS i
+SET "imported_at" = GREATEST(a."created_at", i."created_at")
+FROM "anime_external_id" AS e
+JOIN "anime" AS a ON a."id" = e."anime_id"
+WHERE e."source" = 'ANILIST'
+  AND e."external_id" = i."anilist_id"
+  AND i."imported_at" IS NULL;
+SELECT anilist_id, canonical_slug, created_at FROM anime_identity i
+WHERE i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>'
+FOR UPDATE;
+DELETE FROM anime_slug s USING anime_identity i
+WHERE s.anilist_id = i.anilist_id
+  AND i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
+DELETE FROM anime_identity i
+WHERE i.imported_at IS NULL AND i.removed_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM anime_external_id e
+                  WHERE e.source = 'ANILIST' AND e.external_id = i.anilist_id)
+  AND i."created_at" >= '<from>' AND i."created_at" < '<to>';
+ROLLBACK;
+```
+
+The lock waits for imports in flight and blocks new ones until the end of the transaction. The first `UPDATE` repeats the migration's second backfill (safe to run again), so anime imported by the old API during the deploy window are marked before anything is released. For an AniList refusal (ADR 0006), drop the `AND i."created_at" ...` line in each statement to release every never-imported identity. After a release, list pages answer `slug: null` for those anime (the card links through the nofollow id route, ADR 0018), and a list that still lists one claims it again at its next fetch.
+
+Rollback: revert the code only; never drop `imported_at` (a re-run backfill cannot rebuild the marks of identities imported and purged since).
+
+**Deep dives.**
+
+- **Safety (2).** The race is an import whose `anime_external_id` insert is not committed yet: `NOT EXISTS` cannot see it. The `SHARE MODE` lock waits for that import to commit, and blocks new ones until the runbook ends, so the predicate sees every anime row. An import cannot sneak in between the `SELECT` and the `DELETE`.
+- **Backfill (1).** Two `UPDATE`s over a table of at most about 20,000 rows, once. The cutoff is a deploy fact, not a guess: nothing but an import created identities before it.
+- **Import cost (1).** One more statement by primary key per stored AniList snapshot, next to the 5 to 10 the importer already runs.
+
+Rejected:
+
+- **Clearing the marker on purge.** It would turn a purged import into a deletable identity, and its slug could then go to another anime while a link to it still exists.
+- **A `claim_origin` enum.** Same answer as a nullable timestamp, plus a value to keep in sync, and it loses when it happened.
+- **An admin endpoint or a `scripts/` command.** Used a few times at most, and each one needs auth or a release for no gain over a reviewed query.
+
+Too simple, on purpose:
+
+- **A re-imported identity whose anime was purged before the migration** gets the latest `anime.created_at` as `imported_at`, not the first. The marker only guards against release, so this is harmless.
+- **The runbook is not run in CI.** It was checked by hand once with five seeded identities (list claim, imported, purged import, removed, held but unmarked): only the list claim was returned and deleted. It was checked once on a local Postgres 16 and must be re-checked on the Postgres 18 dev database before its first use on production.
+
+Too complicated, not built: an index on `imported_at`, a scheduled job that releases old claims, a `released_at` tombstone, and deleting list pages together with their identities.
+
 ## Learnings
+
+## Amendment (2026-11-14, Farouk): Seasonal page before OTA-189
+
+Decision by Farouk: the Seasonal page (OTA-137) may go public on the beta before OTA-189 ships, behind these interim controls: `Disallow: /season?` in `robotsRules()`; card links come from `animeLink()` (never-imported anime use the nofollow id route) and are not prefetched; every season stepper, "Show more" and retry link is `rel="nofollow"` and not prefetched; lists stop at page 10. The global import bucket and the claim scope above still hold. OTA-189 is still required before launch and lifts these controls when it ships.

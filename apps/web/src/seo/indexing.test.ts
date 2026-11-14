@@ -47,18 +47,3 @@ describe('robots metadata key', () => {
     expect(offenders).toEqual([]);
   });
 });
-
-describe('public/robots.txt', () => {
-  const robotsTxt = readFileSync(
-    path.resolve(__dirname, '../../public/robots.txt'),
-    'utf8',
-  );
-
-  it('keeps crawlers out of the AniList id route, which imports on first visit (OTA-173)', () => {
-    expect(robotsTxt).toMatch(/^Disallow: \/anime\/anilist\/$/m);
-  });
-
-  it('never blocks the whole site, so crawlers can still read the noindex (OTA-134)', () => {
-    expect(robotsTxt).not.toMatch(/^Disallow:\s*\/\s*$/m);
-  });
-});

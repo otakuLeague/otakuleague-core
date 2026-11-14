@@ -39,8 +39,11 @@ API service:
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (reference variable) |
 | `SENTRY_DSN` | Set. The value lives only in Railway. |
+| `INTERNAL_API_KEY` | Not set yet (ADR 0019). Set: every route except `/health` needs it in `X-Internal-Api-Key`. Same value on Vercel (Production). |
+| `INTERNAL_API_KEY_PREVIOUS` | Unset, except during a rotation (below). Refused without `INTERNAL_API_KEY`. |
 
 - The `DATABASE_URL` reference resolves to the private network host. Database traffic never leaves Railway and costs no egress.
+- Without `INTERNAL_API_KEY` the API answers any caller and logs `INTERNAL_API_KEY is not set: the API answers any caller` once at start. Production still boots, so a missing key never blocks a deploy (until OTA-139 makes it required).
 - All names are also in `.env.example`. Never write a secret value in the repo.
 - Swagger UI (`/docs`) is off in production.
 
@@ -78,6 +81,26 @@ API service:
 Railway keeps old images for a limited time. If Redeploy is not offered, revert the commit on `main` instead, via a PR.
 
 A rollback does not undo migrations. Fix forward with a new migration. Never edit an applied one.
+
+## Internal API key (ADR 0019)
+
+Generate a key with `openssl rand -hex 32` on your own machine. Paste it only into the Railway and Vercel dashboards: never in the repo, a ticket, a chat or a URL. A wrong key on either side makes the whole site answer "service unavailable", so follow the order.
+
+Turn it on (once the web sends the key, OTA-182 slice 2, and the Preview decision of ADR 0019 is in place):
+1. Vercel → Settings → Environment Variables: `INTERNAL_API_KEY` for Production. Redeploy the web.
+2. Railway → API → Variables: the same `INTERNAL_API_KEY`. Railway restarts the API; from then on the check is on.
+3. Check: `curl -i '<api>/anime/search?q=a'` answers 403 `INTERNAL_KEY_REQUIRED`, `curl -i '<api>/health'` answers 200, and the site loads an anime page. The start-up warning is gone from the API logs.
+
+Rotate (no refused request):
+1. Railway: set `INTERNAL_API_KEY_PREVIOUS` to the current key first, or both variables in one staged change (one deploy). Then `INTERNAL_API_KEY` to the new one. The API now accepts both. Never change `INTERNAL_API_KEY` alone: until Vercel has the new key, every web request would be refused.
+2. Vercel: set `INTERNAL_API_KEY` to the new key and redeploy the web.
+3. Once that deploy is live, delete `INTERNAL_API_KEY_PREVIOUS` on Railway.
+
+On a suspected leak, run the three steps back to back: the leaked key works until step 3.
+
+A Vercel rollback (Instant Rollback, or redeploying an old deployment) keeps that deployment's variables, so it sends the key it was built with. Rolling the web back past a rotation sends the old key, refused once step 3 is done: set `INTERNAL_API_KEY_PREVIOUS` back to it on Railway first.
+
+Turn it off: delete `INTERNAL_API_KEY` (and `INTERNAL_API_KEY_PREVIOUS`) on Railway first, then on Vercel. Before rolling the web back to a build older than slice 2, turn it off the same way.
 
 ## Backups
 

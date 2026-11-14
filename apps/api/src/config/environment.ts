@@ -59,6 +59,27 @@ export function isHttpUrl(value: unknown): boolean {
   );
 }
 
+// 43 characters of base64url is 256 bits; `openssl rand -hex 32` gives 64 hex characters (ADR 0019).
+export const INTERNAL_API_KEY_MIN_LENGTH = 43;
+const INTERNAL_API_KEY_PATTERN = new RegExp(
+  `^[A-Za-z0-9_-]{${String(INTERNAL_API_KEY_MIN_LENGTH)},128}$`,
+);
+
+export function isInternalApiKey(value: unknown): boolean {
+  return typeof value === 'string' && INTERNAL_API_KEY_PATTERN.test(value);
+}
+
+function hasInternalApiKey(environment: unknown): boolean {
+  return (
+    typeof environment === 'object' &&
+    environment !== null &&
+    Reflect.get(environment, 'INTERNAL_API_KEY') !== undefined
+  );
+}
+
+const INTERNAL_API_KEY_RULE =
+  'must be 43 to 128 characters of A-Z, a-z, 0-9, _ or - (openssl rand -hex 32)';
+
 const BOOLEAN_STRINGS = ['true', 'false'] as const;
 
 const NODE_ENVIRONMENTS = ['development', 'test', 'production'] as const;
@@ -130,6 +151,33 @@ export class EnvironmentVariables {
     { message: 'JIKAN_API_URL must be an http(s) URL' },
   )
   readonly JIKAN_API_URL?: string;
+
+  // Shared with the web server (ADR 0019). Optional until OTA-139: unset, every route is open.
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isInternalApiKey', validator: { validate: isInternalApiKey } },
+    { message: `INTERNAL_API_KEY ${INTERNAL_API_KEY_RULE}` },
+  )
+  readonly INTERNAL_API_KEY?: string;
+
+  // Accepted too during a rotation; refused without INTERNAL_API_KEY. Bottom-up, like PORT.
+  @ValidateBy(
+    {
+      name: 'needsInternalApiKey',
+      validator: { validate: (_, args) => hasInternalApiKey(args?.object) },
+    },
+    {
+      message:
+        // No ":" or "=" after a variable name: the log redaction would mask the words after it.
+        'INTERNAL_API_KEY_PREVIOUS is set without INTERNAL_API_KEY; set the new key too, or unset both',
+    },
+  )
+  @IsOptional()
+  @ValidateBy(
+    { name: 'isInternalApiKey', validator: { validate: isInternalApiKey } },
+    { message: `INTERNAL_API_KEY_PREVIOUS ${INTERNAL_API_KEY_RULE}` },
+  )
+  readonly INTERNAL_API_KEY_PREVIOUS?: string;
 }
 
 // Messages name the variable and the rule, never the value: DATABASE_URL holds a password.

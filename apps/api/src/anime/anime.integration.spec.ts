@@ -615,6 +615,10 @@ describe('GET /anime/:idSource/:externalId', () => {
       canonical: 'attack-on-titan',
       all: ['attack-on-titan', 'shingeki-no-kyojin'],
     });
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 16498 } }))
+        ?.importedAt,
+    ).toEqual(clock.now());
   });
 
   it('gives a later anime with the same title the next free rung, and no alias already taken', async () => {
@@ -634,6 +638,7 @@ describe('GET /anime/:idSource/:externalId', () => {
     aniListByMalId.set(2963, fixture('anilist-minami-ke'));
     await get('/anime/myanimelist/2963').expect(200);
     await importer.settle();
+    const importedAt = clock.now();
     expect(await slugsOf(2963)).toEqual({
       canonical: 'minami-ke',
       all: ['minami-ke'],
@@ -659,6 +664,10 @@ describe('GET /anime/:idSource/:externalId', () => {
       canonical: 'the-minami-family',
       all: ['minami-ke', 'the-minami-family'],
     });
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 2963 } }))
+        ?.importedAt,
+    ).toEqual(importedAt);
     // The former canonical now redirects through the endpoint.
     expect((await get('/anime/slugs/minami-ke').expect(200)).body).toEqual({
       kind: 'redirect',
@@ -765,12 +774,21 @@ describe('GET /anime/:idSource/:externalId', () => {
   it('keeps the slugs through the purge and reuses them on re-import', async () => {
     await get('/anime/myanimelist/16498').expect(200);
     await importer.settle();
+    const importedAt = clock.now();
     clock.advance(31 * DAY_MS);
     expect(await importer.purgeUnviewed()).toBe(1);
 
     expect((await slugsOf(16498)).all).toHaveLength(2);
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 16498 } }))
+        ?.importedAt,
+    ).toEqual(importedAt);
     await get('/anime/anilist/16498').expect(200);
     await importer.settle();
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 16498 } }))
+        ?.importedAt,
+    ).toEqual(importedAt);
 
     expect(await slugsOf(16498)).toEqual({
       canonical: 'attack-on-titan',
@@ -781,6 +799,7 @@ describe('GET /anime/:idSource/:externalId', () => {
   it('never imports again an anime deleted for being adult, though its slugs stay', async () => {
     await get('/anime/myanimelist/52991').expect(200);
     await importer.settle();
+    const importedAt = clock.now();
     const frieren = record(record(fixture('anilist-frieren')).data).Media;
     aniListByMalId.set(52991, {
       data: { Media: { ...record(frieren), isAdult: true } },
@@ -800,6 +819,10 @@ describe('GET /anime/:idSource/:externalId', () => {
       (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
         ?.removedAt,
     ).toEqual(flaggedAt);
+    expect(
+      (await prisma.animeIdentity.findUnique({ where: { anilistId: 154587 } }))
+        ?.importedAt,
+    ).toEqual(importedAt);
     expect((await slugsOf(154587)).all).toHaveLength(2);
   });
 
@@ -878,6 +901,37 @@ describe('GET /anime/:idSource/:externalId', () => {
 
   describe('GET /anime/slugs/:slug', () => {
     const bySlug = (slug: string) => get(`/anime/slugs/${slug}`);
+
+    it('marks a list-claimed identity imported when its slug first imports it', async () => {
+      await prisma.animeIdentity.create({
+        data: {
+          anilistId: 16498,
+          canonicalSlug: 'attack-on-titan',
+          createdAt: clock.now(),
+        },
+      });
+      await prisma.animeSlug.create({
+        data: {
+          slug: 'attack-on-titan',
+          anilistId: 16498,
+          createdAt: clock.now(),
+        },
+      });
+      expect(
+        (await prisma.animeIdentity.findUnique({ where: { anilistId: 16498 } }))
+          ?.importedAt,
+      ).toBeNull();
+      clock.advance(DAY_MS);
+
+      await bySlug('attack-on-titan').expect(200);
+      await importer.settle();
+
+      const identity = await prisma.animeIdentity.findUnique({
+        where: { anilistId: 16498 },
+      });
+      expect(identity?.importedAt).toEqual(clock.now());
+      expect(identity?.canonicalSlug).toBe('attack-on-titan');
+    });
 
     it('serves the anime by its canonical slug and redirects its other slugs', async () => {
       const first = (await get('/anime/myanimelist/16498').expect(200))
