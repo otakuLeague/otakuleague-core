@@ -150,12 +150,14 @@ model AnimeIdentity {
   // Adult or taken down: never imported again.
   removedAt     DateTime?   @map("removed_at") @db.Timestamptz(3)
   createdAt     DateTime    @map("created_at") @db.Timestamptz(3)
+  // First time an anime row held this AniList id; never cleared. Null = claimed by a list, never imported (ADR 0016, OTA-192).
+  importedAt    DateTime?   @map("imported_at") @db.Timestamptz(3)
   slugs         AnimeSlug[]
 
   @@map("anime_identity")
 }
 
-// Every slug ever claimed (current canonical, former canonicals, romaji alias); never reassigned.
+// Every slug ever claimed (current canonical, former canonicals, romaji alias); never reassigned, except a never-imported identity's slugs released by the ADR 0016 runbook.
 // A CHECK constraint (migration anime_slug_rules) holds the format: never a bad row forever.
 model AnimeSlug {
   slug      String        @id
