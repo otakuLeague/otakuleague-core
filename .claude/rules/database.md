@@ -18,3 +18,4 @@ Requires Docker. First time: `cp .env.example .env` (until `.env` exists, Compos
 - `pnpm db:logs`: follow the database logs.
 - Port conflict ("port is already allocated" / "address already in use"): set `POSTGRES_PORT` in `.env` (e.g. 5433) and update the port in `DATABASE_URL` and `DATABASE_URL_TEST`, then `pnpm db:up`.
 - Leftover volume (`db:up` ends with "container ... is unhealthy" because the test DB is missing, or the logs say "database files are incompatible with server" after a version change): init scripts only run on an empty volume, so run `pnpm db:reset`. This deletes all local data.
+- Production backup: `.github/workflows/db-backup.yml` dumps production nightly, encrypted with age, to a 60-day workflow artifact (OTA-170). Secrets, rotation and the restore drill: `docs/deploy.md` → Backups.

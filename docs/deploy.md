@@ -52,9 +52,9 @@ API service:
 ## Postgres service
 
 - Image: Railway template `ghcr.io/railwayapp-templates/postgres-ssl:18`.
-- Production runs 18 (Railway template default); dev and CI run 16. Farouk decides: bump dev/CI to 18 or pin production to 16 (tracked in Linear). Nothing in the schema depends on the difference today.
+- Production (Railway template default), dev (`docker-compose.yml`) and CI all run Postgres 18.
 - Volume: `postgres-volume`, 500 MB, mounted at `/var/lib/postgresql/data`.
-- No public TCP proxy. The database is reachable only over the private network.
+- Public TCP proxy (`*.proxy.rlwy.net`) on, for the nightly backup only (OTA-170, see Backups); the API uses the private network. Anyone who finds the host and port can try passwords, so the password stays Railway's long random one.
 
 ## Plan and limits
 
@@ -71,7 +71,7 @@ API service:
 - `/health` returns 503 while Postgres is down.
 - If the build, the migration or the health check fails, the deployment is marked failed. The previous deployment keeps serving (expected behaviour, to be confirmed by the drills).
 - Each migration file runs in its own implicit transaction, so a failed file is rolled back. Earlier files in the same run stay applied, and statements such as `CREATE INDEX CONCURRENTLY` are not transactional.
-- A failed migration stays recorded in `_prisma_migrations`. Every later `migrate deploy` then fails with P3009 until someone runs `prisma migrate resolve --rolled-back <name>` against production (from Farouk's machine through a temporary TCP proxy, or a one-off pre-deploy command). Then fix forward with a new migration.
+- A failed migration stays recorded in `_prisma_migrations`. Every later `migrate deploy` then fails with P3009 until someone runs `prisma migrate resolve --rolled-back <name>` against production (from Farouk's machine through the TCP proxy, permanent since OTA-170, see Backups; or a one-off pre-deploy command). Then fix forward with a new migration.
 - The dangerous case is a migration that applies and breaks the old code still running. So migrations are additive: expand first, then contract in a later PR.
 
 ## Rollback
@@ -114,11 +114,34 @@ Turn it off: first delete `INTERNAL_API_KEY_REQUIRED` on Railway (or set it to `
 
 ## Backups
 
-**Status as of 2026-11-11: not confirmed.** The autopilot cannot see backup schedules through the Railway tools.
+The copy we rely on is the nightly encrypted dump below (OTA-170): Railway Hobby gives us no backup we control. Railway volume backups are a second layer, **not confirmed as of 2026-11-11** (the Railway tools don't show backup schedules):
 
 - [ ] Daily and weekly volume backups enabled (Farouk). Steps: Postgres service → `postgres-volume` → Backups tab → enable the Daily schedule and the Weekly schedule. Then tick this line.
 - Before relying on an on-demand backup as a safety net, check in the dashboard whether a restore creates a new volume that needs a Deploy, and whether it removes newer backups.
 - Point-in-Time Recovery exists (per Railway docs): pgBackRest to a storage bucket, a weekly full backup and daily differentials, about 4 weeks of history. It costs a storage bucket, so it is not enabled. Revisit before launch.
+
+### Nightly encrypted dump
+
+`.github/workflows/db-backup.yml` runs every night at 03:17 UTC (GitHub may start it late) and on demand: Actions → DB backup → Run workflow, or `gh workflow run db-backup.yml`. Neither works until the file is on main.
+- It runs `pg_dump --format=custom --no-owner --no-privileges` from the `postgres:18` image (the client must be at least the server's major) through the TCP proxy with `sslmode=require`, piped straight into `age` encrypted to Farouk's public key: the plaintext is never written to a file, Docker's log included (`--log-driver none`). Each run uploads one artifact, `db-backup`, holding `otakuleague-<YYYY-MM-DDTHHMM>Z.dump.age`. GitHub deletes it after 60 days.
+- The data of the AniList and Jikan cache tables (`anime_source_snapshot`, `anime_relation_node`, `anime_list_page`) is left out, their schema kept: AniList's terms forbid using its data "as a backup" (ADR 0006). After a restore it re-imports on its own: each anime page refetches on its first view, lists and franchises on their next request, and search finds an anime again once its page has been reopened.
+- The repo is public: anyone can read the run logs and download the artifact. A dump is only as private as the age private key, which Farouk alone holds, outside GitHub and Railway; losing it makes every dump unreadable. The job logs only the encrypted size and masks the proxy host, port and password; it passes them to pg_dump as `PG*` variables, never on a command line.
+- Secrets (Settings → Secrets and variables → Actions): `BACKUP_DATABASE_URL`, Railway's Postgres `DATABASE_PUBLIC_URL`; `BACKUP_AGE_PUBLIC_KEY`, the `age1…` line printed by `age-keygen -y <private key file>`. Plain `age-keygen` keys only: the runner's apt `age` cannot encrypt to post-quantum (`age1pq…`) or plugin keys, and the job refuses them. The URL must have no query string and no `%`: the job sets `sslmode` itself, and does not decode percent-encoding.
+- When the Postgres password changes or the TCP proxy is recreated (new port), copy the new `DATABASE_PUBLIC_URL` into `BACKUP_DATABASE_URL` the same day, then run the workflow on demand. Removing the proxy stops the backups.
+- The run fails if a secret is missing or malformed, or if pg_dump, age or the upload fails, or the dump is empty. GitHub emails a failed scheduled run to whoever last changed the `cron` line. In a public repo GitHub disables scheduled workflows after 60 days without repo activity: re-enable it under Actions → DB backup.
+- `scripts/db-backup.test.mjs` runs the job's shell steps against a fake `docker` and `age`, and checks the workflow's triggers, token, secrets and pins.
+
+Hardening for Farouk (not done yet):
+- [ ] Move both secrets into a GitHub Environment `db-backup` limited to `main`, then add `environment: db-backup` to the job (adding it before the environment exists breaks the job).
+- [ ] A dedicated read-only role for the dump (`GRANT pg_read_all_data`, a low `CONNECTION LIMIT`) instead of the superuser in `DATABASE_PUBLIC_URL`, so a leaked secret can only read.
+- [ ] Protect `main` and add a CODEOWNERS entry for `.github/`, so no workflow change reaches the secrets unreviewed.
+
+Restore a dump into a throwaway local database, never production. **Not yet tested (Farouk, after the first nightly run).** Needs `gh`, `age`, Docker and the root `.env`.
+1. `gh run list --workflow db-backup.yml --status success --limit 5`, then `gh run download <run-id> -n db-backup -D backup` (or download `db-backup` from the run page and unzip it).
+2. `age -d -i <private key file> -o backup/otakuleague.dump backup/otakuleague-<stamp>.dump.age`. Keep the plaintext out of synced folders.
+3. `pnpm db:up` (Postgres 18, as production), then `docker compose exec -T db createdb -U otakuleague restore_drill` and `docker compose exec -T db pg_restore --no-owner --no-privileges -U otakuleague -d restore_drill < backup/otakuleague.dump` (user: `POSTGRES_USER` from `.env`). It should print no `error:` line.
+4. `docker compose exec -T db psql -U otakuleague -d restore_drill -tAc 'select count(*) from anime'` returns a non-zero count close to production's; `anime_source_snapshot` is empty on purpose.
+5. `docker compose exec -T db dropdb -U otakuleague restore_drill`, `rm -r backup`, and replace "Not yet tested" with the date.
 
 ## Restore
 
@@ -126,7 +149,7 @@ Turn it off: first delete `INTERNAL_API_KEY_REQUIRED` on Railway (or set it to `
 2. Railway restarts Postgres. `/health` answers 503 during the restart and recovers on its own (expected, to be confirmed by the drills).
 3. Check that `/health` returns 200, then open one anime by slug.
 
-Off-platform copy (untested): temporarily add a TCP proxy on the Postgres service, run `pg_dump -Fc` with a Postgres 18 client against the proxy URL, then remove the proxy. Local dev runs Postgres 18 too, so the dump restores locally.
+From the nightly dump instead: Backups → Nightly encrypted dump (local drill only; restoring a dump into production is not written up yet).
 
 ## Deploy test plan
 
