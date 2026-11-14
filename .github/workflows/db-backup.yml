@@ -1,0 +1,97 @@
+name: DB backup
+
+# Nightly encrypted dump of the production database (OTA-170, docs/deploy.md "Backups").
+# The repo is public: anyone can read the run logs and download the artifact. So the dump is
+# encrypted with age to Farouk's public key before it reaches the disk, and no step prints the
+# connection string or any part of it. pg_dump runs from the postgres:18 image because the client
+# must be at least the server's major version (production runs 18; the runner's apt client is older).
+on:
+  schedule:
+    - cron: '17 3 * * *' # 03:17 UTC, off the hour: GitHub delays top-of-the-hour runs the most.
+  workflow_dispatch:
+
+# No checkout and no API call; upload-artifact uses the runner's own token, not GITHUB_TOKEN.
+permissions: {}
+
+# Never two dumps at once: a second run waits for the first instead of cancelling it.
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup
+    # A fork has neither the secrets nor any business dumping production.
+    if: github.repository == 'otakuLeague/otakuleague-core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install age
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+
+      # Each secret reaches only the steps that read it, never the job env or a third-party action.
+      - name: Check secrets
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          [[ -n "${BACKUP_DATABASE_URL:-}" ]] || fail 'Secret BACKUP_DATABASE_URL is missing or empty.'
+          [[ -n "${BACKUP_AGE_PUBLIC_KEY:-}" ]] || fail 'Secret BACKUP_AGE_PUBLIC_KEY is missing or empty.'
+          # Only a native age recipient (age1 + 58 bech32 characters). Also stops a private key
+          # (AGE-SECRET-KEY-1...) pasted into the wrong secret before age can echo it in an error.
+          [[ "$BACKUP_AGE_PUBLIC_KEY" =~ ^age1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}$ ]] ||
+            fail 'BACKUP_AGE_PUBLIC_KEY is not an age public key (age1 followed by 58 characters).'
+          # GitHub masks the whole secret, not its parts, and a pg_dump error prints the host and port.
+          # In a public repo the proxy port is what singles out our database, so mask them (and the
+          # password, defensively). The user is left visible: masking "postgres" would blank every
+          # mention of the image.
+          url='^postgres(ql)?://[^:@/[:space:]]+:([^@/[:space:]]+)@([^:@/[:space:]]+):([0-9]+)/[^[:space:]]+$'
+          [[ "$BACKUP_DATABASE_URL" =~ $url ]] ||
+            fail 'BACKUP_DATABASE_URL is not a postgresql://user:password@host:port/database URL.'
+          echo "::add-mask::${BASH_REMATCH[2]}"
+          echo "::add-mask::${BASH_REMATCH[3]}"
+          echo "::add-mask::${BASH_REMATCH[4]}"
+
+      - name: Pull the Postgres 18 client
+        run: docker pull --quiet postgres:18
+
+      - name: Dump and encrypt
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/db-backup"
+          file="$dir/otakuleague-$(date -u +%Y-%m-%dT%H%MZ).dump.age"
+          mkdir -p "$dir"
+          # `-e NAME` copies the value from this step's env, so the URL is on no command line and is
+          # expanded only inside the container. PGSSLMODE=require refuses an unencrypted connection.
+          # The dump streams straight into age: the plaintext never touches the disk. pipefail fails
+          # the step if pg_dump (via docker's exit code) or age fails.
+          docker run --rm --pull=never -e BACKUP_DATABASE_URL -e PGSSLMODE=require postgres:18 \
+            sh -c 'exec pg_dump --format=custom --no-owner --no-privileges --no-password --dbname="$BACKUP_DATABASE_URL"' |
+            age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" --output "$file"
+          # Both can exit 0 on an empty stream: the file must outweigh age's encryption of nothing.
+          size=$(($(wc -c < "$file")))
+          empty=$(($(age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" < /dev/null | wc -c)))
+          if ((size <= empty)); then
+            echo '::error::The dump is empty; nothing was uploaded.'
+            exit 1
+          fi
+          echo "Encrypted dump: $size bytes"
+          echo "Encrypted dump: $size bytes, kept 60 days as artifact \`db-backup\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: db-backup
+          path: ${{ runner.temp }}/db-backup/
+          retention-days: 60
+          if-no-files-found: error
+          # Already compressed (pg_dump -Fc) and encrypted: zipping again would only cost time.
+          compression-level: 0

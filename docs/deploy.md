@@ -54,7 +54,7 @@ API service:
 - Image: Railway template `ghcr.io/railwayapp-templates/postgres-ssl:18`.
 - Production runs 18 (Railway template default); dev and CI run 16. Farouk decides: bump dev/CI to 18 or pin production to 16 (tracked in Linear). Nothing in the schema depends on the difference today.
 - Volume: `postgres-volume`, 500 MB, mounted at `/var/lib/postgresql/data`.
-- No public TCP proxy. The database is reachable only over the private network.
+- Public TCP proxy (`*.proxy.rlwy.net`) on, for the nightly backup only (OTA-170, see Backups); the API uses the private network. Anyone who finds the host and port can try passwords, so the password stays Railway's long random one.
 
 ## Plan and limits
 
@@ -114,11 +114,28 @@ Turn it off: first delete `INTERNAL_API_KEY_REQUIRED` on Railway (or set it to `
 
 ## Backups
 
-**Status as of 2026-11-11: not confirmed.** The autopilot cannot see backup schedules through the Railway tools.
+The copy we rely on is the nightly encrypted dump below (OTA-170): Railway Hobby gives us no backup we control. Railway volume backups are a second layer, **not confirmed as of 2026-11-11** (the Railway tools don't show backup schedules):
 
 - [ ] Daily and weekly volume backups enabled (Farouk). Steps: Postgres service → `postgres-volume` → Backups tab → enable the Daily schedule and the Weekly schedule. Then tick this line.
 - Before relying on an on-demand backup as a safety net, check in the dashboard whether a restore creates a new volume that needs a Deploy, and whether it removes newer backups.
 - Point-in-Time Recovery exists (per Railway docs): pgBackRest to a storage bucket, a weekly full backup and daily differentials, about 4 weeks of history. It costs a storage bucket, so it is not enabled. Revisit before launch.
+
+### Nightly encrypted dump
+
+`.github/workflows/db-backup.yml` runs every night at 03:17 UTC (GitHub may start it late) and on demand: Actions → DB backup → Run workflow, or `gh workflow run db-backup.yml`. Neither works until the file is on main.
+- It runs `pg_dump --format=custom --no-owner --no-privileges` from the `postgres:18` image (the client must be at least the server's major) through the TCP proxy with `sslmode=require`, piped straight into `age` encrypted to Farouk's public key: the plaintext never touches the runner's disk. Each run uploads one artifact, `db-backup`, holding `otakuleague-<YYYY-MM-DDTHHMM>Z.dump.age`. GitHub deletes it after 60 days.
+- The repo is public: anyone can read the run logs and download the artifact. A dump is only as private as the age private key, which Farouk alone holds, outside GitHub and Railway; losing it makes every dump unreadable. The job logs only the encrypted size and masks the proxy host, port and password.
+- Secrets (Settings → Secrets and variables → Actions): `BACKUP_DATABASE_URL`, Railway's Postgres `DATABASE_PUBLIC_URL`; `BACKUP_AGE_PUBLIC_KEY`, the `age1…` line printed by `age-keygen -y <private key file>`. Plain `age-keygen` keys only: the runner's apt `age` cannot encrypt to post-quantum (`age1pq…`) or plugin keys, and the job refuses them.
+- When the Postgres password changes or the TCP proxy is recreated (new port), copy the new `DATABASE_PUBLIC_URL` into `BACKUP_DATABASE_URL` the same day, then run the workflow on demand. Removing the proxy stops the backups.
+- The run fails if a secret is missing or malformed, or if pg_dump, age or the upload fails, or the dump is empty. GitHub emails a failed scheduled run to whoever last changed the `cron` line. In a public repo GitHub disables scheduled workflows after 60 days without repo activity: re-enable it under Actions → DB backup.
+- `scripts/db-backup.test.mjs` runs the job's shell steps against a fake `docker` and `age`.
+
+Restore a dump into a throwaway local database, never production. **Not yet tested (Farouk, after the first nightly run).** Needs `gh`, `age`, Docker and the root `.env`.
+1. `gh run list --workflow db-backup.yml --status success --limit 5`, then `gh run download <run-id> -n db-backup -D backup` (or download `db-backup` from the run page and unzip it).
+2. `age -d -i <private key file> -o backup/otakuleague.dump backup/otakuleague-<stamp>.dump.age`. Keep the plaintext out of synced folders.
+3. `pnpm db:up` (Postgres 18, as production), then `docker compose exec -T db createdb -U otakuleague restore_drill` and `docker compose exec -T db pg_restore --no-owner --no-privileges -U otakuleague -d restore_drill < backup/otakuleague.dump` (user: `POSTGRES_USER` from `.env`). It should print no `error:` line.
+4. `docker compose exec -T db psql -U otakuleague -d restore_drill -tAc 'select count(*) from anime'` returns a non-zero count close to production's.
+5. `docker compose exec -T db dropdb -U otakuleague restore_drill`, `rm -r backup`, and replace "Not yet tested" with the date.
 
 ## Restore
 
@@ -126,7 +143,7 @@ Turn it off: first delete `INTERNAL_API_KEY_REQUIRED` on Railway (or set it to `
 2. Railway restarts Postgres. `/health` answers 503 during the restart and recovers on its own (expected, to be confirmed by the drills).
 3. Check that `/health` returns 200, then open one anime by slug.
 
-Off-platform copy (untested): temporarily add a TCP proxy on the Postgres service, run `pg_dump -Fc` with a Postgres 18 client against the proxy URL, then remove the proxy. Local dev runs Postgres 18 too, so the dump restores locally.
+From the nightly dump instead: Backups → Nightly encrypted dump (local drill only; restoring a dump into production is not written up yet).
 
 ## Deploy test plan
 
