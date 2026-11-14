@@ -214,7 +214,7 @@ Non-functional, with numbers:
 
 - `store()` marks the AniList identity in the same transaction as the slug claim: `UPDATE ... WHERE imported_at IS NULL`, with the injected clock. An import through Jikan alone has no AniList identity and marks nothing.
 - The migration backfills in two steps. Identities created before 2026-11-13 06:01:15 UTC (the OTA-190 merge, when list claims began) were created by an import, so they get `created_at`. Any other identity with an `anime` row now gets the later of that anime's `created_at` and its own `created_at`, so `imported_at` is never before the identity existed.
-- The delete path is a SQL runbook, run by hand through a temporary Railway TCP proxy (docs/deploy.md). There is no endpoint and no script.
+- The delete path is a SQL runbook, run by hand through the Railway TCP proxy (permanent since OTA-170: docs/deploy.md, Backups). There is no endpoint and no script.
 
 Runbook. Run it in `psql`, statement by statement. `<from>` and `<to>` bound `created_at`, ISO 8601 with offset, for example `2026-11-13 06:01:15+00`. The block ends with `ROLLBACK`: check that each `DELETE` count equals the `SELECT` row count, then run it a second time with `COMMIT` in place of `ROLLBACK`.
 

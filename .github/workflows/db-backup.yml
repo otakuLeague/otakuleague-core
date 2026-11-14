@@ -2,9 +2,9 @@ name: DB backup
 
 # Nightly encrypted dump of the production database (OTA-170, docs/deploy.md "Backups").
 # The repo is public: anyone can read the run logs and download the artifact. So the dump is
-# encrypted with age to Farouk's public key before it reaches the disk, and no step prints the
-# connection string or any part of it. pg_dump runs from the postgres:18 image because the client
-# must be at least the server's major version (production runs 18; the runner's apt client is older).
+# encrypted with age to Farouk's public key before it is written to any file, and no step prints
+# the connection string or any part of it. pg_dump runs from the postgres:18 image because the
+# client must be at least the server's major version (production runs 18; apt's client is older).
 on:
   schedule:
     - cron: '17 3 * * *' # 03:17 UTC, off the hour: GitHub delays top-of-the-hour runs the most.
@@ -23,7 +23,8 @@ jobs:
     name: Backup
     # A fork has neither the secrets nor any business dumping production.
     if: github.repository == 'otakuLeague/otakuleague-core'
-    runs-on: ubuntu-latest
+    # Pinned, not -latest: the image decides the apt age version, which decides the key formats.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Install age
@@ -46,16 +47,6 @@ jobs:
           # (AGE-SECRET-KEY-1...) pasted into the wrong secret before age can echo it in an error.
           [[ "$BACKUP_AGE_PUBLIC_KEY" =~ ^age1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}$ ]] ||
             fail 'BACKUP_AGE_PUBLIC_KEY is not an age public key (age1 followed by 58 characters).'
-          # GitHub masks the whole secret, not its parts, and a pg_dump error prints the host and port.
-          # In a public repo the proxy port is what singles out our database, so mask them (and the
-          # password, defensively). The user is left visible: masking "postgres" would blank every
-          # mention of the image.
-          url='^postgres(ql)?://[^:@/[:space:]]+:([^@/[:space:]]+)@([^:@/[:space:]]+):([0-9]+)/[^[:space:]]+$'
-          [[ "$BACKUP_DATABASE_URL" =~ $url ]] ||
-            fail 'BACKUP_DATABASE_URL is not a postgresql://user:password@host:port/database URL.'
-          echo "::add-mask::${BASH_REMATCH[2]}"
-          echo "::add-mask::${BASH_REMATCH[3]}"
-          echo "::add-mask::${BASH_REMATCH[4]}"
 
       - name: Pull the Postgres 18 client
         run: docker pull --quiet postgres:18
@@ -66,23 +57,45 @@ jobs:
           BACKUP_AGE_PUBLIC_KEY: ${{ secrets.BACKUP_AGE_PUBLIC_KEY }}
         run: |
           set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          # The URL is split into libpq's PG* variables, so no part of it is on any command line
+          # (pg_dump's argv included). A query string could override sslmode, and decoding %XX is
+          # not worth the risk: both are refused, as is any character outside these classes.
+          [[ "$BACKUP_DATABASE_URL" != *'?'* ]] ||
+            fail 'BACKUP_DATABASE_URL has a query string (?...). Remove it: this job sets sslmode itself.'
+          [[ "$BACKUP_DATABASE_URL" != *%* ]] ||
+            fail 'BACKUP_DATABASE_URL has a percent-encoded character. Use a password of letters and digits.'
+          url='^postgres(ql)?://([A-Za-z0-9._-]+):([A-Za-z0-9._~-]+)@([A-Za-z0-9.-]+):([0-9]{1,5})/([A-Za-z0-9._-]+)$'
+          [[ "$BACKUP_DATABASE_URL" =~ $url ]] ||
+            fail 'BACKUP_DATABASE_URL is not a postgresql://user:password@host:port/database URL.'
+          export PGUSER="${BASH_REMATCH[2]}" PGPASSWORD="${BASH_REMATCH[3]}" PGHOST="${BASH_REMATCH[4]}"
+          export PGPORT="${BASH_REMATCH[5]}" PGDATABASE="${BASH_REMATCH[6]}" PGSSLMODE=require
+          # GitHub masks the whole secret, not its parts, and a pg_dump error prints the host and
+          # port. In a public repo the proxy port is what singles out our database. The user stays
+          # visible: masking "postgres" would blank every mention of the image.
+          echo "::add-mask::$PGPASSWORD"
+          echo "::add-mask::$PGHOST"
+          echo "::add-mask::$PGPORT"
           dir="$RUNNER_TEMP/db-backup"
           file="$dir/otakuleague-$(date -u +%Y-%m-%dT%H%MZ).dump.age"
           mkdir -p "$dir"
-          # `-e NAME` copies the value from this step's env, so the URL is on no command line and is
-          # expanded only inside the container. PGSSLMODE=require refuses an unencrypted connection.
-          # The dump streams straight into age: the plaintext never touches the disk. pipefail fails
-          # the step if pg_dump (via docker's exit code) or age fails.
-          docker run --rm --pull=never -e BACKUP_DATABASE_URL -e PGSSLMODE=require postgres:18 \
-            sh -c 'exec pg_dump --format=custom --no-owner --no-privileges --no-password --dbname="$BACKUP_DATABASE_URL"' |
+          # `-e NAME` copies the value from this step's env, by name only. --log-driver none: the
+          # container's stdout (the plaintext dump) is streamed to us but never written to Docker's
+          # log file. PGSSLMODE=require refuses an unencrypted connection. The data of the AniList
+          # and Jikan cache tables is left out (ADR 0006: never a backup of their data; it
+          # re-imports on demand); their schema is kept. pipefail fails the step if pg_dump (via
+          # docker's exit code) or age fails.
+          docker run --rm --pull=never --log-driver none \
+            -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGSSLMODE postgres:18 \
+            pg_dump --format=custom --no-owner --no-privileges --no-password \
+            --exclude-table-data=public.anime_source_snapshot \
+            --exclude-table-data=public.anime_relation_node \
+            --exclude-table-data=public.anime_list_page |
             age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" --output "$file"
           # Both can exit 0 on an empty stream: the file must outweigh age's encryption of nothing.
           size=$(($(wc -c < "$file")))
           empty=$(($(age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" < /dev/null | wc -c)))
-          if ((size <= empty)); then
-            echo '::error::The dump is empty; nothing was uploaded.'
-            exit 1
-          fi
+          ((size > empty)) || fail 'The dump is empty; nothing was uploaded.'
           echo "Encrypted dump: $size bytes"
           echo "Encrypted dump: $size bytes, kept 60 days as artifact \`db-backup\`." >> "$GITHUB_STEP_SUMMARY"
 
