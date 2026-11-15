@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { EnvironmentVariables } from '../config/environment';
 import { PrismaClient } from '../generated/prisma/client';
+import { databasePoolConfig } from './database-pool';
 
 // pg defaults to no timeouts: a connect to an unreachable host, or a query to a
 // stalled server, would hold a pool slot until the OS gives up. The health check
@@ -18,8 +19,9 @@ export const DATABASE_POOL_MAX = 10;
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     super({
+      // Session zone pinned to UTC on every connection (OTA-200, database-pool.ts).
       adapter: new PrismaPg({
-        connectionString: config.get('DATABASE_URL', { infer: true }),
+        ...databasePoolConfig(config.get('DATABASE_URL', { infer: true })),
         max: DATABASE_POOL_MAX,
         connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
         query_timeout: QUERY_TIMEOUT_MS,

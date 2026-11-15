@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { REPO_ROOT_ENV_FILE } from '../config/environment';
 import { PrismaClient } from '../generated/prisma/client';
+import { databasePoolConfig } from '../prisma/database-pool';
 
 // Integration tests only (ADR 0005). The database named by DATABASE_URL_TEST is the
 // migrated template; each test file runs against its own clone of it.
@@ -77,10 +78,16 @@ export function connectMaintenance(templateUrl: URL): PrismaClient {
   });
 }
 
-/** A client on this file's own database (DATABASE_URL, set by integration-setup.ts). */
+/** A client on this file's own database (DATABASE_URL, set by integration-setup.ts), in UTC like the app. */
 export function connectTestDatabase(): PrismaClient {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set: integration-setup.ts points it at this file's database. Run the file with `pnpm test:integration`.",
+    );
+  }
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+    adapter: new PrismaPg(databasePoolConfig(url)),
   });
 }
 
