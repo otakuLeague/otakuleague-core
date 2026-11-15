@@ -4,16 +4,19 @@ A guide for people. [CLAUDE.md](../CLAUDE.md) and `.claude/rules/` are written f
 
 ## 1. TL;DR: run it locally
 
+Prerequisites: git, [nvm](https://github.com/nvm-sh/nvm), Docker (running), pnpm 12.11.2 (`npm install -g pnpm@12.11.2`).
+
 ```sh
 nvm use            # Node 24 (first time: nvm install)
 pnpm install
+cp .env.example .env   # first time only
 pnpm db:up         # PostgreSQL 18 in Docker
 pnpm db:migrate
 pnpm dev
 ```
 
 - Web: http://localhost:3000. API: http://localhost:3001. Swagger UI: http://localhost:3001/docs (OpenAPI JSON at `/docs-json`).
-- First time only: `cp .env.example .env` before `pnpm db:up`. Full steps and common problems: [SETUP.md](SETUP.md) and the "Run it locally" section of the [README](../README.md).
+- Full steps and common problems: the "Run it locally" and "Common problems" sections of the [README](../README.md). [SETUP.md](SETUP.md) is not local setup: it is the manual for the Claude daily loop and the autopilot.
 - Start from scratch with `pnpm clean`, then `pnpm install`. Never use `git clean -x` or `-X`: `.env` is gitignored, so they delete it.
 - Seed users and Mailpit (local mail) do not exist yet: coming with OTA-186.
 
@@ -36,27 +39,28 @@ Linear ticket (OTA-123)
 4. **CI** ([ci.yml](../.github/workflows/ci.yml)). Jobs on every PR:
    - Lint (zero warnings), Typecheck, Unit tests, Integration tests (real Postgres), Build.
    - Deploy order: a warning, never a failure. Web (Vercel) and API (Railway) deploy separately, so a PR that changes both and touches the contract should be backward compatible, or split with the API first ([script](../scripts/deploy-order.mjs)).
-   - Screenshots ([screenshots.yml](../.github/workflows/screenshots.yml)): real pages as images in one PR comment ([ADR 0013](decisions/0013-pr-screenshots.md)).
+
+   A separate workflow, Screenshots ([screenshots.yml](../.github/workflows/screenshots.yml)), runs only when `apps/web`, `apps/api`, `packages/shared-types` or `scripts/screenshots` change. It posts real pages as images in one PR comment ([ADR 0013](decisions/0013-pr-screenshots.md)).
 5. **Review.** One review pass before merge (the `/ship` skill runs it). The reviewer is never the model that wrote the code.
-6. **Merge.** Farouk merges, or the `Autopilot merge` workflow squash-merges a PR labelled `automerge`. It never touches protected paths. See [AUTOPILOT.md](AUTOPILOT.md).
-7. **Beta.** A merge to `main` deploys the web to Vercel and the API to Railway, to https://beta.otakuleague.com. Railway waits for green checks, runs `prisma migrate deploy`, and the new container must answer `/health` before it takes traffic. Details: [deploy.md](deploy.md) and [deploy-vercel.md](deploy-vercel.md).
+6. **Merge.** Farouk merges, or the `Autopilot merge` workflow squash-merges a PR labelled `automerge`, or a ready-for-review `autopilot` PR whose checklist is fully ticked (OTA-176), once checks are green. It never merges a PR that touches a protected path. See [AUTOPILOT.md](AUTOPILOT.md).
+7. **Beta.** A merge to `main` deploys the web to Vercel and the API to Railway, to https://beta.otakuleague.com. If a watched path changed, Railway builds the API after green checks, runs `prisma migrate deploy`, and the new container must answer `/health` before it takes traffic. Details: [deploy.md](deploy.md) and [deploy-vercel.md](deploy-vercel.md).
 8. **Production.** The DNS cutover of otakuleague.com is OTA-149 (target 2026-11-30, [ROADMAP.md](ROADMAP.md)). The beta is `noindex` until then.
 
 **Rollback.**
 
 - API (Railway): dashboard, API, Deployments, pick the last good one, Redeploy (or Rollback). If Redeploy is not offered, revert the commit on `main` with a PR. See "Rollback" in [deploy.md](deploy.md).
 - A rollback never undoes a migration. Fix forward with a new migration. Migrations are additive: expand first, contract in a later PR.
-- Web (Vercel): [deploy.md](deploy.md) mentions Vercel Instant Rollback (or redeploying an old deployment) in the internal API key section, but [deploy-vercel.md](deploy-vercel.md) has no rollback steps yet. Until it does, use the Vercel dashboard or revert the commit.
+- Web (Vercel): Instant Rollback to a previous production deployment, or revert the commit on `main`. See "Rollback" in [deploy-vercel.md](deploy-vercel.md).
 
 ## 3. Code map
 
 | Path | What lives there |
 | --- | --- |
 | `apps/api/src/<module>/` | NestJS modules: controller, then service, then adapters. Today: `anime`, `health`, `debug`, `observability`, `prisma`, `config`, `common` |
-| `apps/api/src/anime/sources/` | One adapter per external anime API (today `anilist.adapter.ts`); a source's API is only called from its adapter |
+| `apps/api/src/anime/sources/` | One adapter per external anime API (`anilist.adapter.ts`, `jikan.adapter.ts`); a source's API is only called from its adapter |
 | `apps/api/prisma/` | `schema.prisma` and `migrations/` |
 | `apps/web/app/` | Next.js routes (`anime`, `season`, `faq`, `privacy`, `terms`, `hikari`, ...) and global styles |
-| `apps/web/src/` | Client and shared web code by feature (`anime`, `browse`, `home`, `shell`, `seo`, `observability`) |
+| `apps/web/src/` | Client and shared web code by feature (`anime`, `browse`, `home`, `legal`, `shell`, `seo`, `observability`) |
 | `apps/web/src/api/client.ts` | `apiClient()`: the only place the web makes network calls (ESLint blocks the rest) |
 | `apps/web/app/styles/tokens.css` | Design tokens |
 | `packages/shared-types/` | DTOs, error codes and guards used by both apps |
@@ -81,9 +85,9 @@ NestJS API on Railway
   '-- AniList / Jikan (only when the database lacks it or it is stale)
 ```
 
-- Pages are Server Components. They call the API through `apiClient()` on the server; the browser does not call the API yet. This changes when [ADR 0017](decisions/0017-browser-data.md) is accepted.
-- `apiClient()` returns an `ApiResult`, never throws for expected failures ([ADR 0003](decisions/0003-web-api-client.md)). Its default is `no-store`; a call can opt into Next caching with `next.revalidate` or `tags`.
-- The API serves anime from our database. A missing anime is imported on demand from AniList (primary) or Jikan, behind per-source rate limits. A cached anime expires after 7 days and is deleted if nobody opens it in 30 ([ADR 0006](decisions/0006-anime-data-sources.md)). We cache what visitors open; we never bulk-copy a source.
+- Pages are Server Components. They call the API through `apiClient()` on the server; the browser does not call the API yet. [ADR 0017](decisions/0017-browser-data.md) (proposed) plans browser fetching: `browserApiClient()` (`createApiClient` on `<origin>/api`) calls same-origin `app/api/.../route.ts` handlers, and only those call `apiClient()`, which moves to a server-only file.
+- `apiClient()` returns an `ApiResult`, never throws for expected failures ([ADR 0003](decisions/0003-web-api-client.md)). Its default is `no-store`; a call opts into Next caching with `next.revalidate` (or an explicit `cache`).
+- The API serves anime from our database. A missing anime is imported on demand from AniList (the import source). Jikan (MyAnimeList) only fills gaps, such as score and rank, when it answers. Each source has its own rate limit. A cached anime expires after 7 days and is deleted if nobody opens it in 30 ([ADR 0006](decisions/0006-anime-data-sources.md), still proposed). We cache what visitors open; we never bulk-copy a source.
 - Images are hotlinked from the source CDN with attribution. We do not re-host them (ADR 0006, decision 11).
 - Hosting: web on Vercel, API and database on Railway ([ADR 0009](decisions/0009-hosting.md)).
 
@@ -104,7 +108,7 @@ NestJS API on Railway
 - A folder under `apps/web/app/` is a route. `page.tsx` is the page, `layout.tsx` wraps it, `error.tsx` and `not-found.tsx` handle failures.
 - Components are Server Components by default: they run on the server and can fetch data. Add `'use client'` only for state, effects or browser APIs.
 - Here, server code fetches through `apiClient()` and handles the `ApiResult` (success or failure) before rendering.
-- `next dev` is started for you by `pnpm dev`. The project rules for Next 16 are in [apps/web/AGENTS.md](../apps/web/AGENTS.md) and [.claude/rules/web.md](../.claude/rules/web.md).
+- `next dev` is started for you by `pnpm dev`. Project rules are in [.claude/rules/web.md](../.claude/rules/web.md). [apps/web/AGENTS.md](../apps/web/AGENTS.md) is a block generated by `next dev` that points at the Next docs.
 
 </details>
 
@@ -126,7 +130,7 @@ NestJS API on Railway
 - Apply migrations locally with `pnpm db:migrate`. Production runs `prisma migrate deploy` before each API deploy.
 - Never edit an applied migration. Add a new one.
 - Make migrations additive (expand, then contract in a later PR) so the old code keeps working during a deploy.
-- A failed migration blocks later deploys until it is resolved: see [deploy.md](deploy.md). More in [.claude/rules/database.md](../.claude/rules/database.md).
+- A failed migration blocks later deploys until it is resolved: see [deploy.md](deploy.md). Local database commands (`db:up`, `db:down`, `db:reset`, `db:logs`) are in [.claude/rules/database.md](../.claude/rules/database.md).
 
 </details>
 
@@ -154,6 +158,7 @@ Agents (full table in [.claude/skills/autopilot/SKILL.md](../.claude/skills/auto
 | `debugger` | Failing test, CI failure, bug |
 | `security-reviewer` | Security audit (auth, input, secrets, third-party data, workflows) |
 | `code-reviewer`, `db-migration-checker` | Code review; schema and migration review |
+| `interviewer` | Interview-style coaching questions, only on `/review --coach` |
 
 Where decisions and state live:
 

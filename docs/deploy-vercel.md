@@ -45,6 +45,14 @@ At the launch cutover (OTA-149): change the constant to `'allowed'`, merge, and 
 
 Also at cutover: `curl -s https://otakuleague.com/robots.txt` shows `Disallow: /anime/anilist/` and a `Sitemap: https://otakuleague.com/sitemap.xml` line; `curl -s https://otakuleague.com/sitemap.xml` lists the static pages (/, /faq and the legal pages); each page's `<link rel="canonical">` is absolute on `otakuleague.com`; then submit the sitemap in Search Console (Farouk, manual).
 
+## Rollback
+
+1. Vercel dashboard → project `otakuleague` → Deployments.
+2. Pick the last good production deployment and use Instant Rollback (or redeploy that old deployment).
+3. If neither is available, revert the commit on `main` with a PR.
+
+A rollback keeps that deployment's variables. Rolling back past an `INTERNAL_API_KEY` rotation sends the old key: see "Internal API key" in [deploy.md](deploy.md). A rollback does not undo API migrations (see "Rollback" in [deploy.md](deploy.md)).
+
 ## Test plan
 
 1. Open a PR preview URL (from the Vercel bot comment).
