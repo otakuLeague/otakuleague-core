@@ -34,4 +34,9 @@ export class SearchLimits {
   takeVisitor(key: VisitorKey): VisitorTake {
     return this.visitors.take(key);
   }
+
+  /** Forgets visitors idle long enough to hold a full bucket again (OTA-197). */
+  forgetIdleVisitors(): void {
+    this.visitors.forgetIdle();
+  }
 }

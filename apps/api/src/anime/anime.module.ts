@@ -27,6 +27,7 @@ import {
   AnimeSourceSettings,
   EnvironmentAnimeSourceSettings,
 } from './sources/source-settings';
+import { VisitorSweepScheduler } from './visitor-sweep.scheduler';
 
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const FIRST_PURGE_DELAY_MS = 60 * 1000;
@@ -110,6 +111,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     SearchLimits,
     AnimeFranchiseService,
     AnimePurgeScheduler,
+    VisitorSweepScheduler,
   ],
 })
 export class AnimeModule {}
