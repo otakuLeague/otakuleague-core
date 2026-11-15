@@ -154,4 +154,6 @@ To fill in after the rollout.
 
 **Rejected.** An opt-out for the home rows (`chargeVisitor: false`): a second code path for no caching gain, and a noisier `unknown` bucket. Reading the IP once in the page and passing it down: more plumbing for the same headers read, and every caller could forget it.
 
+**Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on.
+
 **Too simple?** A visitor behind a shared NAT shares a bucket, and a deep `/season?page=N` on a cold season can need more than 3 tokens (busy partway, as before). Both are accepted in the OTA-189 addendum. **Too complicated?** No: one option on one call, no API change.
