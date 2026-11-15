@@ -401,7 +401,11 @@ describe('ApiExceptionFilter', () => {
 });
 
 describe('database waits and cancelled statements (OTA-199)', () => {
-  const known = (code: string, message: string, meta?: object) =>
+  const known = (
+    code: string,
+    message: string,
+    meta?: Record<string, unknown>,
+  ) =>
     new Prisma.PrismaClientKnownRequestError(message, {
       code,
       clientVersion: '7.10.1',
