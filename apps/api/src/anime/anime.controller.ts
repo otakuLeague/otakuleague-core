@@ -275,12 +275,22 @@ export class AnimeController {
     description:
       'q missing or longer than 100 characters, or page or pageSize out of range.',
   })
-  searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
-    return this.animeSearch.search({
-      query: params.q,
-      page: params.page,
-      pageSize: params.pageSize,
-    });
+  @ApiTooManyRequestsResponse({
+    description:
+      'This visitor searched many times in a short time (ANIME_SEARCH_VISITOR_LIMIT_REACHED, Retry-After 1 or 2).',
+  })
+  searchAnime(
+    @Query() params: AnimeSearchParams,
+    @Caller() caller: ApiCaller,
+  ): Promise<AnimeSearchPage> {
+    return this.animeSearch.search(
+      {
+        query: params.q,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+      caller,
+    );
   }
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the

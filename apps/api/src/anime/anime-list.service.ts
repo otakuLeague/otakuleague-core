@@ -12,8 +12,7 @@ import {
 } from '@otakuleague/shared-types';
 import {
   type ApiCaller,
-  PREVIEW_VISITOR_KEY,
-  UNKNOWN_VISITOR_KEY,
+  sharedVisitorBucket,
   type VisitorKey,
   visitorKeyOf,
 } from '../common/api-caller';
@@ -310,12 +309,7 @@ export class AnimeListService implements OnModuleDestroy {
 
   /** Only the shared buckets are logged, once a minute each; never the key: it is a client IP. */
   private warnSharedVisitorLimited(visitorKey: VisitorKey): void {
-    const shared =
-      visitorKey === PREVIEW_VISITOR_KEY
-        ? 'preview'
-        : visitorKey === UNKNOWN_VISITOR_KEY
-          ? 'unknown'
-          : null;
+    const shared = sharedVisitorBucket(visitorKey);
     if (shared === null) return;
     const now = this.clock.now().getTime();
     if (now - (this.sharedWarnedAt.get(shared) ?? 0) < LIMIT_WARN_INTERVAL_MS) {
