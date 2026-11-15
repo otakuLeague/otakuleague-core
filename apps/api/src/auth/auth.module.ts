@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { Argon2id, NodeArgon2id } from './argon2id';
+import { AuthRateLimiter } from './auth-rate-limiter';
 import { AuthSecrets, EnvironmentAuthSecrets } from './auth-secrets';
 import { HashSlots } from './hash-slots';
 import { MeController } from './me.controller';
@@ -18,6 +19,7 @@ import { SessionService } from './session.service';
     HashSlots,
     { provide: Argon2id, useClass: NodeArgon2id },
     { provide: AuthSecrets, useClass: EnvironmentAuthSecrets },
+    AuthRateLimiter,
   ],
   exports: [PasswordHasher],
 })
