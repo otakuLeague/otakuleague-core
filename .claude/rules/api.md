@@ -8,7 +8,7 @@ The API loads the repo-root `.env` (real env vars win) and refuses to boot, exit
 1. `cp .env.example .env` (an older `.env` needs `NODE_ENV=development` added), then `pnpm db:up`.
 2. `pnpm db:migrate` (runs `prisma migrate deploy` in the API): apply migrations to the dev DB (`prisma migrate status` to check).
 3. `pnpm dev`, or `pnpm build && pnpm --filter @otakuleague/api start`.
-4. `curl localhost:3001/health`: 200 `{"status":"ok",...}`, or 503 while Postgres is down or its session time zone is not UTC (the API keeps running and recovers by itself). Swagger UI at `/docs`, JSON at `/docs-json`, both off when `NODE_ENV=production`.
+4. `curl localhost:3001/health`: 200 `{"status":"ok",...}`, or 503 while Postgres is down or its session time zone is not UTC (the API keeps running and recovers by itself once Postgres is back; a non-UTC zone does not recover by itself). Swagger UI at `/docs`, JSON at `/docs-json`, both off when `NODE_ENV=production`.
 - Prisma CLI: run it inside apps/api (`pnpm --filter @otakuleague/api exec prisma ...`); `pnpm install` regenerates the client into `apps/api/src/generated` (gitignored). After a schema change: `prisma migrate dev --name <change>`, then `prisma generate`.
 - Migrations: `migrate dev` only against the dev DB; `migrate deploy` for production; the integration suite migrates the test DB itself. Never edit an applied migration; add a new one.
 - Additive first (OTA-183, see `docs/deploy.md` where migrations already follow this): web and API deploy separately. Expand the API (new field, new route), migrate the web app, contract in a later PR. Never remove or rename a response field in the same PR as the web change that stops using it.

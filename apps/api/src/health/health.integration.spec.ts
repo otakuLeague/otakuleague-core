@@ -33,20 +33,30 @@ describe('GET /health when the session zone is not UTC', () => {
   let tokyoClient: PrismaClient;
 
   beforeAll(async () => {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is not set by integration-setup.ts');
+    }
     // Deliberately bypasses databasePoolConfig: it stands for a pooler that dropped the UTC pin.
     tokyoClient = new PrismaClient({
       adapter: new PrismaPg({
-        connectionString: process.env.DATABASE_URL,
+        connectionString,
         options: '-c timezone=Asia/Tokyo',
       }),
     });
+    // Without this, a failed connection would also make /health answer 503.
+    const rows = await tokyoClient.$queryRaw<
+      { zone: string }[]
+    >`SELECT current_setting('TimeZone') AS zone`;
+    expect(rows).toEqual([{ zone: 'Asia/Tokyo' }]);
+    // PrismaService only adds onModuleDestroy; the explicit $disconnect below covers it.
     app = await createTestApp({
       prisma: tokyoClient as unknown as PrismaService,
     });
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
     await tokyoClient.$disconnect();
   });
 

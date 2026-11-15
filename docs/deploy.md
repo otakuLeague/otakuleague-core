@@ -68,7 +68,7 @@ API service:
 3. The pre-deploy command runs `prisma migrate deploy`.
 4. The new container must answer `/health` with 200 before traffic switches.
 
-- `/health` returns 503 while Postgres is down.
+- `/health` returns 503 while Postgres is down, or when its session time zone is not UTC (OTA-201).
 - If the build, the migration or the health check fails, the deployment is marked failed. The previous deployment keeps serving (expected behaviour, to be confirmed by the drills).
 - Each migration file runs in its own implicit transaction, so a failed file is rolled back. Earlier files in the same run stay applied, and statements such as `CREATE INDEX CONCURRENTLY` are not transactional.
 - A failed migration stays recorded in `_prisma_migrations`. Every later `migrate deploy` then fails with P3009 until someone runs `prisma migrate resolve --rolled-back <name>` against production (from Farouk's machine through the TCP proxy, permanent since OTA-170, see Backups; or a one-off pre-deploy command). Then fix forward with a new migration.
@@ -151,7 +151,7 @@ Restore a dump into a throwaway local database, never production. **Tested 2026-
 ## Restore
 
 1. Postgres service → `postgres-volume` → Backups → choose a backup → Restore. This overwrites the current data, so first take an on-demand backup of the current state.
-2. Railway restarts Postgres. `/health` answers 503 during the restart and recovers on its own (expected, to be confirmed by the drills).
+2. Railway restarts Postgres. `/health` answers 503 during the restart and recovers on its own (expected, to be confirmed by the drills). `/health` also answers 503 `database: down` while Postgres is up when the session zone is not UTC (a pooler ignoring the startup `options` drops the OTA-200 pin, OTA-201); that fails Railway's deploy gate and does not recover by itself: look for the log line `Database session time zone is ...`.
 3. Check that `/health` returns 200, then open one anime by slug.
 
 From the nightly dump instead: Backups → Nightly encrypted dump (local drill only; restoring a dump into production is not written up yet).

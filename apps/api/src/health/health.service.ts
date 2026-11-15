@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 export const DATABASE_CHECK_TIMEOUT_MS = 2_000;
 /** OTA-200 pins every pool to UTC; a pooler that drops the startup option breaks that silently. */
-export const REQUIRED_SESSION_ZONE = 'UTC';
+const REQUIRED_SESSION_ZONE = 'UTC';
 const LOGGED_ZONE_MAX_CHARS = 64;
 
 /** The `zone` of the first row of `SELECT current_setting('TimeZone') AS zone`, or undefined. */
@@ -43,7 +43,7 @@ export class HealthService {
             ? 'unreadable'
             : `"${zone.slice(0, LOGGED_ZONE_MAX_CHARS)}"`;
         this.logger.warn(
-          `Database session time zone is ${shown}, not UTC: the OTA-200 pin is not in effect`,
+          `Database session time zone is ${shown}, not ${REQUIRED_SESSION_ZONE}: the OTA-200 pin is not in effect`,
         );
         return { status: 'error', checks: { database: 'down' } };
       }
