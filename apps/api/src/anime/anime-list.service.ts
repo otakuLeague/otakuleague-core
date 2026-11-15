@@ -12,6 +12,8 @@ import {
 } from '@otakuleague/shared-types';
 import {
   type ApiCaller,
+  PREVIEW_VISITOR_KEY,
+  UNKNOWN_VISITOR_KEY,
   type VisitorKey,
   visitorKeyOf,
 } from '../common/api-caller';
@@ -21,11 +23,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS } from './cache-ttl';
 import { AnimeSlugClaimService } from './anime-slug-claim.service';
 import { findImportedAnilistIds } from './imported-anime';
-import {
-  LIST_FETCH_REFILL_MS,
-  LIST_VISITOR_REFILL_MS,
-  ListFetchLimits,
-} from './list-fetch-limits';
+import { LIST_FETCH_REFILL_MS, ListFetchLimits } from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
   assembleWindow,
@@ -74,7 +72,7 @@ function listFetchLimited(): ApiException {
     {
       code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
       message:
-        'Too many new lists are being loaded right now. Try again in a minute.',
+        'Too many new lists are being loaded right now. Try again in a few seconds.',
     },
     { retryAfterSeconds: LIST_FETCH_REFILL_MS / 1000 },
   );
@@ -114,6 +112,8 @@ export class AnimeListService implements OnModuleDestroy {
   private stopping = false;
   /** When the fetch cap was last logged (epoch ms). */
   private limitWarnedAt = 0;
+  /** When each shared visitor bucket's cap was last logged (epoch ms). */
+  private readonly sharedWarnedAt = new Map<'preview' | 'unknown', number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -149,9 +149,9 @@ export class AnimeListService implements OnModuleDestroy {
   async getList(
     kind: AnimeListKind,
     filters: ListFilters,
-    cursor: string | undefined,
-    limit = ANIME_LIST_DEFAULT_LIMIT,
     caller: ApiCaller,
+    cursor?: string,
+    limit = ANIME_LIST_DEFAULT_LIMIT,
   ): Promise<AnimeListPage> {
     const offset = cursor === undefined ? 0 : decodeCursor(cursor);
     if (offset === null) {
@@ -236,6 +236,9 @@ export class AnimeListService implements OnModuleDestroy {
     if (!fresh && !this.stopping && !this.anilist.isDown()) {
       // A visitor with no token left is served the stale page and starts no refresh.
       const { kind } = this.startDecision(list, page, visitorKey);
+      if (kind === 'visitor-limited' && visitorKey !== null) {
+        this.warnSharedVisitorLimited(visitorKey);
+      }
       if (kind === 'join' || kind === 'start') {
         void this.fetchShared(list, page, 'background', visitorKey);
       }
@@ -254,6 +257,7 @@ export class AnimeListService implements OnModuleDestroy {
     }
     const start = this.startDecision(list, page, visitorKey);
     if (start.kind === 'visitor-limited') {
+      if (visitorKey !== null) this.warnSharedVisitorLimited(visitorKey);
       throw listVisitorLimited(start.retryAfterSeconds);
     }
     if (start.kind === 'limited') {
@@ -295,16 +299,32 @@ export class AnimeListService implements OnModuleDestroy {
       if (!take.taken) {
         return {
           kind: 'visitor-limited',
-          retryAfterSeconds: Math.min(
-            take.retryAfterSeconds,
-            LIST_VISITOR_REFILL_MS / 1000,
-          ),
+          retryAfterSeconds: take.retryAfterSeconds,
         };
       }
     }
     if (this.limits.take()) return { kind: 'start' };
     if (visitorKey !== null) this.limits.giveBackVisitor(visitorKey);
     return { kind: 'limited' };
+  }
+
+  /** Only the shared buckets are logged, once a minute each; never the key: it is a client IP. */
+  private warnSharedVisitorLimited(visitorKey: VisitorKey): void {
+    const shared =
+      visitorKey === PREVIEW_VISITOR_KEY
+        ? 'preview'
+        : visitorKey === UNKNOWN_VISITOR_KEY
+          ? 'unknown'
+          : null;
+    if (shared === null) return;
+    const now = this.clock.now().getTime();
+    if (now - (this.sharedWarnedAt.get(shared) ?? 0) < LIMIT_WARN_INTERVAL_MS) {
+      return;
+    }
+    this.sharedWarnedAt.set(shared, now);
+    this.logger.warn(
+      `List visitor cap reached on the shared ${shared} bucket: new lists are refused or not refreshed.`,
+    );
   }
 
   private warnLimitReached(): void {

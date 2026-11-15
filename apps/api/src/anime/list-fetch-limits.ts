@@ -43,6 +43,7 @@ export class ListFetchLimits {
     return this.visitors.take(key);
   }
 
+  /** Returns a visitor token taken for a fetch that never reached AniList (never above the burst). */
   giveBackVisitor(key: VisitorKey): void {
     this.visitors.giveBack(key);
   }

@@ -258,9 +258,9 @@ export class AnimeController {
     return this.lists.getList(
       params.kind,
       { season: query.season, year: query.year, genre: query.genre },
+      caller,
       query.cursor,
       query.limit,
-      caller,
     );
   }
 

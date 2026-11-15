@@ -19,10 +19,6 @@ export const IMPORT_REFILL_MS = 20_000;
 export const VISITOR_IMPORT_BURST = 5;
 /** One visitor token comes back every this many milliseconds: half the global refill. */
 export const VISITOR_IMPORT_REFILL_MS = 40_000;
-export { refillBucket, type VisitorTake };
-
-/** A visitor's bucket is full again this long after its last take, so its entry goes (200 s). */
-export const VISITOR_IDLE_MS = VISITOR_IMPORT_BURST * VISITOR_IMPORT_REFILL_MS;
 /** The most visitors remembered at once (about 1.5 MB); the least recently used goes first. */
 export const MAX_VISITOR_ENTRIES = 10_000;
 

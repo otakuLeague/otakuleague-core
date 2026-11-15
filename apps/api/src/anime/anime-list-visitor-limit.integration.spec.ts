@@ -29,7 +29,10 @@ import {
 } from './list-fetch-limits';
 import { AniListAdapter } from './sources/anilist.adapter';
 import { AnimeSourceSettings } from './sources/source-settings';
-import { SourceUnavailableError } from './sources/source.types';
+import {
+  QUEUE_FULL_REASON,
+  SourceUnavailableError,
+} from './sources/source.types';
 
 const HOUR_MS = 3_600_000;
 /** Obvious fakes of a valid shape (64 characters). */
@@ -223,7 +226,9 @@ describe('per-visitor limit on cold list fetches (OTA-189)', () => {
     await boot(ENFORCED);
     const refusing = vi
       .spyOn(app.get(AniListAdapter), 'fetchList')
-      .mockRejectedValue(new SourceUnavailableError('anilist', 'queue full'));
+      .mockRejectedValue(
+        new SourceUnavailableError('anilist', QUEUE_FULL_REASON),
+      );
     for (let index = 0; index <= LIST_VISITOR_BURST; index += 1) {
       await cold(index, ALICE).expect(503);
     }
@@ -253,9 +258,8 @@ describe('per-visitor limit on cold list fetches (OTA-189)', () => {
     }
   });
 
-  it('serves a stale page and sends no request when the visitor has no token', async () => {
-    await boot(ENFORCED);
-    await app.get(PrismaService).animeListPage.create({
+  const seedStaleTrending = () =>
+    app.get(PrismaService).animeListPage.create({
       data: {
         listKey: 'trending',
         page: 1,
@@ -264,6 +268,10 @@ describe('per-visitor limit on cold list fetches (OTA-189)', () => {
         entries: [],
       },
     });
+
+  it('serves a stale page and sends no request when the visitor has no token', async () => {
+    await boot(ENFORCED);
+    await seedStaleTrending();
     await burst(ALICE);
 
     const stale = await cold(0, ALICE, '/anime/lists/trending').expect(200);
@@ -271,6 +279,35 @@ describe('per-visitor limit on cold list fetches (OTA-189)', () => {
 
     expect(stale.body).toMatchObject({ freshness: 'stale' });
     expect(requests).toBe(LIST_VISITOR_BURST);
+  });
+
+  it('charges the visitor one token for a background refresh', async () => {
+    await boot(ENFORCED);
+    await seedStaleTrending();
+
+    await cold(0, ALICE, '/anime/lists/trending').expect(200);
+    await lists.settle();
+
+    expect(requests).toBe(1);
+    await cold(0, ALICE).expect(200);
+    await cold(1, ALICE).expect(200);
+    await cold(2, ALICE).expect(429);
+  });
+
+  it('gives the token back when a background refresh is refused before any request', async () => {
+    await boot(ENFORCED);
+    await seedStaleTrending();
+    const refusing = vi
+      .spyOn(app.get(AniListAdapter), 'fetchList')
+      .mockRejectedValue(
+        new SourceUnavailableError('anilist', QUEUE_FULL_REASON),
+      );
+
+    await cold(0, ALICE, '/anime/lists/trending').expect(200);
+    await lists.settle();
+    refusing.mockRestore();
+
+    await burst(ALICE);
   });
 
   it('puts no visitor limit on an open API, only the global one', async () => {

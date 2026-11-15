@@ -34,13 +34,13 @@ Consistency or availability: **availability.** Limiter state is in memory, per p
 
 ## Options
 
-| Topic | Chosen | Rejected, and why |
-|---|---|---|
-| Who may call the API | A shared secret header checked by a global Nest guard | **Railway private network only**: Vercel cannot reach it. **Allowlist of Vercel addresses**: Hobby has no fixed egress addresses. **Signed requests (HMAC plus timestamp) or mTLS**: they stop replay of a captured request, which TLS already prevents; more code for a threat we do not have. |
-| Where the check runs | `APP_GUARD` plus a `@PublicRoute()` marker on the health controller | **Express middleware in `main.ts`**: it would also cover unknown paths and Swagger, but its errors skip the exception filter (the envelope would be written by hand) and `test-app.ts` would have to mirror it. The repo is public, so "which routes exist" is not a secret. |
-| Per-visitor counting | In-memory buckets inside `ImportLimits`, taken only when this caller starts an import | **`@nestjs/throttler`**: a new dependency that counts requests, and cached pages must stay free. **Postgres counters** (as ADR 0015 does for sign-in): a write per cold visit for state worth 200 s; the global bucket it sits in front of is in memory too. |
-| Visitor identity | The client IP the web forwards in `X-Client-Ip` (ADR 0015, 0017), IPv6 cut to its /64 | **A second `X-Visitor-Key` header**: two headers for the same fact. **A cookie id**: a crawler drops cookies. |
-| Without a trusted IP | No per-visitor count when the check is off; one shared bucket when the key matched but no valid IP came | **The socket address**: on Railway it is the platform proxy's, not the caller's (not verified by running), and in tests it is always loopback. |
+| Topic                | Chosen                                                                                                  | Rejected, and why                                                                                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Who may call the API | A shared secret header checked by a global Nest guard                                                   | **Railway private network only**: Vercel cannot reach it. **Allowlist of Vercel addresses**: Hobby has no fixed egress addresses. **Signed requests (HMAC plus timestamp) or mTLS**: they stop replay of a captured request, which TLS already prevents; more code for a threat we do not have. |
+| Where the check runs | `APP_GUARD` plus a `@PublicRoute()` marker on the health controller                                     | **Express middleware in `main.ts`**: it would also cover unknown paths and Swagger, but its errors skip the exception filter (the envelope would be written by hand) and `test-app.ts` would have to mirror it. The repo is public, so "which routes exist" is not a secret.                    |
+| Per-visitor counting | In-memory buckets inside `ImportLimits`, taken only when this caller starts an import                   | **`@nestjs/throttler`**: a new dependency that counts requests, and cached pages must stay free. **Postgres counters** (as ADR 0015 does for sign-in): a write per cold visit for state worth 200 s; the global bucket it sits in front of is in memory too.                                    |
+| Visitor identity     | The client IP the web forwards in `X-Client-Ip` (ADR 0015, 0017), IPv6 cut to its /64                   | **A second `X-Visitor-Key` header**: two headers for the same fact. **A cookie id**: a crawler drops cookies.                                                                                                                                                                                   |
+| Without a trusted IP | No per-visitor count when the check is off; one shared bucket when the key matched but no valid IP came | **The socket address**: on Railway it is the platform proxy's, not the caller's (not verified by running), and in tests it is always loopback.                                                                                                                                                  |
 
 ## Decision
 
@@ -126,6 +126,7 @@ To fill in after the rollout.
 **Requirement.** A crawler must not be able to spend AniList's budget through the list endpoints: the filters make about 8,500 list keys reachable (ADR 0016), and the global list bucket (6 tokens) is shared by every visitor. Nobody should be refused for reading a page we already hold.
 
 **Decision.** One keyed limiter, `VisitorBuckets` (`apps/api/src/common/visitor-buckets.ts`), now behind both the import limit (unchanged numbers) and the list limit. Lists charge only work that calls AniList:
+
 - Cold list page: burst 3, one token back per 20 s (3 a minute, half the global rate of 6 a minute). Visitor token first, then the global token; the visitor token goes back if the global bucket is empty, and both go back when the fetch is refused before any request is sent (`refusedBeforeSending`, item 10).
 - Stored pages and joining a fetch already running are free. A background refresh of a stale page takes a visitor token too; with the bucket empty the refresh is skipped and the stale page is served, never a 429.
 - Who is charged follows items 7 and 8: `web` by client IP key (IPv6 /64), `preview` shared `preview`, `web` without a valid IP shared `unknown`, `open` (no key configured) no visitor bucket, global only. Never the socket address.
@@ -134,8 +135,7 @@ To fill in after the rollout.
 
 **Memory.** At most 10,000 entries per limiter, about 150 bytes each: three limiters (import, list, search) are about 4.5 MB.
 
-**Trade-offs.** In memory per process: a deploy refills every bucket, and a second API instance doubles the limits. Visitors behind one NAT share a bucket. No effect until `INTERNAL_API_KEY` is on in production (without it every caller is `open`, global limit only).
-
+**Trade-offs.** In memory per process: a deploy refills every bucket, and a second API instance doubles the limits. Visitors behind one NAT share a bucket. No effect until `INTERNAL_API_KEY` is on in production (without it every caller is `open`, global limit only). Each visitor gets half the global bucket, so two keys (two IPv4s, or two /64s from one /56 or a free tunnel) can drain it: others' cold pages are refused and stale pages go unrefreshed until it refills. AniList spend and memory stay bounded. Keep `claimsSlugs`, `Disallow: /season?` and the nofollow links until the key is on and slice B ships. Options for later, if abuse appears: reserve global tokens for refreshes, key IPv6 by /56.
 **Rejected.** `@nestjs/throttler`: a new dependency, and it counts every request, including stored pages. Charging every list request: punishes reading what we already hold.
 
-**Slices.** A (this): refactor and list limit. B: `/season` forwards the client IP to the API, else its cold pages share `unknown`. C: search.
+**Slices.** A (this): refactor and list limit. B: the web list loader `loadAnimeListPage` (used by `/season` and the home rows, not only `/season`) forwards the client IP to the API, else its cold pages share `unknown`. C: search.
