@@ -27,7 +27,7 @@ export function clientIpFromHeaders(
 }
 
 /**
- * Request-time data: call it only behind Suspense, on a call that can start an import, never inside
+ * Request-time data: call it only behind Suspense, on a call that can make the API call AniList for the visitor (an import, a cold or stale list page), never inside
  * `'use cache'`. Off Vercel (`VERCEL` is not `1`) nobody overwrites `x-forwarded-for`, so a visitor
  * could choose it: nothing is sent and the API counts the shared `unknown` visitor. A CDN in front
  * of Vercel would need its own decision. `headers()` is read either way, so pages render alike.

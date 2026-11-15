@@ -139,3 +139,21 @@ To fill in after the rollout.
 **Rejected.** `@nestjs/throttler`: a new dependency, and it counts every request, including stored pages. Charging every list request: punishes reading what we already hold.
 
 **Slices.** A (this): refactor and list limit. B: the web list loader `loadAnimeListPage` (used by `/season` and the home rows, not only `/season`) forwards the client IP to the API, else its cold pages share `unknown`. C: search.
+
+## Addendum: the web list loader forwards the visitor IP (OTA-195, OTA-189 slice B, 2026-11-15)
+
+**Requirement.** Once `INTERNAL_API_KEY` is on, list calls from the web must be charged to the visitor who caused them, or every cold page from `/season` and the home rows shares the `unknown` bucket (3 tokens, one back per 20 s) and one heavy visitor gets everyone a 429. A cached or prerendered page must never carry, or be keyed by, one visitor's IP.
+
+**Decision.** `loadAnimeListPage` (`apps/web/src/anime/data.ts`) passes `clientIp: await readClientIp()`, like the two import loaders. `loadAnimeList` (the home rows) goes through it, so both `/season` and the home rows send `X-Client-Ip`. Nothing else changes: still only with the key, still nothing unless `VERCEL=1` and `x-forwarded-for` is one bare address (a list, an empty or malformed value, or a zone id sends no IP and the API counts `unknown`).
+
+**Why this does not change caching.** There is no web cache in front of the list API: the call is `no-store` (the client refuses `clientIp` on any cached call) and no list loader is inside `'use cache'`. The only list cache is the API's stored pages (`anime_list_page`), and there only a cold page or a stale refresh takes a visitor token; stored pages and joined fetches are free. Both callers already render at request time inside Suspense: `/season` after `connection()`, each home row as its own streamed hole of a Partial Prerender page. So `headers()` adds no request-time data, the prerendered parts hold no list data, and no IP reaches a cache key or the HTML. The build must still report `/` and `/season` as Partial Prerender.
+
+**Home rows.** They send the IP. They were already rendered per request, so leaving it out would save no caching; it would only put every home visitor's cold row and stale refresh on `unknown`, whose "cap reached on the shared unknown bucket" log is how the rollout spots a route that forgets the IP. Cost: right after a season change, the first visitor can spend up to 3 tokens on cold rows, and their next cold page within about 20 s is refused (busy state, retry link); other visitors join in-flight fetches for free.
+
+**If the lists are cached in the web later (OTA-86).** A loader inside `'use cache'` or with `revalidate` cannot read `headers()` and must not send an IP: the visitor whose request fills the cache would be pinned into a shared entry. Such a loader is a stored-data loader in the `data.test.ts` gate, and its misses are charged to `unknown`. Acceptable then, because cached misses are rare; decide it in that ticket.
+
+**Rejected.** An opt-out for the home rows (`chargeVisitor: false`): a second code path for no caching gain, and a noisier `unknown` bucket. Reading the IP once in the page and passing it down: more plumbing for the same headers read, and every caller could forget it.
+
+**Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on.
+
+**Too simple?** A visitor behind a shared NAT shares a bucket, and a deep `/season?page=N` on a cold season can need more than 3 tokens (busy partway, as before). Both are accepted in the OTA-189 addendum. **Too complicated?** No: one option on one call, no API change.
