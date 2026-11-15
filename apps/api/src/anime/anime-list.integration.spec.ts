@@ -357,6 +357,7 @@ describe('GET /anime/lists/:kind', () => {
             'Too many new lists are being loaded right now. Try again in a minute.',
         },
       });
+      expect(refused.headers['retry-after']).toBe('10');
       expect(stored.freshness).toBe('fresh');
       expect(requests).toHaveLength(LIST_FETCH_BURST);
     });

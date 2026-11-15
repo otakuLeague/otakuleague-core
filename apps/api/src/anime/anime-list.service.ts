@@ -10,13 +10,22 @@ import {
   type AnimeListKind,
   type AnimeListPage,
 } from '@otakuleague/shared-types';
+import {
+  type ApiCaller,
+  type VisitorKey,
+  visitorKeyOf,
+} from '../common/api-caller';
 import { ApiException } from '../common/api.exception';
 import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { PURGE_AFTER_MS } from './cache-ttl';
 import { AnimeSlugClaimService } from './anime-slug-claim.service';
 import { findImportedAnilistIds } from './imported-anime';
-import { ListFetchLimits } from './list-fetch-limits';
+import {
+  LIST_FETCH_REFILL_MS,
+  LIST_VISITOR_REFILL_MS,
+  ListFetchLimits,
+} from './list-fetch-limits';
 import { sourceNotAvailable } from './anime-import.service';
 import {
   assembleWindow,
@@ -43,6 +52,7 @@ import {
   isQuietReason,
   type ListBlock,
   type ListedAnime,
+  refusedBeforeSending,
   SourceUnavailableError,
   UnusableAnswerError,
 } from './sources/source.types';
@@ -57,13 +67,36 @@ function blockKey(list: CatalogList, page: number): string {
   return `${listKey(list)}#${page}`;
 }
 
+/** The global cap: Retry-After is one refill step, 10 s (ADR 0019 addendum). */
 function listFetchLimited(): ApiException {
-  return new ApiException(HttpStatus.TOO_MANY_REQUESTS, {
-    code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
-    message:
-      'Too many new lists are being loaded right now. Try again in a minute.',
-  });
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
+      message:
+        'Too many new lists are being loaded right now. Try again in a minute.',
+    },
+    { retryAfterSeconds: LIST_FETCH_REFILL_MS / 1000 },
+  );
 }
+
+/** This visitor's cap: Retry-After is the seconds until its next token, 1 to 20. */
+function listVisitorLimited(retryAfterSeconds: number): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_LIST_VISITOR_LIMIT_REACHED',
+      message:
+        'You loaded many new lists in a short time. Try again in a moment.',
+    },
+    { retryAfterSeconds },
+  );
+}
+
+/** Whether a fetch of one block may start now, and if not, why (ADR 0019 addendum). */
+type StartDecision =
+  | { readonly kind: 'join' | 'start' | 'retry-later' | 'limited' }
+  | { readonly kind: 'visitor-limited'; readonly retryAfterSeconds: number };
 
 /**
  * Catalog lists (ADR 0016): cache-aside over anime_list_page, stale-while-revalidate. A
@@ -118,6 +151,7 @@ export class AnimeListService implements OnModuleDestroy {
     filters: ListFilters,
     cursor: string | undefined,
     limit = ANIME_LIST_DEFAULT_LIMIT,
+    caller: ApiCaller,
   ): Promise<AnimeListPage> {
     const offset = cursor === undefined ? 0 : decodeCursor(cursor);
     if (offset === null) {
@@ -138,16 +172,18 @@ export class AnimeListService implements OnModuleDestroy {
     const { list } = resolution;
     if (!this.settings.get('anilist').enabled) throw sourceNotAvailable();
 
+    const visitorKey = visitorKeyOf(caller);
     const { firstPage, lastPage } = readWindow(offset, limit);
     const blocks: WindowBlock<ListedAnime>[] = [];
     const first = await this.readBlock(
       list,
       firstPage,
       firstPage === 1 || (await this.hasNextAfter(list, firstPage - 1)),
+      visitorKey,
     );
     if (first !== null) blocks.push(first);
     if (first?.hasNextPage === true && lastPage > firstPage) {
-      const second = await this.readBlock(list, lastPage, true);
+      const second = await this.readBlock(list, lastPage, true, visitorKey);
       if (second !== null) blocks.push(second);
     }
     const window = assembleWindow(blocks, offset, limit);
@@ -185,6 +221,7 @@ export class AnimeListService implements OnModuleDestroy {
     list: CatalogList,
     page: number,
     mayFetch: boolean,
+    visitorKey: VisitorKey | null,
   ): Promise<WindowBlock<ListedAnime> | null> {
     let block = await this.stored(list, page);
     if (block === null) {
@@ -193,13 +230,14 @@ export class AnimeListService implements OnModuleDestroy {
       if (!this.inFlight.has(blockKey(list, page))) {
         block = await this.stored(list, page);
       }
-      if (block === null) return this.fetchCold(list, page);
+      if (block === null) return this.fetchCold(list, page, visitorKey);
     }
     const fresh = isFresh(list.kind, block.fetchedAt, this.clock.now());
     if (!fresh && !this.stopping && !this.anilist.isDown()) {
-      const start = this.startDecision(list, page);
-      if (start === 'join' || start === 'start') {
-        void this.fetchShared(list, page, 'background');
+      // A visitor with no token left is served the stale page and starts no refresh.
+      const { kind } = this.startDecision(list, page, visitorKey);
+      if (kind === 'join' || kind === 'start') {
+        void this.fetchShared(list, page, 'background', visitorKey);
       }
     }
     return this.toWindowBlock(page, block, fresh);
@@ -209,20 +247,24 @@ export class AnimeListService implements OnModuleDestroy {
   private async fetchCold(
     list: CatalogList,
     page: number,
+    visitorKey: VisitorKey | null,
   ): Promise<WindowBlock<ListedAnime>> {
     if (!this.inFlight.has(blockKey(list, page)) && this.anilist.isDown()) {
       throw sourceNotAvailable();
     }
-    const start = this.startDecision(list, page);
-    if (start === 'limited') {
+    const start = this.startDecision(list, page, visitorKey);
+    if (start.kind === 'visitor-limited') {
+      throw listVisitorLimited(start.retryAfterSeconds);
+    }
+    if (start.kind === 'limited') {
       this.warnLimitReached();
       throw listFetchLimited();
     }
-    if (start === 'retry-later') throw sourceNotAvailable();
+    if (start.kind === 'retry-later') throw sourceNotAvailable();
     try {
       return this.toWindowBlock(
         page,
-        await this.fetchShared(list, page, 'visitor'),
+        await this.fetchShared(list, page, 'visitor', visitorKey),
         true,
       );
     } catch (error) {
@@ -234,18 +276,35 @@ export class AnimeListService implements OnModuleDestroy {
 
   /**
    * Joining a fetch already running is free; a block in its retry delay is not asked; a new
-   * fetch takes a token from the shared bucket (given back if no request was sent).
+   * fetch takes the visitor's token (none for an `open` caller), then one from the shared
+   * bucket; both are given back if no request was sent, the visitor's also if the shared
+   * bucket is empty.
    */
   private startDecision(
     list: CatalogList,
     page: number,
-  ): 'join' | 'start' | 'retry-later' | 'limited' {
+    visitorKey: VisitorKey | null,
+  ): StartDecision {
     const key = blockKey(list, page);
-    if (this.inFlight.has(key)) return 'join';
+    if (this.inFlight.has(key)) return { kind: 'join' };
     if ((this.retryAt.get(key) ?? 0) > this.clock.now().getTime()) {
-      return 'retry-later';
+      return { kind: 'retry-later' };
     }
-    return this.limits.take() ? 'start' : 'limited';
+    if (visitorKey !== null) {
+      const take = this.limits.takeVisitor(visitorKey);
+      if (!take.taken) {
+        return {
+          kind: 'visitor-limited',
+          retryAfterSeconds: Math.min(
+            take.retryAfterSeconds,
+            LIST_VISITOR_REFILL_MS / 1000,
+          ),
+        };
+      }
+    }
+    if (this.limits.take()) return { kind: 'start' };
+    if (visitorKey !== null) this.limits.giveBackVisitor(visitorKey);
+    return { kind: 'limited' };
   }
 
   private warnLimitReached(): void {
@@ -271,12 +330,13 @@ export class AnimeListService implements OnModuleDestroy {
     list: CatalogList,
     page: number,
     wait: ListFetchWait,
+    visitorKey: VisitorKey | null,
   ): Promise<StoredListBlock> {
     const key = blockKey(list, page);
     const running = this.inFlight.get(key);
     if (running) return running;
-    const task = this.fetchAndStore(list, page, key, wait).finally(() =>
-      this.inFlight.delete(key),
+    const task = this.fetchAndStore(list, page, key, wait, visitorKey).finally(
+      () => this.inFlight.delete(key),
     );
     this.inFlight.set(key, task);
     if (wait === 'background') {
@@ -296,6 +356,7 @@ export class AnimeListService implements OnModuleDestroy {
     page: number,
     key: string,
     wait: ListFetchWait,
+    visitorKey: VisitorKey | null,
   ): Promise<StoredListBlock> {
     const now = this.clock.now();
     let fetched: ListBlock;
@@ -305,8 +366,14 @@ export class AnimeListService implements OnModuleDestroy {
     } catch (error) {
       const refused =
         error instanceof SourceUnavailableError && isQuietReason(error);
-      // Queue full or cooling down before any request left: the token was not spent.
-      if (refused && !error.requestSent) this.limits.giveBack();
+      // Refused before any request left (ADR 0019 item 10): neither token was spent.
+      if (
+        error instanceof SourceUnavailableError &&
+        refusedBeforeSending(error)
+      ) {
+        this.limits.giveBack();
+        if (visitorKey !== null) this.limits.giveBackVisitor(visitorKey);
+      }
       if (error instanceof SourceUnavailableError && !refused) {
         for (const [failed, until] of this.retryAt) {
           if (until > now.getTime()) break;

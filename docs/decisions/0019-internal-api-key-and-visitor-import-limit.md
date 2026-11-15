@@ -120,3 +120,22 @@ To fill in after the rollout.
 - Cache the `/health` result for about 1 s, so a public route cannot be used to load the database.
 - Swagger: an api-key security scheme for `X-Internal-Api-Key` and the 403 `INTERNAL_KEY_REQUIRED` answer on every route.
 - Not in this ADR (other nits in the OTA-182 notes): AniList 404 only when `data.Media === null`; remember every id on the adult path; `rel="nofollow"` on season links without a slug.
+
+## Addendum: per-visitor limit on lists and search (OTA-189, 2026-11-15)
+
+**Requirement.** A crawler must not be able to spend AniList's budget through the list endpoints: the filters make about 8,500 list keys reachable (ADR 0016), and the global list bucket (6 tokens) is shared by every visitor. Nobody should be refused for reading a page we already hold.
+
+**Decision.** One keyed limiter, `VisitorBuckets` (`apps/api/src/common/visitor-buckets.ts`), now behind both the import limit (unchanged numbers) and the list limit. Lists charge only work that calls AniList:
+- Cold list page: burst 3, one token back per 20 s (3 a minute, half the global rate of 6 a minute). Visitor token first, then the global token; the visitor token goes back if the global bucket is empty, and both go back when the fetch is refused before any request is sent (`refusedBeforeSending`, item 10).
+- Stored pages and joining a fetch already running are free. A background refresh of a stale page takes a visitor token too; with the bucket empty the refresh is skipped and the stale page is served, never a 429.
+- Who is charged follows items 7 and 8: `web` by client IP key (IPv6 /64), `preview` shared `preview`, `web` without a valid IP shared `unknown`, `open` (no key configured) no visitor bucket, global only. Never the socket address.
+- Answers: 429 `ANIME_LIST_VISITOR_LIMIT_REACHED` with `Retry-After` 1 to 20; the existing global 429 `ANIME_LIST_FETCH_LIMIT_REACHED` now carries `Retry-After: 10`.
+- Search (slice C): burst 20, one token back per 2 s; search reads only the database, so this guards load, not AniList.
+
+**Memory.** At most 10,000 entries per limiter, about 150 bytes each: three limiters (import, list, search) are about 4.5 MB.
+
+**Trade-offs.** In memory per process: a deploy refills every bucket, and a second API instance doubles the limits. Visitors behind one NAT share a bucket. No effect until `INTERNAL_API_KEY` is on in production (without it every caller is `open`, global limit only).
+
+**Rejected.** `@nestjs/throttler`: a new dependency, and it counts every request, including stored pages. Charging every list request: punishes reading what we already hold.
+
+**Slices.** A (this): refactor and list limit. B: `/season` forwards the client IP to the API, else its cold pages share `unknown`. C: search.
