@@ -4,14 +4,15 @@ Updated: 2026-11-15
 ## Current milestone
 W3 Browse, then W7 rate limits. Done: catalog list API slices 1–3 (OTA-135, 177, 190), OTA-137 slice 1 (`/season`), OTA-136 Home slice 1, OTA-173/174 import guards, OTA-148 robots/sitemap, OTA-182 web→API key + visitor import limit, OTA-191/192, OTA-184 slice 1 (ADR 0017), OTA-194, OTA-166/188 design skills, OTA-185 React checklist, OTA-170 nightly encrypted backup (restore drill recorded), OTA-187 onboarding guide (`docs/ONBOARDING.md`), OTA-189 per-client rate limit (slices A–C: OTA-195 list loader forwards IP, OTA-196 search limit), OTA-199 searches-in-flight cap (DB pool waits now 503).
 ## Last session
-OTA-139 slice 1a merged (#94): `app_user`, `auth_session`, session rules, `GET /me`. Slice 1b: argon2id `PasswordHasher`, `HashSlots` (2 running, 8 waiting, then 429 `AUTH_BUSY`), `Random.bytes`, `engines.node >=24.7`. Real-argon2 spec runs in CI only.
+OTA-139 slices 1a (#94) and 1b (#103) merged: `app_user`, `auth_session`, `GET /me`, argon2id `PasswordHasher`, `HashSlots`, `Random.bytes`. OTA-197 merged (#98): 60 s sweep of idle visitor IPs; a new per-visitor limiter must be registered in `VisitorSweepScheduler`. OTA-200 (autopilot): every pool pinned to UTC (`databasePoolConfig`), note in `docs/progress/OTA-200.md`.
 ## In progress
-- OTA-139 slice 1b PR (open): Farouk merges (touches protected package.json).
-- OTA-197 sweep of idle visitor IPs merged (#98, note in `docs/progress/OTA-197.md`).
+- OTA-139 slice 1c-i PR #104 (rate limiter, `AUTH_HMAC_KEY`): Farouk checks the Railway key, then merges (protected paths).
+- OTA-200 PR (open): run `SHOW timezone` on Railway's Postgres before merge. Follow-up OTA-201 (health check 503 when not UTC).
+- OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4 (features, sign-up band, card meta, Logo, hero motion, `--ease-drift`); OTA-147 `/contact` (needs the email provider). Launch gate: DPAs, OTA-180/181/179 wording, contact mailbox, AnimeThemes credit (OTA-107).
 - Decided 2026-11-15 (Farouk): email on Resend free plan only (80 sign-up + 20 reset/day, Sentry alert at 75); ADR 0015 addendum in the email slice.
 ## Next 3 tasks
-1. OTA-139 slice 1c: sign-in/out. Per-IP limit runs before any hasher call; DTO counts length after NFC; export a shared normalise helper.
+1. OTA-139 slice 1c-ii (after #104 merges): sign-in/out routes. Per-IP limit runs before any hasher call; DTO counts length after NFC; export a shared normalise helper.
 2. OTA-139 slices 1d–1f: AuthToken/UsernameHold, sign-up, console EmailSender; confirm + runtime proof; web apiClient session/clientIp, ADR 0003 addendum, Server Action cookie.
 3. OTA-198: `claimsSlugs` gate decision, once the internal key is on.
 Later: OTA-186 Mailpit + seed accounts; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 follow-up (shared `currentSeason`).

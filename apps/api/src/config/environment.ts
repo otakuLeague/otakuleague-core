@@ -14,6 +14,10 @@ import {
   validateSync,
   type ValidationError,
 } from 'class-validator';
+import {
+  DATABASE_URL_OPTIONS_RULE,
+  hasOptionsParameter,
+} from '../prisma/database-pool';
 
 // Same depth from src/config and dist/config, so this resolves to the repo root
 // whether the API starts from the repo root, from apps/api, or from dist.
@@ -38,6 +42,11 @@ export function isPostgresUrl(value: unknown): boolean {
     URL.canParse(value) &&
     POSTGRES_PROTOCOLS.includes(new URL(value).protocol)
   );
+}
+
+// `?options=` would win over the pool's UTC pin (OTA-200, src/prisma/database-pool.ts).
+function keepsUtcSessionPin(value: unknown): boolean {
+  return typeof value === 'string' && !hasOptionsParameter(value);
 }
 
 // A DSN carries the project's public key as the URL user name and ends with the project id.
@@ -116,6 +125,14 @@ export class EnvironmentVariables {
   @IsInt({ message: 'PORT must be an integer' })
   readonly PORT: number = 3001;
 
+  // Bottom-up: a value that is not a postgres URL reports only that.
+  @ValidateBy(
+    {
+      name: 'keepsUtcSessionPin',
+      validator: { validate: keepsUtcSessionPin },
+    },
+    { message: DATABASE_URL_OPTIONS_RULE },
+  )
   @ValidateBy(
     { name: 'isPostgresUrl', validator: { validate: isPostgresUrl } },
     { message: 'DATABASE_URL must be a postgres:// or postgresql:// URL' },
