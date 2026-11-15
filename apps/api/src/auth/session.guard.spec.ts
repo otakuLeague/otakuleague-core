@@ -88,11 +88,16 @@ describe('SessionGuard', () => {
     expect(() => currentSessionOf(request)).toThrow();
   });
 
-  it('lets a database outage through as 503, never 401', async () => {
-    const outage = new Prisma.PrismaClientInitializationError(
-      "Can't reach database server",
-      '7.10.1',
-    );
+  it.each([
+    [
+      'database down',
+      new Prisma.PrismaClientInitializationError(
+        "Can't reach database server",
+        '7.10.1',
+      ),
+    ],
+    ['pool wait', new Error('timeout exceeded when trying to connect')],
+  ])('lets a %s through as 503, never 401', async (_, outage) => {
     const { run } = setup(() => Promise.reject(outage));
 
     const error: unknown = await run(WEB, `Bearer ${TOKEN}`).result.catch(

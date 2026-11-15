@@ -22,13 +22,28 @@ export class FixedClock extends Clock {
   }
 }
 
-/** Returns 00000000-0000-4000-8000-000000000001, then ...0002, and so on. */
+/**
+ * uuid(): 00000000-0000-4000-8000-000000000001, then ...0002, and so on.
+ * bytes(n): n zero bytes ending in its own call count, big-endian (00..01, then 00..02).
+ */
 export class SequentialRandom extends Random {
-  private calls = 0;
+  private uuidCalls = 0;
+  private bytesCalls = 0;
 
   uuid(): string {
-    this.calls += 1;
-    return `00000000-0000-4000-8000-${String(this.calls).padStart(12, '0')}`;
+    this.uuidCalls += 1;
+    return `00000000-0000-4000-8000-${String(this.uuidCalls).padStart(12, '0')}`;
+  }
+
+  bytes(byteCount: number): Buffer {
+    this.bytesCalls += 1;
+    const bytes = Buffer.alloc(byteCount);
+    let rest = this.bytesCalls;
+    for (let index = byteCount - 1; index >= 0 && rest > 0; index -= 1) {
+      bytes[index] = rest % 256;
+      rest = Math.floor(rest / 256);
+    }
+    return bytes;
   }
 }
 
