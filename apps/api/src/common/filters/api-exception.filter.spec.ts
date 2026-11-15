@@ -399,3 +399,68 @@ describe('ApiExceptionFilter', () => {
     expect(response.end).toHaveBeenCalledOnce();
   });
 });
+
+describe('database waits and cancelled statements (OTA-199)', () => {
+  const known = (
+    code: string,
+    message: string,
+    meta?: Record<string, unknown>,
+  ) =>
+    new Prisma.PrismaClientKnownRequestError(message, {
+      code,
+      clientVersion: '7.10.1',
+      ...(meta !== undefined && { meta }),
+    });
+  const postgresCause = (code: string) => ({
+    driverAdapterError: {
+      name: 'DriverAdapterError',
+      cause: { kind: 'postgres', code },
+    },
+  });
+
+  it('answers 503 for a transaction that could not start in time', () => {
+    const error = known(
+      'P2028',
+      'Transaction API error: Unable to start a transaction in the given time.',
+    );
+    expect(toErrorResponse(error)).toEqual(SERVICE_UNAVAILABLE);
+  });
+
+  it('keeps 500 for any other transaction API error', () => {
+    const error = known(
+      'P2028',
+      'Transaction API error: Transaction already closed: a query cannot be executed.',
+    );
+    expect(toErrorResponse(error)).toEqual(INTERNAL_ERROR);
+  });
+
+  it('answers 503 for pg-pool when no connection came free in time', () => {
+    expect(
+      toErrorResponse(new Error('timeout exceeded when trying to connect')),
+    ).toEqual(SERVICE_UNAVAILABLE);
+  });
+
+  it('answers 503 for a query cancelled by its statement timeout (57014)', () => {
+    expect(
+      toErrorResponse(known('P2010', LEAKY_MESSAGE, postgresCause('57014'))),
+    ).toEqual(SERVICE_UNAVAILABLE);
+  });
+
+  it('answers 503 for a model query cancelled by its statement timeout', () => {
+    expect(
+      toErrorResponse(known('P2039', LEAKY_MESSAGE, postgresCause('57014'))),
+    ).toEqual(SERVICE_UNAVAILABLE);
+  });
+
+  it('keeps 500 for a P2039 with another postgres code', () => {
+    expect(
+      toErrorResponse(known('P2039', LEAKY_MESSAGE, postgresCause('23505'))),
+    ).toEqual(INTERNAL_ERROR);
+  });
+
+  it('keeps 500 for another postgres error code', () => {
+    expect(
+      toErrorResponse(known('P2010', LEAKY_MESSAGE, postgresCause('42P01'))),
+    ).toEqual(INTERNAL_ERROR);
+  });
+});
