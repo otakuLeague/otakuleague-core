@@ -46,6 +46,15 @@ describe('SequentialRandom', () => {
     }
   });
 
+  it('returns zero bytes ending in a call count kept apart from uuid()', () => {
+    const random = new SequentialRandom();
+    random.uuid();
+
+    expect(random.bytes(3).toString('hex')).toBe('000001');
+    expect(random.bytes(3).toString('hex')).toBe('000002');
+    expect(random.uuid()).toBe('00000000-0000-4000-8000-000000000002');
+  });
+
   it('starts over for each new instance', () => {
     new SequentialRandom().uuid();
 

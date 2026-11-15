@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@12.11.2",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.7"
   },
   "scripts": {
     "prepare": "node -e \"const fs = require('fs'); if (fs.existsSync('.githooks') && fs.existsSync('.git')) { try { require('child_process').execSync('git config core.hooksPath .githooks'); } catch (error) { console.warn('Could not set git hooksPath:', error.message); } }\"",
