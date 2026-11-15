@@ -33,7 +33,7 @@ With a cached install, the workspace `prepare` step that builds `shared-types` w
 | `NEXT_PUBLIC_SENTRY_DSN` | not set yet | n/a | OTA-167 |
 | `INTERNAL_API_KEY` | not set yet (ADR 0019, runbook in `docs/deploy.md`) | Production: the production key. Preview: the preview key (`INTERNAL_API_KEY_PREVIEW` on Railway), **never the production key** | Server-only, Sensitive. Two different values under one name: the API's boot check compares only Railway's variables, so nothing but this rule keeps the production key out of Preview |
 
-With `INTERNAL_API_KEY` set, the web sends it on every API call, and the build fails (`next.config.ts`) if the key is malformed or `API_BASE_URL` is not https: a bad value stops the deploy, never live requests. It also sends the visitor's IP (`X-Client-Ip`) on the two calls that can import an anime, read from `x-forwarded-for`, only when `VERCEL=1`: Vercel overwrites that header with the address it saw, so it is trustworthy only there. Keep "Automatically expose System Environment Variables" on, or no IP is sent and every visitor shares the API's `unknown` bucket. A CDN or proxy in front of Vercel needs its own decision first. Check after setting it: the deploy's build log is green, `/anime/<slug>` and `/` still load, and `curl -i '<api>/anime/search?q=a'` answers 403 once Railway has the key too.
+With `INTERNAL_API_KEY` set, the web sends it on every API call, and the build fails (`next.config.ts`) if the key is malformed or `API_BASE_URL` is not https: a bad value stops the deploy, never live requests. It also sends the visitor's IP (`X-Client-Ip`) on calls that can make the API call AniList for the visitor (imports, list pages; ADR 0019 OTA-195 addendum), read from `x-forwarded-for`, only when `VERCEL=1`: Vercel overwrites that header with the address it saw, so it is trustworthy only there. Keep "Automatically expose System Environment Variables" on, or no IP is sent and every visitor shares the API's `unknown` bucket. A CDN or proxy in front of Vercel needs its own decision first. Check after setting it: the deploy's build log is green, `/anime/<slug>` and `/` still load, and `curl -i '<api>/anime/search?q=a'` answers 403 once Railway has the key too.
 
 ## Search indexing
 
@@ -44,6 +44,14 @@ With `INTERNAL_API_KEY` set, the web sends it on every API call, and the build f
 At the launch cutover (OTA-149): change the constant to `'allowed'`, merge, and check on the real domain, on a page that returns 200: `curl -s <url> | grep -o '<meta name="robots"[^>]*>'` shows `index, follow`, and `curl -sI <url> | grep -i x-robots-tag` prints nothing. 404 pages keep Next's own noindex.
 
 Also at cutover: `curl -s https://otakuleague.com/robots.txt` shows `Disallow: /anime/anilist/` and a `Sitemap: https://otakuleague.com/sitemap.xml` line; `curl -s https://otakuleague.com/sitemap.xml` lists the static pages (/, /faq and the legal pages); each page's `<link rel="canonical">` is absolute on `otakuleague.com`; then submit the sitemap in Search Console (Farouk, manual).
+
+## Rollback
+
+1. Vercel dashboard → project `otakuleague` → Deployments.
+2. Pick the last good production deployment and use Instant Rollback (or redeploy that old deployment).
+3. If neither is available, revert the commit on `main` with a PR.
+
+A rollback keeps that deployment's variables. Rolling back past an `INTERNAL_API_KEY` rotation sends the old key: see "Internal API key" in [deploy.md](deploy.md). A rollback does not undo API migrations (see "Rollback" in [deploy.md](deploy.md)).
 
 ## Test plan
 

@@ -1,8 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import type {
   AnimeSearchHit,
   AnimeSearchPage,
 } from '@otakuleague/shared-types';
+import {
+  type ApiCaller,
+  sharedVisitorBucket,
+  type VisitorKey,
+  visitorKeyOf,
+} from '../common/api-caller';
+import { ApiException } from '../common/api.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnimeImportService } from './anime-import.service';
 import { rankAnime } from './anime-search.query';
@@ -10,11 +17,42 @@ import { toSearchHit } from './anime-search.view';
 import { mergeAnime, SOURCE_PRIORITY } from './anime.merge';
 import { ANIME_WITH_DATA, DB_DATA_SOURCE, fromAnimeRow } from './anime.rows';
 import { Clock } from '../common/clock-and-random.module';
+import { SearchInFlight } from './search-in-flight';
+import { SearchLimits } from './search-limits';
 
 export interface AnimeSearchRequest {
   readonly query: string;
   readonly page: number;
   readonly pageSize: number;
+}
+
+/** A shared bucket's refusals are logged at most this often. */
+const LIMIT_WARN_INTERVAL_MS = 60_000;
+
+/** This visitor's cap: Retry-After is the seconds until its next token, 1 or 2. */
+function searchVisitorLimited(retryAfterSeconds: number): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_SEARCH_VISITOR_LIMIT_REACHED',
+      message:
+        'You searched many times in a short time. Try again in a moment.',
+    },
+    { retryAfterSeconds },
+  );
+}
+
+/** Refused at the cap on searches in flight: Retry-After 1 (a search is bounded by the 2 s transaction start wait plus the 2 s statement timeout). */
+function searchBusy(): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_SEARCH_BUSY',
+      message:
+        'Too many searches are running right now. Try again in a moment.',
+    },
+    { retryAfterSeconds: 1 },
+  );
 }
 
 /** Ranking scans every stored title (slice 1): bound the time one request can take. */
@@ -40,46 +78,76 @@ export class AnimeSearchService {
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly importer: AnimeImportService,
+    private readonly limits: SearchLimits,
+    private readonly inFlight: SearchInFlight,
   ) {}
 
-  async search({
-    query,
-    page,
-    pageSize,
-  }: AnimeSearchRequest): Promise<AnimeSearchPage> {
+  private readonly logger = new Logger(AnimeSearchService.name);
+  private readonly sharedWarnedAt = new Map<'preview' | 'unknown', number>();
+  private busyWarnedAt = 0;
+
+  async search(
+    { query, page, pageSize }: AnimeSearchRequest,
+    caller: ApiCaller,
+  ): Promise<AnimeSearchPage> {
+    this.chargeVisitor(caller);
     const sources = SOURCE_PRIORITY.filter(this.importer.isEnabled).map(
       (source) => DB_DATA_SOURCE[source],
     );
     if (sources.length === 0 || !hasSearchableText(query))
       return { hits: [], page, pageSize, total: 0 };
 
-    const ranked = await this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
-      return rankAnime(transaction, {
-        query,
-        sources,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      });
-    });
+    const run = await this.inFlight.run(() =>
+      this.findStored({ query, page, pageSize }, sources),
+    );
+    if (run.kind === 'busy') {
+      this.warnBusy();
+      throw searchBusy();
+    }
+    return run.value;
+  }
+
+  private async findStored(
+    { query, page, pageSize }: AnimeSearchRequest,
+    sources: readonly string[],
+  ): Promise<AnimeSearchPage> {
+    // One transaction: a search pins one connection (the relation includes would fan out on the pool).
+    const { ranked, found, identities } = await this.prisma.$transaction(
+      async (transaction) => {
+        await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
+        const matched = await rankAnime(transaction, {
+          query,
+          sources,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        });
+        if (matched.matches.length === 0) {
+          return { ranked: matched, found: [], identities: [] };
+        }
+        const rows = await transaction.anime.findMany({
+          where: { id: { in: matched.matches.map(({ animeId }) => animeId) } },
+          include: ANIME_WITH_DATA,
+        });
+        const found = rows.map(fromAnimeRow);
+        const anilistIds = found.flatMap(({ externalIds }) =>
+          externalIds.filter(({ source }) => source === 'anilist'),
+        );
+        return {
+          ranked: matched,
+          found,
+          identities: await transaction.animeIdentity.findMany({
+            where: {
+              anilistId: { in: anilistIds.map(({ externalId }) => externalId) },
+              removedAt: null,
+            },
+          }),
+        };
+      },
+    );
     if (ranked.matches.length === 0) {
       return { hits: [], page, pageSize, total: ranked.total };
     }
-
-    const rows = await this.prisma.anime.findMany({
-      where: { id: { in: ranked.matches.map(({ animeId }) => animeId) } },
-      include: ANIME_WITH_DATA,
-    });
-    const stored = new Map(rows.map((row) => [row.id, fromAnimeRow(row)]));
-    const anilistIds = [...stored.values()].flatMap(({ externalIds }) =>
-      externalIds.filter(({ source }) => source === 'anilist'),
-    );
-    const identities = await this.prisma.animeIdentity.findMany({
-      where: {
-        anilistId: { in: anilistIds.map(({ externalId }) => externalId) },
-        removedAt: null,
-      },
-    });
+    const stored = new Map(found.map((anime) => [anime.id, anime]));
     const slugByAnilistId = new Map(
       identities.map(({ anilistId, canonicalSlug }) => [
         anilistId,
@@ -103,5 +171,36 @@ export class AnimeSearchService {
       return hit ? [hit] : [];
     });
     return { hits, page, pageSize, total: ranked.total };
+  }
+
+  private warnBusy(): void {
+    const now = this.clock.now().getTime();
+    if (now - this.busyWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+    this.busyWarnedAt = now;
+    this.logger.warn('Search in-flight cap reached: searches are refused.');
+  }
+
+  /** One token per valid search, before any work; an open caller is not limited. */
+  private chargeVisitor(caller: ApiCaller): void {
+    const visitorKey = visitorKeyOf(caller);
+    if (visitorKey === null) return;
+    const take = this.limits.takeVisitor(visitorKey);
+    if (take.taken) return;
+    this.warnSharedVisitorLimited(visitorKey);
+    throw searchVisitorLimited(take.retryAfterSeconds);
+  }
+
+  /** Only the shared buckets are logged, once a minute each; never the key: it is a client IP. */
+  private warnSharedVisitorLimited(visitorKey: VisitorKey): void {
+    const shared = sharedVisitorBucket(visitorKey);
+    if (shared === null) return;
+    const now = this.clock.now().getTime();
+    if (now - (this.sharedWarnedAt.get(shared) ?? 0) < LIMIT_WARN_INTERVAL_MS) {
+      return;
+    }
+    this.sharedWarnedAt.set(shared, now);
+    this.logger.warn(
+      `Search visitor cap reached on the shared ${shared} bucket: searches are refused.`,
+    );
   }
 }

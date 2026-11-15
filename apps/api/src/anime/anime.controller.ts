@@ -248,15 +248,17 @@ export class AnimeController {
   })
   @ApiTooManyRequestsResponse({
     description:
-      'Too many new lists are being loaded right now (global cap); a stored page is unaffected.',
+      'Too many new lists are being loaded right now (global cap, ANIME_LIST_FETCH_LIMIT_REACHED, Retry-After 10), or this visitor loaded many new lists in a short time (ANIME_LIST_VISITOR_LIMIT_REACHED, Retry-After 1 to 20). A stored page is unaffected.',
   })
   getList(
     @Param() params: AnimeListParams,
     @Query() query: AnimeListQuery,
+    @Caller() caller: ApiCaller,
   ): Promise<AnimeListPage> {
     return this.lists.getList(
       params.kind,
       { season: query.season, year: query.year, genre: query.genre },
+      caller,
       query.cursor,
       query.limit,
     );
@@ -273,12 +275,22 @@ export class AnimeController {
     description:
       'q missing or longer than 100 characters, or page or pageSize out of range.',
   })
-  searchAnime(@Query() params: AnimeSearchParams): Promise<AnimeSearchPage> {
-    return this.animeSearch.search({
-      query: params.q,
-      page: params.page,
-      pageSize: params.pageSize,
-    });
+  @ApiTooManyRequestsResponse({
+    description:
+      'This visitor searched many times in a short time (ANIME_SEARCH_VISITOR_LIMIT_REACHED, Retry-After 1 or 2), or too many searches are running at once (ANIME_SEARCH_BUSY, Retry-After 1, any caller).',
+  })
+  searchAnime(
+    @Query() params: AnimeSearchParams,
+    @Caller() caller: ApiCaller,
+  ): Promise<AnimeSearchPage> {
+    return this.animeSearch.search(
+      {
+        query: params.q,
+        page: params.page,
+        pageSize: params.pageSize,
+      },
+      caller,
+    );
   }
 
   // Declared before ':idSource/:externalId': both have two segments, and Express takes the

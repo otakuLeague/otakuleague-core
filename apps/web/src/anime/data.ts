@@ -14,8 +14,8 @@ import { apiClient, type ApiResult } from '../api/client';
 import { readClientIp } from '../api/client-ip';
 
 // One API call per request for each, shared by the layout, the tab page and generateMetadata.
-// Only the two loaders that can start an import send the visitor's IP (ADR 0019): the others never
-// read request headers, so they add no request-time data to a page.
+// Loaders that can call AniList for a visitor (an import, a cold or stale list page) send the
+// visitor's IP (ADR 0019); the others never read request headers.
 
 /** Which anime a slug names: database only on the API side, fast even for a purged anime. */
 export const resolveAnimeSlug = cache(
@@ -60,7 +60,7 @@ export interface AnimeListPageRequest {
 }
 
 /** One page of a catalog list (ADR 0016), card fields only. A drifted body is an invalid_response. */
-export function loadAnimeListPage(
+export async function loadAnimeListPage(
   kind: AnimeListKind,
   request: AnimeListPageRequest,
 ): Promise<ApiResult<AnimeListCardPage>> {
@@ -75,7 +75,7 @@ export function loadAnimeListPage(
   query.set('limit', String(request.limit));
   return apiClient().call(
     `/anime/lists/${encodeURIComponent(kind)}?${query.toString()}`,
-    { isExpectedBody: isAnimeListPage },
+    { isExpectedBody: isAnimeListPage, clientIp: await readClientIp() },
   );
 }
 

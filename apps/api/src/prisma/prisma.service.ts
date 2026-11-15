@@ -9,6 +9,8 @@ import { PrismaClient } from '../generated/prisma/client';
 // stops waiting after 2 s, but only these settle the abandoned query.
 const CONNECT_TIMEOUT_MS = 5_000;
 const QUERY_TIMEOUT_MS = 10_000;
+/** Named, not pg's default, so the cap on searches in flight is checked against a number we own. */
+export const DATABASE_POOL_MAX = 10;
 
 // No $connect at boot: Prisma connects on the first query, so the API starts
 // (and /health answers 503) while PostgreSQL is down.
@@ -18,6 +20,7 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     super({
       adapter: new PrismaPg({
         connectionString: config.get('DATABASE_URL', { infer: true }),
+        max: DATABASE_POOL_MAX,
         connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
         query_timeout: QUERY_TIMEOUT_MS,
       }),

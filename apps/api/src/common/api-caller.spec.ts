@@ -4,7 +4,9 @@ import {
   callerOf,
   OPEN_CALLER,
   PREVIEW_CALLER,
+  PREVIEW_VISITOR_KEY,
   recordCaller,
+  sharedVisitorBucket,
   UNKNOWN_VISITOR_KEY,
   visitorKeyFromClientIp,
   visitorKeyOf,
@@ -131,5 +133,20 @@ describe('callerOf', () => {
 
   it('throws, never assumes an open caller, when the guard recorded none', () => {
     expect(() => callerOf({})).toThrow('No ApiCaller recorded');
+  });
+});
+
+describe('sharedVisitorBucket', () => {
+  it('names the preview and unknown buckets and nothing else', () => {
+    expect(sharedVisitorBucket(PREVIEW_VISITOR_KEY)).toBe('preview');
+    expect(sharedVisitorBucket(visitorKeyFromClientIp(undefined))).toBe(
+      'unknown',
+    );
+    expect(
+      sharedVisitorBucket(visitorKeyFromClientIp('203.0.113.7')),
+    ).toBeNull();
+    expect(
+      sharedVisitorBucket(visitorKeyFromClientIp('2001:db8:1:2::9')),
+    ).toBeNull();
   });
 });

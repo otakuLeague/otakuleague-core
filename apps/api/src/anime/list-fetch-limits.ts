@@ -1,10 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import type { VisitorKey } from '../common/api-caller';
 import { Clock } from '../common/clock-and-random.module';
+import { VisitorBuckets, type VisitorTake } from '../common/visitor-buckets';
 
 /** Cold list fetches allowed at once, and the most the bucket ever holds. */
 export const LIST_FETCH_BURST = 6;
 /** One list-fetch token comes back every this many milliseconds (6 a minute). */
 export const LIST_FETCH_REFILL_MS = 10_000;
+/** Cold list fetches one visitor may start at once (ADR 0019 addendum, OTA-189). */
+export const LIST_VISITOR_BURST = 3;
+/** One visitor token comes back every this many milliseconds (3 a minute). */
+export const LIST_VISITOR_REFILL_MS = 20_000;
+/** The most visitors remembered at once; the least recently used goes first. */
+const LIST_VISITOR_MAX_ENTRIES = 10_000;
 
 /**
  * A global token bucket for catalog-list fetches of pages we do not hold, and for the
@@ -16,9 +24,28 @@ export const LIST_FETCH_REFILL_MS = 10_000;
 export class ListFetchLimits {
   private tokens = LIST_FETCH_BURST;
   private refilledAt: number;
+  private readonly visitors: VisitorBuckets;
 
   constructor(private readonly clock: Clock) {
     this.refilledAt = clock.now().getTime();
+    this.visitors = new VisitorBuckets(
+      {
+        burst: LIST_VISITOR_BURST,
+        refillMs: LIST_VISITOR_REFILL_MS,
+        maxEntries: LIST_VISITOR_MAX_ENTRIES,
+      },
+      clock,
+    );
+  }
+
+  /** Takes one of this visitor's tokens; the global one is taken after it. */
+  takeVisitor(key: VisitorKey): VisitorTake {
+    return this.visitors.take(key);
+  }
+
+  /** Returns a visitor token taken for a fetch that never reached AniList (never above the burst). */
+  giveBackVisitor(key: VisitorKey): void {
+    this.visitors.giveBack(key);
   }
 
   /** Takes one token; false when the bucket is empty. */

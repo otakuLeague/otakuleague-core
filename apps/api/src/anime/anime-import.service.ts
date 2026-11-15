@@ -8,8 +8,7 @@ import {
 import type { AnimeDataSource } from '@otakuleague/shared-types';
 import {
   type ApiCaller,
-  PREVIEW_VISITOR_KEY,
-  UNKNOWN_VISITOR_KEY,
+  sharedVisitorBucket,
   type VisitorKey,
   visitorKeyOf,
 } from '../common/api-caller';
@@ -395,7 +394,8 @@ export class AnimeImportService implements OnModuleDestroy {
   /** Never logs the visitor key: it is a client IP (ADR 0019). Only whether it was a shared one. */
   private warnVisitorLimitReached(visitorKey: VisitorKey): void {
     const now = this.clock.now().getTime();
-    if (visitorKey === PREVIEW_VISITOR_KEY) {
+    const shared = sharedVisitorBucket(visitorKey);
+    if (shared === 'preview') {
       if (now - this.previewLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
       this.previewLimitWarnedAt = now;
       this.logger.warn(
@@ -403,7 +403,7 @@ export class AnimeImportService implements OnModuleDestroy {
       );
       return;
     }
-    if (visitorKey === UNKNOWN_VISITOR_KEY) {
+    if (shared === 'unknown') {
       if (now - this.unknownVisitorLimitWarnedAt < LIMIT_WARN_INTERVAL_MS) {
         return;
       }

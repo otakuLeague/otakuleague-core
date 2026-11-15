@@ -34,13 +34,13 @@ Consistency or availability: **availability.** Limiter state is in memory, per p
 
 ## Options
 
-| Topic | Chosen | Rejected, and why |
-|---|---|---|
-| Who may call the API | A shared secret header checked by a global Nest guard | **Railway private network only**: Vercel cannot reach it. **Allowlist of Vercel addresses**: Hobby has no fixed egress addresses. **Signed requests (HMAC plus timestamp) or mTLS**: they stop replay of a captured request, which TLS already prevents; more code for a threat we do not have. |
-| Where the check runs | `APP_GUARD` plus a `@PublicRoute()` marker on the health controller | **Express middleware in `main.ts`**: it would also cover unknown paths and Swagger, but its errors skip the exception filter (the envelope would be written by hand) and `test-app.ts` would have to mirror it. The repo is public, so "which routes exist" is not a secret. |
-| Per-visitor counting | In-memory buckets inside `ImportLimits`, taken only when this caller starts an import | **`@nestjs/throttler`**: a new dependency that counts requests, and cached pages must stay free. **Postgres counters** (as ADR 0015 does for sign-in): a write per cold visit for state worth 200 s; the global bucket it sits in front of is in memory too. |
-| Visitor identity | The client IP the web forwards in `X-Client-Ip` (ADR 0015, 0017), IPv6 cut to its /64 | **A second `X-Visitor-Key` header**: two headers for the same fact. **A cookie id**: a crawler drops cookies. |
-| Without a trusted IP | No per-visitor count when the check is off; one shared bucket when the key matched but no valid IP came | **The socket address**: on Railway it is the platform proxy's, not the caller's (not verified by running), and in tests it is always loopback. |
+| Topic                | Chosen                                                                                                  | Rejected, and why                                                                                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Who may call the API | A shared secret header checked by a global Nest guard                                                   | **Railway private network only**: Vercel cannot reach it. **Allowlist of Vercel addresses**: Hobby has no fixed egress addresses. **Signed requests (HMAC plus timestamp) or mTLS**: they stop replay of a captured request, which TLS already prevents; more code for a threat we do not have. |
+| Where the check runs | `APP_GUARD` plus a `@PublicRoute()` marker on the health controller                                     | **Express middleware in `main.ts`**: it would also cover unknown paths and Swagger, but its errors skip the exception filter (the envelope would be written by hand) and `test-app.ts` would have to mirror it. The repo is public, so "which routes exist" is not a secret.                    |
+| Per-visitor counting | In-memory buckets inside `ImportLimits`, taken only when this caller starts an import                   | **`@nestjs/throttler`**: a new dependency that counts requests, and cached pages must stay free. **Postgres counters** (as ADR 0015 does for sign-in): a write per cold visit for state worth 200 s; the global bucket it sits in front of is in memory too.                                    |
+| Visitor identity     | The client IP the web forwards in `X-Client-Ip` (ADR 0015, 0017), IPv6 cut to its /64                   | **A second `X-Visitor-Key` header**: two headers for the same fact. **A cookie id**: a crawler drops cookies.                                                                                                                                                                                   |
+| Without a trusted IP | No per-visitor count when the check is off; one shared bucket when the key matched but no valid IP came | **The socket address**: on Railway it is the platform proxy's, not the caller's (not verified by running), and in tests it is always loopback.                                                                                                                                                  |
 
 ## Decision
 
@@ -120,3 +120,91 @@ To fill in after the rollout.
 - Cache the `/health` result for about 1 s, so a public route cannot be used to load the database.
 - Swagger: an api-key security scheme for `X-Internal-Api-Key` and the 403 `INTERNAL_KEY_REQUIRED` answer on every route.
 - Not in this ADR (other nits in the OTA-182 notes): AniList 404 only when `data.Media === null`; remember every id on the adult path; `rel="nofollow"` on season links without a slug.
+
+## Addendum: per-visitor limit on lists and search (OTA-189, 2026-11-15)
+
+**Requirement.** A crawler must not be able to spend AniList's budget through the list endpoints: the filters make about 8,500 list keys reachable (ADR 0016), and the global list bucket (6 tokens) is shared by every visitor. Nobody should be refused for reading a page we already hold.
+
+**Decision.** One keyed limiter, `VisitorBuckets` (`apps/api/src/common/visitor-buckets.ts`), now behind both the import limit (unchanged numbers) and the list limit. Lists charge only work that calls AniList:
+
+- Cold list page: burst 3, one token back per 20 s (3 a minute, half the global rate of 6 a minute). Visitor token first, then the global token; the visitor token goes back if the global bucket is empty, and both go back when the fetch is refused before any request is sent (`refusedBeforeSending`, item 10).
+- Stored pages and joining a fetch already running are free. A background refresh of a stale page takes a visitor token too; with the bucket empty the refresh is skipped and the stale page is served, never a 429.
+- Who is charged follows items 7 and 8: `web` by client IP key (IPv6 /64), `preview` shared `preview`, `web` without a valid IP shared `unknown`, `open` (no key configured) no visitor bucket, global only. Never the socket address.
+- Answers: 429 `ANIME_LIST_VISITOR_LIMIT_REACHED` with `Retry-After` 1 to 20; the existing global 429 `ANIME_LIST_FETCH_LIMIT_REACHED` now carries `Retry-After: 10`.
+- Search (slice C): burst 20, one token back per 2 s; search reads only the database, so this guards load, not AniList.
+
+**Memory.** At most 10,000 entries per limiter, about 150 bytes each: three limiters (import, list, search) are about 4.5 MB.
+
+**Trade-offs.** In memory per process: a deploy refills every bucket, and a second API instance doubles the limits. Visitors behind one NAT share a bucket. No effect until `INTERNAL_API_KEY` is on in production (without it every caller is `open`, global limit only). Each visitor gets half the global bucket, so two keys (two IPv4s, or two /64s from one /56 or a free tunnel) can drain it: others' cold pages are refused and stale pages go unrefreshed until it refills. AniList spend and memory stay bounded. Keep `claimsSlugs`, `Disallow: /season?` and the nofollow links until the key is on and slice B ships. Options for later, if abuse appears: reserve global tokens for refreshes, key IPv6 by /56.
+**Rejected.** `@nestjs/throttler`: a new dependency, and it counts every request, including stored pages. Charging every list request: punishes reading what we already hold.
+
+**Slices.** A (this): refactor and list limit. B: the web list loader `loadAnimeListPage` (used by `/season` and the home rows, not only `/season`) forwards the client IP to the API, else its cold pages share `unknown`. C: search.
+
+## Addendum: the web list loader forwards the visitor IP (OTA-195, OTA-189 slice B, 2026-11-15)
+
+**Requirement.** Once `INTERNAL_API_KEY` is on, list calls from the web must be charged to the visitor who caused them, or every cold page from `/season` and the home rows shares the `unknown` bucket (3 tokens, one back per 20 s) and one heavy visitor gets everyone a 429. A cached or prerendered page must never carry, or be keyed by, one visitor's IP.
+
+**Decision.** `loadAnimeListPage` (`apps/web/src/anime/data.ts`) passes `clientIp: await readClientIp()`, like the two import loaders. `loadAnimeList` (the home rows) goes through it, so both `/season` and the home rows send `X-Client-Ip`. Nothing else changes: still only with the key, still nothing unless `VERCEL=1` and `x-forwarded-for` is one bare address (a list, an empty or malformed value, or a zone id sends no IP and the API counts `unknown`).
+
+**Why this does not change caching.** There is no web cache in front of the list API: the call is `no-store` (the client refuses `clientIp` on any cached call) and no list loader is inside `'use cache'`. The only list cache is the API's stored pages (`anime_list_page`), and there only a cold page or a stale refresh takes a visitor token; stored pages and joined fetches are free. Both callers already render at request time inside Suspense: `/season` after `connection()`, each home row as its own streamed hole of a Partial Prerender page. So `headers()` adds no request-time data, the prerendered parts hold no list data, and no IP reaches a cache key or the HTML. The build must still report `/` and `/season` as Partial Prerender.
+
+**Home rows.** They send the IP. They were already rendered per request, so leaving it out would save no caching; it would only put every home visitor's cold row and stale refresh on `unknown`, whose "cap reached on the shared unknown bucket" log is how the rollout spots a route that forgets the IP. Cost: right after a season change, the first visitor can spend up to 3 tokens on cold rows, and their next cold page within about 20 s is refused (busy state, retry link); other visitors join in-flight fetches for free.
+
+**If the lists are cached in the web later (OTA-86).** A loader inside `'use cache'` or with `revalidate` cannot read `headers()` and must not send an IP: the visitor whose request fills the cache would be pinned into a shared entry. Such a loader is a stored-data loader in the `data.test.ts` gate, and its misses are charged to `unknown`. Acceptable then, because cached misses are rare; decide it in that ticket.
+
+**Rejected.** An opt-out for the home rows (`chargeVisitor: false`): a second code path for no caching gain, and a noisier `unknown` bucket. Reading the IP once in the page and passing it down: more plumbing for the same headers read, and every caller could forget it.
+
+**Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on.
+
+**Too simple?** A visitor behind a shared NAT shares a bucket, and a deep `/season?page=N` on a cold season can need more than 3 tokens (busy partway, as before). Both are accepted in the OTA-189 addendum. **Too complicated?** No: one option on one call, no API change.
+
+## Addendum: per-visitor limit on search (OTA-196, OTA-189 slice C, 2026-11-15)
+
+**Requirements.** Functional: (1) a visitor can search as fast as a person types and pages; (2) one address that floods `GET /anime/search` is refused alone, with a `Retry-After`; (3) a malformed request still gets its 400, and costs nothing. Non-functional: per visitor at most 20 searches at once and 30 a minute after that (burst 20, one token back per 2 s); 0 tokens for a 400; the check adds no I/O and is O(1) per request (one `Map` lookup, the idle sweep amortised); memory stays within the 10,000 entries per limiter of the OTA-189 addendum (an entry is idle after 40 s); `Retry-After` is a whole number of seconds, 1 or 2. **Availability**, as for the other limiters: in memory, per process; a lost counter only lets a few extra searches through.
+
+**Entities.** `ApiCaller`, `VisitorKey` and `VisitorBuckets` as they are; one new provider, `SearchLimits`. No table, no new dependency.
+
+**API.** `GET /anime/search` is unchanged on success. New answer: 429 `ANIME_SEARCH_VISITOR_LIMIT_REACHED` with `Retry-After` (seconds until this visitor's next token) and the error envelope.
+
+**Data flow.** Validation pipe (400 `VALIDATION_FAILED`, no token) → guard has recorded the `ApiCaller` → controller passes `@Caller()` down → `AnimeSearchService.search(request, caller)` takes the visitor token first (none for `open`), then searches. Every valid search is charged, including one that skips the database (no searchable text, every source off): the charge is per request, which is simpler to explain and test, and those requests cost almost nothing.
+
+**Decision.** Mirror the list limit, minus what search does not have:
+
+- `SearchLimits` (`apps/api/src/anime/search-limits.ts`): an injectable around one `VisitorBuckets` with `SEARCH_VISITOR_BURST = 20`, `SEARCH_VISITOR_REFILL_MS = 2_000`, 10,000 entries, `Clock` injected; one method, `takeVisitor(key)`.
+- Keyed by `visitorKeyOf(caller)`: `web` by client IP (IPv6 /64), `web` without a valid IP the shared `unknown`, every `preview` the shared `preview`, `open` not limited and not charged. Never the socket address.
+- No give-back: search never calls a source, so a token stands for database load, and a search that failed or timed out (`statement_timeout` 2 s) still cost that load.
+- No global search bucket: the 2 s statement timeout bounds each search, and a global bucket would refuse every visitor during one crawl. The pool does not cap one visitor: a burst of 20 can fill the default pool of 10, so other requests wait. OTA-199 adds an in-flight cap and a 503 on pool waits.
+- A refusal on the shared `unknown` or `preview` bucket logs one warning a minute per bucket, never the key, like lists: it is how the rollout spots a web route that forgets the IP.
+
+**Rejected.** Taking the token in the controller or a Nest interceptor: business logic belongs in the service (CLAUDE.md), and an interceptor would be a second limiting mechanism next to the service-level ones. A global search bucket in front (as lists and imports have): those protect AniList's budget, shared by everyone; search protects only our own database, where the pool bounds connections but not who holds them (OTA-199).
+
+**Web side.** The web has no search page or loader yet (`/search` in the header form has no route). Whatever OTA-98 adds must call `/anime/search` uncached (`no-store`) with `clientIp: await readClientIp()`, like `loadAnimeListPage`; otherwise every visitor shares `unknown` (20 at once, 30 a minute for the whole site) once the key is on. This is a rollout gate for the key, next to the two import routes and the list loader. A live-results box should debounce (about 250 ms), so a typed query costs a few tokens, not one per key press.
+
+**Out of scope.** Removing the `claimsSlugs` gate (ADR 0016 claim scope): the OTA-189 addendum keeps it until the key is on in production and slice B has shipped; the key is not on yet, so it stays, in OTA-198.
+
+**Too simple?** Search has no global bucket, so a /48 gets 65,536 buckets of 20 and `open` callers are unlimited: a /48 bucket or a Vercel firewall rule is a gate before turning the key on. Idle IPs stay in memory until the next granted take (OTA-197 covers search too). Shared NATs share 20. In memory: a deploy refills every bucket. **Too complicated?** No: one provider, one take, no give-back, no new state beyond the existing limiter class.
+
+## Addendum: cap on searches in flight, and 503 on database waits (OTA-199, 2026-11-15)
+
+**Problem.** The OTA-196 burst lets one address start 20 searches at once. Each holds a database connection for up to 2 s (`statement_timeout`) after waiting up to 2 s to start, and the pool has 10 (pg's default). One address, or any `open` caller (all of production until the key is on), can fill the pool: every other route then waits, and the wait ends as a 500.
+
+**Requirements.** Functional: (1) a search still answers while a few others run; (2) when too many run at once, the next one is refused at once with a retry hint, and every other route keeps its connections; (3) a request that could not get a connection in time, or whose ranking was cancelled by its timeout, is answered "unavailable, retry" (503), not "server bug" (500). Non-functional: searches hold at most 4 of the 10 pool connections (a search runs its ranking and both reads in one transaction, so it pins one connection), so at least 6 stay for other routes; a refusal costs no I/O and is O(1) (one counter); at the cap, the worst case is still 2 searches a second (4 slots, 2 s each: the statement timeout bounds the ranking; the transaction start wait, 2 s, comes before it); a refused search or a pool wait sends 0 Sentry events, and refused searches log at most one warning a minute. **Availability**: the counter is in memory, per process. Unlike the rate limits, that is the right scope and not a compromise: the pool it protects is per process too.
+
+**Entities.** One new provider, `SearchInFlight`: a counter and a cap. No table, no dependency, nothing timed (the warning throttle uses the search service's `Clock`).
+
+**API.** `GET /anime/search` gains 429 `ANIME_SEARCH_BUSY` with `Retry-After: 1`. Any route: the existing 503 `SERVICE_UNAVAILABLE` envelope now also covers pool waits and a cancelled statement.
+
+**Data flow.** Validation (400, free) → visitor token (429 `ANIME_SEARCH_VISITOR_LIMIT_REACHED`) → early empty page when no source is on or the query has no searchable text (no slot: no database work) → slot (429 `ANIME_SEARCH_BUSY` when all 4 are taken) → ranking transaction and the two reads → slot released in a `finally`, on success, failure and timeout alike.
+
+**Decision.**
+
+- `SearchInFlight` (`apps/api/src/anime/search-in-flight.ts`, its own file so it does not touch the visitor limiter): `SEARCH_MAX_IN_FLIGHT = 4`; `run(task)` answers `{ kind: 'busy' }` without calling the task when 4 are running, else `{ kind: 'done', value }`, and always gives the slot back. No queue: a refused search fails fast.
+- The cap is global and applies to every caller, `open` included. It is the only search guard that works before the key is on.
+- 429, not 503, for the cap: it follows the two global caps we already have (`ANIME_IMPORT_LIMIT_REACHED`, `ANIME_LIST_FETCH_LIMIT_REACHED`: 429, `Retry-After`, one warning a minute), and the filter logs every 5xx with its stack, which a flood would turn into one error line per refused request. 503 stays for what the cap did not prevent.
+- The visitor token is taken first and not given back on `ANIME_SEARCH_BUSY` (the OTA-196 rule: no give-back). A flooder gets its own 429 first, and its refused requests still empty its bucket.
+- Filter (`isDatabaseUnavailable`): three more cases answer 503. (a) `P2028` only when the message contains "Unable to start a transaction in the given time" (Prisma's 2 s `maxWait`; the search transaction hits this one). `P2028` is every transaction API error, so "Transaction already closed" and the others stay 500. (b) A bare `Error` whose message is `timeout exceeded when trying to connect`: pg-pool raises it when no connection came free within `connectionTimeoutMillis` (5 s), and the adapter rethrows it unchanged, like the connect timeout already handled. (c) `P2010` or `P2039` (a model query inside the search transaction) whose adapter cause is `kind: 'postgres'`, `code: '57014'` (query cancelled): the search ranking timeout, the known bug in PROGRESS.md, folded in because it is three lines in the same function. Shapes read from `@prisma/client` and `@prisma/adapter-pg` 7.10.1 and `pg-pool` 3.14.0; an integration spec pins (a) and (c) against the real driver.
+- `PrismaService` names the pool size (`DATABASE_POOL_MAX = 10`, passed as `max`), so the cap of 4 is checked against a number we own, not a driver default.
+
+**Rejected.** A smaller burst alone (say 4): it bounds one address, not the total, so three addresses or one `open` caller still fill the pool, and it would refuse a person who types and pages fast. A bounded wait queue in front of search: it needs a queue limit, a wait timeout and a clean-up when the client leaves, and during a flood it only adds latency before the same refusal; a synchronous refusal is clearer back-pressure (charter section 9, "don't queue short jobs").
+
+**Too simple?** Yes, in four known ways, all accepted. (1) The cap is not per visitor: a few addresses, or one `open` caller, can keep the 4 slots busy with slow queries, and search answers 429 for everyone while the rest of the API stays up. The real fix is a fast ranking (an index, ADR 0016), not more limiting. (2) Only search is capped. Imports, list fetches and walks are bounded by their own buckets, not by connections, so the pool can still fill; those waits now end as a 503 after 2 s (transaction) or 5 s (query) instead of a 500. (3) A 57014 no longer reaches Sentry (only 500s do): a slow ranking shows as error lines in the logs only. (4) Cases (a) and (b) match on message text, which a Prisma or pg upgrade can change: the specs fail first, and the fallback is the old 500. Also: a client that disconnects keeps its slot until its query ends (2 s at most), and after a `P2028` the abandoned request can stay in pg's wait queue for up to 3 more seconds. **Too complicated?** No: a counter, a constant and three conditions in an existing function.

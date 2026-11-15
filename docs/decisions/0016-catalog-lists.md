@@ -123,6 +123,8 @@ Rejected for this slice: `genre_in` or several genres (the stored page is one An
 
 Too simple, and now real: slice 1 exposed 4 keys, slice 2 exposes the about 8,500 counted under Consequences. The first page of any unseen key costs one AniList request and a waiting visitor's queue slot, so the per-client limit on list endpoints (OTA-173 follow-up) must ship before the Seasonal page is public. Not built here: it is its own decision and this slice has no room for it.
 
+Update (OTA-189): the per-visitor list limit is in the code (ADR 0019, addendum "per-visitor limit on lists and search") but has no effect until `INTERNAL_API_KEY` is on in production and slice B (the web list loader sends the client IP; shipped in OTA-195) ships.
+
 **Claim scope (decision, until OTA-189).** Only lists without a genre, and the seasonal list of the current season, claim (`claimsSlugs`). A genre or past-season page is stored and served but its anime keep a null slug until they are claimed elsewhere. This bounds what a crawler can reserve before the per-client limit exists; remove the gate when OTA-189 ships.
 
 **Terms (ADR 0006).** A listed identity keeps only the AniList id and two slugs derived from its titles, never AniList data, and is never purged. The gate above bounds how many exist. A way to delete one is the OTA-192 addendum below.
