@@ -38,7 +38,7 @@ export class HealthController {
   })
   @ApiServiceUnavailableResponse({
     description:
-      'The database is unreachable or did not answer within 2 seconds. This body is the one documented exception to the error envelope.',
+      'The database is unreachable, did not answer within 2 seconds, or its session time zone is not UTC. This body is the one documented exception to the error envelope.',
     schema: healthSchema('error', 'down'),
   })
   async getHealth(

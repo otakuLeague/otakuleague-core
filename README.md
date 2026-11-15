@@ -26,7 +26,7 @@ pnpm dev                         # API on :3001, web on :3000
 
 Check it works:
 
-- `curl localhost:3001/health` returns 200 `{"status":"ok",...}` (503 while Postgres is down).
+- `curl localhost:3001/health` returns 200 `{"status":"ok",...}` (503 while Postgres is down or its session zone is not UTC).
 - http://localhost:3000 shows the API status.
 - Swagger UI at http://localhost:3001/docs.
 
