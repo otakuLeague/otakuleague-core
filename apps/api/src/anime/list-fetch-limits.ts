@@ -43,6 +43,16 @@ export class ListFetchLimits {
     return this.visitors.take(key);
   }
 
+  /** Forgets visitors idle long enough to hold a full bucket again (OTA-197). */
+  forgetIdleVisitors(): void {
+    this.visitors.forgetIdle();
+  }
+
+  /** Visitors remembered right now (tests and the sweep guard). */
+  visitorCount(): number {
+    return this.visitors.size();
+  }
+
   /** Returns a visitor token taken for a fetch that never reached AniList (never above the burst). */
   giveBackVisitor(key: VisitorKey): void {
     this.visitors.giveBack(key);

@@ -282,6 +282,18 @@ describe('ImportLimits visitor buckets', () => {
     expect(limits.visitorCount()).toBe(1);
   });
 
+  it('forgets every idle visitor on a sweep, with no take', () => {
+    const { clock, limits } = setup();
+    limits.takeVisitorToken(alice);
+    limits.takeVisitorToken(bob);
+    clock.advance(VISITOR_IDLE_MS - 1);
+    limits.forgetIdleVisitors();
+    expect(limits.visitorCount()).toBe(2);
+    clock.advance(1);
+    limits.forgetIdleVisitors();
+    expect(limits.visitorCount()).toBe(0);
+  });
+
   it(`remembers at most ${MAX_VISITOR_ENTRIES} visitors, dropping the least recently used`, () => {
     const { limits } = setup();
     const keyOf = (n: number) =>

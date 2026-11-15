@@ -12,7 +12,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   title: 'Privacy policy',
   description:
     'What OtakuLeague collects, why, who processes it, which cookies we set and how to use your rights.',
-  lastUpdated: '2026-11-12',
+  lastUpdated: '2026-11-15',
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
     'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
@@ -74,6 +74,13 @@ export const PRIVACY_POLICY: LegalDocument = {
             When something crashes, an error report records what broke and on
             which page, without your password. Our sign-in logs carry your user
             ID only, never your email, IP address or password.
+          </p>
+          <p>
+            To limit how fast one visitor can make us fetch anime data from
+            AniList, and how often one visitor can search, our server keeps your{' '}
+            <strong>IP address</strong> (for IPv6, only its first half, the /64
+            network) in memory. It is never written to disk or logged, and it is
+            forgotten within 5 minutes of your last request.
           </p>
         </>
       ),
@@ -213,6 +220,10 @@ export const PRIVACY_POLICY: LegalDocument = {
               Keyed hashes of IP addresses and sign-in identifiers
             </strong>
             : deleted within about 48 hours.
+          </li>
+          <li>
+            <strong>IP address used for rate limiting</strong>: kept in memory
+            only, forgotten within 5 minutes.
           </li>
           <li>
             <strong>Emails you send us</strong>: as long as the conversation

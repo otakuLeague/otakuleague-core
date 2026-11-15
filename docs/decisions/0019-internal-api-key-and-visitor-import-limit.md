@@ -101,7 +101,7 @@ Rotation: set `INTERNAL_API_KEY_PREVIOUS` to the old key and `INTERNAL_API_KEY` 
 - **Accepted risk: a large IPv6 allocation is many visitors.** The key is the /64, so whoever holds a /56 (256 keys) or a /48 (65,536 keys) gets that many visitor buckets of 5; only the global bucket bounds them. A coarser bucket per /48 in front is a follow-up (below).
 - **In memory**: every deploy refills every bucket, and a second API instance doubles each limit. Same trade as OTA-173.
 - **A limited visitor asking for a known-missing id** gets 429 instead of 404 until a token is back. So does one asking, by an id we have not linked yet, for an anime we already store (e.g. stored from AniList without its MAL id, asked by MAL id): it goes through the importer, so it takes a visitor token first (given back once the import finds it stored).
-- The client IP is personal data: it lives only in the API's memory, from an import until the next import of any visitor at least 200 s later (or until 10,000 newer visitors push it out, or a restart), and is never logged; the refusal warning only says whether the shared `unknown` key was refused. The privacy page should say IPs are used for rate limiting (check with OTA-147).
+- The client IP is personal data: it lives only in the API's memory, from an import until the next import of any visitor at least 200 s later (or until 10,000 newer visitors push it out, or a restart), and is never logged; the refusal warning only says whether the shared `unknown` key was refused. (Superseded for retention by the retention addendum below: a timed sweep now bounds it, OTA-197.) The privacy page should say IPs are used for rate limiting (check with OTA-147).
 - ADR 0006 ("the API only sees Vercel's addresses", known limit) and ADR 0017 ("otherwise it counts its own peer IP") get a pointer here: without the key there is no per-visitor count, and once the check is on such a request is refused.
 
 **Too simple?** Yes in three places, accepted: open when unset (above), no check on unknown paths or before body parsing, and no limit per signed-in member (an IP is all we have before accounts). **Too complicated?** Three parts look optional and are not. The previous key: with a guard on every route, a rotation without overlap is a site-wide outage between two dashboards. The /64 cut: without it one IPv6 host has 2^64 visitor keys. The preview key: without it either previews break or preview code holds the production secret. Left out on purpose: Redis, a throttler library, request signing, a per-route allowlist of callers.
@@ -154,7 +154,7 @@ To fill in after the rollout.
 
 **Rejected.** An opt-out for the home rows (`chargeVisitor: false`): a second code path for no caching gain, and a noisier `unknown` bucket. Reading the IP once in the page and passing it down: more plumbing for the same headers read, and every caller could forget it.
 
-**Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on.
+**Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on. (Superseded by the retention addendum below: the sweep exists.)
 
 **Too simple?** A visitor behind a shared NAT shares a bucket, and a deep `/season?page=N` on a cold season can need more than 3 tokens (busy partway, as before). Both are accepted in the OTA-189 addendum. **Too complicated?** No: one option on one call, no API change.
 
@@ -182,7 +182,7 @@ To fill in after the rollout.
 
 **Out of scope.** Removing the `claimsSlugs` gate (ADR 0016 claim scope): the OTA-189 addendum keeps it until the key is on in production and slice B has shipped; the key is not on yet, so it stays, in OTA-198.
 
-**Too simple?** Search has no global bucket, so a /48 gets 65,536 buckets of 20 and `open` callers are unlimited: a /48 bucket or a Vercel firewall rule is a gate before turning the key on. Idle IPs stay in memory until the next granted take (OTA-197 covers search too). Shared NATs share 20. In memory: a deploy refills every bucket. **Too complicated?** No: one provider, one take, no give-back, no new state beyond the existing limiter class.
+**Too simple?** Search has no global bucket, so a /48 gets 65,536 buckets of 20 and `open` callers are unlimited: a /48 bucket or a Vercel firewall rule is a gate before turning the key on. Idle IPs stay in memory until the next granted take (superseded by the retention addendum below: the sweep covers search too, OTA-197). Shared NATs share 20. In memory: a deploy refills every bucket. **Too complicated?** No: one provider, one take, no give-back, no new state beyond the existing limiter class.
 
 ## Addendum: cap on searches in flight, and 503 on database waits (OTA-199, 2026-11-15)
 
@@ -208,3 +208,17 @@ To fill in after the rollout.
 **Rejected.** A smaller burst alone (say 4): it bounds one address, not the total, so three addresses or one `open` caller still fill the pool, and it would refuse a person who types and pages fast. A bounded wait queue in front of search: it needs a queue limit, a wait timeout and a clean-up when the client leaves, and during a flood it only adds latency before the same refusal; a synchronous refusal is clearer back-pressure (charter section 9, "don't queue short jobs").
 
 **Too simple?** Yes, in four known ways, all accepted. (1) The cap is not per visitor: a few addresses, or one `open` caller, can keep the 4 slots busy with slow queries, and search answers 429 for everyone while the rest of the API stays up. The real fix is a fast ranking (an index, ADR 0016), not more limiting. (2) Only search is capped. Imports, list fetches and walks are bounded by their own buckets, not by connections, so the pool can still fill; those waits now end as a 503 after 2 s (transaction) or 5 s (query) instead of a 500. (3) A 57014 no longer reaches Sentry (only 500s do): a slow ranking shows as error lines in the logs only. (4) Cases (a) and (b) match on message text, which a Prisma or pg upgrade can change: the specs fail first, and the fallback is the old 500. Also: a client that disconnects keeps its slot until its query ends (2 s at most), and after a `P2028` the abandoned request can stay in pg's wait queue for up to 3 more seconds. **Too complicated?** No: a counter, a constant and three conditions in an existing function.
+
+## Addendum: retention of visitor keys (OTA-197, 2026-11-15)
+
+Every owner of a `VisitorBuckets` (`ImportLimits`, `ListFetchLimits`, `SearchLimits`) is swept by `VisitorSweepScheduler` every 60 s on an unref'd timer. The sweep drops entries idle for `burst * refillMs`, which are full buckets again, so it changes no answer. Worst case a key is held is the idle window plus one sweep interval:
+
+| Limiter | Idle window      | Worst case |
+| ------- | ---------------- | ---------- |
+| Import  | 5 x 40 s = 200 s | 260 s      |
+| List    | 3 x 20 s = 60 s  | 120 s      |
+| Search  | 20 x 2 s = 40 s  | 100 s      |
+
+**Promise (privacy page):** a raw IP is forgotten within 5 minutes of the visitor's last granted request. Refused requests do not extend it. Caveats: a backward wall-clock step is handled (entries stamped in the future are dropped at the next sweep); a delayed event loop adds seconds; a restart forgets everything; with `INTERNAL_API_KEY` unset no IP is held at all (every caller is `open`).
+
+A new per-visitor limiter must be registered in `VisitorSweepScheduler`; `visitor-sweep.scheduler.spec.ts` guards the numbers (largest idle window plus 60 s at most 5 minutes). No new dependency, no log line (keys are IPs).

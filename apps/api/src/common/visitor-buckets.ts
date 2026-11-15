@@ -63,7 +63,9 @@ function secondsUntilNextToken(
 /**
  * The one keyed token-bucket limiter (ADR 0019): a bucket per visitor key, in memory, per
  * process. Entries are kept in last-granted-take order; an entry idle for burst * refillMs is a
- * full bucket again and is dropped, and over `maxEntries` the least recently used goes first.
+ * full bucket again and is dropped (on the next granted take, and by the timed sweep of
+ * `forgetIdle`, ADR 0019 retention addendum, OTA-197), and over `maxEntries` the least recently
+ * used goes first.
  * Keys are client IPs: never log them.
  */
 export class VisitorBuckets {
@@ -128,10 +130,17 @@ export class VisitorBuckets {
     return this.entries.size;
   }
 
+  /** Drops every idle entry now, with no take needed: the timed sweep of OTA-197 calls this. */
+  forgetIdle(): void {
+    this.dropIdle(this.now());
+  }
+
   /** Idle entries are full buckets: dropping them changes no answer. */
   private dropIdle(now: number): void {
     for (const [key, entry] of this.entries) {
-      if (now - entry.takenAt < this.idleMs) break;
+      // Stamped in the future: the clock stepped backwards, so it is idle however long ago.
+      const idle = entry.takenAt > now || now - entry.takenAt >= this.idleMs;
+      if (!idle) break;
       this.entries.delete(key);
     }
   }
