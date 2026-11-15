@@ -5,7 +5,7 @@ import {
   MAX_WAITING_HASHES,
 } from './hash-slots';
 
-/** A task that stays running until `finish` or `fail`; `started` lists the tasks called, in order. */
+/** `make(name)`: a task held until `finish` or `fail`; `started` lists the tasks called, in order. */
 function tasks() {
   const started: string[] = [];
   const make = (name: string) => {
@@ -19,7 +19,11 @@ function tasks() {
       started.push(name);
       return promise;
     };
-    return { task, finish: () => finish(), fail: (error: Error) => fail(error) };
+    return {
+      task,
+      finish: () => finish(),
+      fail: (error: Error) => fail(error),
+    };
   };
   return { started, make };
 }
@@ -35,18 +39,17 @@ describe('HashSlots', () => {
   it('runs two at once and holds the third until a slot frees', async () => {
     const slots = new HashSlots();
     const { started, make } = tasks();
-    const [a, b, c] = ['a', 'b', 'c'].map(make);
-    const runs = [a, b, c].map((held) => held && slots.run(held.task));
+    const held = ['a', 'b', 'c'].map(make);
+    const runs = held.map(({ task }) => slots.run(task));
 
     await settle();
     expect(started).toEqual(['a', 'b']);
 
-    a?.finish();
+    held[0]?.finish();
     await settle();
     expect(started).toEqual(['a', 'b', 'c']);
 
-    b?.finish();
-    c?.finish();
+    for (const { finish } of held) finish();
     await expect(Promise.all(runs)).resolves.toEqual(
       ['a', 'b', 'c'].map((value) => ({ kind: 'done', value })),
     );
@@ -91,17 +94,15 @@ describe('HashSlots', () => {
   it('gives the slot of a failed task to the next one', async () => {
     const slots = new HashSlots();
     const { started, make } = tasks();
-    const [a, b, c] = ['a', 'b', 'c'].map(make);
-    const failed = a && slots.run(a.task);
-    const runs = [b, c].map((held) => held && slots.run(held.task));
+    const held = ['a', 'b', 'c'].map(make);
+    const [failed, ...runs] = held.map(({ task }) => slots.run(task));
 
-    a?.fail(new Error('argon2 failed'));
+    held[0]?.fail(new Error('argon2 failed'));
 
     await expect(failed).rejects.toThrow('argon2 failed');
     await settle();
     expect(started).toEqual(['a', 'b', 'c']);
-    b?.finish();
-    c?.finish();
+    for (const { finish } of held) finish();
     await Promise.all(runs);
   });
 });

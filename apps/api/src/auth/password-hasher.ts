@@ -21,7 +21,8 @@ function authBusy(): ApiException {
     HttpStatus.SERVICE_UNAVAILABLE,
     {
       code: 'AUTH_BUSY',
-      message: 'Too many passwords are being checked right now. Try again in a moment.',
+      message:
+        'Too many passwords are being checked right now. Try again in a moment.',
     },
     { retryAfterSeconds: 1 },
   );

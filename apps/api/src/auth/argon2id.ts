@@ -22,7 +22,9 @@ const nodeArgon2: typeof nodeCrypto.argon2 | undefined = nodeCrypto.argon2;
 export class NodeArgon2id extends Argon2id {
   derive(input: Argon2idInput): Promise<Buffer> {
     if (nodeArgon2 === undefined) {
-      return Promise.reject(new Error('crypto.argon2 needs Node 24.7 or later'));
+      return Promise.reject(
+        new Error('crypto.argon2 needs Node 24.7 or later'),
+      );
     }
     return new Promise((resolve, reject) => {
       nodeArgon2(

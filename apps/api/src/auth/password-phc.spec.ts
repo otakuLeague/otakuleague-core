@@ -50,7 +50,10 @@ describe('formatPhc and parsePhc', () => {
     ['base64url', GOLDEN.replace(TAG_B64, TAG_B64.replace('+', '-'))],
     ['padding', GOLDEN.replace(TAG_B64, `${TAG_B64}=`)],
     ['a dangling base64 digit', GOLDEN.replace(SALT_B64, `${SALT_B64}AAA`)],
-    ['non-canonical last bits', GOLDEN.replace(SALT_B64, 'AAECAwQFBgcICQoLDA0ODx')],
+    [
+      'non-canonical last bits',
+      GOLDEN.replace(SALT_B64, 'AAECAwQFBgcICQoLDA0ODx'),
+    ],
     ['a 15-byte salt', formatPhc(ARGON2_PARAMS, SALT.subarray(1), TAG)],
     ['a 65-byte tag', formatPhc(ARGON2_PARAMS, SALT, Buffer.alloc(65))],
   ])('refuses %s', (_, phc) => {
