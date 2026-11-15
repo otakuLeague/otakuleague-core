@@ -18,6 +18,7 @@ export const API_ERROR_CODES = [
   'ANIME_NOT_FOUND',
   'PAYLOAD_TOO_LARGE',
   'INTERNAL_KEY_REQUIRED',
+  'UNAUTHORIZED',
   'CLIENT_ERROR',
   'SERVICE_UNAVAILABLE',
   'ANIME_SOURCES_UNAVAILABLE',
@@ -203,3 +204,4 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
+export type { MeResponse } from './auth';
