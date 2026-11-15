@@ -19,6 +19,7 @@ import { FranchiseWalker } from './franchise-walker.service';
 import { AnimeFranchiseService } from './franchise.service';
 import { ImportLimits } from './import-limits';
 import { ListFetchLimits } from './list-fetch-limits';
+import { SearchInFlight } from './search-in-flight';
 import { SearchLimits } from './search-limits';
 import { SourceBackoff } from './source-backoff';
 import { AniListAdapter } from './sources/anilist.adapter';
@@ -103,6 +104,7 @@ export class AnimePurgeScheduler implements OnModuleInit, OnModuleDestroy {
     AnimeListService,
     AnimeSlugClaimService,
     AnimeSearchService,
+    SearchInFlight,
     FranchiseWalker,
     SourceBackoff,
     ImportLimits,

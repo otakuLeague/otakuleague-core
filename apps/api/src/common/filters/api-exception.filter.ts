@@ -54,7 +54,17 @@ const UNAVAILABLE_ADAPTER_KINDS = new Set([
 const PG_CONNECT_TIMEOUT_MESSAGE =
   'Connection terminated due to connection timeout';
 
-function driverAdapterErrorKind(meta: unknown): unknown {
+// pg-pool's bare Error when no connection came free within connectionTimeoutMillis.
+const PG_POOL_WAIT_MESSAGE = 'timeout exceeded when trying to connect';
+
+// Prisma's P2028 for a transaction that waited maxWait for a connection; every other P2028 is a bug.
+const TRANSACTION_WAIT_MESSAGE =
+  'Unable to start a transaction in the given time';
+
+// PostgreSQL's query_canceled: statement_timeout fired (the search ranking, 2 s).
+const POSTGRES_QUERY_CANCELED = '57014';
+
+function driverAdapterCause(meta: unknown, field: string): unknown {
   if (typeof meta !== 'object' || meta === null) return undefined;
   const adapterError: unknown = Reflect.get(meta, 'driverAdapterError');
   if (typeof adapterError !== 'object' || adapterError === null) {
@@ -62,7 +72,18 @@ function driverAdapterErrorKind(meta: unknown): unknown {
   }
   const cause: unknown = Reflect.get(adapterError, 'cause');
   if (typeof cause !== 'object' || cause === null) return undefined;
-  return Reflect.get(cause, 'kind');
+  return Reflect.get(cause, field);
+}
+
+function driverAdapterErrorKind(meta: unknown): unknown {
+  return driverAdapterCause(meta, 'kind');
+}
+
+function isQueryCanceled(meta: unknown): boolean {
+  return (
+    driverAdapterErrorKind(meta) === 'postgres' &&
+    driverAdapterCause(meta, 'code') === POSTGRES_QUERY_CANCELED
+  );
 }
 
 export function isDatabaseUnavailable(exception: unknown): boolean {
@@ -71,12 +92,16 @@ export function isDatabaseUnavailable(exception: unknown): boolean {
     const kind = driverAdapterErrorKind(exception.meta);
     return (
       UNAVAILABLE_PRISMA_CODES.has(exception.code) ||
-      (typeof kind === 'string' && UNAVAILABLE_ADAPTER_KINDS.has(kind))
+      (typeof kind === 'string' && UNAVAILABLE_ADAPTER_KINDS.has(kind)) ||
+      (exception.code === 'P2028' &&
+        exception.message.includes(TRANSACTION_WAIT_MESSAGE)) ||
+      (exception.code === 'P2010' && isQueryCanceled(exception.meta))
     );
   }
   return (
     exception instanceof Error &&
-    exception.message === PG_CONNECT_TIMEOUT_MESSAGE
+    (exception.message === PG_CONNECT_TIMEOUT_MESSAGE ||
+      exception.message === PG_POOL_WAIT_MESSAGE)
   );
 }
 

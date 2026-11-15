@@ -17,6 +17,7 @@ import { toSearchHit } from './anime-search.view';
 import { mergeAnime, SOURCE_PRIORITY } from './anime.merge';
 import { ANIME_WITH_DATA, DB_DATA_SOURCE, fromAnimeRow } from './anime.rows';
 import { Clock } from '../common/clock-and-random.module';
+import { SearchInFlight } from './search-in-flight';
 import { SearchLimits } from './search-limits';
 
 export interface AnimeSearchRequest {
@@ -38,6 +39,19 @@ function searchVisitorLimited(retryAfterSeconds: number): ApiException {
         'You searched many times in a short time. Try again in a moment.',
     },
     { retryAfterSeconds },
+  );
+}
+
+/** Refused at the cap on searches in flight: Retry-After 1 (a search lasts 2 s at most). */
+function searchBusy(): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_SEARCH_BUSY',
+      message:
+        'Too many searches are running right now. Try again in a moment.',
+    },
+    { retryAfterSeconds: 1 },
   );
 }
 
@@ -65,10 +79,12 @@ export class AnimeSearchService {
     private readonly clock: Clock,
     private readonly importer: AnimeImportService,
     private readonly limits: SearchLimits,
+    private readonly inFlight: SearchInFlight,
   ) {}
 
   private readonly logger = new Logger(AnimeSearchService.name);
   private readonly sharedWarnedAt = new Map<'preview' | 'unknown', number>();
+  private busyWarnedAt = 0;
 
   async search(
     { query, page, pageSize }: AnimeSearchRequest,
@@ -81,6 +97,20 @@ export class AnimeSearchService {
     if (sources.length === 0 || !hasSearchableText(query))
       return { hits: [], page, pageSize, total: 0 };
 
+    const run = await this.inFlight.run(() =>
+      this.findStored({ query, page, pageSize }, sources),
+    );
+    if (run.kind === 'busy') {
+      this.warnBusy();
+      throw searchBusy();
+    }
+    return run.value;
+  }
+
+  private async findStored(
+    { query, page, pageSize }: AnimeSearchRequest,
+    sources: readonly string[],
+  ): Promise<AnimeSearchPage> {
     const ranked = await this.prisma.$transaction(async (transaction) => {
       await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
       return rankAnime(transaction, {
@@ -131,6 +161,13 @@ export class AnimeSearchService {
       return hit ? [hit] : [];
     });
     return { hits, page, pageSize, total: ranked.total };
+  }
+
+  private warnBusy(): void {
+    const now = this.clock.now().getTime();
+    if (now - this.busyWarnedAt < LIMIT_WARN_INTERVAL_MS) return;
+    this.busyWarnedAt = now;
+    this.logger.warn('Search in-flight cap reached: searches are refused.');
   }
 
   /** One token per valid search, before any work; an open caller is not limited. */
