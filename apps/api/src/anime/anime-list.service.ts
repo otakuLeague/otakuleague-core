@@ -72,7 +72,7 @@ function listFetchLimited(): ApiException {
     {
       code: 'ANIME_LIST_FETCH_LIMIT_REACHED',
       message:
-        'Too many new lists are being loaded right now. Try again in a few seconds.',
+        'Too many new lists are being loaded right now. Try again in a minute.',
     },
     { retryAfterSeconds: LIST_FETCH_REFILL_MS / 1000 },
   );
