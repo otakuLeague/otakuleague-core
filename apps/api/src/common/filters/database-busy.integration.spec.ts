@@ -30,7 +30,7 @@ describe('database busy errors answer 503', () => {
     const error = await caught(
       prisma.$transaction(async (transaction) => {
         await transaction.$queryRaw`SELECT set_config('statement_timeout', '50ms', true)`;
-        await transaction.$queryRaw`SELECT pg_sleep(1)`;
+        await transaction.$queryRaw`SELECT pg_sleep(1)::text`;
       }),
     );
 
@@ -38,16 +38,34 @@ describe('database busy errors answer 503', () => {
   });
 
   it('maps a transaction that waited for a connection past maxWait', async () => {
-    const holders = Array.from(
-      { length: DATABASE_POOL_MAX },
-      () => prisma.$queryRaw`SELECT pg_sleep(1.5)`,
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let started = 0;
+    let allStarted!: () => void;
+    const everyConnectionHeld = new Promise<void>((resolve) => {
+      allStarted = resolve;
+    });
+    const holders = Array.from({ length: DATABASE_POOL_MAX }, () =>
+      prisma.$transaction(
+        async (transaction) => {
+          await transaction.$executeRaw`SELECT 1`;
+          started += 1;
+          if (started === DATABASE_POOL_MAX) allStarted();
+          await gate;
+        },
+        { timeout: 10_000 },
+      ),
     );
+    await everyConnectionHeld;
 
     const error = await caught(
       prisma.$transaction(() => Promise.resolve(), { maxWait: 200 }),
     );
+    open();
+    await Promise.all(holders);
 
     expect(toErrorResponse(error).status).toBe(503);
-    await Promise.all(holders);
   });
 });

@@ -42,7 +42,7 @@ function searchVisitorLimited(retryAfterSeconds: number): ApiException {
   );
 }
 
-/** Refused at the cap on searches in flight: Retry-After 1 (a search lasts 2 s at most). */
+/** Refused at the cap on searches in flight: Retry-After 1 (a search is bounded by the 2 s transaction start wait plus the 2 s statement timeout). */
 function searchBusy(): ApiException {
   return new ApiException(
     HttpStatus.TOO_MANY_REQUESTS,
@@ -111,33 +111,43 @@ export class AnimeSearchService {
     { query, page, pageSize }: AnimeSearchRequest,
     sources: readonly string[],
   ): Promise<AnimeSearchPage> {
-    const ranked = await this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
-      return rankAnime(transaction, {
-        query,
-        sources,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      });
-    });
+    // One transaction: a search pins one connection (the relation includes would fan out on the pool).
+    const { ranked, found, identities } = await this.prisma.$transaction(
+      async (transaction) => {
+        await transaction.$queryRaw`SELECT set_config('statement_timeout', ${RANK_TIMEOUT}, true)`;
+        const matched = await rankAnime(transaction, {
+          query,
+          sources,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        });
+        if (matched.matches.length === 0) {
+          return { ranked: matched, found: [], identities: [] };
+        }
+        const rows = await transaction.anime.findMany({
+          where: { id: { in: matched.matches.map(({ animeId }) => animeId) } },
+          include: ANIME_WITH_DATA,
+        });
+        const found = rows.map(fromAnimeRow);
+        const anilistIds = found.flatMap(({ externalIds }) =>
+          externalIds.filter(({ source }) => source === 'anilist'),
+        );
+        return {
+          ranked: matched,
+          found,
+          identities: await transaction.animeIdentity.findMany({
+            where: {
+              anilistId: { in: anilistIds.map(({ externalId }) => externalId) },
+              removedAt: null,
+            },
+          }),
+        };
+      },
+    );
     if (ranked.matches.length === 0) {
       return { hits: [], page, pageSize, total: ranked.total };
     }
-
-    const rows = await this.prisma.anime.findMany({
-      where: { id: { in: ranked.matches.map(({ animeId }) => animeId) } },
-      include: ANIME_WITH_DATA,
-    });
-    const stored = new Map(rows.map((row) => [row.id, fromAnimeRow(row)]));
-    const anilistIds = [...stored.values()].flatMap(({ externalIds }) =>
-      externalIds.filter(({ source }) => source === 'anilist'),
-    );
-    const identities = await this.prisma.animeIdentity.findMany({
-      where: {
-        anilistId: { in: anilistIds.map(({ externalId }) => externalId) },
-        removedAt: null,
-      },
-    });
+    const stored = new Map(found.map((anime) => [anime.id, anime]));
     const slugByAnilistId = new Map(
       identities.map(({ anilistId, canonicalSlug }) => [
         anilistId,

@@ -7,8 +7,8 @@ export type SearchRun<Value> =
   { readonly kind: 'busy' } | { readonly kind: 'done'; readonly value: Value };
 
 /**
- * A cap on searches in flight (ADR 0019 addendum, OTA-199): a search holds one pool
- * connection at a time, so the cap keeps the rest of the pool for other routes. In memory,
+ * A cap on searches in flight (ADR 0019 addendum, OTA-199): a search runs in one
+ * transaction, so it pins one pool connection and the cap keeps the rest (at least 6) for other routes. In memory,
  * per process, like the pool it protects. No queue: a search over the cap is refused at once.
  */
 @Injectable()

@@ -79,6 +79,10 @@ function driverAdapterErrorKind(meta: unknown): unknown {
   return driverAdapterCause(meta, 'kind');
 }
 
+// P2010 is a raw query, P2039 a model query (a cancelled statement inside a transaction).
+const isRawOrModelCode = (code: string): boolean =>
+  code === 'P2010' || code === 'P2039';
+
 function isQueryCanceled(meta: unknown): boolean {
   return (
     driverAdapterErrorKind(meta) === 'postgres' &&
@@ -86,6 +90,7 @@ function isQueryCanceled(meta: unknown): boolean {
   );
 }
 
+/** Down, unreachable, out of connections, or a statement cancelled by its timeout: all answer 503. */
 export function isDatabaseUnavailable(exception: unknown): boolean {
   if (exception instanceof Prisma.PrismaClientInitializationError) return true;
   if (exception instanceof Prisma.PrismaClientKnownRequestError) {
@@ -95,7 +100,7 @@ export function isDatabaseUnavailable(exception: unknown): boolean {
       (typeof kind === 'string' && UNAVAILABLE_ADAPTER_KINDS.has(kind)) ||
       (exception.code === 'P2028' &&
         exception.message.includes(TRANSACTION_WAIT_MESSAGE)) ||
-      (exception.code === 'P2010' && isQueryCanceled(exception.meta))
+      (isRawOrModelCode(exception.code) && isQueryCanceled(exception.meta))
     );
   }
   return (

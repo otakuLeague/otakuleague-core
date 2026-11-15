@@ -119,7 +119,13 @@ describe('AnimeSearchService', () => {
         $transaction: () => {
           prisma.calls += 1;
           return new Promise((resolve) => {
-            releases.push(() => resolve({ matches: [], total: 0 }));
+            releases.push(() =>
+              resolve({
+                ranked: { matches: [], total: 0 },
+                found: [],
+                identities: [],
+              }),
+            );
           });
         },
         anime: {
@@ -130,7 +136,12 @@ describe('AnimeSearchService', () => {
     };
     const busyService = (
       prisma: unknown,
-      options: { limits?: SearchLimits; enabled?: boolean; clock?: Clock } = {},
+      options: {
+        limits?: SearchLimits;
+        enabled?: boolean;
+        clock?: Clock;
+        inFlight?: SearchInFlight;
+      } = {},
     ) => {
       const clock = options.clock ?? new FixedClock(NOW);
       return new AnimeSearchService(
@@ -140,7 +151,7 @@ describe('AnimeSearchService', () => {
           isEnabled: () => options.enabled ?? true,
         } as unknown as AnimeImportService,
         options.limits ?? new SearchLimits(clock),
-        new SearchInFlight(),
+        options.inFlight ?? new SearchInFlight(),
       );
     };
     const fillSlots = (
@@ -201,14 +212,18 @@ describe('AnimeSearchService', () => {
 
     it('still answers an empty page for unsearchable text or switched-off sources while full', async () => {
       const { prisma, releases } = slowDatabase();
-      const target = busyService(prisma);
+      const inFlight = new SearchInFlight();
+      const target = busyService(prisma, { inFlight });
       const running = fillSlots(target);
 
       await expect(
         target.search({ ...request, query: '!!!' }, OPEN_CALLER),
       ).resolves.toMatchObject({ hits: [], total: 0 });
       await expect(
-        busyService(prisma, { enabled: false }).search(request, OPEN_CALLER),
+        busyService(prisma, { enabled: false, inFlight }).search(
+          request,
+          OPEN_CALLER,
+        ),
       ).resolves.toMatchObject({ hits: [], total: 0 });
       for (const release of releases) release();
       await Promise.all(running);
@@ -245,7 +260,9 @@ describe('AnimeSearchService', () => {
 
     it('warns once a minute', async () => {
       const { prisma, releases } = slowDatabase();
-      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
       const clock = new MovableClock(NOW);
       const target = busyService(prisma, { clock });
       const running = fillSlots(target);

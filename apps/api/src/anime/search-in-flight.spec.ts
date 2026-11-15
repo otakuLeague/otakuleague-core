@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DATABASE_POOL_MAX } from '../prisma/prisma.service';
 import { SEARCH_MAX_IN_FLIGHT, SearchInFlight } from './search-in-flight';
 
 /** A task that stays running until `finish` or `fail` is called. */
@@ -13,6 +14,10 @@ function deferred() {
 }
 
 describe('SearchInFlight', () => {
+  it('leaves connections of the pool for other routes', () => {
+    expect(SEARCH_MAX_IN_FLIGHT).toBeLessThan(DATABASE_POOL_MAX);
+  });
+
   const fill = (inFlight: SearchInFlight) =>
     Array.from({ length: SEARCH_MAX_IN_FLIGHT }, () => {
       const task = deferred();

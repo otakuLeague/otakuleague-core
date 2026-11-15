@@ -442,6 +442,18 @@ describe('database waits and cancelled statements (OTA-199)', () => {
     ).toEqual(SERVICE_UNAVAILABLE);
   });
 
+  it('answers 503 for a model query cancelled by its statement timeout', () => {
+    expect(
+      toErrorResponse(known('P2039', LEAKY_MESSAGE, postgresCause('57014'))),
+    ).toEqual(SERVICE_UNAVAILABLE);
+  });
+
+  it('keeps 500 for a P2039 with another postgres code', () => {
+    expect(
+      toErrorResponse(known('P2039', LEAKY_MESSAGE, postgresCause('23505'))),
+    ).toEqual(INTERNAL_ERROR);
+  });
+
   it('keeps 500 for another postgres error code', () => {
     expect(
       toErrorResponse(known('P2010', LEAKY_MESSAGE, postgresCause('42P01'))),
