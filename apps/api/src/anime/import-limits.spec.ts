@@ -7,11 +7,10 @@ import {
   ImportLimits,
   MAX_VISITOR_ENTRIES,
   NOT_FOUND_TTL_MS,
-  refillBucket,
-  VISITOR_IDLE_MS,
   VISITOR_IMPORT_BURST,
   VISITOR_IMPORT_REFILL_MS,
 } from './import-limits';
+import { refillBucket } from '../common/visitor-buckets';
 import type { AnimeRef } from './sources/source.types';
 
 class MovableClock extends Clock {
@@ -25,6 +24,9 @@ class MovableClock extends Clock {
     this.instant += ms;
   }
 }
+
+/** A visitor's bucket is full again this long after its last take (200 s). */
+const VISITOR_IDLE_MS = VISITOR_IMPORT_BURST * VISITOR_IMPORT_REFILL_MS;
 
 function setup(): { clock: MovableClock; limits: ImportLimits } {
   const clock = new MovableClock();

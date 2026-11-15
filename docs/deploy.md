@@ -14,35 +14,35 @@ Railway's config-as-code is deprecated and stops on 2026-12-01 (per Farouk, OTA-
 
 ## API service settings
 
-| Setting | Value |
-| --- | --- |
-| Source repo | `otakuLeague/otakuleague-core` |
-| Branch | `main` |
-| Wait for CI | On: deploys only after GitHub checks pass |
-| Root directory | Repo root |
-| Builder | Railpack |
-| Build command | `pnpm --filter @otakuleague/api build` |
-| Pre-deploy command | `pnpm --filter @otakuleague/api exec prisma migrate deploy` |
-| Start command | `pnpm --filter @otakuleague/api start` |
-| Health check path | `/health` |
-| Watch paths | `/apps/api/**`, `/packages/shared-types/**`. A change only to the root `package.json` or `pnpm-lock.yaml` does not trigger a deploy. |
-| Replicas | 1, in europe-west4 |
-| Public domain | https://api-production-9cacf2d8.up.railway.app (until `api.otakuleague.com` at the launch cutover, OTA-149) |
-| Private endpoint | Service named `API`; private DNS `otakuleague-core.railway.internal` |
+| Setting            | Value                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Source repo        | `otakuLeague/otakuleague-core`                                                                                                       |
+| Branch             | `main`                                                                                                                               |
+| Wait for CI        | On: deploys only after GitHub checks pass                                                                                            |
+| Root directory     | Repo root                                                                                                                            |
+| Builder            | Railpack                                                                                                                             |
+| Build command      | `pnpm --filter @otakuleague/api build`                                                                                               |
+| Pre-deploy command | `pnpm --filter @otakuleague/api exec prisma migrate deploy`                                                                          |
+| Start command      | `pnpm --filter @otakuleague/api start`                                                                                               |
+| Health check path  | `/health`                                                                                                                            |
+| Watch paths        | `/apps/api/**`, `/packages/shared-types/**`. A change only to the root `package.json` or `pnpm-lock.yaml` does not trigger a deploy. |
+| Replicas           | 1, in europe-west4                                                                                                                   |
+| Public domain      | https://api-production-9cacf2d8.up.railway.app (until `api.otakuleague.com` at the launch cutover, OTA-149)                          |
+| Private endpoint   | Service named `API`; private DNS `otakuleague-core.railway.internal`                                                                 |
 
 ## Variables
 
 API service:
 
-| Name | Value |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (reference variable) |
-| `SENTRY_DSN` | Set. The value lives only in Railway. |
-| `INTERNAL_API_KEY` | Not set yet (ADR 0019). Set: every route except `/health` needs it in `X-Internal-Api-Key`. Same value on Vercel (Production). |
-| `INTERNAL_API_KEY_PREVIOUS` | Unset, except during a rotation (below). Refused without `INTERNAL_API_KEY`. |
-| `INTERNAL_API_KEY_PREVIEW` | Not set yet. Vercel previews' own key, never equal to the two above (boot refused). Passes as a `preview` caller on GET and HEAD only: `X-Client-Ip` ignored, one import bucket for every preview. Inert while `INTERNAL_API_KEY` is unset. Same value on Vercel (Preview) under the name `INTERNAL_API_KEY`. |
-| `INTERNAL_API_KEY_REQUIRED` | Not set yet. `true` once the key is on (below): the API then refuses to boot without `INTERNAL_API_KEY`, so a deleted variable fails the deploy instead of reopening the API. |
+| Name                        | Value                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                  | `production`                                                                                                                                                                                                                                                                                                  |
+| `DATABASE_URL`              | `${{Postgres.DATABASE_URL}}` (reference variable)                                                                                                                                                                                                                                                             |
+| `SENTRY_DSN`                | Set. The value lives only in Railway.                                                                                                                                                                                                                                                                         |
+| `INTERNAL_API_KEY`          | Not set yet (ADR 0019). Set: every route except `/health` needs it in `X-Internal-Api-Key`. Same value on Vercel (Production).                                                                                                                                                                                |
+| `INTERNAL_API_KEY_PREVIOUS` | Unset, except during a rotation (below). Refused without `INTERNAL_API_KEY`.                                                                                                                                                                                                                                  |
+| `INTERNAL_API_KEY_PREVIEW`  | Not set yet. Vercel previews' own key, never equal to the two above (boot refused). Passes as a `preview` caller on GET and HEAD only: `X-Client-Ip` ignored, one import bucket for every preview. Inert while `INTERNAL_API_KEY` is unset. Same value on Vercel (Preview) under the name `INTERNAL_API_KEY`. |
+| `INTERNAL_API_KEY_REQUIRED` | Not set yet. `true` once the key is on (below): the API then refuses to boot without `INTERNAL_API_KEY`, so a deleted variable fails the deploy instead of reopening the API.                                                                                                                                 |
 
 - The `DATABASE_URL` reference resolves to the private network host. Database traffic never leaves Railway and costs no egress.
 - Without `INTERNAL_API_KEY` (and without `INTERNAL_API_KEY_REQUIRED=true`) the API answers any caller and logs `INTERNAL_API_KEY is not set: the API answers any caller` once at start. It also sends that line to Sentry as an error-level message, so it opens an issue (an open production API is an error, not a warning). Production still boots, so a missing key never blocks a deploy until `INTERNAL_API_KEY_REQUIRED` is `true`.
@@ -90,7 +90,8 @@ Generate a key with `openssl rand -hex 32` on your own machine. Paste it only in
 
 One-time check before turning it on: Sentry → Alerts. An alert rule must email on a new issue **and** on an issue that changes from resolved to unresolved (a regression). Without the second trigger, the "INTERNAL_API_KEY is not set" issue resolved at step 5 would come back silently the day the API reopens.
 
-Turn it on once the web sends the key (OTA-182 slice 2) and both import routes send `X-Client-Ip`, `GET /anime/slugs/:slug` and `GET /anime/:idSource/:externalId` (the slice 2 test covers it). A route without it puts every visitor in one shared bucket of 5.
+Turn it on once the web sends the key (OTA-182 slice 2) and both import routes send `X-Client-Ip`, `GET /anime/slugs/:slug` and `GET /anime/:idSource/:externalId` (the slice 2 test covers it), and the list loader sends `X-Client-Ip` too (OTA-189 slice B: `loadAnimeListPage`, used by `/season` and the home rows). A route without it puts every visitor in one shared bucket (5 imports, 3 cold lists).
+
 1. Preview key, a second `openssl rand -hex 32` (never the production key): Railway → API → Variables: `INTERNAL_API_KEY_PREVIEW`. Nothing changes yet (inert without `INTERNAL_API_KEY`). Then Vercel → Settings → Environment Variables: `INTERNAL_API_KEY` for **Preview only**, that preview value, marked Sensitive.
 2. Vercel: `INTERNAL_API_KEY` for **Production only**, the production key, marked Sensitive. Then run `vercel env ls`: exactly two `INTERNAL_API_KEY` entries, one scoped to Production only and one to Preview only, both Sensitive (no entry covers both, no Development entry). Redeploy the web.
 3. Railway → API → Variables: the same production `INTERNAL_API_KEY`. Railway restarts the API; from then on the check is on.
@@ -98,6 +99,7 @@ Turn it on once the web sends the key (OTA-182 slice 2) and both import routes s
 5. Railway: `INTERNAL_API_KEY_REQUIRED=true`. From now on a deploy without the key fails its boot (the old deployment keeps serving) instead of reopening the API. Then resolve the "INTERNAL_API_KEY is not set" issue in Sentry, so a new one means it happened again.
 
 Rotate (no refused request):
+
 1. Railway: set `INTERNAL_API_KEY_PREVIOUS` to the current key first, or both variables in one staged change (one deploy). Then `INTERNAL_API_KEY` to the new one. The API now accepts both. Never change `INTERNAL_API_KEY` alone: until Vercel has the new key, every web request would be refused.
 2. Vercel: set the **Production entry only** of `INTERNAL_API_KEY` to the new key. Then run `vercel env ls`: exactly two `INTERNAL_API_KEY` entries, one scoped to Production only and one to Preview only, both Sensitive (no entry covers both, no Development entry). Redeploy the web.
 3. Once that deploy is live, delete `INTERNAL_API_KEY_PREVIOUS` on Railway.
@@ -123,6 +125,7 @@ The copy we rely on is the nightly encrypted dump below (OTA-170): Railway Hobby
 ### Nightly encrypted dump
 
 `.github/workflows/db-backup.yml` runs every night at 03:17 UTC (GitHub may start it late) and on demand: Actions → DB backup → Run workflow, or `gh workflow run db-backup.yml`. Neither works until the file is on main.
+
 - It runs `pg_dump --format=custom --no-owner --no-privileges` from the `postgres:18` image (the client must be at least the server's major) through the TCP proxy with `sslmode=require`, piped straight into `age` encrypted to Farouk's public key: the plaintext is never written to a file, Docker's log included (`--log-driver none`). Each run uploads one artifact, `db-backup`, holding `otakuleague-<YYYY-MM-DDTHHMM>Z.dump.age`. GitHub deletes it after 60 days.
 - The data of the AniList and Jikan cache tables (`anime_source_snapshot`, `anime_relation_node`, `anime_list_page`) is left out, their schema kept: AniList's terms forbid using its data "as a backup" (ADR 0006). After a restore it re-imports on its own: each anime page refetches on its first view, lists and franchises on their next request, and search finds an anime again once its page has been reopened.
 - The repo is public: anyone can read the run logs and download the artifact. A dump is only as private as the age private key, which Farouk alone holds, outside GitHub and Railway; losing it makes every dump unreadable. The job logs only the encrypted size and masks the proxy host, port and password; it passes them to pg_dump as `PG*` variables, never on a command line.
@@ -132,11 +135,13 @@ The copy we rely on is the nightly encrypted dump below (OTA-170): Railway Hobby
 - `scripts/db-backup.test.mjs` runs the job's shell steps against a fake `docker` and `age`, and checks the workflow's triggers, token, secrets and pins.
 
 Hardening for Farouk (not done yet):
+
 - [x] Both secrets live in the GitHub Environment `db-backup`, limited to `main`; the job declares `environment: db-backup` (2026-11-14). The repo-level copies are deleted once a run passes with it. Rotating a secret: edit it in that environment.
 - [x] A dedicated read-only role for the dump (`GRANT pg_read_all_data`, a low `CONNECTION LIMIT`) instead of the superuser in `DATABASE_PUBLIC_URL`, so a leaked secret can only read: `backup_reader`, created 2026-11-14. When the TCP proxy host or port changes, update `BACKUP_DATABASE_URL` in the environment with the same user.
 - [ ] Protect `main` and add a CODEOWNERS entry for `.github/`, so no workflow change reaches the secrets unreviewed.
 
 Restore a dump into a throwaway local database, never production. **Tested 2026-11-14** (Farouk, run 43649106041: decrypted, restored with no errors, `anime` rows present). Needs `gh`, `age`, Docker and the root `.env`.
+
 1. `gh run list --workflow db-backup.yml --status success --limit 5`, then `gh run download <run-id> -n db-backup -D backup` (or download `db-backup` from the run page and unzip it).
 2. `age -d -i <private key file> -o backup/otakuleague.dump backup/otakuleague-<stamp>.dump.age`. Keep the plaintext out of synced folders. The identity file must hold only the `AGE-SECRET-KEY-1…` line: a line with the `age1…` public key makes age fail ("apparent recipient found in identities file").
 3. `pnpm db:up` (Postgres 18, as production), then `docker compose exec -T db createdb -U otakuleague restore_drill` and `docker compose exec -T db pg_restore --no-owner --no-privileges -U otakuleague -d restore_drill < backup/otakuleague.dump` (user: `POSTGRES_USER` from `.env`). It should print no `error:` line.
