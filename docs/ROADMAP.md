@@ -1,7 +1,7 @@
 # Roadmap to launch
 
 **Launch: no fixed date** (Farouk, 2026-11-15, OTA-149): launch and feature freeze when Farouk decides; new features after launch. The weekly milestones below are targets, not deadlines.
-The autopilot builds; Farouk's time goes to reviews and human-only steps. Tickets live in Linear project **v1 Launch** (one milestone per stage). `/roadmap` compares this file with Linear; the launch date never moves without an explicit decision recorded here.
+The autopilot builds; Farouk's time goes to reviews and human-only steps. Tickets live in Linear project **v1 Launch** (one milestone per stage). `/roadmap` compares this file with Linear; launch happens when Farouk is satisfied, as recorded here (OTA-149, 2026-11-15).
 
 **v1 goal:** everything the current otakuleague.com offers, rebuilt with the new design, fewer bugs and measurably faster pages.
 
@@ -30,7 +30,7 @@ The autopilot builds; Farouk's time goes to reviews and human-only steps. Ticket
 
 ## Risks
 - **Data terms (ADR 0006):** AniList's terms prohibit use in competing list/tracker services and cap free commercial use. Parked by decision until there is a product (OTA-127, OTA-128); revisit before monetising. Kill switches exist per source.
-- **Scope vs time:** 19 days for ~27 tickets (~2.5 merged PRs a day). The plan's usage limit and PRs waiting on Farouk are the bottlenecks. Any stage that slips triggers a cut, not a later launch.
+- **Scope vs time:** 19 days for ~27 tickets (~2.5 merged PRs a day). The plan's usage limit and PRs waiting on Farouk are the bottlenecks. A stage that slips moves its target; nothing is cut only to hit a date.
 - **Old accounts:** decide in OTA-149 whether to migrate old Supabase users.
 
 ## Decisions log
