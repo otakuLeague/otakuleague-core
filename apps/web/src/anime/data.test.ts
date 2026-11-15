@@ -19,7 +19,11 @@ interface RecordedRequest {
 /** The real apiClient() over a stubbed global fetch that answers 200 with `body`. */
 async function loadDataWith(
   body: unknown,
-  { baseUrl = 'http://api.test:4000', internalApiKey = '' } = {},
+  {
+    baseUrl = 'http://api.test:4000',
+    internalApiKey = '',
+    status = 200,
+  } = {},
 ) {
   const requests: RecordedRequest[] = [];
   const fetchFunction: FetchFunction = (input, init) => {
@@ -29,7 +33,7 @@ async function loadDataWith(
     });
     return Promise.resolve(
       new Response(JSON.stringify(body), {
-        status: 200,
+        status,
         headers: { 'content-type': 'application/json' },
       }),
     );
@@ -147,25 +151,27 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
 
   const withKey = { baseUrl: 'https://api.test', internalApiKey: FAKE_KEY };
 
-  const importLoaders: [string, (data: DataModule) => Promise<unknown>][] = [
+  const visitorChargedLoaders: [
+    string,
+    (data: DataModule) => Promise<unknown>,
+  ][] = [
     ['loadAnime', (data) => data.loadAnime('frieren')],
     ['loadAnimeByAnilistId', (data) => data.loadAnimeByAnilistId(154587)],
+    ['loadAnimeList', (data) => data.loadAnimeList('top', 12)],
+    [
+      'loadAnimeListPage',
+      (data) => data.loadAnimeListPage('seasonal', { cursor: 'c1', limit: 48 }),
+    ],
   ];
 
   const storedDataLoaders: [string, (data: DataModule) => Promise<unknown>][] =
     [
       ['resolveAnimeSlug', (data) => data.resolveAnimeSlug('frieren')],
       ['loadFranchise', (data) => data.loadFranchise('frieren')],
-      ['loadAnimeList', (data) => data.loadAnimeList('top', 12)],
-      [
-        'loadAnimeListPage',
-        (data) =>
-          data.loadAnimeListPage('seasonal', { cursor: 'c1', limit: 48 }),
-      ],
     ];
 
-  it.each(importLoaders)(
-    '%s sends the key and the visitor IP: it can start an import',
+  it.each(visitorChargedLoaders)(
+    '%s sends the key and the visitor IP: it can call AniList for the visitor',
     async (_name, load) => {
       incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
       const { data, requests } = await loadDataWith({}, withKey);
@@ -198,11 +204,11 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
     const { data } = await loadDataWith({});
 
     expect(Object.keys(data).sort()).toEqual(
-      [...importLoaders, ...storedDataLoaders].map(([name]) => name).sort(),
+      [...visitorChargedLoaders, ...storedDataLoaders].map(([name]) => name).sort(),
     );
   });
 
-  it.each(importLoaders)(
+  it.each(visitorChargedLoaders)(
     '%s sends neither header without a key, as before slice 2',
     async (_name, load) => {
       incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
@@ -213,4 +219,89 @@ describe('internal key and client IP (ADR 0019 rollout gate)', () => {
       expect(requests[0]?.headers).toEqual({ accept: 'application/json' });
     },
   );
+});
+
+describe('loadAnimeListPage client IP', () => {
+  const withKey = { baseUrl: 'https://api.test', internalApiKey: FAKE_KEY };
+  const load = (data: DataModule) =>
+    data.loadAnimeListPage('seasonal', { cursor: null, limit: 48 });
+
+  beforeEach(() => {
+    vi.stubEnv('VERCEL', '1');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    incoming.headers = new Headers();
+    incoming.reads = 0;
+  });
+
+  it('sends the key without an IP when there is no x-forwarded-for', async () => {
+    const { data, requests } = await loadDataWith(page, withKey);
+
+    await load(data);
+
+    expect(requests[0]?.headers['x-internal-api-key']).toBe(FAKE_KEY);
+    expect(requests[0]?.headers).not.toHaveProperty('x-client-ip');
+  });
+
+  it.each(['203.0.113.7, 10.0.0.1', '', 'not-an-ip', 'fe80::1%eth0'])(
+    'leaves x-client-ip out for x-forwarded-for %j',
+    async (forwardedFor) => {
+      incoming.headers = new Headers({ 'x-forwarded-for': forwardedFor });
+      const { data, requests } = await loadDataWith(page, withKey);
+
+      await load(data);
+
+      expect(requests[0]?.headers['x-internal-api-key']).toBe(FAKE_KEY);
+      expect(requests[0]?.headers).not.toHaveProperty('x-client-ip');
+    },
+  );
+
+  it('sends x-client-ip for one valid address', async () => {
+    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+    const { data, requests } = await loadDataWith(page, withKey);
+
+    await load(data);
+
+    expect(requests[0]?.headers['x-client-ip']).toBe(VISITOR_IP);
+  });
+
+  it('leaves x-client-ip out off Vercel', async () => {
+    vi.stubEnv('VERCEL', '');
+    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+    const { data, requests } = await loadDataWith(page, withKey);
+
+    await load(data);
+
+    expect(requests[0]?.headers).not.toHaveProperty('x-client-ip');
+  });
+
+  it('reads the request headers exactly once per call', async () => {
+    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+    const { data } = await loadDataWith(page, withKey);
+
+    await load(data);
+
+    expect(incoming.reads).toBe(1);
+  });
+
+  it('returns a visitor-limit 429 as an api_error without throwing', async () => {
+    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+    const { data } = await loadDataWith(
+      {
+        error: {
+          code: 'ANIME_LIST_VISITOR_LIMIT_REACHED',
+          message: 'Too many list requests, try again shortly.',
+        },
+      },
+      { ...withKey, status: 429 },
+    );
+
+    expect(await load(data)).toMatchObject({
+      ok: false,
+      failure: { kind: 'api_error', status: 429 },
+    });
+  });
 });
