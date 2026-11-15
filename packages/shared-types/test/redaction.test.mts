@@ -178,6 +178,21 @@ void describe('redactValue', () => {
     assert.doesNotMatch(JSON.stringify(masked), /fake-internal-api-key/);
   });
 
+  void it('masks the auth HMAC key under its env name, as a field and in a line (ADR 0015)', () => {
+    const key = 'fake-auth-hmac-key-'.padEnd(64, '0');
+    const masked = redactValue({
+      env: { AUTH_HMAC_KEY: key, authHmacKey: key },
+      line: `AUTH_HMAC_KEY=${key}`,
+      json: JSON.stringify({ AUTH_HMAC_KEY: key }),
+    });
+
+    assert.deepEqual(masked.env, {
+      AUTH_HMAC_KEY: '[redacted]',
+      authHmacKey: '[redacted]',
+    });
+    assert.doesNotMatch(JSON.stringify(masked), /fake-auth-hmac-key/);
+  });
+
   void it('redacts strings inside arrays and nested objects', () => {
     assert.deepEqual(redactValue({ list: ['mail me at a@b.co', 1, null] }), {
       list: ['mail me at [email]', 1, null],

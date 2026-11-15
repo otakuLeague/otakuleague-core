@@ -11,6 +11,7 @@ import {
   Max,
   Min,
   ValidateBy,
+  ValidateIf,
   validateSync,
   type ValidationError,
 } from 'class-validator';
@@ -94,6 +95,17 @@ function differsFromProductionKeys(
   return (
     value !== variableOf(environment, 'INTERNAL_API_KEY') &&
     value !== variableOf(environment, 'INTERNAL_API_KEY_PREVIOUS')
+  );
+}
+
+/** Same reasoning as above: a key Vercel holds must never be the one behind the auth counters. */
+function differsFromInternalKeys(
+  value: unknown,
+  environment: unknown,
+): boolean {
+  return (
+    differsFromProductionKeys(value, environment) &&
+    value !== variableOf(environment, 'INTERNAL_API_KEY_PREVIEW')
   );
 }
 
@@ -242,6 +254,31 @@ export class EnvironmentVariables {
     message: 'INTERNAL_API_KEY_REQUIRED must be true or false',
   })
   readonly INTERNAL_API_KEY_REQUIRED?: (typeof BOOLEAN_STRINGS)[number];
+
+  // Keys every auth rate-limit counter (ADR 0015). Required in production: a key drawn per process
+  // would reset every counter at each deploy. Elsewhere, unset means a random key per process.
+  // Never equal to an INTERNAL_API_KEY* value: Vercel holds those. Bottom-up, like PORT.
+  @ValidateBy(
+    {
+      name: 'differsFromInternalKeys',
+      validator: {
+        validate: (value, args) => differsFromInternalKeys(value, args?.object),
+      },
+    },
+    {
+      message:
+        'AUTH_HMAC_KEY is the same as an INTERNAL_API_KEY variable; give it its own value',
+    },
+  )
+  @ValidateIf(
+    (environment: EnvironmentVariables, value: unknown) =>
+      environment.NODE_ENV === 'production' || value !== undefined,
+  )
+  @ValidateBy(
+    { name: 'isInternalApiKey', validator: { validate: isInternalApiKey } },
+    { message: `AUTH_HMAC_KEY ${INTERNAL_API_KEY_RULE}` },
+  )
+  readonly AUTH_HMAC_KEY?: string;
 }
 
 // Messages name the variable and the rule, never the value: DATABASE_URL holds a password.

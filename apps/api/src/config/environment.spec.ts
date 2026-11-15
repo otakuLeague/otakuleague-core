@@ -2,10 +2,14 @@ import { redactText } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import { isInsideRepo, validateEnvironment } from './environment';
 
+const FAKE_AUTH_HMAC_KEY = 'fake-auth-hmac-key-'.padEnd(64, '0');
+
+// With AUTH_HMAC_KEY, so the same variables also boot when a test switches NODE_ENV to production.
 const VALID_ENVIRONMENT = {
   NODE_ENV: 'development',
   PORT: '3001',
   DATABASE_URL: 'postgresql://user:s3cret-password@127.0.0.1:5432/otakuleague',
+  AUTH_HMAC_KEY: FAKE_AUTH_HMAC_KEY,
 };
 
 function validationMessage(config: Record<string, unknown>): string {
@@ -345,6 +349,94 @@ describe('validateEnvironment: internal API key (ADR 0019)', () => {
     // Logged at boot through redaction: no ":" or "=" after a name, so it stays readable.
     expect(redactText(message)).toBe(message);
   });
+});
+
+describe('validateEnvironment: AUTH_HMAC_KEY (ADR 0015)', () => {
+  const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
+  const WITHOUT_HMAC_KEY = {
+    NODE_ENV: 'production',
+    DATABASE_URL: VALID_ENVIRONMENT.DATABASE_URL,
+  };
+
+  it.each([
+    ['missing', WITHOUT_HMAC_KEY],
+    ['empty (KEY= in .env)', { ...WITHOUT_HMAC_KEY, AUTH_HMAC_KEY: '' }],
+  ])('refuses to boot in production when it is %s', (_, config) => {
+    const message = validationMessage(config);
+
+    expect(message).toBe(
+      'Invalid environment configuration:\n  - AUTH_HMAC_KEY is missing',
+    );
+    expect(redactText(message)).toBe(message);
+  });
+
+  it.each(['development', 'test'])(
+    'leaves it unset in %s, missing or empty',
+    (nodeEnvironment) => {
+      for (const value of [undefined, '']) {
+        const environment = validateEnvironment({
+          ...WITHOUT_HMAC_KEY,
+          NODE_ENV: nodeEnvironment,
+          AUTH_HMAC_KEY: value,
+        });
+        expect(environment.AUTH_HMAC_KEY).toBeUndefined();
+      }
+    },
+  );
+
+  it.each(['development', 'test', 'production'])(
+    'accepts a well-formed key in %s',
+    (nodeEnvironment) => {
+      const environment = validateEnvironment({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: nodeEnvironment,
+      });
+
+      expect(environment.AUTH_HMAC_KEY).toBe(FAKE_AUTH_HMAC_KEY);
+    },
+  );
+
+  it.each([
+    ['42 characters', 'h'.repeat(42)],
+    ['129 characters', 'h'.repeat(129)],
+    ['standard base64', `${'h'.repeat(41)}+/=`],
+    ['a non-ASCII letter', `${'h'.repeat(42)}é`],
+  ])('rejects a key with %s in any NODE_ENV without echoing it', (_, key) => {
+    for (const nodeEnvironment of ['development', 'production']) {
+      const message = validationMessage({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: nodeEnvironment,
+        AUTH_HMAC_KEY: key,
+      });
+
+      expect(message).toContain(
+        'AUTH_HMAC_KEY must be 43 to 128 characters of A-Z, a-z, 0-9, _ or -',
+      );
+      expect(message).not.toContain(key);
+    }
+  });
+
+  it.each([
+    'INTERNAL_API_KEY',
+    'INTERNAL_API_KEY_PREVIOUS',
+    'INTERNAL_API_KEY_PREVIEW',
+  ])(
+    'refuses a key equal to %s, naming the variables but not the value',
+    (variable) => {
+      const message = validationMessage({
+        ...VALID_ENVIRONMENT,
+        NODE_ENV: 'production',
+        INTERNAL_API_KEY: FAKE_KEY,
+        [variable]: FAKE_AUTH_HMAC_KEY,
+      });
+
+      expect(message).toContain(
+        'AUTH_HMAC_KEY is the same as an INTERNAL_API_KEY variable',
+      );
+      expect(message).not.toContain(FAKE_AUTH_HMAC_KEY);
+      expect(redactText(message)).toBe(message);
+    },
+  );
 });
 
 describe('isInsideRepo', () => {

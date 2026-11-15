@@ -60,7 +60,9 @@ jobs:
       - name: Start replay server, API and web
         run: |
           node scripts/screenshots/fake-sources.mjs > "$RUNNER_TEMP/replay.log" 2>&1 &
+          # Production refuses to boot without AUTH_HMAC_KEY (ADR 0015): an obvious fake, not a secret.
           NODE_ENV=production PORT=3001 \
+            AUTH_HMAC_KEY=fake-auth-hmac-key-for-pr-screenshots-not-a-secret \
             ANILIST_API_URL=http://127.0.0.1:4010 JIKAN_API_URL=http://127.0.0.1:4010/v4 \
             pnpm --filter @otakuleague/api start > "$RUNNER_TEMP/api.log" 2>&1 &
           PORT=3000 pnpm --filter @otakuleague/web start > "$RUNNER_TEMP/web.log" 2>&1 &
