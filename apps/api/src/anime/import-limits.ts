@@ -102,6 +102,11 @@ export class ImportLimits {
     return this.visitors.size();
   }
 
+  /** Forgets visitors idle long enough to hold a full bucket again (OTA-197). */
+  forgetIdleVisitors(): void {
+    this.visitors.forgetIdle();
+  }
+
   private refilledGlobal(): TokenBucket {
     return refillBucket(
       this.global,

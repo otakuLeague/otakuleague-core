@@ -6,7 +6,7 @@ Read by the `/autopilot` skill at the start of every unattended build run. The c
 enabled: true          # false = every run stops immediately
 automerge: true        # label the run's PR `automerge` when its review has no Critical; the workflow merges it
 max_open_prs: 6        # stop opening new PRs when this many autopilot PRs are open (OTA-175: Farouk merges each PR himself)
-tickets_per_run: 1
+tickets_per_run: 3     # tickets per hourly run; a run skips tickets that wait on an open PR and stops early when only blocked work is left (Farouk, 2026-11-15)
 design_first: true     # a "Build:" ticket waits until its "Design:" ticket is merged
 skip_labels: [needs-human, post-launch]
 ```
@@ -15,7 +15,7 @@ skip_labels: [needs-human, post-launch]
 - Never merges anything itself. The `Autopilot merge` workflow (`.github/workflows/autopilot-merge.yml`) squash-merges a PR labelled `automerge`, or a ready-for-review PR labelled `autopilot` opened by Farouk's account whose `## Checklist` lines are all ticked (OTA-176), once every check on its head commit is green. The autopilot keeps its PR a draft until the checklist is final and marks it ready only when every step is ticked: for an autopilot PR, "ready for review" means "merge when green". A step "not done" stays unticked and keeps the PR a draft for Farouk.
 - The workflow never merges a PR that touches a path in `.github/autopilot-protected-paths` (read from main): CI and workflows, git hooks, everything under `.claude/` except `rules/`, CLAUDE.md, this file, `scripts/`, lint/test/TypeScript configs, dependencies (`package.json`, the lockfile), database migrations, deploy and Docker config, `.env*`. Those wait for Farouk. Only labels added by Farouk's account count.
 - To stop merges: convert the PR to a draft, remove its `automerge`/`autopilot` label, set `automerge: false` here (new PRs stay drafts; a PR already marked ready still merges), or disable the workflow in GitHub's Actions tab.
-- Until the launch swap (2026-11-30): a cleaner-coded version of the old site, parity first; improvements and new features after launch, page by page.
+- Until the launch swap (no fixed date; Farouk decides, OTA-149): a cleaner-coded version of the old site, parity first; improvements and new features after launch, page by page.
 - Pings Farouk only when it needs him (blocked question, `needs-human`, a draft left for him, a protected-path PR, a failure, or a full queue); page reports go to the PR and Linear only.
 - Never touches `otakuleague.com` DNS, Vercel/Railway settings or secrets.
 - `main` deploys only to beta.otakuleague.com until the launch cutover (OTA-149), so a bad merge is a revert, not an outage.

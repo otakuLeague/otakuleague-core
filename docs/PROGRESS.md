@@ -7,7 +7,7 @@ W3 Browse, then W7 rate limits. Done: catalog list API slices 1–3 (OTA-135, 17
 OTA-139 slice 1a merged (#94): `app_user`, `auth_session`, session rules, `GET /me`. Slice 1b: argon2id `PasswordHasher`, `HashSlots` (2 running, 8 waiting, then 429 `AUTH_BUSY`), `Random.bytes`, `engines.node >=24.7`. Real-argon2 spec runs in CI only.
 ## In progress
 - OTA-139 slice 1b PR (open): Farouk merges (touches protected package.json).
-- OTA-197 (sweep of idle visitor IPs; precondition for turning the internal key on): draft PR #98, for Farouk.
+- OTA-197 sweep of idle visitor IPs merged (#98, note in `docs/progress/OTA-197.md`).
 - OTA-136 slices 2–4 (features, sign-up band, card meta, Logo, hero motion, `--ease-drift`); OTA-147 `/contact` (needs the email provider). Launch gate: DPAs, OTA-180/181/179 wording, contact mailbox, AnimeThemes credit (OTA-107).
 - Decided 2026-11-15 (Farouk): email on Resend free plan only (80 sign-up + 20 reset/day, Sentry alert at 75); ADR 0015 addendum in the email slice.
 ## Next 3 tasks
