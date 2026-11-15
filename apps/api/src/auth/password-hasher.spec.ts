@@ -1,15 +1,15 @@
 import { createHash } from 'node:crypto';
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, Logger } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { toErrorResponse } from '../common/filters/api-exception.filter';
-import { SequentialRandom } from '../testing/test-app';
+import { FixedClock, SequentialRandom } from '../testing/test-app';
 import { Argon2id, type Argon2idInput } from './argon2id';
 import {
   HashSlots,
   MAX_RUNNING_HASHES,
   MAX_WAITING_HASHES,
 } from './hash-slots';
-import { PasswordHasher } from './password-hasher';
+import { MAX_PASSWORD_BYTES, PasswordHasher } from './password-hasher';
 import { ARGON2_PARAMS, DUMMY_PHC, formatPhc } from './password-phc';
 
 /** Fast stand-in: a tag that depends on the password, the salt and every parameter. */
@@ -41,17 +41,34 @@ function setup(argon2 = new FakeArgon2id()) {
     argon2,
     new HashSlots(),
     new SequentialRandom(),
+    new FixedClock(new Date('2026-11-15T10:00:00.000Z')),
   );
   return { argon2, hasher };
 }
 
-const DUMMY_COST = {
-  salt: DUMMY_PHC.salt,
+/** A stored hash for `password` with any cost and tag length, as an older release would have written it. */
+function storedHash(
+  password: string,
+  cost: { memoryKiB: number; passes: number; tagLength: number },
+) {
+  const salt = Buffer.alloc(16, 7);
+  const input = { ...cost, parallelism: 1, salt };
+  const tag = fakeTag({ ...input, password: Buffer.from(password) });
+  return { phc: formatPhc(input, salt, tag), input };
+}
+
+const CURRENT_COST = {
   memoryKiB: 19_456,
   passes: 2,
   parallelism: 1,
   tagLength: 32,
 };
+const DUMMY_RUN = { ...CURRENT_COST, salt: DUMMY_PHC.salt };
+const TOO_LONG = 'a'.repeat(MAX_PASSWORD_BYTES + 1);
+
+async function refusalOf(promise: Promise<unknown>) {
+  return toErrorResponse(await promise.catch((caught: unknown) => caught));
+}
 
 describe('PasswordHasher', () => {
   it('hashes with the current parameters and a salt from Random', async () => {
@@ -62,13 +79,13 @@ describe('PasswordHasher', () => {
 
     const salt = Buffer.alloc(16);
     salt[15] = 1;
-    expect(argon2.calls[0]).toMatchObject({ ...DUMMY_COST, salt });
+    expect(argon2.calls[0]).toMatchObject({ ...CURRENT_COST, salt });
     expect(first).toBe(
       formatPhc(
         ARGON2_PARAMS,
         salt,
         fakeTag({
-          ...DUMMY_COST,
+          ...CURRENT_COST,
           salt,
           password: Buffer.from('correct horse 1'),
         }),
@@ -105,10 +122,14 @@ describe('PasswordHasher', () => {
 
   it('treats the composed and decomposed é as the same password (NFC)', async () => {
     const { argon2, hasher } = setup();
-    const phc = await hasher.hash('café au lait 1');
+    const composed = 'café au lait 1'.normalize('NFC');
+    const decomposed = composed.normalize('NFD');
+    expect(decomposed).not.toBe(composed);
 
-    await expect(hasher.verify('café au lait 1', phc)).resolves.toBe('match');
-    expect(argon2.calls[1]?.password).toEqual(Buffer.from('café au lait 1'));
+    const phc = await hasher.hash(composed);
+
+    await expect(hasher.verify(decomposed, phc)).resolves.toBe('match');
+    expect(argon2.calls[1]?.password).toEqual(Buffer.from(composed));
   });
 
   it.each([
@@ -130,7 +151,7 @@ describe('PasswordHasher', () => {
       'mismatch',
     );
     expect(argon2.calls).toHaveLength(1);
-    expect(argon2.calls[0]).toMatchObject(DUMMY_COST);
+    expect(argon2.calls[0]).toMatchObject(DUMMY_RUN);
   });
 
   it('answers mismatch even when the password derives the dummy tag', async () => {
@@ -143,22 +164,67 @@ describe('PasswordHasher', () => {
 
   it('verifies with the parameters stored in the hash', async () => {
     const { argon2, hasher } = setup();
-    const cost = { memoryKiB: 8_192, passes: 3, parallelism: 1 };
-    const salt = Buffer.alloc(16, 7);
-    const tag = fakeTag({
-      ...cost,
-      salt,
+    const old = storedHash('old password 1', {
+      memoryKiB: 8_192,
+      passes: 3,
       tagLength: 32,
-      password: Buffer.from('old password 1'),
     });
-    const old = formatPhc(cost, salt, tag);
 
-    await expect(hasher.verify('old password 1', old)).resolves.toBe('match');
-    expect(argon2.calls[0]).toMatchObject({ ...cost, salt, tagLength: 32 });
-    expect(hasher.needsRehash(old)).toBe(true);
+    await expect(hasher.verify('old password 1', old.phc)).resolves.toBe(
+      'match',
+    );
+    expect(argon2.calls[0]).toMatchObject(old.input);
+    expect(hasher.needsRehash(old.phc)).toBe(true);
   });
 
-  it('refuses with 503 AUTH_BUSY and Retry-After 1 once every slot and place is taken', async () => {
+  it('matches a stored 16-byte tag and asks for a rehash', async () => {
+    const { argon2, hasher } = setup();
+    const old = storedHash('old password 1', {
+      ...CURRENT_COST,
+      tagLength: 16,
+    });
+
+    await expect(hasher.verify('old password 1', old.phc)).resolves.toBe(
+      'match',
+    );
+    expect(argon2.calls[0]?.tagLength).toBe(16);
+    expect(hasher.needsRehash(old.phc)).toBe(true);
+  });
+
+  it(`hashes ${MAX_PASSWORD_BYTES} UTF-8 bytes and refuses one more with 400`, async () => {
+    const { argon2, hasher } = setup();
+
+    await expect(hasher.hash(TOO_LONG.slice(1))).resolves.toMatch(
+      /^\$argon2id\$/,
+    );
+    await expect(refusalOf(hasher.hash(TOO_LONG))).resolves.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      body: { error: { code: 'BAD_REQUEST' } },
+    });
+    // The cap counts bytes, not characters: 513 × é is 1026 bytes.
+    await expect(
+      refusalOf(hasher.hash('é'.repeat(513))),
+    ).resolves.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+    });
+    expect(argon2.calls).toHaveLength(1);
+  });
+
+  it('verifies an over-long password against the dummy and answers mismatch', async () => {
+    const { argon2, hasher } = setup();
+    const phc = await hasher.hash(TOO_LONG.slice(1));
+
+    await expect(hasher.verify(TOO_LONG, phc)).resolves.toBe('mismatch');
+    expect(argon2.calls[1]).toMatchObject({
+      ...DUMMY_RUN,
+      password: Buffer.alloc(0),
+    });
+  });
+
+  it('refuses with 429 AUTH_BUSY and Retry-After 1 once every slot and place is taken', async () => {
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     let release: () => void = () => undefined;
     const hold = new Promise<void>((resolve) => {
       release = resolve;
@@ -169,21 +235,22 @@ describe('PasswordHasher', () => {
       () => hasher.verify('correct horse 1', null),
     );
 
-    const refusal: unknown = await hasher
-      .verify('correct horse 1', null)
-      .catch((caught: unknown) => caught);
+    const refusal = await refusalOf(hasher.verify('correct horse 1', null));
+    await refusalOf(hasher.hash('correct horse 1'));
 
-    expect(toErrorResponse(refusal)).toEqual({
-      status: HttpStatus.SERVICE_UNAVAILABLE,
+    expect(refusal).toEqual({
+      status: HttpStatus.TOO_MANY_REQUESTS,
       body: {
         error: { code: 'AUTH_BUSY', message: expect.any(String) as string },
       },
       retryAfterSeconds: 1,
     });
     expect(argon2.calls).toHaveLength(MAX_RUNNING_HASHES);
+    expect(warn).toHaveBeenCalledTimes(1);
     release();
     await expect(Promise.all(queued)).resolves.toHaveLength(
       MAX_RUNNING_HASHES + MAX_WAITING_HASHES,
     );
+    warn.mockRestore();
   });
 });

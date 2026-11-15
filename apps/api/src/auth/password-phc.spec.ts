@@ -45,7 +45,7 @@ describe('formatPhc and parsePhc', () => {
     ['memory under 8 KiB per lane', GOLDEN.replace('m=19456', 'm=7')],
     ['a leading zero', GOLDEN.replace('m=19456', 'm=019456')],
     ['11 passes', GOLDEN.replace('t=2', 't=11')],
-    ['parallelism 5', GOLDEN.replace('p=1', 'p=5')],
+    ['parallelism 2 (OpenSSL threads)', GOLDEN.replace('p=1', 'p=2')],
     ['parameters out of order', GOLDEN.replace('m=19456,t=2', 't=2,m=19456')],
     ['base64url', GOLDEN.replace(TAG_B64, TAG_B64.replace('+', '-'))],
     ['padding', GOLDEN.replace(TAG_B64, `${TAG_B64}=`)],
@@ -69,7 +69,6 @@ describe('needsRehash', () => {
   it.each([
     ['memory', GOLDEN.replace('m=19456', 'm=8192')],
     ['passes', GOLDEN.replace('t=2', 't=3')],
-    ['parallelism', GOLDEN.replace('p=1', 'p=2')],
     ['salt length', formatPhc(ARGON2_PARAMS, Buffer.alloc(32), TAG)],
     ['tag length', formatPhc(ARGON2_PARAMS, SALT, TAG.subarray(0, 16))],
   ])('is true when the %s differs', (_, phc) => {

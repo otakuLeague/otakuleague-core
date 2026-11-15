@@ -22,7 +22,8 @@ export interface ParsedPhc extends Argon2Cost {
 // time, nor values crypto.argon2 rejects (that would be a 500 instead of a mismatch).
 const MAX_MEMORY_KIB = 65_536;
 const MAX_PASSES = 10;
-const MAX_PARALLELISM = 4;
+// p > 1 makes OpenSSL start its own threads, outside the libuv pool HashSlots protects.
+const MAX_PARALLELISM = 1;
 
 // Anchored, digits without leading zeros, standard base64 without padding (PHC string format).
 // Salt and tag: 22 to 86 characters, 16 to 64 bytes.
