@@ -157,3 +157,29 @@ To fill in after the rollout.
 **Retention.** List buckets count a visitor idle after 60 s, but idle buckets are only dropped on the next granted take, so an IP can stay in API memory until then or a restart. A timed sweep and privacy wording are OTA-197, a precondition for turning the key on.
 
 **Too simple?** A visitor behind a shared NAT shares a bucket, and a deep `/season?page=N` on a cold season can need more than 3 tokens (busy partway, as before). Both are accepted in the OTA-189 addendum. **Too complicated?** No: one option on one call, no API change.
+
+## Addendum: per-visitor limit on search (OTA-196, OTA-189 slice C, 2026-11-15)
+
+**Requirements.** Functional: (1) a visitor can search as fast as a person types and pages; (2) one address that floods `GET /anime/search` is refused alone, with a `Retry-After`; (3) a malformed request still gets its 400, and costs nothing. Non-functional: per visitor at most 20 searches at once and 30 a minute after that (burst 20, one token back per 2 s); 0 tokens for a 400; the check adds no I/O and is O(1) per request (one `Map` lookup, the idle sweep amortised); memory stays within the 10,000 entries per limiter of the OTA-189 addendum (an entry is idle after 40 s); `Retry-After` is a whole number of seconds, 1 or 2. **Availability**, as for the other limiters: in memory, per process; a lost counter only lets a few extra searches through.
+
+**Entities.** `ApiCaller`, `VisitorKey` and `VisitorBuckets` as they are; one new provider, `SearchLimits`. No table, no new dependency.
+
+**API.** `GET /anime/search` is unchanged on success. New answer: 429 `ANIME_SEARCH_VISITOR_LIMIT_REACHED` with `Retry-After` (seconds until this visitor's next token) and the error envelope.
+
+**Data flow.** Validation pipe (400 `VALIDATION_FAILED`, no token) → guard has recorded the `ApiCaller` → controller passes `@Caller()` down → `AnimeSearchService.search(request, caller)` takes the visitor token first (none for `open`), then searches. Every valid search is charged, including one that skips the database (no searchable text, every source off): the charge is per request, which is simpler to explain and test, and those requests cost almost nothing.
+
+**Decision.** Mirror the list limit, minus what search does not have:
+
+- `SearchLimits` (`apps/api/src/anime/search-limits.ts`): an injectable around one `VisitorBuckets` with `SEARCH_VISITOR_BURST = 20`, `SEARCH_VISITOR_REFILL_MS = 2_000`, 10,000 entries, `Clock` injected; one method, `takeVisitor(key)`.
+- Keyed by `visitorKeyOf(caller)`: `web` by client IP (IPv6 /64), `web` without a valid IP the shared `unknown`, every `preview` the shared `preview`, `open` not limited and not charged. Never the socket address.
+- No give-back: search never calls a source, so a token stands for database load, and a search that failed or timed out (`statement_timeout` 2 s) still cost that load.
+- No global search bucket: the Prisma connection pool and the 2 s statement timeout already bound total load, and a global bucket would refuse every visitor during one crawl.
+- A refusal on the shared `unknown` or `preview` bucket logs one warning a minute per bucket, never the key, like lists: it is how the rollout spots a web route that forgets the IP.
+
+**Rejected.** Taking the token in the controller or a Nest interceptor: business logic belongs in the service (CLAUDE.md), and an interceptor would be a second limiting mechanism next to the service-level ones. A global search bucket in front (as lists and imports have): those protect AniList's budget, shared by everyone; search protects only our own database, which the pool already caps.
+
+**Web side.** The web has no search page or loader yet (`/search` in the header form has no route). Whatever OTA-98 adds must call `/anime/search` uncached (`no-store`) with `clientIp: await readClientIp()`, like `loadAnimeListPage`; otherwise every visitor shares `unknown` (20 at once, 30 a minute for the whole site) once the key is on. This is a rollout gate for the key, next to the two import routes and the list loader. A live-results box should debounce (about 250 ms), so a typed query costs a few tokens, not one per key press.
+
+**Out of scope.** Removing the `claimsSlugs` gate (ADR 0016 claim scope): the OTA-189 addendum keeps it until the key is on in production and slice B has shipped; the key is not on yet, so it stays, in a follow-up ticket.
+
+**Too simple?** No global cap: many addresses can still load the database together, bounded only by the pool and the timeout; accepted until a measurement says otherwise. Shared NATs share 20. In memory: a deploy refills every bucket. **Too complicated?** No: one provider, one take, no give-back, no new state beyond the existing limiter class.
