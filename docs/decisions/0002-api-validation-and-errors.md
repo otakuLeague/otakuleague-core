@@ -38,7 +38,7 @@ A server fault never sends its own message, stack, SQL or file paths to the clie
 
 **Health exception.** `GET /health` returns:
 - 200 `{ "status": "ok", "checks": { "database": "up" } }`, or
-- 503 `{ "status": "error", "checks": { "database": "down" } }`.
+- 503 `{ "status": "error", "checks": { "database": "down" } }`, also when the session time zone (`current_setting('TimeZone')`) is not exactly `UTC`, because the OTA-200 pin may have been dropped by a pooler. (Done in OTA-201.)
 
 The 503 body is the one documented exception to the envelope: monitors read `checks`, not `error`. The query races a 2 s timer, so the endpoint cannot hang. The response has `Cache-Control: no-store`, so no proxy serves a stale 200 during an outage. The controller only sets the status code and that header; the logic lives in `HealthService`.
 
