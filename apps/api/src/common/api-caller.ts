@@ -26,6 +26,15 @@ function asVisitorKey(value: string): VisitorKey {
 /** The one bucket every Vercel preview shares (ADR 0019). Never an IP, so no visitor gets it. */
 export const PREVIEW_VISITOR_KEY = asVisitorKey('preview');
 
+/** Which shared bucket this key is, for logs that must never carry a client IP; null for a plain visitor. */
+export function sharedVisitorBucket(
+  key: VisitorKey,
+): 'preview' | 'unknown' | null {
+  if (key === PREVIEW_VISITOR_KEY) return 'preview';
+  if (key === UNKNOWN_VISITOR_KEY) return 'unknown';
+  return null;
+}
+
 /**
  * Who the guard decided is calling (ADR 0019 item 7). Never read from a body. `preview` is a
  * preview deployment's key: no X-Client-Ip trusted. A credential route (OTA-139) must allowlist

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   type ApiCaller,
+  type VisitorKey,
   OPEN_CALLER,
+  PREVIEW_VISITOR_KEY,
   PREVIEW_CALLER,
   visitorKeyFromClientIp,
 } from '../common/api-caller';
@@ -48,24 +50,36 @@ describe('AnimeSearchService', () => {
     },
   );
 
+  const drain = (limits: SearchLimits, key: VisitorKey) => {
+    for (let taken = 0; taken < SEARCH_VISITOR_BURST; taken += 1) {
+      limits.takeVisitor(key);
+    }
+  };
+
   it('refuses a web caller with an empty bucket with a 429 before touching the database', async () => {
     const limits = new SearchLimits(new FixedClock(NOW));
-    for (let taken = 0; taken < SEARCH_VISITOR_BURST; taken += 1) {
-      limits.takeVisitor(UNKNOWN);
-    }
+    drain(limits, UNKNOWN);
 
     const refusal = await service(true, limits)
       .search(request, WEB)
       .catch((error: unknown) => error);
 
     expect(refusal).toBeInstanceOf(ApiException);
-    expect((refusal as ApiException).getStatus()).toBe(429);
+    const exception = refusal as ApiException;
+    expect(exception.getStatus()).toBe(429);
+    expect(exception.error.code).toBe('ANIME_SEARCH_VISITOR_LIMIT_REACHED');
+    expect(exception.retryAfterSeconds).toBe(2);
   });
 
   it('charges a preview caller on its own bucket, apart from the unknown one', async () => {
     const limits = new SearchLimits(new FixedClock(NOW));
-    await service(false, limits).search(request, PREVIEW_CALLER);
+    drain(limits, PREVIEW_VISITOR_KEY);
 
+    const refusal = await service(false, limits)
+      .search(request, PREVIEW_CALLER)
+      .catch((error: unknown) => error);
+
+    expect((refusal as ApiException).getStatus()).toBe(429);
     expect(limits.takeVisitor(UNKNOWN)).toEqual({ taken: true });
   });
 
