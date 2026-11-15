@@ -138,7 +138,9 @@ export class VisitorBuckets {
   /** Idle entries are full buckets: dropping them changes no answer. */
   private dropIdle(now: number): void {
     for (const [key, entry] of this.entries) {
-      if (now - entry.takenAt < this.idleMs) break;
+      // Stamped in the future: the clock stepped backwards, so it is idle however long ago.
+      const idle = entry.takenAt > now || now - entry.takenAt >= this.idleMs;
+      if (!idle) break;
       this.entries.delete(key);
     }
   }

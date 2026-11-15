@@ -39,4 +39,9 @@ export class SearchLimits {
   forgetIdleVisitors(): void {
     this.visitors.forgetIdle();
   }
+
+  /** Visitors remembered right now (tests and the sweep guard). */
+  visitorCount(): number {
+    return this.visitors.size();
+  }
 }

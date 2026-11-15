@@ -188,12 +188,12 @@ To fill in after the rollout.
 
 Every owner of a `VisitorBuckets` (`ImportLimits`, `ListFetchLimits`, `SearchLimits`) is swept by `VisitorSweepScheduler` every 60 s on an unref'd timer. The sweep drops entries idle for `burst * refillMs`, which are full buckets again, so it changes no answer. Worst case a key is held is the idle window plus one sweep interval:
 
-| Limiter | Idle window              | Worst case |
-| ------- | ------------------------ | ---------- |
-| Import  | 5 x 40 s = 200 s         | 260 s      |
-| List    | 3 x 20 s = 60 s          | 120 s      |
-| Search  | 20 x 2 s = 40 s          | 100 s      |
+| Limiter | Idle window      | Worst case |
+| ------- | ---------------- | ---------- |
+| Import  | 5 x 40 s = 200 s | 260 s      |
+| List    | 3 x 20 s = 60 s  | 120 s      |
+| Search  | 20 x 2 s = 40 s  | 100 s      |
 
-**Promise (privacy page):** a raw IP is forgotten within 5 minutes of the visitor's last granted request. Refused requests do not extend it. Caveats: a backward wall-clock jump or a delayed event loop adds seconds; a restart forgets everything; with `INTERNAL_API_KEY` unset no IP is held at all (every caller is `open`).
+**Promise (privacy page):** a raw IP is forgotten within 5 minutes of the visitor's last granted request. Refused requests do not extend it. Caveats: a backward wall-clock step is handled (entries stamped in the future are dropped at the next sweep); a delayed event loop adds seconds; a restart forgets everything; with `INTERNAL_API_KEY` unset no IP is held at all (every caller is `open`).
 
 A new per-visitor limiter must be registered in `VisitorSweepScheduler`; `visitor-sweep.scheduler.spec.ts` guards the numbers (largest idle window plus 60 s at most 5 minutes). No new dependency, no log line (keys are IPs).

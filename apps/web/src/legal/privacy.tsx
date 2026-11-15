@@ -77,10 +77,10 @@ export const PRIVACY_POLICY: LegalDocument = {
           </p>
           <p>
             To limit how fast one visitor can make us fetch anime data from
-            AniList, and how often one visitor can search, our server keeps
-            your <strong>IP address</strong> (for IPv6, only its first half,
-            the /64 network) in memory. It is never written to disk, logged or
-            stored, and it is forgotten within 5 minutes of your last request.
+            AniList, and how often one visitor can search, our server keeps your{' '}
+            <strong>IP address</strong> (for IPv6, only its first half, the /64
+            network) in memory. It is never written to disk or logged, and it is
+            forgotten within 5 minutes of your last request.
           </p>
         </>
       ),

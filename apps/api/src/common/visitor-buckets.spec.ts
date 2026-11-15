@@ -150,6 +150,16 @@ describe('VisitorBuckets', () => {
       expect(buckets.take(B).taken).toBe(true);
     });
 
+    it('drops entries stamped in the future after a 30-minute backward clock step', () => {
+      const { clock, buckets } = setup();
+      buckets.take(A);
+      clock.advance(1_000);
+      buckets.take(B);
+      clock.advance(-30 * 60_000);
+      buckets.forgetIdle();
+      expect(buckets.size()).toBe(0);
+    });
+
     it('does nothing when empty', () => {
       const { buckets } = setup();
       buckets.forgetIdle();

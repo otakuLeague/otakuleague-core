@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { visitorKeyFromClientIp } from '../common/api-caller';
 import { Clock } from '../common/clock-and-random.module';
 import {
   ImportLimits,
@@ -22,14 +25,20 @@ import {
 
 const FIVE_MINUTES_MS = 5 * 60_000;
 
-class StillClock extends Clock {
+class MovableClock extends Clock {
+  private instant = new Date('2026-11-15T12:00:00.000Z').getTime();
+
   now(): Date {
-    return new Date('2026-11-15T12:00:00.000Z');
+    return new Date(this.instant);
+  }
+
+  advance(ms: number): void {
+    this.instant += ms;
   }
 }
 
 function setup() {
-  const clock = new StillClock();
+  const clock = new MovableClock();
   const imports = new ImportLimits(clock);
   const lists = new ListFetchLimits(clock);
   const searches = new SearchLimits(clock);
@@ -80,10 +89,56 @@ describe('VisitorSweepScheduler', () => {
 
   it('does not keep the process alive', () => {
     const { scheduler } = setup();
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
     scheduler.onModuleInit();
-    expect(vi.getTimerCount()).toBe(1);
+    const timer = setIntervalSpy.mock.results[0]?.value as NodeJS.Timeout;
+    expect(timer.hasRef()).toBe(false);
     scheduler.onModuleDestroy();
-    expect(vi.getTimerCount()).toBe(0);
+    setIntervalSpy.mockRestore();
+  });
+
+  it('empties real limiters one interval after the largest idle window', () => {
+    const clock = new MovableClock();
+    const imports = new ImportLimits(clock);
+    const lists = new ListFetchLimits(clock);
+    const searches = new SearchLimits(clock);
+    const key = visitorKeyFromClientIp('203.0.113.9');
+    imports.takeVisitorToken(key);
+    lists.takeVisitor(key);
+    searches.takeVisitor(key);
+    const scheduler = new VisitorSweepScheduler(imports, lists, searches);
+    scheduler.onModuleInit();
+
+    const idleMs = VISITOR_IMPORT_BURST * VISITOR_IMPORT_REFILL_MS;
+    clock.advance(idleMs);
+    vi.advanceTimersByTime(VISITOR_SWEEP_INTERVAL_MS);
+
+    expect(imports.visitorCount()).toBe(0);
+    expect(lists.visitorCount()).toBe(0);
+    expect(searches.visitorCount()).toBe(0);
+    scheduler.onModuleDestroy();
+  });
+
+  it('is the only owner of VisitorBuckets: every class that builds one is swept', () => {
+    const root = join(__dirname, '..');
+    const owners = readdirSync(root, { recursive: true, encoding: 'utf8' })
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts'))
+      .filter((f) =>
+        readFileSync(join(root, f), 'utf8').includes('new VisitorBuckets('),
+      )
+      .map((f) => f.split('/').pop());
+    expect(owners.sort()).toEqual([
+      'import-limits.ts',
+      'list-fetch-limits.ts',
+      'search-limits.ts',
+    ]);
+    const scheduler = readFileSync(
+      join(__dirname, 'visitor-sweep.scheduler.ts'),
+      'utf8',
+    );
+    for (const cls of ['ImportLimits', 'ListFetchLimits', 'SearchLimits']) {
+      expect(scheduler).toContain(`: ${cls}`);
+    }
   });
 });
 

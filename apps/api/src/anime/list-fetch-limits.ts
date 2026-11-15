@@ -48,6 +48,11 @@ export class ListFetchLimits {
     this.visitors.forgetIdle();
   }
 
+  /** Visitors remembered right now (tests and the sweep guard). */
+  visitorCount(): number {
+    return this.visitors.size();
+  }
+
   /** Returns a visitor token taken for a fetch that never reached AniList (never above the burst). */
   giveBackVisitor(key: VisitorKey): void {
     this.visitors.giveBack(key);
