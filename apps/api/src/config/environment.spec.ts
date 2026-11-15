@@ -125,6 +125,21 @@ describe('validateEnvironment', () => {
     expect(message).not.toContain(databaseUrl);
   });
 
+  it('lists a DATABASE_URL with an options parameter (it would drop the UTC pin) without echoing it', () => {
+    const databaseUrl = `${VALID_ENVIRONMENT.DATABASE_URL}?options=-c%20timezone%3DAsia%2FTokyo`;
+
+    const message = validationMessage({ DATABASE_URL: databaseUrl });
+
+    expect(message).toBe(
+      [
+        'Invalid environment configuration:',
+        '  - NODE_ENV is missing',
+        '  - DATABASE_URL must not set the `options` parameter: every pool pins the session time zone to UTC (OTA-200).',
+      ].join('\n'),
+    );
+    expect(message).not.toContain('s3cret-password');
+  });
+
   it('never puts the password in the message or the stack', () => {
     const secret = 's3cret-password';
     let caught: unknown;

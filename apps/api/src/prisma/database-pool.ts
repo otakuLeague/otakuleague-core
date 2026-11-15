@@ -5,6 +5,10 @@
 /** Sent as the startup `options` of every connection: the session time zone is UTC. */
 export const UTC_SESSION_OPTIONS = '-c timezone=UTC';
 
+/** One message for the boot validation and this module's backstop; it never quotes the value. */
+export const DATABASE_URL_OPTIONS_RULE =
+  'DATABASE_URL must not set the `options` parameter: every pool pins the session time zone to UTC (OTA-200).';
+
 /** The part of a pg pool config this module owns; callers spread their own limits beside it. */
 export interface DatabasePoolConfig {
   readonly connectionString: string;
@@ -12,10 +16,22 @@ export interface DatabasePoolConfig {
 }
 
 /**
- * The pool config every Prisma client is built from. pg copies each query parameter of the URL
- * over the config (`Object.assign({}, config, parse(url))`), so `?options=` would silently drop
- * the pin: refused, as is a string that is not a URL (it could not be checked). The messages
- * name the variable and the rule, never the value: it holds the password.
+ * True when pg would read an `options` query parameter from this URL: pg copies each query
+ * parameter over the config (`Object.assign({}, config, parse(url))`), so it would drop the pin.
+ * False for a string that is not a URL (the URL rule reports that).
+ */
+export function hasOptionsParameter(connectionString: string): boolean {
+  return (
+    URL.canParse(connectionString) &&
+    new URL(connectionString).searchParams.has('options')
+  );
+}
+
+/**
+ * The pool config every Prisma client is built from. Environment validation already refuses
+ * both cases at boot; this is the backstop for any other caller. A string that is not a URL is
+ * refused because it could not be checked. The messages name the variable and the rule, never
+ * the value: it holds the password.
  */
 export function databasePoolConfig(
   connectionString: string,
@@ -23,10 +39,8 @@ export function databasePoolConfig(
   if (!URL.canParse(connectionString)) {
     throw new Error('DATABASE_URL must be a URL.');
   }
-  if (new URL(connectionString).searchParams.has('options')) {
-    throw new Error(
-      'DATABASE_URL must not set the `options` parameter: every pool pins the session time zone to UTC (OTA-200).',
-    );
+  if (hasOptionsParameter(connectionString)) {
+    throw new Error(DATABASE_URL_OPTIONS_RULE);
   }
   return { connectionString, options: UTC_SESSION_OPTIONS };
 }

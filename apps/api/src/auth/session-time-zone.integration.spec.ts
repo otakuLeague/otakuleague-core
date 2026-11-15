@@ -14,6 +14,7 @@ import { PrismaClient } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp, FixedClock } from '../testing/test-app';
 import {
+  clonePrefix,
   connectMaintenance,
   databaseName,
   truncateAllTables,
@@ -39,6 +40,7 @@ const SESSION_ID = '10000000-0000-4000-8000-0000000000a1';
 const USERNAME = 'Member';
 
 const at = (offsetMs: number): Date => new Date(NOW.getTime() + offsetMs);
+const SESSION_CREATED_AT = at(-DAY);
 
 /** This file's clone (integration-setup.ts points DATABASE_URL at it). */
 function cloneUrl(): string {
@@ -47,10 +49,20 @@ function cloneUrl(): string {
   return url;
 }
 
-/** Applies to sessions opened afterwards, so it runs before the app's pool connects. */
+/**
+ * Applies to sessions opened afterwards, so it runs before the app's pool connects. Only ever
+ * on one of this run's clones (`<prefix><worker>`), which integration-setup.ts drops afterwards.
+ */
 async function setDatabaseZone(): Promise<void> {
+  const templateUrl = new URL(inject('testDatabaseUrl'));
+  const prefix = clonePrefix(templateUrl);
   const clone = databaseName(new URL(cloneUrl()));
-  const maintenance = connectMaintenance(new URL(inject('testDatabaseUrl')));
+  if (!clone.startsWith(prefix) || !/^\d+$/.test(clone.slice(prefix.length))) {
+    throw new Error(
+      `Refusing to change the time zone of ${clone}: not a test clone (${prefix}<worker>).`,
+    );
+  }
+  const maintenance = connectMaintenance(templateUrl);
   try {
     await maintenance.$executeRawUnsafe(
       `ALTER DATABASE "${clone}" SET timezone TO '${DATABASE_ZONE}'`,
@@ -66,7 +78,7 @@ async function sessionZone(client: PrismaClient): Promise<string> {
   return row.zone;
 }
 
-async function seed(prisma: PrismaService, expiresAt: Date): Promise<void> {
+async function seedMember(prisma: PrismaService): Promise<void> {
   await prisma.user.create({
     data: {
       id: USER_ID,
@@ -78,17 +90,48 @@ async function seed(prisma: PrismaService, expiresAt: Date): Promise<void> {
       sessionEpoch: 0,
       createdAt: at(-10 * DAY),
       updatedAt: at(-10 * DAY),
-      sessions: {
-        create: {
-          id: SESSION_ID,
-          tokenHash: hashSessionToken(TOKEN),
-          sessionEpoch: 0,
-          createdAt: at(-DAY),
-          expiresAt,
-        },
-      },
     },
   });
+}
+
+/** Through the adapter, like the app writes: what is stored depends on the session zone. */
+async function seedSessionThroughPrisma(
+  prisma: PrismaService,
+  expiresAt: Date,
+): Promise<void> {
+  await prisma.session.create({
+    data: {
+      id: SESSION_ID,
+      tokenHash: hashSessionToken(TOKEN),
+      userId: USER_ID,
+      sessionEpoch: 0,
+      createdAt: SESSION_CREATED_AT,
+      expiresAt,
+    },
+  });
+}
+
+/** The instant as a SQL literal with its offset written out (`Z`): no session zone shifts it. */
+function utcLiteral(instant: Date): string {
+  return `'${instant.toISOString()}'::timestamptz`;
+}
+
+/**
+ * Bypasses the adapter's write path, so the stored instants are right whatever the session
+ * zone and only the read path is tested: an unpinned read would see them 9 hours late, which
+ * flips what `resolve` answers.
+ */
+async function seedSessionInSql(
+  prisma: PrismaService,
+  expiresAt: Date,
+): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO auth_session (id, token_hash, user_id, session_epoch, created_at, expires_at)
+     VALUES ($1::uuid, $2, $3::uuid, 0, ${utcLiteral(SESSION_CREATED_AT)}, ${utcLiteral(expiresAt)})`,
+    SESSION_ID,
+    hashSessionToken(TOKEN),
+    USER_ID,
+  );
 }
 
 interface StoredSessionTimes {
@@ -98,12 +141,22 @@ interface StoredSessionTimes {
   readonly expiresAtMs: number;
 }
 
-async function storedTimes(prisma: PrismaService): Promise<StoredSessionTimes> {
-  const [row] = await prisma.$queryRaw<[StoredSessionTimes]>`
+/** Every auth_session row: tests compare the whole list, so a missing or extra row fails. */
+function storedTimes(prisma: PrismaService): Promise<StoredSessionTimes[]> {
+  return prisma.$queryRaw<StoredSessionTimes[]>`
     SELECT created_at AS "createdAt", expires_at AS "expiresAt",
       (EXTRACT(EPOCH FROM expires_at) * 1000)::float8 AS "expiresAtMs"
     FROM auth_session`;
-  return row;
+}
+
+function storedAs(expiresAt: Date): StoredSessionTimes[] {
+  return [
+    {
+      createdAt: SESSION_CREATED_AT,
+      expiresAt,
+      expiresAtMs: expiresAt.getTime(),
+    },
+  ];
 }
 
 describe(`sessions on a database whose default zone is ${DATABASE_ZONE}`, () => {
@@ -120,6 +173,7 @@ describe(`sessions on a database whose default zone is ${DATABASE_ZONE}`, () => 
 
   beforeEach(async () => {
     await truncateAllTables(prisma);
+    await seedMember(prisma);
   });
 
   afterAll(async () => {
@@ -141,33 +195,25 @@ describe(`sessions on a database whose default zone is ${DATABASE_ZONE}`, () => 
   });
 
   it('stores and reads back the true instants', async () => {
-    await seed(prisma, at(20 * DAY));
+    await seedSessionThroughPrisma(prisma, at(20 * DAY));
 
-    expect(await storedTimes(prisma)).toEqual({
-      createdAt: at(-DAY),
-      expiresAt: at(20 * DAY),
-      expiresAtMs: at(20 * DAY).getTime(),
-    });
+    expect(await storedTimes(prisma)).toEqual(storedAs(at(20 * DAY)));
   });
 
-  it('signs out a session that expired an hour ago', async () => {
-    await seed(prisma, at(-HOUR));
+  it('signs out a session written in SQL as expired an hour ago', async () => {
+    await seedSessionInSql(prisma, at(-HOUR));
 
     expect(await sessions.resolve(TOKEN)).toEqual({ kind: 'signed_out' });
-    expect((await storedTimes(prisma)).expiresAtMs).toBe(at(-HOUR).getTime());
+    expect(await storedTimes(prisma)).toEqual(storedAs(at(-HOUR)));
   });
 
-  it('renews a session 1 ms inside the renewal window to now + 30 days', async () => {
-    await seed(prisma, at(SESSION_RENEW_BELOW_MS - 1));
+  it('renews a session written in SQL 1 ms inside the renewal window to now + 30 days', async () => {
+    await seedSessionInSql(prisma, at(SESSION_RENEW_BELOW_MS - 1));
 
     expect(await sessions.resolve(TOKEN)).toEqual({
       kind: 'signed_in',
       session: { sessionId: SESSION_ID, userId: USER_ID, username: USERNAME },
     });
-    expect(await storedTimes(prisma)).toEqual({
-      createdAt: at(-DAY),
-      expiresAt: at(SESSION_IDLE_MS),
-      expiresAtMs: at(SESSION_IDLE_MS).getTime(),
-    });
+    expect(await storedTimes(prisma)).toEqual(storedAs(at(SESSION_IDLE_MS)));
   });
 });
