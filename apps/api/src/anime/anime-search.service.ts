@@ -1,8 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import type {
   AnimeSearchHit,
   AnimeSearchPage,
 } from '@otakuleague/shared-types';
+import {
+  type ApiCaller,
+  PREVIEW_VISITOR_KEY,
+  UNKNOWN_VISITOR_KEY,
+  type VisitorKey,
+  visitorKeyOf,
+} from '../common/api-caller';
+import { ApiException } from '../common/api.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnimeImportService } from './anime-import.service';
 import { rankAnime } from './anime-search.query';
@@ -10,11 +18,28 @@ import { toSearchHit } from './anime-search.view';
 import { mergeAnime, SOURCE_PRIORITY } from './anime.merge';
 import { ANIME_WITH_DATA, DB_DATA_SOURCE, fromAnimeRow } from './anime.rows';
 import { Clock } from '../common/clock-and-random.module';
+import { SearchLimits } from './search-limits';
 
 export interface AnimeSearchRequest {
   readonly query: string;
   readonly page: number;
   readonly pageSize: number;
+}
+
+/** A shared bucket's refusals are logged at most this often. */
+const LIMIT_WARN_INTERVAL_MS = 60_000;
+
+/** This visitor's cap: Retry-After is the seconds until its next token, 1 or 2. */
+function searchVisitorLimited(retryAfterSeconds: number): ApiException {
+  return new ApiException(
+    HttpStatus.TOO_MANY_REQUESTS,
+    {
+      code: 'ANIME_SEARCH_VISITOR_LIMIT_REACHED',
+      message:
+        'You searched many times in a short time. Try again in a moment.',
+    },
+    { retryAfterSeconds },
+  );
 }
 
 /** Ranking scans every stored title (slice 1): bound the time one request can take. */
@@ -40,13 +65,17 @@ export class AnimeSearchService {
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly importer: AnimeImportService,
+    private readonly limits: SearchLimits,
   ) {}
 
-  async search({
-    query,
-    page,
-    pageSize,
-  }: AnimeSearchRequest): Promise<AnimeSearchPage> {
+  private readonly logger = new Logger(AnimeSearchService.name);
+  private readonly sharedWarnedAt = new Map<'preview' | 'unknown', number>();
+
+  async search(
+    { query, page, pageSize }: AnimeSearchRequest,
+    caller: ApiCaller,
+  ): Promise<AnimeSearchPage> {
+    this.chargeVisitor(caller);
     const sources = SOURCE_PRIORITY.filter(this.importer.isEnabled).map(
       (source) => DB_DATA_SOURCE[source],
     );
@@ -103,5 +132,34 @@ export class AnimeSearchService {
       return hit ? [hit] : [];
     });
     return { hits, page, pageSize, total: ranked.total };
+  }
+
+  /** One token per valid search, before any work; an open caller is not limited. */
+  private chargeVisitor(caller: ApiCaller): void {
+    const visitorKey = visitorKeyOf(caller);
+    if (visitorKey === null) return;
+    const take = this.limits.takeVisitor(visitorKey);
+    if (take.taken) return;
+    this.warnSharedVisitorLimited(visitorKey);
+    throw searchVisitorLimited(take.retryAfterSeconds);
+  }
+
+  /** Only the shared buckets are logged, once a minute each; never the key: it is a client IP. */
+  private warnSharedVisitorLimited(visitorKey: VisitorKey): void {
+    const shared =
+      visitorKey === PREVIEW_VISITOR_KEY
+        ? 'preview'
+        : visitorKey === UNKNOWN_VISITOR_KEY
+          ? 'unknown'
+          : null;
+    if (shared === null) return;
+    const now = this.clock.now().getTime();
+    if (now - (this.sharedWarnedAt.get(shared) ?? 0) < LIMIT_WARN_INTERVAL_MS) {
+      return;
+    }
+    this.sharedWarnedAt.set(shared, now);
+    this.logger.warn(
+      `Search visitor cap reached on the shared ${shared} bucket: searches are refused.`,
+    );
   }
 }
