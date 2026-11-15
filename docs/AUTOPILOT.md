@@ -6,7 +6,7 @@ Read by the `/autopilot` skill at the start of every unattended build run. The c
 enabled: true          # false = every run stops immediately
 automerge: true        # label the run's PR `automerge` when its review has no Critical; the workflow merges it
 max_open_prs: 6        # stop opening new PRs when this many autopilot PRs are open (OTA-175: Farouk merges each PR himself)
-tickets_per_run: 1
+tickets_per_run: 3     # tickets per hourly run; a run skips tickets that wait on an open PR and stops early when only blocked work is left (Farouk, 2026-11-15)
 design_first: true     # a "Build:" ticket waits until its "Design:" ticket is merged
 skip_labels: [needs-human, post-launch]
 ```
