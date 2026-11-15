@@ -277,7 +277,7 @@ export class AnimeController {
   })
   @ApiTooManyRequestsResponse({
     description:
-      'This visitor searched many times in a short time (ANIME_SEARCH_VISITOR_LIMIT_REACHED, Retry-After 1 or 2).',
+      'This visitor searched many times in a short time (ANIME_SEARCH_VISITOR_LIMIT_REACHED, Retry-After 1 or 2), or too many searches are running at once (ANIME_SEARCH_BUSY, Retry-After 1, any caller).',
   })
   searchAnime(
     @Query() params: AnimeSearchParams,

@@ -10,6 +10,7 @@ import {
 } from './common/internal-key.guard';
 import { createValidationPipe } from './common/validation';
 import { AnimeModule } from './anime/anime.module';
+import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/app-config.module';
 import { DebugModule, debugRoutesEnabled } from './debug/debug.module';
 import { HealthModule } from './health/health.module';
@@ -20,6 +21,7 @@ import { HealthModule } from './health/health.module';
     ClockAndRandomModule,
     HealthModule,
     AnimeModule,
+    AuthModule,
     ConditionalModule.registerWhen(DebugModule, debugRoutesEnabled),
   ],
   providers: [

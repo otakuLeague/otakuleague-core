@@ -2,6 +2,8 @@
 
 Status: proposed (2026-11-12, OTA-138; revised the same day after review). Accepted when the runtime proof (first acceptance criterion of OTA-139) passes.
 
+Built so far: slice 1a (OTA-139), the `app_user` and `auth_session` tables, the session check (`apps/api/src/auth/`: `SessionGuard`, `SessionService`, pure `session-rules.ts`) and `GET /me`, for `web` callers only; sessions are seeded by tests until sign-in lands. Next: sign-up, verification and sign-in (slice 1b), then the web side.
+
 ## Context
 Accounts are built in OTA-139 and OTA-140. PARITY.md lists as v1: sign-up and sign-in with email + password, sign-in by username, Google, email confirmation, forgot/reset password. The OTA-155 design fixes the behaviour: hard email verification, no account enumeration, username held 24 h after a sign-up submit, token links answered with a 303 to a clean URL.
 

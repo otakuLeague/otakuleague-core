@@ -58,6 +58,7 @@ CI runs lint, typecheck, unit tests, integration tests and build on every PR and
 
 ## More
 
+- [Onboarding guide](docs/ONBOARDING.md): new here? Start with this.
 - [Architecture](docs/architecture.md)
 - [Decision records](docs/decisions/)
 - [Engineering charter](docs/engineering-charter.md)
