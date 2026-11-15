@@ -1,11 +1,17 @@
 import { createSecretKey } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { type VisitorKey, visitorKeyFromClientIp } from '../common/api-caller';
 import {
+  PREVIEW_VISITOR_KEY,
+  visitorKeyFromClientIp,
+} from '../common/api-caller';
+import {
+  type ClientIpKey,
+  clientIpKey,
   decide,
   rateLimitKey,
   type RateLimitRule,
   SIGN_IN_LIMITS,
+  signInHits,
 } from './auth-rate-limit-rules';
 import {
   type NormalisedIdentifier,
@@ -18,8 +24,15 @@ const HMAC_KEY = createSecretKey(
 const OTHER_HMAC_KEY = createSecretKey(
   Buffer.from('fake-other-hmac-key-'.padEnd(64, '0')),
 );
-const IP = visitorKeyFromClientIp('203.0.113.7');
-const OTHER_IP = visitorKeyFromClientIp('203.0.113.8');
+
+function ipKey(header: string): ClientIpKey {
+  const key = clientIpKey(visitorKeyFromClientIp(header));
+  if (key === null) throw new Error(`${header} is not a client IP`);
+  return key;
+}
+
+const IP = ipKey('203.0.113.7');
+const OTHER_IP = ipKey('203.0.113.8');
 const FRIEREN = normaliseIdentifier('frieren@example.com');
 const HIMMEL = normaliseIdentifier('himmel');
 
@@ -32,6 +45,29 @@ describe('SIGN_IN_LIMITS', () => {
       identifierIp: { limit: 5, windowMs: 15 * 60_000 },
       identifier: { limit: 30, windowMs: 60 * 60_000 },
     });
+  });
+});
+
+describe('clientIpKey', () => {
+  it('keeps an IPv4 and an IPv6 /64 visitor key', () => {
+    expect(clientIpKey(visitorKeyFromClientIp('203.0.113.7'))).toBe(
+      '203.0.113.7',
+    );
+    expect(clientIpKey(visitorKeyFromClientIp('2001:db8:1:2::1'))).toBe(
+      '2001:db8:1:2::/64',
+    );
+  });
+
+  it.each([
+    ['a missing header (unknown)', undefined],
+    ['a malformed header (unknown)', 'not-an-ip'],
+    ['a list of IPs (unknown)', '203.0.113.7, 198.51.100.1'],
+  ])('refuses %s: never counted in a shared bucket', (_, header) => {
+    expect(clientIpKey(visitorKeyFromClientIp(header))).toBeNull();
+  });
+
+  it('refuses the shared preview bucket', () => {
+    expect(clientIpKey(PREVIEW_VISITOR_KEY)).toBeNull();
   });
 });
 
@@ -82,7 +118,7 @@ describe('rateLimitKey', () => {
       hex(
         rateLimitKey(HMAC_KEY, 'sign-in', 'identifierIp', [
           identifier as NormalisedIdentifier,
-          visitor as VisitorKey,
+          visitor as ClientIpKey,
         ]),
       );
 
@@ -93,18 +129,40 @@ describe('rateLimitKey', () => {
 
   it('counts a whole IPv6 /64 as one visitor', () => {
     expect(
-      hex(
-        rateLimitKey(HMAC_KEY, 'sign-in', 'ip', [
-          visitorKeyFromClientIp('2001:db8:1:2::1'),
-        ]),
-      ),
+      hex(rateLimitKey(HMAC_KEY, 'sign-in', 'ip', [ipKey('2001:db8:1:2::1')])),
     ).toBe(
       hex(
         rateLimitKey(HMAC_KEY, 'sign-in', 'ip', [
-          visitorKeyFromClientIp('2001:db8:1:2:ffff:ffff:ffff:ffff'),
+          ipKey('2001:db8:1:2:ffff:ffff:ffff:ffff'),
         ]),
       ),
     );
+  });
+});
+
+describe('signInHits', () => {
+  it('orders the keys ip, then (identifier, IP), then identifier, each with its own rule', () => {
+    expect(signInHits(HMAC_KEY, IP, FRIEREN)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'sign-in', 'ip', [IP]),
+        rule: SIGN_IN_LIMITS.ip,
+      },
+      {
+        key: rateLimitKey(HMAC_KEY, 'sign-in', 'identifierIp', [FRIEREN, IP]),
+        rule: SIGN_IN_LIMITS.identifierIp,
+      },
+      {
+        key: rateLimitKey(HMAC_KEY, 'sign-in', 'identifier', [FRIEREN]),
+        rule: SIGN_IN_LIMITS.identifier,
+      },
+    ]);
+  });
+
+  it('counts an email and a username of the same account apart (per spelling)', () => {
+    const [, , byEmail] = signInHits(HMAC_KEY, IP, FRIEREN);
+    const [, , byUsername] = signInHits(HMAC_KEY, IP, HIMMEL);
+
+    expect(hex(byEmail.key)).not.toBe(hex(byUsername.key));
   });
 });
 

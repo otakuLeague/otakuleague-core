@@ -5,18 +5,13 @@ import {
   decide,
   RATE_LIMIT_ALLOWED,
   type RateLimitDecision,
+  type RateLimitHits,
   type RateLimitKey,
   type RateLimitRule,
 } from './auth-rate-limit-rules';
 
-/** One key to count an attempt against, under its rule. */
-export interface RateLimitHit {
-  readonly key: RateLimitKey;
-  readonly rule: RateLimitRule;
-}
-
 /** A key's counter just after one attempt was counted. */
-export interface RateLimitCounter {
+interface RateLimitCounter {
   readonly count: number;
   readonly windowStart: Date;
 }
@@ -39,13 +34,12 @@ export class AuthRateLimiter {
   ) {}
 
   /**
-   * What a route calls. Counts one attempt against each key in order and stops at the first
+   * What a route calls, with keys from its builder (signInHits). Counts one attempt against
+   * each key in order and stops at the first
    * refusal: a refused attempt never counts against the later keys (ADR 0015 lockout arithmetic:
    * with the per-IP key first, one IP alone cannot use up an identifier's hourly budget).
    */
-  async check(
-    hits: readonly [RateLimitHit, ...RateLimitHit[]],
-  ): Promise<RateLimitDecision> {
+  async check(hits: RateLimitHits): Promise<RateLimitDecision> {
     const now = this.clock.now();
     for (const { key, rule } of hits) {
       const { count, windowStart } = await this.count(key, rule, now);
@@ -53,11 +47,6 @@ export class AuthRateLimiter {
       if (decision.kind === 'limited') return decision;
     }
     return RATE_LIMIT_ALLOWED;
-  }
-
-  /** Counts one attempt against one key and returns the counter, without deciding. */
-  hit(key: RateLimitKey, rule: RateLimitRule): Promise<RateLimitCounter> {
-    return this.count(key, rule, this.clock.now());
   }
 
   /**

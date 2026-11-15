@@ -1,11 +1,13 @@
 import { createHmac } from 'node:crypto';
 import { inspect } from 'node:util';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { describe, expect, it } from 'vitest';
+import { redactText } from '@otakuleague/shared-types';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CryptoRandom } from '../common/clock-and-random.module';
 import type { EnvironmentVariables } from '../config/environment';
 import { SequentialRandom } from '../testing/test-app';
-import { EnvironmentAuthSecrets } from './auth-secrets';
+import { EnvironmentAuthSecrets, GENERATED_KEY_WARNING } from './auth-secrets';
 
 const FAKE_HMAC_KEY = 'fake-auth-hmac-key-'.padEnd(64, '0');
 
@@ -75,5 +77,36 @@ describe('EnvironmentAuthSecrets', () => {
 
     expect(inspect(secrets)).not.toContain('fake-auth-hmac-key');
     expect(JSON.stringify(secrets)).not.toContain('fake-auth-hmac-key');
+  });
+
+  describe('start-up warning', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('warns once, readable after redaction, when the key was drawn', () => {
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      secretsFrom({ NODE_ENV: 'development' }).onApplicationBootstrap();
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(GENERATED_KEY_WARNING);
+      expect(redactText(GENERATED_KEY_WARNING)).toBe(GENERATED_KEY_WARNING);
+    });
+
+    it('stays silent when the key is configured', () => {
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      secretsFrom({
+        NODE_ENV: 'development',
+        AUTH_HMAC_KEY: FAKE_HMAC_KEY,
+      }).onApplicationBootstrap();
+
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 });

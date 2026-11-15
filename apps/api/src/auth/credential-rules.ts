@@ -1,8 +1,11 @@
-/** Password length bounds in code points after NFC (ADR 0015, parity with the old site). */
+/** Password length bounds, in Unicode code points after NFC (passwordLength; ADR 0015, parity). */
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
 
-/** Longest identifier: an email address is at most 254 characters (RFC 5321 path limit). */
+/**
+ * Longest identifier as typed, in UTF-16 code units (what `@MaxLength` counts), checked on the
+ * raw input before normaliseIdentifier. 254 is the longest email address (RFC 5321 path limit).
+ */
 export const IDENTIFIER_MAX = 254;
 
 declare const identifierBrand: unique symbol;
@@ -19,7 +22,10 @@ export function normalisePassword(password: string): string {
   return password.normalize('NFC');
 }
 
-/** Code points after NFC: a combining accent or an emoji counts once, as a person would count. */
+/**
+ * Unicode code points after NFC. An accent that NFC composes and an emoji outside the BMP count
+ * once; a sequence (a ZWJ emoji, an accent with no composed form) counts each code point.
+ */
 export function passwordLength(password: string): number {
   return [...normalisePassword(password)].length;
 }
