@@ -1,6 +1,6 @@
 # Roadmap to launch
 
-**Launch: Mon 2026-11-30** · **Feature freeze: Fri 2026-11-27** · December: new features (OTA-164; was Dec 28).
+**Launch: no fixed date** (Farouk, 2026-11-15, OTA-149): launch and feature freeze when Farouk decides; new features after launch. The weekly milestones below are targets, not deadlines.
 The autopilot builds; Farouk's time goes to reviews and human-only steps. Tickets live in Linear project **v1 Launch** (one milestone per stage). `/roadmap` compares this file with Linear; the launch date never moves without an explicit decision recorded here.
 
 **v1 goal:** everything the current otakuleague.com offers, rebuilt with the new design, fewer bugs and measurably faster pages.
