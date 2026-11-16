@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Clock } from '../common/clock-and-random.module';
+import { Clock, Random } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
-import { hashSessionToken, sessionValidity } from './session-rules';
+import {
+  hashSessionToken,
+  SESSION_IDLE_MS,
+  SESSION_TOKEN_BYTES,
+  sessionValidity,
+} from './session-rules';
 
 /** The member a request acts as: built from the session row only, never from the request. */
 export interface SignedInSession {
@@ -15,6 +20,18 @@ export type SessionResolution =
   | { readonly kind: 'signed_out' };
 
 const SIGNED_OUT: SessionResolution = { kind: 'signed_out' };
+
+/** A new session as the client gets it: the token exists only here and in the member's cookie. */
+export interface IssuedSession {
+  readonly sessionToken: string;
+  readonly expiresAt: Date;
+}
+
+/** Whom a new session belongs to, and the user epoch read in the same lookup as the password. */
+export interface SessionOwner {
+  readonly userId: string;
+  readonly sessionEpoch: number;
+}
 
 interface SessionRow {
   readonly id: string;
@@ -31,7 +48,37 @@ export class SessionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
+    private readonly random: Random,
   ) {}
+
+  /**
+   * A fresh token from Random (never from the client: no fixation), stored only as its SHA-256.
+   * The epoch is the one read with the password hash, so a password reset racing this sign-in
+   * leaves a session that is already revoked (ADR 0015). Logs nothing.
+   */
+  async create(owner: SessionOwner): Promise<IssuedSession> {
+    const sessionToken = this.random
+      .bytes(SESSION_TOKEN_BYTES)
+      .toString('base64url');
+    const createdAt = this.clock.now();
+    const expiresAt = new Date(createdAt.getTime() + SESSION_IDLE_MS);
+    await this.prisma.session.create({
+      data: {
+        id: this.random.uuid(),
+        tokenHash: hashSessionToken(sessionToken),
+        userId: owner.userId,
+        sessionEpoch: owner.sessionEpoch,
+        createdAt,
+        expiresAt,
+      },
+    });
+    return { sessionToken, expiresAt };
+  }
+
+  /** Sign-out: the row goes, so the next request with the token is refused (0 s, ADR 0015). */
+  async delete(sessionId: string): Promise<void> {
+    await this.prisma.session.deleteMany({ where: { id: sessionId } });
+  }
 
   /**
    * One lookup by the token's digest (unique index) joined to its user, verified users only

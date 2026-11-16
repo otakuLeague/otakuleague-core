@@ -9,7 +9,10 @@ export const SESSION_RENEW_BELOW_MS = 15 * DAY_MS;
 /** Hard stop after creation, however often the session was renewed. */
 export const SESSION_MAX_AGE_MS = 180 * DAY_MS;
 
-/** 32 random bytes in base64url without padding: exactly 43 characters. */
+/** Random bytes in a new session token (ADR 0015). */
+export const SESSION_TOKEN_BYTES = 32;
+
+/** SESSION_TOKEN_BYTES in base64url without padding: exactly 43 characters. */
 export const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 const BEARER_PREFIX = 'Bearer ';

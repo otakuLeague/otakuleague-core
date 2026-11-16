@@ -207,4 +207,4 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
-export type { MeResponse } from './auth';
+export type { MeResponse, SignInRequest, SignInResponse } from './auth';
