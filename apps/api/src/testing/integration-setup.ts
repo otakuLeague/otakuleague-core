@@ -22,6 +22,8 @@ process.env.INTERNAL_API_KEY = '';
 process.env.INTERNAL_API_KEY_PREVIOUS = '';
 process.env.INTERNAL_API_KEY_PREVIEW = '';
 process.env.INTERNAL_API_KEY_REQUIRED = '';
+// Same for the auth HMAC key (ADR 0015): unset outside production means a random key per process.
+process.env.AUTH_HMAC_KEY = '';
 
 beforeAll(async () => {
   const maintenance = connectMaintenance(templateUrl);

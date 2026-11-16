@@ -3,6 +3,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ApiException } from '../common/api.exception';
 import { Clock, Random } from '../common/clock-and-random.module';
 import { Argon2id } from './argon2id';
+import { normalisePassword } from './credential-rules';
 import { HashSlots } from './hash-slots';
 import {
   ARGON2_PARAMS,
@@ -23,7 +24,7 @@ const BUSY_WARN_INTERVAL_MS = 60_000;
 
 /** NFC UTF-8 bytes, or null when over MAX_PASSWORD_BYTES. */
 function passwordBytes(password: string): Buffer | null {
-  const bytes = Buffer.from(password.normalize('NFC'), 'utf8');
+  const bytes = Buffer.from(normalisePassword(password), 'utf8');
   return bytes.length > MAX_PASSWORD_BYTES ? null : bytes;
 }
 

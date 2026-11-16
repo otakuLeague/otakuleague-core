@@ -6,11 +6,11 @@ const REDACTED = '[redacted]';
 const MAX_TEXT_LENGTH = 8192;
 
 const SENSITIVE_KEY =
-  /passw(?:or)?d|^pwd$|secret|token|authorization|^auth$|cookie|api[-_]?key|private[-_]?key|session|credential|jwt|^otp$|^dsn$/i;
+  /passw(?:or)?d|^pwd$|secret|token|authorization|^auth$|cookie|api[-_]?key|private[-_]?key|session|credential|jwt|hmac|^otp$|^dsn$/i;
 
 // Compound names too (passwordHash, refresh_token_hash, secretKey): word characters around the keyword.
 const KEY_VALUE =
-  /([\w-]{0,32}(?:passw(?:or)?d|pwd|secret|token|api[-_]?key|private[-_]?key|authorization|cookie|session[-_]?id|jwt|otp|dsn)[\w-]{0,32})(["']?\s{0,8}[:=]\s{0,8})("[^"\n]{0,256}"|'[^'\n]{0,256}'|[^\s"',;&}]{1,4096})/gi;
+  /([\w-]{0,32}(?:passw(?:or)?d|pwd|secret|token|api[-_]?key|private[-_]?key|authorization|cookie|session[-_]?id|jwt|hmac|otp|dsn)[\w-]{0,32})(["']?\s{0,8}[:=]\s{0,8})("[^"\n]{0,256}"|'[^'\n]{0,256}'|[^\s"',;&}]{1,4096})/gi;
 
 // Credentials in any URL, such as a database connection string; runs to the last `@`
 // so a password with an unencoded `@` is masked whole.

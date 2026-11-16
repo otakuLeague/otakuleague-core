@@ -270,3 +270,14 @@ model Session {
   @@index([userId])
   @@map("auth_session")
 }
+
+// One counter per rate-limit key (ADR 0015), written only by AuthRateLimiter's upsert. key is an
+// HMAC-SHA256 (AUTH_HMAC_KEY) of the route, the scope and the IP and/or identifier, never the
+// raw values. CHECK constraints (migration auth_rate_limit): key of 32 bytes, count at least 1.
+model AuthRateLimit {
+  key         Bytes    @id
+  windowStart DateTime @map("window_start") @db.Timestamptz(3)
+  count       Int
+
+  @@map("auth_rate_limit")
+}

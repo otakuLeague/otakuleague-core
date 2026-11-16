@@ -25,6 +25,17 @@ void describe('isApiError', () => {
     );
   });
 
+  void it('accepts every auth error code a sign-in can answer (ADR 0015)', () => {
+    for (const code of [
+      'UNAUTHORIZED',
+      'AUTH_BUSY',
+      'INVALID_CREDENTIALS',
+      'TOO_MANY_REQUESTS',
+    ]) {
+      assert.equal(isApiError({ error: { code, message: 'x' } }), true, code);
+    }
+  });
+
   void it('accepts VALIDATION_FAILED with details, including an empty list', () => {
     const issue = { field: 'studio.name', message: 'must be a string' };
 

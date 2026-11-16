@@ -10,6 +10,8 @@ async function createAppWith(
   nodeEnv: 'production' | 'development' | 'test',
 ): Promise<INestApplication<App>> {
   vi.stubEnv('NODE_ENV', nodeEnv);
+  // Production refuses to boot without it (ADR 0015); an obvious fake, never a real key.
+  vi.stubEnv('AUTH_HMAC_KEY', 'fake-auth-hmac-key-'.padEnd(64, '0'));
   vi.resetModules();
   const { createTestApp } = await import('../testing/test-app.js');
   return createTestApp();
