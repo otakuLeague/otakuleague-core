@@ -8,7 +8,11 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
-import { IDENTIFIER_MAX, PASSWORD_MAX, passwordLength } from './credential-rules';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_MAX,
+  passwordLength,
+} from './credential-rules';
 
 /** PostgreSQL cannot store or compare U+0000 in text (22021): refused here, never a 500. */
 @ValidatorConstraint({ name: 'withoutNul' })
