@@ -3,10 +3,12 @@
 # The workflow reads this file from main, so a PR cannot loosen the rules it is checked against.
 # docs/AUTOPILOT.md describes the same list in words.
 #
-# Farouk, 2026-11-16 (OTA-202): everything else merges on its own once CI is green and the Fable
+# Farouk, 2026-11-16 (OTA-202): everything else (migrations, dependencies, .claude/, ...) merges on its own once CI is green and the Fable
 # reviews have no Critical (migrations: db-migration-checker; workflows, dependencies, .claude/,
-# CLAUDE.md, scripts, configs, deploy files: security-reviewer). Only the merge gate itself stays
-# here, so the autopilot can never change the rule that checks its own PRs.
+# CLAUDE.md, scripts, configs, deploy files: security-reviewer). Only the merge gate stays here:
+# this list, and every workflow and action, because any workflow on main can get a write token
+# (merge PRs, push to main) or read main-only secrets such as the production database URL.
 
 .github/autopilot-protected-paths
-.github/workflows/autopilot-merge.yml
+.github/workflows/*
+.github/actions/*
