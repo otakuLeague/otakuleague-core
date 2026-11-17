@@ -104,18 +104,34 @@ void describe('redactText', () => {
     assert.ok(redacted.endsWith('[truncated]'));
   });
 
-  void it('stays fast on request paths built to backtrack (ReDoS)', () => {
-    for (const path of [
-      `/${'-eyJ'.repeat(4000)}`,
-      `/${'Bearer '.repeat(2300)}`,
-      `/${'a://'.repeat(4000)}`,
-      `/${'password="'.repeat(1600)}`,
-      `/${'a.'.repeat(8000)}`,
-    ]) {
-      const started = performance.now();
+  void it('stays near-linear on request paths built to backtrack (ReDoS)', () => {
+    const bestOfThreeMs = (path: string): number => {
       redactText(path);
-      const elapsed = performance.now() - started;
-      assert.ok(elapsed < 20, `${path.slice(0, 12)}… took ${elapsed} ms`);
+      let best = Infinity;
+      for (let run = 0; run < 3; run += 1) {
+        const started = performance.now();
+        redactText(path);
+        best = Math.min(best, performance.now() - started);
+      }
+      return best;
+    };
+
+    for (const [unit, count] of [
+      ['-eyJ', 500],
+      ['Bearer ', 285],
+      ['a://', 500],
+      ['password="', 200],
+      ['a.', 1000],
+    ] as const) {
+      const small = bestOfThreeMs(`/${unit.repeat(count)}`);
+      const large = bestOfThreeMs(`/${unit.repeat(count * 4)}`);
+      const ratio = large / Math.max(small, 0.5);
+      // Inputs stay under the 8 KB cap so 4x is not truncated. Linear is ~4, quadratic ~16.
+      assert.ok(
+        ratio < 8,
+        `${unit}: 4x input took ${ratio.toFixed(1)}x longer (${small} ms -> ${large} ms)`,
+      );
+      assert.ok(large < 200, `${unit}: 4x input took ${large} ms`);
     }
   });
 
