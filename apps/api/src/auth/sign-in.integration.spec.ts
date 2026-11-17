@@ -26,6 +26,8 @@ import {
 } from './auth.controller';
 import { CLIENT_IP_REQUIRED_MESSAGE } from './credential.guard';
 import { PasswordHasher } from './password-hasher';
+import { formatPhc } from './password-phc';
+import { PasswordRehasher } from './password-rehasher';
 import { SESSION_REQUIRED_MESSAGE } from './session.guard';
 import { hashSessionToken, SESSION_TOKEN_PATTERN } from './session-rules';
 
@@ -94,6 +96,17 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
   let prisma: PrismaService;
   let memberHash: string;
   let accentHash: string;
+  /** PASSWORD at an older cost (m=8192, t=3), as an earlier release would have stored it. */
+  let oldCostHash: string;
+  /** `settle()` waits for the rehashes sign-in started without awaiting them. */
+  let rehasher: PasswordRehasher;
+  const storedHash = async () =>
+    (
+      await prisma.user.findUniqueOrThrow({
+        where: { id: MEMBER.id },
+        select: { passwordHash: true },
+      })
+    ).passwordHash;
 
   const signIn = (body: object, headers: Record<string, string> = WEB) =>
     request(app.getHttpServer()).post('/auth/sign-in').set(headers).send(body);
@@ -144,6 +157,19 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
     const hasher = app.get(PasswordHasher);
     memberHash = await hasher.hash(PASSWORD);
     accentHash = await hasher.hash(COMPOSED_128);
+    const oldCost = { memoryKiB: 8_192, passes: 3, parallelism: 1 };
+    const salt = Buffer.alloc(16, 7);
+    oldCostHash = formatPhc(
+      oldCost,
+      salt,
+      await argon2.derive({
+        ...oldCost,
+        password: Buffer.from(PASSWORD),
+        salt,
+        tagLength: 32,
+      }),
+    );
+    rehasher = app.get(PasswordRehasher);
   });
 
   beforeEach(async () => {
@@ -250,6 +276,69 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
       expect(await prisma.session.count()).toBe(0);
     },
   );
+
+  it('rehashes an older cost after the sign-in, keeping the epoch and the session', async () => {
+    await seedMember({ passwordHash: oldCostHash });
+    const attempt = { identifier: MEMBER.email, password: PASSWORD };
+
+    const token = await tokenOf(attempt);
+    await rehasher.settle();
+
+    const rehashed = await prisma.user.findUniqueOrThrow({
+      where: { id: MEMBER.id },
+    });
+    expect(rehashed.passwordHash).toMatch(
+      /^\$argon2id\$v=19\$m=19456,t=2,p=1\$/,
+    );
+    expect(rehashed.sessionEpoch).toBe(MEMBER.sessionEpoch);
+    expect(argon2.derives).toBe(2);
+    await me(token).expect(200);
+    // The new hash matches the same password, and is current: no second rehash.
+    await tokenOf(attempt);
+    await rehasher.settle();
+    expect(argon2.derives).toBe(3);
+    expect(await storedHash()).toBe(rehashed.passwordHash);
+  });
+
+  it('leaves a hash at the current cost untouched', async () => {
+    await seedMember();
+
+    await tokenOf({ identifier: MEMBER.email, password: PASSWORD });
+    await rehasher.settle();
+
+    expect(argon2.derives).toBe(1);
+    expect(await storedHash()).toBe(memberHash);
+  });
+
+  it.each<[string, boolean, string]>([
+    ['a wrong password', true, WRONG_PASSWORD],
+    ['an unverified email with the right password', false, PASSWORD],
+  ])(
+    'never rehashes after a failed sign-in (%s)',
+    async (_, verified, password) => {
+      await seedMember({ verified, passwordHash: oldCostHash });
+
+      await signIn({ identifier: MEMBER.email, password }).expect(401);
+      await rehasher.settle();
+
+      expect(argon2.derives).toBe(1);
+      expect(await storedHash()).toBe(oldCostHash);
+    },
+  );
+
+  it('never overwrites a hash that changed since the sign-in lookup', async () => {
+    // The row already holds another hash, as after a password change between lookup and write.
+    await seedMember();
+
+    await rehasher.schedule({
+      userId: MEMBER.id,
+      password: PASSWORD,
+      storedHash: oldCostHash,
+    });
+
+    expect(argon2.derives).toBe(1);
+    expect(await storedHash()).toBe(memberHash);
+  });
 
   it('counts a success too and refuses the 6th attempt per (identifier, IP) without verifying', async () => {
     await seedMember();

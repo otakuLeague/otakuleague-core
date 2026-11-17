@@ -8,6 +8,7 @@ import { CredentialGuard } from './credential.guard';
 import { HashSlots } from './hash-slots';
 import { MeController } from './me.controller';
 import { PasswordHasher } from './password-hasher';
+import { PasswordRehasher } from './password-rehasher';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
 import { SignInService } from './sign-in.service';
@@ -19,6 +20,7 @@ import { SignInService } from './sign-in.service';
     SessionService,
     SessionGuard,
     PasswordHasher,
+    PasswordRehasher,
     HashSlots,
     { provide: Argon2id, useClass: NodeArgon2id },
     { provide: AuthSecrets, useClass: EnvironmentAuthSecrets },

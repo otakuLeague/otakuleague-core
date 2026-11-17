@@ -66,16 +66,20 @@ export function parsePhc(phc: string): ParsedPhc | null {
   return { ...cost, salt: saltBytes, tag: tagBytes };
 }
 
-/** True when the stored hash is unreadable or any of its parameters differs from ARGON2_PARAMS. */
+/**
+ * True when the stored hash is unreadable or any of its parameters is below ARGON2_PARAMS.
+ * Only weaker, never just different: a rollback or an older instance during a deploy must not
+ * rewrite a stronger hash with its lower constants.
+ */
 export function needsRehash(phc: string): boolean {
   const parsed = parsePhc(phc);
   return (
     parsed === null ||
-    parsed.memoryKiB !== ARGON2_PARAMS.memoryKiB ||
-    parsed.passes !== ARGON2_PARAMS.passes ||
-    parsed.parallelism !== ARGON2_PARAMS.parallelism ||
-    parsed.salt.length !== ARGON2_PARAMS.saltLength ||
-    parsed.tag.length !== ARGON2_PARAMS.tagLength
+    parsed.memoryKiB < ARGON2_PARAMS.memoryKiB ||
+    parsed.passes < ARGON2_PARAMS.passes ||
+    parsed.parallelism < ARGON2_PARAMS.parallelism ||
+    parsed.salt.length < ARGON2_PARAMS.saltLength ||
+    parsed.tag.length < ARGON2_PARAMS.tagLength
   );
 }
 

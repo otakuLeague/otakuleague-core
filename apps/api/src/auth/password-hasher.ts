@@ -1,10 +1,11 @@
 import { timingSafeEqual } from 'node:crypto';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import type { ApiErrorCode } from '@otakuleague/shared-types';
 import { ApiException } from '../common/api.exception';
 import { Clock, Random } from '../common/clock-and-random.module';
-import { Argon2id } from './argon2id';
+import { Argon2id, type Argon2idInput } from './argon2id';
 import { normalisePassword } from './credential-rules';
-import { HashSlots } from './hash-slots';
+import { HashSlots, type HashTry } from './hash-slots';
 import {
   ARGON2_PARAMS,
   type Argon2Cost,
@@ -32,17 +33,28 @@ function passwordBytes(password: string): Buffer | null {
   return bytes.length > MAX_PASSWORD_BYTES ? null : bytes;
 }
 
+export const AUTH_BUSY = 'AUTH_BUSY' satisfies ApiErrorCode;
+
 /** 429, not 503: the filter logs every 5xx with a stack, a flood would be one line each (ADR 0019). */
 function authBusy(): ApiException {
   return new ApiException(
     HttpStatus.TOO_MANY_REQUESTS,
     {
-      code: 'AUTH_BUSY',
+      code: AUTH_BUSY,
       message:
         'Too many passwords are being checked right now. Try again in a moment.',
     },
     { retryAfterSeconds: 1 },
   );
+}
+
+function argon2Input(
+  password: Buffer,
+  salt: Buffer,
+  cost: Argon2Cost & { readonly tagLength: number },
+): Argon2idInput {
+  const { memoryKiB, passes, parallelism, tagLength } = cost;
+  return { password, salt, memoryKiB, passes, parallelism, tagLength };
 }
 
 function passwordTooLong(): ApiException {
@@ -73,6 +85,18 @@ export class PasswordHasher {
     return formatPhc(ARGON2_PARAMS, salt, tag);
   }
 
+  /** Like `hash`, for optional work: never queued and never AUTH_BUSY, `skipped` when no slot is free. */
+  async tryHash(password: string): Promise<HashTry<string>> {
+    const bytes = passwordBytes(password);
+    if (bytes === null) throw passwordTooLong();
+    const salt = this.random.bytes(ARGON2_PARAMS.saltLength);
+    const run = await this.slots.tryRun(() =>
+      this.argon2id.derive(argon2Input(bytes, salt, ARGON2_PARAMS)),
+    );
+    if (run.kind === 'skipped') return run;
+    return { kind: 'done', value: formatPhc(ARGON2_PARAMS, salt, run.value) };
+  }
+
   /** No hash, an unreadable one or an over-long password: one dummy verification, then a mismatch. */
   async verify(password: string, phc: string | null): Promise<PasswordCheck> {
     const bytes = passwordBytes(password);
@@ -97,14 +121,7 @@ export class PasswordHasher {
     cost: Argon2Cost & { readonly tagLength: number },
   ): Promise<Buffer> {
     const run = await this.slots.run(() =>
-      this.argon2id.derive({
-        password,
-        salt,
-        memoryKiB: cost.memoryKiB,
-        passes: cost.passes,
-        parallelism: cost.parallelism,
-        tagLength: cost.tagLength,
-      }),
+      this.argon2id.derive(argon2Input(password, salt, cost)),
     );
     if (run.kind === 'busy') {
       this.warnBusy();
