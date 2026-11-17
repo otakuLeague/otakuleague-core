@@ -8,6 +8,7 @@ import {
   type ClientIpKey,
   clientIpKey,
   decide,
+  RATE_LIMIT_LONGEST_WINDOW_MS,
   rateLimitKey,
   type RateLimitRule,
   SIGN_IN_LIMITS,
@@ -45,6 +46,21 @@ describe('SIGN_IN_LIMITS', () => {
       identifierIp: { limit: 5, windowMs: 15 * 60_000 },
       identifier: { limit: 30, windowMs: 60 * 60_000 },
     });
+  });
+});
+
+describe('RATE_LIMIT_LONGEST_WINDOW_MS', () => {
+  // A new route's limits join this list: the auth cleanup must never delete a running window.
+  const RULES: readonly RateLimitRule[] = [...Object.values(SIGN_IN_LIMITS)];
+
+  it('is at least every rule window, so the cleanup only deletes ended windows', () => {
+    for (const rule of RULES) {
+      expect(rule.windowMs).toBeLessThanOrEqual(RATE_LIMIT_LONGEST_WINDOW_MS);
+    }
+  });
+
+  it('keeps keyed hashes of IPs and identifiers at most a day past their window start', () => {
+    expect(RATE_LIMIT_LONGEST_WINDOW_MS).toBe(24 * 60 * 60_000);
   });
 });
 

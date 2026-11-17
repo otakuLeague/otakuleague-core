@@ -14,6 +14,13 @@ export interface RateLimitRule {
   readonly windowMs: number;
 }
 
+/**
+ * The auth cleanup deletes a counter once its window started this long ago, so no rule's
+ * windowMs may exceed it (a test checks every rule). Keyed hashes of IPs and identifiers thus
+ * live at most this plus one cleanup interval, about 48 h (ADR 0015 privacy note).
+ */
+export const RATE_LIMIT_LONGEST_WINDOW_MS = 24 * HOUR_MS;
+
 /** Sign-in limits, ADR 0015 "Rate limits" (requirement 3); a test pins these numbers. */
 export const SIGN_IN_LIMITS = {
   ip: { limit: 30, windowMs: 15 * MINUTE_MS },
