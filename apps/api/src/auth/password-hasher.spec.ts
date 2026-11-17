@@ -210,6 +210,22 @@ describe('PasswordHasher', () => {
     expect(argon2.calls).toHaveLength(1);
   });
 
+  it('refuses a raw string over 4 x the byte cap before normalising it', async () => {
+    const { argon2, hasher } = setup();
+    // 4097 UTF-16 units of combining marks: slow to NFC, so never normalised.
+    const marks = `a${'\u0301'.repeat(4 * MAX_PASSWORD_BYTES)}`;
+    const normalize = vi.spyOn(String.prototype, 'normalize');
+
+    await expect(refusalOf(hasher.hash(marks))).resolves.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      body: { error: { code: 'BAD_REQUEST' } },
+    });
+    await expect(hasher.verify(marks, null)).resolves.toBe('mismatch');
+    expect(normalize).not.toHaveBeenCalled();
+    normalize.mockRestore();
+    expect(argon2.calls).toHaveLength(1);
+  });
+
   it('verifies an over-long password against the dummy and answers mismatch', async () => {
     const { argon2, hasher } = setup();
     const phc = await hasher.hash(TOO_LONG.slice(1));

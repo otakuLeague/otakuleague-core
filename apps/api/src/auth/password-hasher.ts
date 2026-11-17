@@ -22,8 +22,12 @@ export const MAX_PASSWORD_BYTES = 1024;
 /** Refusals at the cap are logged at most this often. */
 const BUSY_WARN_INTERVAL_MS = 60_000;
 
-/** NFC UTF-8 bytes, or null when over MAX_PASSWORD_BYTES. */
+/** UTF-16 units refused before NFC runs (slow on long runs of combining marks): never over the cap after NFC in practice. */
+const MAX_PASSWORD_UNITS = 4 * MAX_PASSWORD_BYTES;
+
+/** NFC UTF-8 bytes, or null when over MAX_PASSWORD_BYTES (or over MAX_PASSWORD_UNITS before NFC). */
 function passwordBytes(password: string): Buffer | null {
+  if (password.length > MAX_PASSWORD_UNITS) return null;
   const bytes = Buffer.from(normalisePassword(password), 'utf8');
   return bytes.length > MAX_PASSWORD_BYTES ? null : bytes;
 }
