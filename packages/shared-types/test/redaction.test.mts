@@ -104,18 +104,40 @@ void describe('redactText', () => {
     assert.ok(redacted.endsWith('[truncated]'));
   });
 
-  void it('stays fast on request paths built to backtrack (ReDoS)', () => {
-    for (const path of [
-      `/${'-eyJ'.repeat(4000)}`,
-      `/${'Bearer '.repeat(2300)}`,
-      `/${'a://'.repeat(4000)}`,
-      `/${'password="'.repeat(1600)}`,
-      `/${'a.'.repeat(8000)}`,
-    ]) {
+  void it('stays near-linear on request paths built to backtrack (ReDoS)', () => {
+    // Floor for time(n): below this, timer resolution makes the ratio noise.
+    const MIN_BASELINE_MS = 0.05;
+    const timeMs = (path: string): number => {
       const started = performance.now();
       redactText(path);
-      const elapsed = performance.now() - started;
-      assert.ok(elapsed < 20, `${path.slice(0, 12)}… took ${elapsed} ms`);
+      return performance.now() - started;
+    };
+
+    // `-eyJ` and `a.` guard the WORD_RUN split; the others guard their own pattern.
+    for (const [unit, count] of [
+      ['-eyJ', 500],
+      ['Bearer ', 285],
+      ['a://', 500],
+      ['password="', 200],
+      ['a.', 1000],
+    ] as const) {
+      const smallPath = `/${unit.repeat(count)}`;
+      const largePath = `/${unit.repeat(count * 4)}`;
+      timeMs(smallPath);
+      timeMs(largePath);
+      let small = Infinity;
+      let large = Infinity;
+      // Interleaved best-of-25: a busy neighbour hits both sizes alike.
+      for (let round = 0; round < 25; round += 1) {
+        small = Math.min(small, timeMs(smallPath));
+        large = Math.min(large, timeMs(largePath));
+      }
+      const ratio = large / Math.max(small, MIN_BASELINE_MS);
+      // 4x the input: linear is ~4 (p95 ~4.5), injected quadratics are ~9-15x.
+      assert.ok(
+        ratio < 8,
+        `${unit}: 4x input took ${ratio.toFixed(2)}x longer (${small.toFixed(2)} ms -> ${large.toFixed(2)} ms)`,
+      );
     }
   });
 
