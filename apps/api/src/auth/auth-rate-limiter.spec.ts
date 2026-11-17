@@ -93,11 +93,12 @@ describe('AuthRateLimiter.check', () => {
     await expect(limiter.check(HITS)).rejects.toBe(outage);
   });
 
-  it('refuses a rule whose window outlives the cleanup cutoff, before counting anything', async () => {
-    const { limiter, keysCounted } = limiterAnswering(counts(1));
+  it('refuses a rule whose window outlives the cleanup cutoff, before counting any key', async () => {
+    const { limiter, keysCounted } = limiterAnswering(counts(1, 1));
     const tooLong = [
+      IP_HIT,
       {
-        key: IP_HIT.key,
+        key: PAIR_HIT.key,
         rule: { limit: 5, windowMs: RATE_LIMIT_LONGEST_WINDOW_MS + 1 },
       },
     ] as unknown as RateLimitHits;

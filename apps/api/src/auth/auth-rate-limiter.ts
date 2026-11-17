@@ -41,6 +41,15 @@ export class AuthRateLimiter {
    * with the per-IP key first, one IP alone cannot use up an identifier's hourly budget).
    */
   async check(hits: RateLimitHits): Promise<RateLimitDecision> {
+    // The cleanup deletes a counter this long after its window started: a longer window would
+    // lose its count mid-window, so such a rule fails the attempt before any key is counted.
+    if (
+      hits.some(({ rule }) => !(rule.windowMs <= RATE_LIMIT_LONGEST_WINDOW_MS))
+    ) {
+      throw new Error(
+        'A rate-limit window is longer than RATE_LIMIT_LONGEST_WINDOW_MS',
+      );
+    }
     const now = this.clock.now();
     for (const { key, rule } of hits) {
       const { count, windowStart } = await this.count(key, rule, now);
@@ -62,13 +71,6 @@ export class AuthRateLimiter {
     rule: RateLimitRule,
     now: Date,
   ): Promise<RateLimitCounter> {
-    // The cleanup deletes a counter this long after its window started: a longer window would
-    // lose its count mid-window, so it is refused before anything is counted.
-    if (!(rule.windowMs <= RATE_LIMIT_LONGEST_WINDOW_MS)) {
-      throw new Error(
-        'A rate-limit window is longer than RATE_LIMIT_LONGEST_WINDOW_MS',
-      );
-    }
     const start = now.toISOString();
     const ended = new Date(now.getTime() - rule.windowMs).toISOString();
     const [row] = await this.prisma.$queryRaw<StoredCounter[]>`

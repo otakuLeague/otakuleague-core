@@ -41,17 +41,18 @@ const AUTH_CLEANUP_STEPS: readonly AuthCleanupStep[] = [
   },
 ];
 
-const PRISMA_ERROR_CODE = /^P\d{4}$/;
+/** A Prisma code (P1001), a Postgres SQLSTATE (40P01) or a Node errno (ECONNREFUSED). */
+const ERROR_CODE = /^(?:P\d{4}|[0-9A-Z]{5}|E[A-Z]+)$/;
 const ERROR_CLASS_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 
-/** A Prisma code (P1001) or an error class name: never a message, which can quote parameters. */
+/** A known error code shape, else an error class name: never a message, which can quote parameters. */
 function errorKind(error: unknown): string {
   if (
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
     typeof error.code === 'string' &&
-    PRISMA_ERROR_CODE.test(error.code)
+    ERROR_CODE.test(error.code)
   ) {
     return error.code;
   }
@@ -122,8 +123,17 @@ export class AuthCleanupScheduler implements OnModuleInit, OnModuleDestroy {
     } catch (error: unknown) {
       const kind = errorKind(error);
       this.logger.warn(`Auth cleanup step failed: ${step.label} (${kind})`);
-      this.alerts.stepFailed(step.label, kind);
+      this.alertQuietly(step.label, kind);
       return 'failed';
+    }
+  }
+
+  /** A failing alert must not stop the remaining steps: the warning above already went out. */
+  private alertQuietly(label: string, kind: string): void {
+    try {
+      this.alerts.stepFailed(label, kind);
+    } catch {
+      // Nothing else to report it to.
     }
   }
 }

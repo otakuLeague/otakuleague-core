@@ -145,7 +145,7 @@ sequenceDiagram
 - **OTA-140:** reset flow as above; avatar storage and Settings are not decided here and should be split out.
 - **OTA-178, Farouk:** Brevo account (2FA, tracking off), domain DNS (DKIM, DMARC), env vars on Railway and Vercel, the Vercel checklist.
 - **OTA-179:** Build: Google sign-in (plus Farouk's Google Cloud OAuth client).
-- **OTA-149, OTA-147, OTA-152:** cutover steps above; privacy page (Brevo as processor, the session cookie, keyed hashes of IPs and identifiers kept under about 48 h: the longest window plus the daily cleanup); `Viewer` in the header.
+- **OTA-149, OTA-147, OTA-152:** cutover steps above; privacy page (Brevo as processor, the session cookie, keyed hashes of IPs and identifiers kept under about 48 h: the longest window plus the daily cleanup, and never in the nightly backups; never-verified accounts and expired sessions do stay in those encrypted backups for their 60 days); `Viewer` in the header.
 
 ## Sources (checked 2026-11-12)
 - npm registry (`registry.npmjs.org`): `better-auth`, `@thallesp/nestjs-better-auth`, `passport`, `passport-local`, `passport-google-oauth20`, `@nestjs/passport`, `lucia`: versions, dates, licences, peers.

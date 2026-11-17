@@ -17,7 +17,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EnvironmentInternalKeySettings } from '../common/internal-key.guard';
 import type { EnvironmentVariables } from '../config/environment';
 import { createTestApp } from '../testing/test-app';
-import { initSentry } from './sentry';
+import { captureBackgroundStepFailure, initSentry } from './sentry';
 
 // An obvious fake of a valid shape (64 characters, like `openssl rand -hex 32`).
 const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
@@ -89,6 +89,37 @@ describe('Sentry in the API', () => {
     fakeSentry?.closeAllConnections();
     fakeSentry?.close();
     fakeSentry = undefined;
+  });
+
+  it('sends a failed background step as a warning: its message and tags, no error text', async () => {
+    const { server, dsn, envelopes } = await startFakeSentry('answer');
+    fakeSentry = server;
+    initSentry({ dsn, environment: 'test', release: 'release-under-test' });
+
+    captureBackgroundStepFailure('Auth cleanup', 'sessions', 'P1001');
+    await Sentry.flush(2000);
+
+    const [envelope] = errorEvents(envelopes);
+    const event = JSON.parse(envelope?.split('\n')[2] ?? '{}') as Record<
+      string,
+      unknown
+    >;
+    expect(event).toMatchObject({
+      level: 'warning',
+      message: 'Auth cleanup step failed: sessions',
+      tags: { job: 'Auth cleanup', step: 'sessions', error_kind: 'P1001' },
+    });
+    // The SDK adds a synthetic call-site stack; its only text is the message, never an error.
+    expect(event).toMatchObject({
+      exception: {
+        values: [
+          {
+            value: 'Auth cleanup step failed: sessions',
+            mechanism: { synthetic: true },
+          },
+        ],
+      },
+    });
   });
 
   it('stays off without a DSN, and the API keeps answering', async () => {

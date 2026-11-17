@@ -129,9 +129,21 @@ describe('AuthCleanupScheduler', () => {
       'unknown',
     ],
     [
-      'the class name when the code is not a Prisma code',
+      'the class name when the code has no known shape',
       Object.assign(new Error('x'), { code: 'fake-id' }),
       'Error',
+    ],
+    [
+      'a Postgres SQLSTATE',
+      Object.assign(new Error('deadlock near fake-id'), { code: '40P01' }),
+      '40P01',
+    ],
+    [
+      'a Node errno code',
+      Object.assign(new Error('connect fake-host:5432'), {
+        code: 'ECONNREFUSED',
+      }),
+      'ECONNREFUSED',
     ],
   ])('reports %s', async (_, failure, kind) => {
     const { scheduler, alerts } = setup({
@@ -142,6 +154,24 @@ describe('AuthCleanupScheduler', () => {
     await vi.advanceTimersByTimeAsync(FIRST_AUTH_CLEANUP_DELAY_MS);
 
     expect(alerts.failures).toEqual([['rate limits', kind]]);
+    await scheduler.onModuleDestroy();
+  });
+
+  it('runs the remaining steps when the alert itself throws', async () => {
+    const { scheduler, alerts, calls, log } = setup({
+      removeEndedRateLimits: () => Promise.reject(new Error('fake outage')),
+    });
+    vi.spyOn(alerts, 'stepFailed').mockImplementation(() => {
+      throw new Error('sentry down');
+    });
+    scheduler.onModuleInit();
+
+    await vi.advanceTimersByTimeAsync(FIRST_AUTH_CLEANUP_DELAY_MS);
+
+    expect(calls).toEqual(STEPS);
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+      'Auth cleanup removed: rate limits failed, sessions 2, tokens 3, username holds 4, pending sign-ups 5',
+    );
     await scheduler.onModuleDestroy();
   });
 

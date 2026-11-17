@@ -84,6 +84,19 @@ describe('AuthCleanupService on Postgres', () => {
     });
   }
 
+  /** Polls until the cleanup's DELETE on app_user waits for a row lock in this database. */
+  async function waitForDeleteBlockedOnLock(): Promise<void> {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const [row] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'
+          AND query LIKE 'DELETE FROM "public"."app_user"%'`;
+      if ((row?.waiting ?? 0) > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('The cleanup DELETE never waited on the row lock');
+  }
+
   beforeAll(async () => {
     app = await createTestApp({ clock: new FixedClock(NOW) });
     prisma = app.get(PrismaService);
@@ -219,6 +232,35 @@ describe('AuthCleanupService on Postgres', () => {
     expect(await prisma.session.count()).toBe(0);
     const tokens = await prisma.authToken.findMany();
     expect(tokens.map((token) => token.userId)).toEqual([pending]);
+  });
+
+  it('keeps an account whose deadline a re-submit moved while the DELETE waited on its row', async () => {
+    const racing = await seedUser(1, {
+      verified: false,
+      createdAt: at(-DAY),
+      pendingExpiresAt: NOW,
+    });
+    const expired = await seedUser(2, {
+      verified: false,
+      createdAt: at(-DAY),
+      pendingExpiresAt: NOW,
+    });
+
+    // The re-submit holds the row lock while the cleanup's DELETE starts and blocks on it.
+    const { removal } = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: racing },
+        data: { pendingExpiresAt: at(DAY) },
+      });
+      const started = cleanup.removeExpiredPendingSignUps();
+      await waitForDeleteBlockedOnLock();
+      return { removal: started };
+    });
+
+    expect(await removal).toBe(1);
+    const users = await prisma.user.findMany();
+    expect(users.map((user) => user.id)).toEqual([racing]);
+    expect(users.map((user) => user.id)).not.toContain(expired);
   });
 
   it('refuses a token hash or a binding hash that is not 32 bytes, and a binding on a reset token', async () => {

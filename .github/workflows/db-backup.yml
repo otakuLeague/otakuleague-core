@@ -88,6 +88,7 @@ jobs:
           # re-imports on demand); their schema is kept. The same goes for the short-lived auth
           # tables (ADR 0015: rate-limit counters, emailed-link tokens, username holds): the daily
           # cleanup deletes their rows within about a day, and a 60-day backup must not keep them.
+          # Never-verified app_user rows and expired auth_session rows are still in each dump.
           # pipefail fails the step if pg_dump (via docker's exit code) or age fails.
           docker run --rm --pull=never --log-driver none \
             -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGSSLMODE postgres:18 \
