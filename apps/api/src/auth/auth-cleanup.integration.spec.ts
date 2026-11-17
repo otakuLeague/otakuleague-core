@@ -4,10 +4,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp, FixedClock } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
+import { AuthCleanupScheduler } from './auth-cleanup.scheduler';
 import { AuthCleanupService } from './auth-cleanup.service';
 import { RATE_LIMIT_LONGEST_WINDOW_MS } from './auth-rate-limit-rules';
 import { SESSION_MAX_AGE_MS } from './session-rules';
-import { PENDING_SIGN_UP_TTL_MS } from './sign-up-rules';
 
 // Each rule's boundary: a row at the cutoff goes, a row 1 ms inside its life stays.
 const NOW = new Date('2026-11-17T12:00:00.000Z');
@@ -27,7 +27,11 @@ describe('AuthCleanupService on Postgres', () => {
 
   async function seedUser(
     n: number,
-    options: { readonly verified: boolean; readonly createdAt: Date },
+    options: {
+      readonly verified: boolean;
+      readonly createdAt: Date;
+      readonly pendingExpiresAt?: Date;
+    },
   ): Promise<string> {
     const userId = id(n);
     await prisma.user.create({
@@ -38,6 +42,7 @@ describe('AuthCleanupService on Postgres', () => {
         usernameKey: `member${n}`,
         passwordHash: '$argon2id$fake',
         emailVerifiedAt: options.verified ? options.createdAt : null,
+        pendingExpiresAt: options.pendingExpiresAt ?? null,
         createdAt: options.createdAt,
         updatedAt: options.createdAt,
       },
@@ -91,6 +96,10 @@ describe('AuthCleanupService on Postgres', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('registers the scheduler in the app', () => {
+    expect(app.get(AuthCleanupScheduler)).toBeInstanceOf(AuthCleanupScheduler);
   });
 
   it('removes nothing from empty tables', async () => {
@@ -178,38 +187,38 @@ describe('AuthCleanupService on Postgres', () => {
     expect(left.map((counter) => counter.key[0])).toEqual([2, 3]);
   });
 
-  it('removes an unverified account past the TTL with its session and token, and nothing else', async () => {
+  it('removes an unverified account at its pending deadline with its session and token, and nothing else', async () => {
     const expired = await seedUser(1, {
       verified: false,
-      createdAt: at(-PENDING_SIGN_UP_TTL_MS),
+      createdAt: at(-DAY),
+      pendingExpiresAt: NOW,
     });
     await seedSession(1, expired, { createdAt: at(-HOUR), expiresAt: at(DAY) });
-    await seedToken(1, expired, { expiresAt: NOW });
-    const young = await seedUser(2, {
+    await seedToken(1, expired, { expiresAt: at(HOUR) });
+    const pending = await seedUser(2, {
       verified: false,
-      createdAt: at(-PENDING_SIGN_UP_TTL_MS + 1),
+      createdAt: at(-DAY),
+      pendingExpiresAt: at(1),
     });
-    const resubmitted = await seedUser(3, {
+    await seedToken(2, pending, { expiresAt: at(HOUR) });
+    // No deadline: every account created before sign-up existed is never deleted.
+    const legacy = await seedUser(3, {
       verified: false,
-      createdAt: at(-3 * DAY),
+      createdAt: at(-30 * DAY),
     });
-    await seedToken(3, resubmitted, { expiresAt: at(1) });
     const verified = await seedUser(4, {
       verified: true,
       createdAt: at(-3 * DAY),
+      pendingExpiresAt: at(-DAY),
     });
 
     expect(await cleanup.removeExpiredPendingSignUps()).toBe(1);
 
     const users = await prisma.user.findMany({ orderBy: { id: 'asc' } });
-    expect(users.map((user) => user.id)).toEqual([
-      young,
-      resubmitted,
-      verified,
-    ]);
+    expect(users.map((user) => user.id)).toEqual([pending, legacy, verified]);
     expect(await prisma.session.count()).toBe(0);
     const tokens = await prisma.authToken.findMany();
-    expect(tokens.map((token) => token.userId)).toEqual([resubmitted]);
+    expect(tokens.map((token) => token.userId)).toEqual([pending]);
   });
 
   it('refuses a token hash or a binding hash that is not 32 bytes, and a binding on a reset token', async () => {

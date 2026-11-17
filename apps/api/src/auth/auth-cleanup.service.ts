@@ -3,7 +3,6 @@ import { Clock } from '../common/clock-and-random.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { RATE_LIMIT_LONGEST_WINDOW_MS } from './auth-rate-limit-rules';
 import { SESSION_MAX_AGE_MS } from './session-rules';
-import { PENDING_SIGN_UP_TTL_MS } from './sign-up-rules';
 
 const before = (now: Date, ms: number): Date => new Date(now.getTime() - ms);
 
@@ -60,18 +59,18 @@ export class AuthCleanupService {
   }
 
   /**
-   * Unverified accounts older than the sign-up TTL with no live token: a re-submit's new
-   * token keeps the account until that token expires. Their sessions and tokens go with them
-   * (ON DELETE CASCADE). Postgres re-checks `email_verified_at` on the row it deletes, so an
-   * account verified while this runs stays.
+   * Unverified accounts past their `pendingExpiresAt`; their sessions and tokens go with them
+   * (ON DELETE CASCADE). A null deadline (every account from before slice 1e) is never
+   * deleted. Slice 1e sets the deadline to now + PENDING_SIGN_UP_TTL_MS in the same UPDATE
+   * that re-arms an account on submit and resend, and clears it on verification. Both are
+   * columns of the row this DELETE locks, and Postgres re-checks them after waiting on that
+   * lock, so a re-submit or a verification racing the cleanup keeps the account.
    */
   async removeExpiredPendingSignUps(): Promise<number> {
-    const now = this.clock.now();
     const { count } = await this.prisma.user.deleteMany({
       where: {
         emailVerifiedAt: null,
-        createdAt: { lte: before(now, PENDING_SIGN_UP_TTL_MS) },
-        authTokens: { none: { expiresAt: { gt: now } } },
+        pendingExpiresAt: { lte: this.clock.now() },
       },
     });
     return count;

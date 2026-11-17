@@ -16,7 +16,7 @@ export interface RateLimitRule {
 
 /**
  * The auth cleanup deletes a counter once its window started this long ago, so no rule's
- * windowMs may exceed it (a test checks every rule). Keyed hashes of IPs and identifiers thus
+ * windowMs may exceed it (AuthRateLimiter refuses such a rule). Keyed hashes of IPs and identifiers thus
  * live at most this plus one cleanup interval, about 48 h (ADR 0015 privacy note).
  */
 export const RATE_LIMIT_LONGEST_WINDOW_MS = 24 * HOUR_MS;

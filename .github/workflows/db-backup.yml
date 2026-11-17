@@ -85,14 +85,19 @@ jobs:
           # container's stdout (the plaintext dump) is streamed to us but never written to Docker's
           # log file. PGSSLMODE=require refuses an unencrypted connection. The data of the AniList
           # and Jikan cache tables is left out (ADR 0006: never a backup of their data; it
-          # re-imports on demand); their schema is kept. pipefail fails the step if pg_dump (via
-          # docker's exit code) or age fails.
+          # re-imports on demand); their schema is kept. The same goes for the short-lived auth
+          # tables (ADR 0015: rate-limit counters, emailed-link tokens, username holds): the daily
+          # cleanup deletes their rows within about a day, and a 60-day backup must not keep them.
+          # pipefail fails the step if pg_dump (via docker's exit code) or age fails.
           docker run --rm --pull=never --log-driver none \
             -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGSSLMODE postgres:18 \
             pg_dump --format=custom --no-owner --no-privileges --no-password \
             --exclude-table-data=public.anime_source_snapshot \
             --exclude-table-data=public.anime_relation_node \
-            --exclude-table-data=public.anime_list_page |
+            --exclude-table-data=public.anime_list_page \
+            --exclude-table-data=public.auth_rate_limit \
+            --exclude-table-data=public.auth_token \
+            --exclude-table-data=public.auth_username_hold |
             age --encrypt --recipient "$BACKUP_AGE_PUBLIC_KEY" --output "$file"
           # Both can exit 0 on an empty stream: the file must outweigh age's encryption of nothing.
           size=$(($(wc -c < "$file")))

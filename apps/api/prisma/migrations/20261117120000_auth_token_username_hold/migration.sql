@@ -1,6 +1,9 @@
 -- CreateEnum
 CREATE TYPE "auth_token_purpose" AS ENUM ('EMAIL_VERIFICATION', 'PASSWORD_RESET');
 
+-- AlterTable
+ALTER TABLE "app_user" ADD COLUMN     "pending_expires_at" TIMESTAMPTZ(3);
+
 -- CreateTable
 CREATE TABLE "auth_token" (
     "token_hash" BYTEA NOT NULL,

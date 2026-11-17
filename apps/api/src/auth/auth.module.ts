@@ -2,7 +2,11 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { Argon2id, NodeArgon2id } from './argon2id';
 import { AuthController } from './auth.controller';
-import { AuthCleanupScheduler } from './auth-cleanup.scheduler';
+import {
+  AuthCleanupAlerts,
+  AuthCleanupScheduler,
+  SentryAuthCleanupAlerts,
+} from './auth-cleanup.scheduler';
 import { AuthCleanupService } from './auth-cleanup.service';
 import { AuthRateLimiter } from './auth-rate-limiter';
 import { AuthSecrets, EnvironmentAuthSecrets } from './auth-secrets';
@@ -31,6 +35,7 @@ import { SignInService } from './sign-in.service';
     SignInService,
     AuthCleanupService,
     AuthCleanupScheduler,
+    { provide: AuthCleanupAlerts, useClass: SentryAuthCleanupAlerts },
   ],
   exports: [PasswordHasher],
 })

@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { FixedClock } from '../testing/test-app';
 import {
   AUTH_CLEANUP_INTERVAL_MS,
+  AuthCleanupAlerts,
   AuthCleanupScheduler,
   FIRST_AUTH_CLEANUP_DELAY_MS,
 } from './auth-cleanup.scheduler';
@@ -19,6 +20,14 @@ const STEPS = [
 ] as const;
 
 type Step = (typeof STEPS)[number];
+
+class RecordingAlerts extends AuthCleanupAlerts {
+  readonly failures: (readonly [string, string])[] = [];
+
+  stepFailed(step: string, errorKind: string): void {
+    this.failures.push([step, errorKind]);
+  }
+}
 
 function setup(overrides: Partial<Record<Step, () => Promise<number>>> = {}) {
   const cleanup = new AuthCleanupService(
@@ -38,13 +47,25 @@ function setup(overrides: Partial<Record<Step, () => Promise<number>>> = {}) {
   const warn = vi
     .spyOn(Logger.prototype, 'warn')
     .mockImplementation(() => undefined);
+  const alerts = new RecordingAlerts();
   return {
-    scheduler: new AuthCleanupScheduler(cleanup),
+    scheduler: new AuthCleanupScheduler(cleanup, alerts),
+    alerts,
     calls,
     spies,
     log,
     warn,
   };
+}
+
+/** A step that runs until the test calls `finish`. */
+function held() {
+  let finish: (count: number) => void = () => undefined;
+  const step = () =>
+    new Promise<number>((resolve) => {
+      finish = resolve;
+    });
+  return { step, finish: (count: number) => finish(count) };
 }
 
 describe('AuthCleanupScheduler', () => {
@@ -77,12 +98,13 @@ describe('AuthCleanupScheduler', () => {
     await scheduler.onModuleDestroy();
   });
 
-  it('runs the other steps after a failing one and warns with the step label only', async () => {
-    const { scheduler, calls, log, warn } = setup({
-      removeExpiredSessions: () =>
-        Promise.reject(
-          new Error('delete failed near token_hash = \\x00ff, id = fake-id'),
-        ),
+  it('runs the other steps after a failing one; the warning and the alert hold its label and kind only', async () => {
+    const failure = Object.assign(
+      new Error('delete failed near token_hash = \\x00ff, id = fake-id'),
+      { code: 'P1001' },
+    );
+    const { scheduler, alerts, calls, log, warn } = setup({
+      removeExpiredSessions: () => Promise.reject(failure),
     });
     scheduler.onModuleInit();
 
@@ -90,11 +112,36 @@ describe('AuthCleanupScheduler', () => {
 
     expect(calls).toEqual(STEPS);
     expect(warn).toHaveBeenCalledExactlyOnceWith(
-      'Auth cleanup step failed: sessions',
+      'Auth cleanup step failed: sessions (P1001)',
     );
+    expect(alerts.failures).toEqual([['sessions', 'P1001']]);
     expect(log).toHaveBeenCalledExactlyOnceWith(
       'Auth cleanup removed: rate limits 1, sessions failed, tokens 3, username holds 4, pending sign-ups 5',
     );
+    await scheduler.onModuleDestroy();
+  });
+
+  it.each([
+    ['an error class name', new TypeError('fake-id 00ff'), 'TypeError'],
+    [
+      'unknown for a name that is not an identifier',
+      fakeNamed('id fake-id'),
+      'unknown',
+    ],
+    [
+      'the class name when the code is not a Prisma code',
+      Object.assign(new Error('x'), { code: 'fake-id' }),
+      'Error',
+    ],
+  ])('reports %s', async (_, failure, kind) => {
+    const { scheduler, alerts } = setup({
+      removeEndedRateLimits: () => Promise.reject(failure),
+    });
+    scheduler.onModuleInit();
+
+    await vi.advanceTimersByTimeAsync(FIRST_AUTH_CLEANUP_DELAY_MS);
+
+    expect(alerts.failures).toEqual([['rate limits', kind]]);
     await scheduler.onModuleDestroy();
   });
 
@@ -112,40 +159,35 @@ describe('AuthCleanupScheduler', () => {
   });
 
   it('joins a pass still running instead of starting a second one', async () => {
-    let finish: (count: number) => void = () => undefined;
-    const { scheduler, spies } = setup({
-      removeEndedRateLimits: () =>
-        new Promise<number>((resolve) => {
-          finish = resolve;
-        }),
-    });
+    const first = held();
+    const { scheduler, spies } = setup({ removeEndedRateLimits: first.step });
     scheduler.onModuleInit();
 
     await vi.advanceTimersByTimeAsync(AUTH_CLEANUP_INTERVAL_MS);
     expect(spies[0]).toHaveBeenCalledTimes(1);
 
-    finish(0);
+    first.finish(0);
     await vi.advanceTimersByTimeAsync(0);
     expect(spies[4]).toHaveBeenCalledTimes(1);
     await scheduler.onModuleDestroy();
   });
 
-  it('waits for the running pass on shutdown', async () => {
-    let finish: (count: number) => void = () => undefined;
-    const { scheduler, log } = setup({
-      removeEndedRateLimits: () =>
-        new Promise<number>((resolve) => {
-          finish = resolve;
-        }),
+  it('on shutdown skips the remaining steps of the running pass and waits for it', async () => {
+    const first = held();
+    const { scheduler, calls, log } = setup({
+      removeEndedRateLimits: first.step,
     });
     scheduler.onModuleInit();
     await vi.advanceTimersByTimeAsync(FIRST_AUTH_CLEANUP_DELAY_MS);
 
     const destroyed = scheduler.onModuleDestroy();
-    finish(0);
+    first.finish(7);
     await destroyed;
 
-    expect(log).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(['removeEndedRateLimits']);
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+      'Auth cleanup removed: rate limits 7, sessions skipped, tokens skipped, username holds skipped, pending sign-ups skipped',
+    );
   });
 
   it('stops once destroyed, and destroying twice is harmless', async () => {
@@ -172,3 +214,9 @@ describe('AuthCleanupScheduler', () => {
     await scheduler.onModuleDestroy();
   });
 });
+
+function fakeNamed(name: string): Error {
+  const error = new Error('fake');
+  error.name = name;
+  return error;
+}
