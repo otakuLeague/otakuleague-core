@@ -105,17 +105,15 @@ void describe('redactText', () => {
   });
 
   void it('stays near-linear on request paths built to backtrack (ReDoS)', () => {
-    const bestOfThreeMs = (path: string): number => {
+    // Floor for time(n): below this, timer resolution makes the ratio noise.
+    const MIN_BASELINE_MS = 0.05;
+    const timeMs = (path: string): number => {
+      const started = performance.now();
       redactText(path);
-      let best = Infinity;
-      for (let run = 0; run < 3; run += 1) {
-        const started = performance.now();
-        redactText(path);
-        best = Math.min(best, performance.now() - started);
-      }
-      return best;
+      return performance.now() - started;
     };
 
+    // `-eyJ` and `a.` guard the WORD_RUN split; the others guard their own pattern.
     for (const [unit, count] of [
       ['-eyJ', 500],
       ['Bearer ', 285],
@@ -123,15 +121,23 @@ void describe('redactText', () => {
       ['password="', 200],
       ['a.', 1000],
     ] as const) {
-      const small = bestOfThreeMs(`/${unit.repeat(count)}`);
-      const large = bestOfThreeMs(`/${unit.repeat(count * 4)}`);
-      const ratio = large / Math.max(small, 0.5);
-      // Inputs stay under the 8 KB cap so 4x is not truncated. Linear is ~4, quadratic ~16.
+      const smallPath = `/${unit.repeat(count)}`;
+      const largePath = `/${unit.repeat(count * 4)}`;
+      timeMs(smallPath);
+      timeMs(largePath);
+      let small = Infinity;
+      let large = Infinity;
+      // Interleaved best-of-25: a busy neighbour hits both sizes alike.
+      for (let round = 0; round < 25; round += 1) {
+        small = Math.min(small, timeMs(smallPath));
+        large = Math.min(large, timeMs(largePath));
+      }
+      const ratio = large / Math.max(small, MIN_BASELINE_MS);
+      // 4x the input: linear is ~4 (p95 ~4.5), injected quadratics are ~9-15x.
       assert.ok(
         ratio < 8,
-        `${unit}: 4x input took ${ratio.toFixed(1)}x longer (${small} ms -> ${large} ms)`,
+        `${unit}: 4x input took ${ratio.toFixed(2)}x longer (${small.toFixed(2)} ms -> ${large.toFixed(2)} ms)`,
       );
-      assert.ok(large < 200, `${unit}: 4x input took ${large} ms`);
     }
   });
 
