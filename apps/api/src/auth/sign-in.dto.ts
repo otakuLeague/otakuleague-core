@@ -3,8 +3,10 @@ import type { SignInRequest } from '@otakuleague/shared-types';
 import {
   IsNotEmpty,
   IsString,
+  Matches,
   MaxLength,
   Validate,
+  type ValidationArguments,
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
@@ -21,16 +23,27 @@ class WithoutNul implements ValidatorConstraintInterface {
     return typeof value === 'string' && !value.includes('\u0000');
   }
 
-  defaultMessage(): string {
-    return 'identifier must not contain U+0000';
+  defaultMessage(args: ValidationArguments): string {
+    return `${args.property} must not contain U+0000`;
   }
 }
+
+/**
+ * Raw UTF-16 units accepted before NFC runs: NFC on a long run of combining marks is slow (1.7 s
+ * measured on 96 KB) and runs before the rate limiter, so a longer string is refused unread.
+ * Generous: NFC never folds 8 units into one code point.
+ */
+export const PASSWORD_RAW_MAX = 8 * PASSWORD_MAX;
 
 /** Counted like sign-up will count it (code points after NFC); the message never echoes the value. */
 @ValidatorConstraint({ name: 'passwordMaxLength' })
 class PasswordMaxLength implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
-    return typeof value === 'string' && passwordLength(value) <= PASSWORD_MAX;
+    return (
+      typeof value === 'string' &&
+      value.length <= PASSWORD_RAW_MAX &&
+      passwordLength(value) <= PASSWORD_MAX
+    );
   }
 
   defaultMessage(): string {
@@ -50,6 +63,8 @@ export class SignInDto implements SignInRequest {
   })
   @IsString()
   @IsNotEmpty()
+  // Whitespace only would normalise to "": refused like an empty identifier (linear, no NFC).
+  @Matches(/\S/, { message: '$property must not be blank' })
   @MaxLength(IDENTIFIER_MAX)
   @Validate(WithoutNul)
   readonly identifier!: string;

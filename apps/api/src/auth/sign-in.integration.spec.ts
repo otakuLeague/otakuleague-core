@@ -200,6 +200,18 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
     expect(argon2.derives).toBe(1);
   });
 
+  it('accepts an identifier of 254 characters (a 401, not a 400)', async () => {
+    await seedMember();
+
+    const response = await signIn({
+      identifier: `${'a'.repeat(241)}@example.test`,
+      password: PASSWORD,
+    }).expect(401);
+
+    expect(response.text).toBe(INVALID_CREDENTIALS_TEXT);
+    expect(argon2.derives).toBe(1);
+  });
+
   it('counts 128 characters after NFC, and matches either spelling of an accent', async () => {
     await seedMember({ passwordHash: accentHash });
 
@@ -336,6 +348,11 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
       'an identifier of 255 characters',
       { identifier: `${'a'.repeat(242)}@example.test`, password: PASSWORD },
     ],
+    [
+      'a raw password of combining marks over 1024 UTF-16 units',
+      { identifier: MEMBER.email, password: `a${'\u0301'.repeat(2000)}` },
+    ],
+    ['a whitespace-only identifier', { identifier: '   ', password: PASSWORD }],
     ['a non-string password', { identifier: MEMBER.email, password: 12345678 }],
     ['an empty password', { identifier: MEMBER.email, password: '' }],
     ['a missing identifier', { password: PASSWORD }],

@@ -64,18 +64,19 @@ export class SignInService {
       };
     }
     const account = await this.findAccount(identifier);
-    const verified =
+    const verifiedAccount =
       account !== null && account.emailVerifiedAt !== null ? account : null;
     const check = await this.hasher.verify(
       attempt.password,
-      verified === null ? null : verified.passwordHash,
+      verifiedAccount === null ? null : verifiedAccount.passwordHash,
     );
     // No counter is reset on success: a caller holding one valid password could otherwise sign
     // in between guesses at other accounts to clear its per-IP count.
-    if (verified === null || check !== 'match') return INVALID_CREDENTIALS;
+    if (verifiedAccount === null || check !== 'match')
+      return INVALID_CREDENTIALS;
     const session = await this.sessions.create({
-      userId: verified.id,
-      sessionEpoch: verified.sessionEpoch,
+      userId: verifiedAccount.id,
+      sessionEpoch: verifiedAccount.sessionEpoch,
     });
     return { kind: 'signed_in', ...session };
   }
