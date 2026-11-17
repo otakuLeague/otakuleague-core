@@ -106,3 +106,56 @@ describe('HashSlots', () => {
     await Promise.all(runs);
   });
 });
+
+describe('HashSlots.tryRun', () => {
+  it('gives the slot back after a failed task', async () => {
+    const slots = new HashSlots();
+    const { started, make } = tasks();
+    const failing = make('failing');
+
+    const tried = slots.tryRun(failing.task);
+    failing.fail(new Error('argon2 failed'));
+    await expect(tried).rejects.toThrow('argon2 failed');
+    const held = ['a', 'b'].map(make);
+    const runs = held.map(({ task }) => slots.run(task));
+    await settle();
+
+    // A leaked slot would leave 'b' waiting.
+    expect(started).toEqual(['failing', 'a', 'b']);
+    for (const { finish } of held) finish();
+    await Promise.all(runs);
+  });
+
+  it.each([
+    ['every slot runs', MAX_RUNNING_HASHES],
+    ['others wait', MAX_RUNNING_HASHES + 1],
+  ])(
+    'skips without calling the task or queuing when %s',
+    async (_, occupying) => {
+      const slots = new HashSlots();
+      const { started, make } = tasks();
+      const held = Array.from({ length: occupying }, (__, index) =>
+        make(String(index)),
+      );
+      const runs = held.map(({ task }) => slots.run(task));
+      const optional = vi.fn(() => Promise.resolve('optional'));
+
+      await expect(slots.tryRun(optional)).resolves.toEqual({
+        kind: 'skipped',
+      });
+
+      expect(optional).not.toHaveBeenCalled();
+      for (const { finish } of held) {
+        finish();
+        await settle();
+      }
+      await Promise.all(runs);
+      expect(started).toHaveLength(occupying);
+      // Nothing was queued for it: the slots are free again.
+      await expect(slots.tryRun(optional)).resolves.toEqual({
+        kind: 'done',
+        value: 'optional',
+      });
+    },
+  );
+});

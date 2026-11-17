@@ -7,16 +7,7 @@ import type {
 } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  type MockInstance,
-  vi,
-} from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   type InternalKeyCheck,
   InternalKeySettings,
@@ -107,13 +98,8 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
   let accentHash: string;
   /** PASSWORD at an older cost (m=8192, t=3), as an earlier release would have stored it. */
   let oldCostHash: string;
+  /** `settle()` waits for the rehashes sign-in started without awaiting them. */
   let rehasher: PasswordRehasher;
-  let rehashes: MockInstance<PasswordRehasher['schedule']>;
-  /** Waits for the rehashes sign-in started without awaiting them. */
-  const rehashesDone = () =>
-    Promise.all(
-      rehashes.mock.results.map((result) => result.value as Promise<void>),
-    );
   const storedHash = async () =>
     (
       await prisma.user.findUniqueOrThrow({
@@ -184,13 +170,11 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
       }),
     );
     rehasher = app.get(PasswordRehasher);
-    rehashes = vi.spyOn(rehasher, 'schedule');
   });
 
   beforeEach(async () => {
     await truncateAllTables(prisma);
     argon2.derives = 0;
-    rehashes.mockClear();
   });
 
   afterAll(async () => {
@@ -298,7 +282,7 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
     const attempt = { identifier: MEMBER.email, password: PASSWORD };
 
     const token = await tokenOf(attempt);
-    await rehashesDone();
+    await rehasher.settle();
 
     const rehashed = await prisma.user.findUniqueOrThrow({
       where: { id: MEMBER.id },
@@ -311,7 +295,7 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
     await me(token).expect(200);
     // The new hash matches the same password, and is current: no second rehash.
     await tokenOf(attempt);
-    await rehashesDone();
+    await rehasher.settle();
     expect(argon2.derives).toBe(3);
     expect(await storedHash()).toBe(rehashed.passwordHash);
   });
@@ -320,7 +304,7 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
     await seedMember();
 
     await tokenOf({ identifier: MEMBER.email, password: PASSWORD });
-    await rehashesDone();
+    await rehasher.settle();
 
     expect(argon2.derives).toBe(1);
     expect(await storedHash()).toBe(memberHash);
@@ -335,8 +319,8 @@ describe('POST /auth/sign-in and POST /auth/sign-out', () => {
       await seedMember({ verified, passwordHash: oldCostHash });
 
       await signIn({ identifier: MEMBER.email, password }).expect(401);
+      await rehasher.settle();
 
-      expect(rehashes).not.toHaveBeenCalled();
       expect(argon2.derives).toBe(1);
       expect(await storedHash()).toBe(oldCostHash);
     },

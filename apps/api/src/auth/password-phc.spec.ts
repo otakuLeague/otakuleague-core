@@ -68,12 +68,23 @@ describe('needsRehash', () => {
 
   it.each([
     ['memory', GOLDEN.replace('m=19456', 'm=8192')],
-    ['passes', GOLDEN.replace('t=2', 't=3')],
-    ['salt length', formatPhc(ARGON2_PARAMS, Buffer.alloc(32), TAG)],
+    ['passes', GOLDEN.replace('t=2', 't=1')],
     ['tag length', formatPhc(ARGON2_PARAMS, SALT, TAG.subarray(0, 16))],
-  ])('is true when the %s differs', (_, phc) => {
+  ])('is true when the %s is below the current one', (_, phc) => {
     expect(needsRehash(phc)).toBe(true);
   });
+
+  it.each([
+    ['memory', GOLDEN.replace('m=19456', 'm=65536')],
+    ['passes', GOLDEN.replace('t=2', 't=3')],
+    ['salt length', formatPhc(ARGON2_PARAMS, Buffer.alloc(32), TAG)],
+    ['tag length', formatPhc(ARGON2_PARAMS, SALT, Buffer.alloc(64))],
+  ])(
+    'is false when the %s is above the current one (no downgrade)',
+    (_, phc) => {
+      expect(needsRehash(phc)).toBe(false);
+    },
+  );
 
   it('is true for an unreadable hash', () => {
     expect(needsRehash('$argon2id$fake')).toBe(true);

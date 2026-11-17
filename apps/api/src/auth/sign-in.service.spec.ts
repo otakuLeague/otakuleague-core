@@ -5,11 +5,16 @@ import { visitorKeyFromClientIp } from '../common/api-caller';
 import { ApiException } from '../common/api.exception';
 import type { PrismaService } from '../prisma/prisma.service';
 import { clientIpKey } from './auth-rate-limit-rules';
+import type { RateLimitDecision } from './auth-rate-limit-rules';
 import type { AuthRateLimiter } from './auth-rate-limiter';
-import type { PasswordCheck, PasswordHasher } from './password-hasher';
+import {
+  AUTH_BUSY,
+  type PasswordCheck,
+  type PasswordHasher,
+} from './password-hasher';
 import type { PasswordRehasher, RehashRequest } from './password-rehasher';
 import type { IssuedSession, SessionService } from './session.service';
-import { SignInService } from './sign-in.service';
+import { type SignInOutcome, SignInService } from './sign-in.service';
 
 // No database: every collaborator is a fake. The real flow: sign-in.integration.spec.ts.
 const IP = clientIpKey(visitorKeyFromClientIp('203.0.113.7'));
@@ -31,6 +36,7 @@ const SESSION: IssuedSession = {
 };
 
 function setup(options: {
+  readonly check?: () => Promise<RateLimitDecision>;
   readonly findUnique: () => Promise<typeof ACCOUNT | null>;
   readonly verify: () => Promise<PasswordCheck>;
   readonly schedule?: (request: RehashRequest) => Promise<void>;
@@ -43,7 +49,7 @@ function setup(options: {
   const service = new SignInService(
     { user: { findUnique: options.findUnique } } as unknown as PrismaService,
     {
-      check: () => Promise.resolve({ kind: 'allowed' }),
+      check: options.check ?? (() => Promise.resolve({ kind: 'allowed' })),
     } as unknown as AuthRateLimiter,
     { hmacKey: () => createSecretKey(Buffer.alloc(32, 1)) },
     { verify } as unknown as PasswordHasher,
@@ -57,7 +63,7 @@ describe('SignInService.signIn', () => {
   it('propagates AUTH_BUSY from the verification unchanged: no session, no rehash', async () => {
     const busy = new ApiException(
       HttpStatus.TOO_MANY_REQUESTS,
-      { code: 'AUTH_BUSY', message: 'Fake busy.' },
+      { code: AUTH_BUSY, message: 'Fake busy.' },
       { retryAfterSeconds: 1 },
     );
     const { service, create, schedule } = setup({
@@ -80,6 +86,33 @@ describe('SignInService.signIn', () => {
     await expect(service.signIn(ATTEMPT)).rejects.toBe(outage);
     expect(verify).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, Parameters<typeof setup>[0], SignInOutcome]>([
+    [
+      'a rate-limited attempt',
+      {
+        check: () =>
+          Promise.resolve({ kind: 'limited', retryAfterSeconds: 900 }),
+        findUnique: () => Promise.resolve(ACCOUNT),
+        verify: () => Promise.resolve('match'),
+      },
+      { kind: 'rate_limited', retryAfterSeconds: 900 },
+    ],
+    [
+      'an unknown account',
+      {
+        findUnique: () => Promise.resolve(null),
+        verify: () => Promise.resolve('mismatch'),
+      },
+      { kind: 'invalid_credentials' },
+    ],
+  ])('never schedules a rehash for %s', async (_, options, outcome) => {
+    const { service, create, schedule } = setup(options);
+
+    await expect(service.signIn(ATTEMPT)).resolves.toEqual(outcome);
+    expect(create).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
   });
 
   it('answers signed_in without waiting for the rehash it schedules', async () => {
