@@ -10,6 +10,7 @@ import {
   normaliseIdentifier,
 } from './credential-rules';
 import { PasswordHasher } from './password-hasher';
+import { PasswordRehasher } from './password-rehasher';
 import { type IssuedSession, SessionService } from './session.service';
 
 export interface SignInAttempt {
@@ -40,7 +41,8 @@ interface SignInAccount {
  * upsert and no argon2. Every counted attempt then runs exactly one verification: the stored
  * hash of a verified account, the dummy one otherwise, so timing does not tell an unknown or
  * unverified account from a wrong password. Errors (database 503, AUTH_BUSY 429) propagate:
- * never a sign-in without a counted attempt and a matching hash. Logs nothing.
+ * never a sign-in without a counted attempt and a matching hash. Logs nothing. On a success it
+ * hands the matched password to `PasswordRehasher`, which rehashes only an outdated cost.
  */
 @Injectable()
 export class SignInService {
@@ -50,6 +52,7 @@ export class SignInService {
     private readonly secrets: AuthSecrets,
     private readonly hasher: PasswordHasher,
     private readonly sessions: SessionService,
+    private readonly rehasher: PasswordRehasher,
   ) {}
 
   async signIn(attempt: SignInAttempt): Promise<SignInOutcome> {
@@ -77,6 +80,12 @@ export class SignInService {
     const session = await this.sessions.create({
       userId: verifiedAccount.id,
       sessionEpoch: verifiedAccount.sessionEpoch,
+    });
+    // Not awaited: the answer never waits for the rehash, which never rejects (slice 1c-iii).
+    void this.rehasher.schedule({
+      userId: verifiedAccount.id,
+      password: attempt.password,
+      storedHash: verifiedAccount.passwordHash,
     });
     return { kind: 'signed_in', ...session };
   }
