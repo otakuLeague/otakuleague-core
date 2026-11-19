@@ -102,7 +102,9 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 | found (used or not), user already verified | any | `already_verified`, never a session; checked before the rows above |
 | not found (unknown, cancelled, cleaned up), malformed, or used or expired with an unverified user | any | 400 `AUTH_TOKEN_INVALID` |
 
-**Resend (1e-ii).** `UPDATE app_user SET pending_expires_at = now + TTL WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now RETURNING id, username`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise replace the token and copy the old row's `binding_hash`, so the browser that signed up keeps its one-click path. Resend does not touch the hold: the "taken" rule reads the pending row itself, which is why that rule is wider than "verified users and live holds".
+This table is replaced by the one in the Addendum (1e-ii): the second row (binding absent, `verified`) was the pre-hijack hole.
+
+**Resend (1e-ii).** `UPDATE app_user SET pending_expires_at = now + TTL WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now RETURNING id, username`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise replace the token and copy the old row's `binding_hash`, so the browser that signed up keeps its one-click path. Resend does not touch the hold: the "taken" rule reads the pending row itself, which is why that rule is wider than "verified users and live holds". The UPDATE of `pending_expires_at` is dropped by the Addendum (1e-ii): it breaks the constraint in "What the 409 reads".
 
 **Email (1e-i).** `EmailSender` is an abstract class with `canSend()` and `send(email: AuthEmail)`; `AuthEmail` is a union of `email_verification` and `sign_up_notice`. The module provides `ConsoleEmailSender` when `NODE_ENV` is not `production` and `ClosedEmailSender` (`canSend()` false) in production, so production cannot get the console sender and sign-up stays closed there until a real adapter exists. The console sender writes one line straight to stdout (kind, address, token), not through the Logger, whose redaction would mask the token: a recorded exception to "no secret in a log", local only. `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, the link and the templates arrive with the first real adapter. The provider is Resend on its free plan (Farouk, 2026-11-15, PROGRESS.md), not Brevo as ADR 0015 says; the email slice writes the ADR 0015 addendum. Closed sign-up answers 403 `SIGN_UP_CLOSED`, not a 5xx: the filter logs every 5xx with a stack, and this answer is expected.
 
@@ -123,12 +125,67 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 | Email slice | Resend adapter, templates, `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, email budget, ADR 0015 addendum | opens sign-up in production |
 | Later migration | CHECK `expires_at > created_at`, UNIQUE(`user_id`, `purpose`) on `auth_token` | deferred as planned |
 
+## Addendum (1e-ii)
+
+Added 2026-11-19 with the 1e-ii plan. It closes the pre-hijack gate, replaces the Confirm table and the Resend statement above, and changes two points of ADR 0015: the confirm body gains an optional `password`, and resend no longer re-arms the account. No schema migration.
+
+**Requirements.** Functional: (1) the browser that signed up confirms with one click and gets a session; (2) any other browser confirms by typing the sign-up password; (3) a pending member gets the mail again, 202 whatever the address. Consistency over availability, as above.
+
+| # | Requirement |
+|---|---|
+| C1 | Gate: a pending password becomes usable only in a transaction whose request held the live token and either the binding stored on that token or a password matching that hash. 0 activations otherwise, also while a re-submit races the confirm. |
+| C2 | N confirms of one token at once: exactly 1 `verified`, at most 1 session, N − 1 `already_verified`, 0 answers 500. |
+| C3 | Resend: one status and an empty body for an unknown, a pending, a stale and a registered email; it moves 0 deadlines (account or hold), so a username stays taken for the same 24 h whatever the email was. |
+| C4 | Abuse bound: confirm 10 per IP per 15 min, at most 1 argon2 verification per request, and at most 10 password checks per pending account per hour from any number of IPs (at most 240 guesses in its 24 h). Resend 10 per IP per hour, 0 hashes. A refused request costs 1 upsert. |
+| C5 | Lock time: argon2 never runs inside a transaction; confirm is at most 3 statements and resend 2, each on a primary key or unique index, locks in the order `app_user`, `auth_token` (the cleanup's order). |
+
+**Gate decision: the path without a matching binding asks for the password** (the first of the two options in the Gate). The pending hash is activated only by a request that proves both the mailbox (the token) and the submit that wrote that hash (its binding, or its password), so the owner's click can activate neither a stranger's pre-registration nor a re-submit made while the account was pending, and a member who confirms on another device can sign in at once. Voiding the hash instead needs the reset flow (OTA-140, not built) before that member can sign in, and the owner's click would still make an account under the attacker's username permanent.
+
+- **The binding path needs no password.** Sign-up writes the hash and the token with its binding in one transaction and deletes the older tokens; resend copies the binding and never writes the hash. So a token's binding always belongs to the submit that wrote the current hash: the browser holding it typed that password.
+- **Attacker pre-registers the victim's address (H1).** The attacker holds the binding and the password, never the token. The victim holds the token only: `confirmation_required`, then 401 for any password the victim tries. Nothing is verified and the cleanup deletes the row after 24 h.
+- **Attacker re-submits while the victim is pending (M2).** The victim's token is deleted (400). The new token carries the attacker's binding and the row the attacker's hash, so the victim's `ol_signup` gives `confirmation_required` and the victim's password 401. The victim signs up again; the attacker never holds a token.
+- **Wrong password:** 401 `INVALID_CREDENTIALS`, nothing consumed, the member can try again. It tells nothing new: only the holder of a live token reaches it, and `confirmation_required` already says the token is live.
+
+**Confirm.** Body `{ token, bindingToken?, password? }`. Count the IP, then read the token row with its user by the token's SHA-256 (liveness and "verified" computed in SQL, no timestamp read back). The first matching row answers:
+
+| Token | User | `bindingToken` | `password` | Answer |
+|---|---|---|---|---|
+| not found (unknown, malformed, cancelled, cleaned up) | | any | any | 400 `AUTH_TOKEN_INVALID` |
+| found, used or not | verified | any | any | 200 `already_verified`, never a session |
+| used or expired | unverified | any | any | 400 `AUTH_TOKEN_INVALID` |
+| live | pending | matches | ignored, no hash | 200 `verified` with `session` (`sessionToken`, `expiresAt`) |
+| live | pending | absent or wrong | absent | 200 `confirmation_required`, nothing consumed |
+| live | pending | absent or wrong | matches the pending hash | 200 `verified`, `session: null` (ADR 0015: only the binding gives a session) |
+| live | pending | absent or wrong | wrong | 401 `INVALID_CREDENTIALS`, nothing consumed |
+
+The password is verified once, outside any transaction, and only in the last two rows; before it the account's password counter is counted (429 over 10 an hour). No dummy hash on the other rows: the status already tells a found token from an unknown one, so there is no timing to hide. Then one transaction (READ COMMITTED):
+1. `SELECT email_verified_at IS NOT NULL AS verified FROM app_user WHERE id = … FOR UPDATE`. No row (cleaned up): 400. Verified (a confirm that lost the race): `already_verified`.
+2. `UPDATE auth_token SET used_at = now WHERE token_hash = … AND used_at IS NULL AND expires_at > now RETURNING` (with `AND binding_hash = …` on the binding path). No row: roll back, 400.
+3. `UPDATE app_user SET email_verified_at = now, pending_expires_at = NULL, updated_at = now WHERE id = … AND email_verified_at IS NULL RETURNING session_epoch` (with `AND password_hash = <the hash that was verified>` on the password path). No row: roll back, 400.
+
+A re-submit that lands between the read and the transaction deletes the token, so step 2 finds nothing; the predicate in step 3 states C1 in the statement itself and does not depend on that. The session is created after commit, on the binding path only. If that insert fails the member is verified without a session: the retry answers `already_verified` and they sign in.
+
+**Resend: neither deadline moves.** One transaction: `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise one statement deletes that user's `EMAIL_VERIFICATION` tokens and inserts the new one with the deleted row's `binding_hash` (NULL when there was none: password path only) and `expires_at` = the account's `pending_expires_at`, copied inside SQL. The hash, the account's deadline and the hold are not written. So "Resend" works for 24 h after the last submit; after that it answers 202 and sends nothing (what ADR 0015's sign-up row already says), and the member submits the form again.
+
+Rejected: resend extends the account and its hold together. A submit with a registered email leaves a hold but no pending row, and resend cannot find that hold from the email. After 24 h the name would be free when the email was registered and still taken when it was new: the probe "What the 409 reads" forbids. It becomes possible with the keyed email hash on the hold (a migration, already in the Gate).
+
+**Limits.** Per-IP keys for the routes `email-verification-confirm` (10 per 15 min) and `email-verification-resend` (10 per hour). The password counter is the key (`email-verification-confirm`, `identifier`, the account's email), 10 per hour, counted only when a password is about to be verified, so only the holder of the live token can use it up. Resend answers 403 `SIGN_UP_CLOSED` before any counter when no sender exists, as sign-up does.
+
+**Split.** The two routes do not fit one PR of about 400 lines (about 480 lines of code, 700 of tests): 1e-ii-a is confirm with `AUTH_TOKEN_INVALID` and the gate (about 350 of code), 1e-ii-b is resend (about 130).
+
+**Too simple?**
+- Anyone who knows a pending address can re-submit it and force its owner to sign up again, as often as the sign-up limit allows (5 per IP per hour). No takeover; the per-address email budget (Gate) bounds the mail.
+- A member who confirms on another device types the password, and gets no session there.
+- Resend can mail a pending address 10 times per IP per hour until the email budget exists (Gate; production is closed).
+
+**Too complicated?** The password counter is the one part an attack has not yet asked for: without it the per-IP limit still gives 960 guesses per IP per day against a stranger's pending password (a typo in the address is enough to send the token to someone else). It is one more key in the existing limiter; drop it if the PR must shrink. Left out on purpose: a session on the password path, a dummy hash, a new outcome for a wrong password, extending the hold.
+
 ## Consequences
 
 - Until 1e-ii merges, an account created by sign-up cannot be confirmed (local and CI only; production is closed).
 - **Gate:** the email slice must not open sign-up in production before all of these are merged:
   - the per-address email budget, checked before the transaction, and the common-password list;
-  - pre-hijack (security review H1/M2): a confirm without a matching binding must not activate the pending password. 1e-ii either asks for the password on that path, or verifies the email and voids the hash so the owner sets one by reset. Otherwise anyone who submits a victim's address, and anyone who re-submits it while it is pending, owns the account once the victim clicks "Confirm my email";
+  - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
   - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
   - a reserved-username deny list.
 - Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again.
