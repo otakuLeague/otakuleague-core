@@ -5,6 +5,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { FixedClock } from '../testing/test-app';
 import {
   clientIpKey,
+  RATE_LIMIT_LONGEST_WINDOW_MS,
+  type RateLimitHits,
   type RateLimitKey,
   signInHits,
 } from './auth-rate-limit-rules';
@@ -89,6 +91,22 @@ describe('AuthRateLimiter.check', () => {
     const { limiter } = limiterAnswering(() => Promise.reject(outage));
 
     await expect(limiter.check(HITS)).rejects.toBe(outage);
+  });
+
+  it('refuses a rule whose window outlives the cleanup cutoff, before counting any key', async () => {
+    const { limiter, keysCounted } = limiterAnswering(counts(1, 1));
+    const tooLong = [
+      IP_HIT,
+      {
+        key: PAIR_HIT.key,
+        rule: { limit: 5, windowMs: RATE_LIMIT_LONGEST_WINDOW_MS + 1 },
+      },
+    ] as unknown as RateLimitHits;
+
+    await expect(limiter.check(tooLong)).rejects.toThrow(
+      'A rate-limit window is longer than RATE_LIMIT_LONGEST_WINDOW_MS',
+    );
+    expect(keysCounted()).toEqual([]);
   });
 
   it('fails when the upsert returns no row, never allows', async () => {

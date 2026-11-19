@@ -239,20 +239,25 @@ model AnimeFranchiseOverride {
 // CHECK constraints (migration auth_sessions): email in lower case, token_hash of 32 bytes.
 
 model User {
-  id              String    @id @db.Uuid
+  id               String      @id @db.Uuid
   // Stored normalised, so the unique index is the duplicate check.
-  email           String    @unique
+  email            String      @unique
   // As typed; usernameKey (lower case) is what must be unique.
-  username        String
-  usernameKey     String    @unique @map("username_key")
+  username         String
+  usernameKey      String      @unique @map("username_key")
   // argon2id PHC string, never the password.
-  passwordHash    String    @map("password_hash")
-  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  passwordHash     String      @map("password_hash")
+  emailVerifiedAt  DateTime?   @map("email_verified_at") @db.Timestamptz(3)
+  // A pending sign-up's deadline (ADR 0015): set to now + PENDING_SIGN_UP_TTL by every submit
+  // and resend, cleared on verification. The cleanup deletes an unverified user only once it is
+  // past; null (every user created before slice 1e) is never deleted.
+  pendingExpiresAt DateTime?   @map("pending_expires_at") @db.Timestamptz(3)
   // Raised to sign out every device: a session is valid only while it holds this value.
-  sessionEpoch    Int       @default(0) @map("session_epoch")
-  createdAt       DateTime  @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime  @map("updated_at") @db.Timestamptz(3)
-  sessions        Session[]
+  sessionEpoch     Int         @default(0) @map("session_epoch")
+  createdAt        DateTime    @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @map("updated_at") @db.Timestamptz(3)
+  sessions         Session[]
+  authTokens       AuthToken[]
 
   @@map("app_user")
 }
@@ -280,4 +285,39 @@ model AuthRateLimit {
   count       Int
 
   @@map("auth_rate_limit")
+}
+
+// Postgres cannot drop an enum value in place: a migration that swaps this type must drop
+// auth_token_binding_purpose_check first and re-add it after, since it names a value.
+enum AuthTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+
+  @@map("auth_token_purpose")
+}
+
+// A single-use emailed link (ADR 0015): only the SHA-256 of the token is stored, and of the
+// sign-up's bindingToken on a verification token. CHECK constraints (migration
+// auth_token_username_hold): token_hash of 32 bytes; binding_hash of 32 bytes, verification only.
+model AuthToken {
+  tokenHash   Bytes            @id @map("token_hash")
+  purpose     AuthTokenPurpose
+  userId      String           @map("user_id") @db.Uuid
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bindingHash Bytes?           @map("binding_hash")
+  createdAt   DateTime         @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime         @map("expires_at") @db.Timestamptz(3)
+  usedAt      DateTime?        @map("used_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("auth_token")
+}
+
+// A username kept for a pending sign-up for 24 h after each submit (ADR 0015), so nobody else
+// takes it while the email is unverified. usernameKey is lower case, like User.usernameKey.
+model UsernameHold {
+  usernameKey String   @id @map("username_key")
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@map("auth_username_hold")
 }

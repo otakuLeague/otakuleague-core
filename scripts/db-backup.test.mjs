@@ -180,7 +180,7 @@ test('workflow: only schedule and manual triggers, no token, secrets only in the
   }
 });
 
-test('workflow: the excluded cache tables exist in the schema', () => {
+test('workflow: the excluded cache and short-lived auth tables exist in the schema', () => {
   const excluded = [
     ...WORKFLOW_TEXT.matchAll(/--exclude-table-data=public\.(\w+)/g),
   ].map((match) => match[1]);
@@ -188,6 +188,9 @@ test('workflow: the excluded cache tables exist in the schema', () => {
     'anime_list_page',
     'anime_relation_node',
     'anime_source_snapshot',
+    'auth_rate_limit',
+    'auth_token',
+    'auth_username_hold',
   ]);
   for (const table of excluded) {
     assert.ok(SCHEMA.includes(`@@map("${table}")`), `${table} in schema`);

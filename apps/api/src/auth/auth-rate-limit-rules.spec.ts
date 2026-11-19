@@ -8,6 +8,7 @@ import {
   type ClientIpKey,
   clientIpKey,
   decide,
+  RATE_LIMIT_LONGEST_WINDOW_MS,
   rateLimitKey,
   type RateLimitRule,
   SIGN_IN_LIMITS,
@@ -45,6 +46,12 @@ describe('SIGN_IN_LIMITS', () => {
       identifierIp: { limit: 5, windowMs: 15 * 60_000 },
       identifier: { limit: 30, windowMs: 60 * 60_000 },
     });
+  });
+});
+
+describe('RATE_LIMIT_LONGEST_WINDOW_MS', () => {
+  it('keeps keyed hashes of IPs and identifiers at most a day past their window start', () => {
+    expect(RATE_LIMIT_LONGEST_WINDOW_MS).toBe(24 * 60 * 60_000);
   });
 });
 
