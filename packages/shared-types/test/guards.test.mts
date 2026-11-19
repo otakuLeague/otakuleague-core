@@ -214,7 +214,7 @@ void describe('isEmailVerificationConfirmResponse', () => {
         assert.equal(
           isEmailVerificationConfirmResponse({ outcome, session }),
           false,
-          `${outcome} ${String(session)}`,
+          `${outcome} ${JSON.stringify(session)}`,
         );
       }
     }
