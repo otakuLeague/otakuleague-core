@@ -15,7 +15,6 @@ Model: `opusplan` for your own session; each kind of work goes to its agent with
 | CI (GitHub Actions) | every PR and push to main | GitHub | free |
 | Dependabot | weekly | PRs | free |
 | Deploys (after OTA-133/134) | merge to main → beta.otakuleague.com; PR → Vercel preview | Vercel, Railway | ADR 0009 |
-| Claude GitHub Action (optional) | `claude-ok` label on a GitHub issue, or `@claude` comment | GitHub | Max plan usage |
 | Hooks | every Claude edit / command | local | zero tokens |
 
 ## Reviewing the autopilot
@@ -26,14 +25,12 @@ To change something: open a session and say what you want ("make the home hero c
 - Autopilot: set `enabled: false` (or `automerge: false`) in `docs/AUTOPILOT.md` and push; or pause the scheduled task in claude.ai → Code → scheduled tasks.
 - Digests: `touch ~/.otakuleague/paused` (delete to resume); remove with `scripts/autopilot/uninstall-mac.sh`.
 - Notifications: `OTAKU_NOTIFY=0` in your shell.
-- Claude GitHub Action: remove the `CLAUDE_CODE_OAUTH_TOKEN` secret or delete `.github/workflows/claude.yml`.
 
 ## One-time setup on the Mac (~10 min)
 1. `git pull && pnpm install` (also enables the git hooks).
 2. `brew install jq gh && gh auth login` if missing.
 3. `scripts/autopilot/install-mac.sh --run-now --with-design` (installs the digests, runs one now, installs Chromium for design screenshots).
 4. Optional: Impeccable is vendored at `.claude/skills/impeccable/` (OTA-188). Do not install it as a plugin: that would bring its engine and hooks (ADR 0011); add `"env": {"DO_NOT_TRACK": "1"}` to `~/.claude/settings.json`.
-5. Optional: `claude setup-token` and save it as the repo secret `CLAUDE_CODE_OAUTH_TOKEN` to enable the GitHub Action.
 
 ## Human-only tickets
 OTA-133: the Railway account and project are done. Left for you: enable daily (and weekly) volume backups and run the failed-migration drill (see docs/deploy.md). OTA-134 (Vercel import + DNS record for beta.otakuleague.com) is still open, ~15 min; the autopilot prepares the config files.

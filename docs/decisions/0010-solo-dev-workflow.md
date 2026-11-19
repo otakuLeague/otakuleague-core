@@ -11,7 +11,7 @@ About 10 hours a week until the 2026-12-28 launch, on a Claude Max plan that ran
 - **Subagents only when they pay:** one review pass per PR (code-reviewer; security-reviewer only for auth, input, secrets; db-migration-checker only for schema changes). Test writing happens in the main session alongside the code. The interviewer is opt-in (`/review --coach`), not automatic.
 - **Daily loop as skills:** `/start`, `/next`, `/ship`, `/wrap`, `/bug`, `/review`, `/roadmap` in `.claude/skills`.
 - **Deterministic work in hooks, not tokens:** Prettier and ESLint `--fix` after each edit, guards for env files, lockfiles, force-pushes and attribution, a macOS notification when Claude waits.
-- **Unattended runs:** nightly and Sunday digests via launchd and `claude -p --model haiku --max-turns --max-budget-usd`, read-only tools, writing a short Markdown file. Optional `claude-ok` GitHub label for small tickets via the Claude Code GitHub Action on the Max subscription (OAuth token).
+- **Unattended runs:** nightly and Sunday digests via launchd and `claude -p --model haiku --max-turns --max-budget-usd`, read-only tools, writing a short Markdown file. (The optional `claude-ok` / `@claude` GitHub Action was removed in OTA-203: unused, and it ran main's code with a write token for any commenter.)
 - **No MCP servers in the project.** `gh`, `pnpm`, `curl` cover it; Linear is reached through the connector already in the account. Playwright stays a dev dependency driven from tests, not an MCP.
 
 ## Consequences
