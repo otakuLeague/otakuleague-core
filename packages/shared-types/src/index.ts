@@ -21,6 +21,8 @@ export const API_ERROR_CODES = [
   'UNAUTHORIZED',
   'AUTH_BUSY',
   'INVALID_CREDENTIALS',
+  'USERNAME_TAKEN',
+  'SIGN_UP_CLOSED',
   'TOO_MANY_REQUESTS',
   'CLIENT_ERROR',
   'SERVICE_UNAVAILABLE',
@@ -207,4 +209,10 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
-export type { MeResponse, SignInRequest, SignInResponse } from './auth';
+export type {
+  MeResponse,
+  SignInRequest,
+  SignInResponse,
+  SignUpRequest,
+  SignUpResponse,
+} from './auth';

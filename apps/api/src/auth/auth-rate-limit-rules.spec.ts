@@ -8,6 +8,8 @@ import {
   type ClientIpKey,
   clientIpKey,
   decide,
+  PER_IP_LIMITS,
+  perIpHits,
   RATE_LIMIT_LONGEST_WINDOW_MS,
   rateLimitKey,
   type RateLimitRule,
@@ -46,6 +48,49 @@ describe('SIGN_IN_LIMITS', () => {
       identifierIp: { limit: 5, windowMs: 15 * 60_000 },
       identifier: { limit: 30, windowMs: 60 * 60_000 },
     });
+  });
+});
+
+describe('PER_IP_LIMITS', () => {
+  it('pins the ADR 0015 sign-up number: 5 per IP per hour', () => {
+    expect(PER_IP_LIMITS).toEqual({
+      'sign-up': { limit: 5, windowMs: 60 * 60_000 },
+    });
+  });
+
+  it('keeps every window within the cleanup horizon', () => {
+    for (const rule of Object.values(PER_IP_LIMITS)) {
+      expect(rule.windowMs).toBeLessThanOrEqual(RATE_LIMIT_LONGEST_WINDOW_MS);
+    }
+  });
+});
+
+describe('perIpHits', () => {
+  it('counts the IP alone, under the route rule', () => {
+    expect(perIpHits(HMAC_KEY, 'sign-up', IP)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'sign-up', 'ip', [IP]),
+        rule: PER_IP_LIMITS['sign-up'],
+      },
+    ]);
+  });
+
+  it('never shares a counter with sign-in for the same IP', () => {
+    const [signUp] = perIpHits(HMAC_KEY, 'sign-up', IP);
+    const [signIn] = signInHits(HMAC_KEY, IP, FRIEREN);
+
+    expect(hex(signUp.key)).not.toBe(hex(signIn.key));
+  });
+
+  it('differs by IP and HMAC key, and counts a whole IPv6 /64 as one visitor', () => {
+    const key = (hmacKey: typeof HMAC_KEY, ip: ClientIpKey): string =>
+      hex(perIpHits(hmacKey, 'sign-up', ip)[0].key);
+
+    expect(key(HMAC_KEY, IP)).not.toBe(key(HMAC_KEY, OTHER_IP));
+    expect(key(HMAC_KEY, IP)).not.toBe(key(OTHER_HMAC_KEY, IP));
+    expect(key(HMAC_KEY, ipKey('2001:db8:1:2::1'))).toBe(
+      key(HMAC_KEY, ipKey('2001:db8:1:2:ffff::9')),
+    );
   });
 });
 

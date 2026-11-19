@@ -8,7 +8,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiHeader,
   ApiNoContentResponse,
@@ -18,7 +20,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import type { SignInResponse } from '@otakuleague/shared-types';
+import type { SignInResponse, SignUpResponse } from '@otakuleague/shared-types';
 import { ApiException } from '../common/api.exception';
 import type { ClientIpKey } from './auth-rate-limit-rules';
 import { ClientIp, CredentialGuard } from './credential.guard';
@@ -26,6 +28,8 @@ import { CurrentSession, SessionGuard } from './session.guard';
 import { type SignedInSession, SessionService } from './session.service';
 import { SignInDto } from './sign-in.dto';
 import { SignInService } from './sign-in.service';
+import { SignUpDto } from './sign-up.dto';
+import { SignUpService } from './sign-up.service';
 
 /** The one sign-in failure: unknown account, unverified email and wrong password alike (ADR 0015). */
 export const INVALID_CREDENTIALS_MESSAGE =
@@ -49,13 +53,109 @@ function signInLimited(retryAfterSeconds: number): ApiException {
   );
 }
 
+export const USERNAME_TAKEN_MESSAGE = 'This username is taken.';
+export const SIGN_UP_LIMITED_MESSAGE =
+  'Too many sign-up attempts. Try again later.';
+/**
+ * Production has no email provider yet (ADR 0020 N5): never an account nobody can confirm. A 403,
+ * not a 503: the filter logs every 5xx with a stack, and this answer is expected, not a fault.
+ */
+export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
+
+function signUpError(
+  status: HttpStatus,
+  code: 'USERNAME_TAKEN' | 'TOO_MANY_REQUESTS' | 'SIGN_UP_CLOSED',
+  message: string,
+  retryAfterSeconds?: number,
+): ApiException {
+  return new ApiException(status, { code, message }, { retryAfterSeconds });
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly signIns: SignInService,
+    private readonly signUps: SignUpService,
     private readonly sessions: SessionService,
   ) {}
+
+  @Post('sign-up')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(CredentialGuard)
+  // The body carries the bindingToken: never in any cache (ADR 0020).
+  @Header('Cache-Control', 'no-store')
+  @ApiHeader({
+    name: 'X-Client-Ip',
+    required: true,
+    description: "The visitor's IP, as the web server saw it.",
+  })
+  @ApiAcceptedResponse({
+    description:
+      'The same answer for a new, a pending and a registered email; the email (verification, or a notice to the owner) leaves afterwards.',
+    schema: {
+      type: 'object',
+      required: ['bindingToken'],
+      properties: {
+        bindingToken: { type: 'string', pattern: '^[A-Za-z0-9_-]{43}$' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description:
+      'VALIDATION_FAILED: a username, email or password outside the rules, or an unknown field. BAD_REQUEST: no valid X-Client-Ip.',
+  })
+  @ApiConflictResponse({
+    description:
+      'USERNAME_TAKEN: a member or a pending sign-up has it, or a submit holds it (24 h).',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'INTERNAL_KEY_REQUIRED: a caller other than the production web server. SIGN_UP_CLOSED: no email provider yet, so no account is created.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'TOO_MANY_REQUESTS: 5 submits per IP per hour. AUTH_BUSY: too many passwords being hashed (Retry-After 1).',
+  })
+  @ApiServiceUnavailableResponse({ description: 'The database is down.' })
+  async signUp(
+    @Body() body: SignUpDto,
+    @ClientIp() ip: ClientIpKey,
+  ): Promise<SignUpResponse> {
+    const outcome = await this.signUps.signUp({
+      username: body.username,
+      email: body.email,
+      password: body.password,
+      ip,
+    });
+    switch (outcome.kind) {
+      case 'accepted':
+        return { bindingToken: outcome.bindingToken };
+      case 'username_taken':
+        throw signUpError(
+          HttpStatus.CONFLICT,
+          'USERNAME_TAKEN',
+          USERNAME_TAKEN_MESSAGE,
+        );
+      case 'rate_limited':
+        throw signUpError(
+          HttpStatus.TOO_MANY_REQUESTS,
+          'TOO_MANY_REQUESTS',
+          SIGN_UP_LIMITED_MESSAGE,
+          outcome.retryAfterSeconds,
+        );
+      case 'closed':
+        throw signUpError(
+          HttpStatus.FORBIDDEN,
+          'SIGN_UP_CLOSED',
+          SIGN_UP_CLOSED_MESSAGE,
+        );
+      default: {
+        const unreachable: never = outcome;
+        return unreachable;
+      }
+    }
+  }
 
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)

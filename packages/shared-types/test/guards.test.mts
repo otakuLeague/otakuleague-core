@@ -25,12 +25,15 @@ void describe('isApiError', () => {
     );
   });
 
-  void it('accepts every auth error code a sign-in can answer (ADR 0015)', () => {
+  void it('accepts every auth error code a sign-in or a sign-up can answer (ADR 0015, 0020)', () => {
     for (const code of [
       'UNAUTHORIZED',
       'AUTH_BUSY',
       'INVALID_CREDENTIALS',
+      'USERNAME_TAKEN',
+      'SIGN_UP_CLOSED',
       'TOO_MANY_REQUESTS',
+      'SERVICE_UNAVAILABLE',
     ]) {
       assert.equal(isApiError({ error: { code, message: 'x' } }), true, code);
     }

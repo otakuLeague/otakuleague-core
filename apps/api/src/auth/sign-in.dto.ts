@@ -37,7 +37,7 @@ export const PASSWORD_RAW_MAX = 8 * PASSWORD_MAX;
 
 /** Counted like sign-up will count it (code points after NFC); the message never echoes the value. */
 @ValidatorConstraint({ name: 'passwordMaxLength' })
-class PasswordMaxLength implements ValidatorConstraintInterface {
+export class PasswordMaxLength implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
     return (
       typeof value === 'string' &&

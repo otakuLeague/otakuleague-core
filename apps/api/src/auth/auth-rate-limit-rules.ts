@@ -28,7 +28,14 @@ export const SIGN_IN_LIMITS = {
   identifier: { limit: 30, windowMs: HOUR_MS },
 } as const satisfies Record<string, RateLimitRule>;
 
-export type AuthRateLimitRoute = 'sign-in';
+/** Routes counted per IP alone, ADR 0015 "Rate limits"; a test pins these numbers. */
+export const PER_IP_LIMITS = {
+  'sign-up': { limit: 5, windowMs: HOUR_MS },
+} as const satisfies Record<string, RateLimitRule>;
+
+export type PerIpRoute = keyof typeof PER_IP_LIMITS;
+
+export type AuthRateLimitRoute = 'sign-in' | PerIpRoute;
 
 export type RateLimitScope = keyof typeof SIGN_IN_LIMITS;
 
@@ -123,6 +130,21 @@ export function signInHits(
     },
   ];
   return hits as SignInHits;
+}
+
+/** The one key of a route counted per IP alone; the route is in the key, so no two routes share it. */
+export function perIpHits(
+  hmacKey: KeyObject,
+  route: PerIpRoute,
+  ip: ClientIpKey,
+): RateLimitHits {
+  const hits: readonly [RateLimitHit] = [
+    {
+      key: rateLimitKey(hmacKey, route, 'ip', [ip]),
+      rule: PER_IP_LIMITS[route],
+    },
+  ];
+  return hits as RateLimitHits;
 }
 
 export type RateLimitDecision =
