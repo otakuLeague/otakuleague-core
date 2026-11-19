@@ -35,3 +35,22 @@ export interface SignInResponse {
   /** ISO 8601 (UTC): 30 days from now, renewed while in use (ADR 0015). */
   readonly expiresAt: string;
 }
+
+/** POST /auth/email-verification/confirm body (ADR 0020 Addendum 1e-ii). Sent only by the web server. */
+export interface EmailVerificationConfirmRequest {
+  /** The emailed token, as the link carried it; at most 128 characters. */
+  readonly token: string;
+  /** From `ol_signup`, when this browser signed up: the one-click path, which gives a session. */
+  readonly bindingToken?: string;
+  /** The sign-up password, typed on another browser after `confirmation_required`. */
+  readonly password?: string;
+}
+
+/**
+ * POST /auth/email-verification/confirm 200 body. Never cached (`no-store`). `session` is set only
+ * when the binding matched; `already_verified` never carries one.
+ */
+export type EmailVerificationConfirmResponse =
+  | { readonly outcome: 'verified'; readonly session: SignInResponse | null }
+  | { readonly outcome: 'already_verified' }
+  | { readonly outcome: 'confirmation_required' };

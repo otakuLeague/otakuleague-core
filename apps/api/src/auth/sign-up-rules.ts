@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import {
   type NormalisedIdentifier,
   normalisePassword,
@@ -51,4 +51,20 @@ export const AUTH_TOKEN_BYTES = 32;
 /** What `auth_token` stores for a token and its binding: the SHA-256, never the token. */
 export function hashAuthToken(token: string): Uint8Array<ArrayBuffer> {
   return createHash('sha256').update(token, 'utf8').digest();
+}
+
+/**
+ * True only when a bindingToken was sent, the token row stores a binding, and the SHA-256 of the
+ * one equals the other, compared in constant time. A missing side never matches.
+ */
+export function bindingMatches(
+  bindingToken: string | undefined,
+  bindingHash: Uint8Array | null,
+): boolean {
+  if (bindingToken === undefined || bindingHash === null) return false;
+  const presented = hashAuthToken(bindingToken);
+  return (
+    bindingHash.length === presented.length &&
+    timingSafeEqual(presented, bindingHash)
+  );
 }

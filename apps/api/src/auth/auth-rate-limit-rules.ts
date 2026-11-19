@@ -31,7 +31,17 @@ export const SIGN_IN_LIMITS = {
 /** Routes counted per IP alone, ADR 0015 "Rate limits"; a test pins these numbers. */
 export const PER_IP_LIMITS = {
   'sign-up': { limit: 5, windowMs: HOUR_MS },
+  'email-verification-confirm': { limit: 10, windowMs: 15 * MINUTE_MS },
 } as const satisfies Record<string, RateLimitRule>;
+
+/**
+ * Password checks per pending account on the confirm route, from any number of IPs (ADR 0020
+ * Addendum C4: at most 240 guesses in the account's 24 h); a test pins it.
+ */
+export const CONFIRM_PASSWORD_LIMIT = {
+  limit: 10,
+  windowMs: HOUR_MS,
+} as const satisfies RateLimitRule;
 
 export type PerIpRoute = keyof typeof PER_IP_LIMITS;
 
@@ -142,6 +152,26 @@ export function perIpHits(
     {
       key: rateLimitKey(hmacKey, route, 'ip', [ip]),
       rule: PER_IP_LIMITS[route],
+    },
+  ];
+  return hits as RateLimitHits;
+}
+
+/**
+ * The account's password counter on the confirm route, keyed by its stored email. Counted only
+ * right before a password verification, so only the holder of a live token can use it up. Its
+ * route differs from sign-in's, so the two never share a counter.
+ */
+export function confirmPasswordHits(
+  hmacKey: KeyObject,
+  email: NormalisedIdentifier,
+): RateLimitHits {
+  const hits: readonly [RateLimitHit] = [
+    {
+      key: rateLimitKey(hmacKey, 'email-verification-confirm', 'identifier', [
+        email,
+      ]),
+      rule: CONFIRM_PASSWORD_LIMIT,
     },
   ];
   return hits as RateLimitHits;

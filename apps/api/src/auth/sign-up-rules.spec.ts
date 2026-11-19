@@ -1,14 +1,21 @@
-import { createHash } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { describe, expect, it, vi } from 'vitest';
 import { identifierKind, normaliseIdentifier } from './credential-rules';
 import {
   AUTH_TOKEN_BYTES,
+  bindingMatches,
   hashAuthToken,
   isEmailAddress,
   meetsSignUpPasswordRule,
   PENDING_SIGN_UP_TTL_MS,
   USERNAME_PATTERN,
 } from './sign-up-rules';
+
+// The real function, recorded: bindingMatches must compare through it, never with ===.
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+  return { ...actual, timingSafeEqual: vi.fn(actual.timingSafeEqual) };
+});
 
 const email = (typed: string): boolean =>
   isEmailAddress(normaliseIdentifier(typed));
@@ -121,5 +128,46 @@ describe('auth tokens', () => {
     );
     expect(digest).toHaveLength(32);
     expect(Buffer.from(digest).toString('latin1')).not.toContain(token);
+  });
+});
+
+describe('bindingMatches', () => {
+  const BINDING = 'fake-binding-token-'.padEnd(43, 'B');
+  const stored = hashAuthToken(BINDING);
+
+  it('matches the bindingToken whose SHA-256 the token row stores', () => {
+    expect(bindingMatches(BINDING, stored)).toBe(true);
+    expect(bindingMatches(BINDING, new Uint8Array(stored))).toBe(true);
+  });
+
+  it.each<[string, string | undefined, Uint8Array | null]>([
+    ['no bindingToken sent', undefined, stored],
+    [
+      'a token row without a binding (resend on the password path)',
+      BINDING,
+      null,
+    ],
+    ['neither side', undefined, null],
+    ['another bindingToken', 'fake-binding-token-'.padEnd(43, 'C'), stored],
+    [
+      'the stored digest sent as the token',
+      Buffer.from(stored).toString('hex'),
+      stored,
+    ],
+    ['an empty bindingToken', '', stored],
+    ['a stored value of another length', BINDING, stored.subarray(0, 31)],
+    ['an empty stored value', BINDING, new Uint8Array()],
+  ])('refuses %s, without throwing', (_, bindingToken, bindingHash) => {
+    expect(bindingMatches(bindingToken, bindingHash)).toBe(false);
+  });
+
+  it('compares the digests in constant time', () => {
+    vi.mocked(timingSafeEqual).mockClear();
+
+    expect(bindingMatches('fake-binding-token-'.padEnd(43, 'C'), stored)).toBe(
+      false,
+    );
+
+    expect(timingSafeEqual).toHaveBeenCalledOnce();
   });
 });
