@@ -12,6 +12,22 @@ export interface SignInRequest {
   readonly password: string;
 }
 
+/** POST /auth/sign-up body (ADR 0020). Sent only by the web server, with X-Client-Ip. */
+export interface SignUpRequest {
+  /** 3 to 20 of A-Z, a-z, 0-9 and "_"; kept as typed, unique in any letter case. */
+  readonly username: string;
+  /** At most 254 characters; stored and mailed trimmed and lower-cased. */
+  readonly email: string;
+  /** 8 to 128 characters (code points after NFC), at least one a digit or symbol. */
+  readonly password: string;
+}
+
+/** POST /auth/sign-up 202 body: the same for a new, a pending and a registered email. Never cached. */
+export interface SignUpResponse {
+  /** 43 base64url characters; the web keeps it in `ol_signup` for the one-click confirmation. */
+  readonly bindingToken: string;
+}
+
 /** POST /auth/sign-in 200 body. Never cached (`no-store`); the token goes only into the session cookie. */
 export interface SignInResponse {
   /** 43 base64url characters, sent back as `Authorization: Bearer <token>`. */

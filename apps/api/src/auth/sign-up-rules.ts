@@ -1,6 +1,54 @@
+import { createHash } from 'node:crypto';
+import {
+  type NormalisedIdentifier,
+  normalisePassword,
+  PASSWORD_MIN,
+} from './credential-rules';
+
 /**
  * `PENDING_SIGN_UP_TTL` (ADR 0015): how long a sign-up submit holds its username, how long its
  * verification token lives, and how far ahead each submit sets an unverified account's
  * `pendingExpiresAt`, after which the auth cleanup deletes it.
  */
 export const PENDING_SIGN_UP_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Parity (PARITY.md): 3 to 20 ASCII letters, digits or "_". Never "@", which sign-in reads as an
+ * email (identifierKind), and nothing normaliseIdentifier could change but the letter case.
+ */
+export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+
+/** A digit, punctuation or symbol (an emoji included); a letter, a mark or a space is not one. */
+const DIGIT_OR_SYMBOL = /[\p{N}\p{P}\p{S}]/u;
+
+/**
+ * Sign-up's password rule (parity): at least PASSWORD_MIN code points after NFC, at least one a
+ * digit or symbol. The upper bound is checked apart (PasswordMaxLength), as sign-in checks it.
+ */
+export function meetsSignUpPasswordRule(password: string): boolean {
+  const normalised = normalisePassword(password);
+  return (
+    [...normalised].length >= PASSWORD_MIN && DIGIT_OR_SYMBOL.test(normalised)
+  );
+}
+
+/**
+ * Lower-case ASCII only, checked on normaliseIdentifier output (what is stored and mailed): a local
+ * part of at most 64, "@", then dot-separated labels ending in one that starts with a letter. No
+ * space, control character or non-ASCII letter can reach a mail header or the lower-case CHECK.
+ * Linear: no class holds both a label character and the "." or "@" that ends it.
+ */
+const EMAIL_PATTERN =
+  /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@(?:[a-z0-9-]{1,63}\.)+[a-z][a-z0-9-]{1,62}$/;
+
+export function isEmailAddress(email: NormalisedIdentifier): boolean {
+  return EMAIL_PATTERN.test(email);
+}
+
+/** Random bytes in a verification token and in a sign-up's bindingToken (ADR 0015). */
+export const AUTH_TOKEN_BYTES = 32;
+
+/** What `auth_token` stores for a token and its binding: the SHA-256, never the token. */
+export function hashAuthToken(token: string): Uint8Array<ArrayBuffer> {
+  return createHash('sha256').update(token, 'utf8').digest();
+}
