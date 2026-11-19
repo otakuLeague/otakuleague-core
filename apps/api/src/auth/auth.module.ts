@@ -14,6 +14,8 @@ import { AuthRateLimiter } from './auth-rate-limiter';
 import { AuthSecrets, EnvironmentAuthSecrets } from './auth-secrets';
 import { CredentialGuard } from './credential.guard';
 import { EmailSender, emailSenderFor } from './email-sender';
+import { EmailVerificationController } from './email-verification.controller';
+import { EmailVerificationService } from './email-verification.service';
 import { HashSlots } from './hash-slots';
 import { MeController } from './me.controller';
 import { PasswordHasher } from './password-hasher';
@@ -25,7 +27,7 @@ import { SignUpService } from './sign-up.service';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [MeController, AuthController],
+  controllers: [MeController, AuthController, EmailVerificationController],
   providers: [
     SessionService,
     SessionGuard,
@@ -38,6 +40,7 @@ import { SignUpService } from './sign-up.service';
     CredentialGuard,
     SignInService,
     SignUpService,
+    EmailVerificationService,
     {
       provide: EmailSender,
       inject: [ConfigService],
