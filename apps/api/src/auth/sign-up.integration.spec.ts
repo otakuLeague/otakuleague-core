@@ -355,6 +355,31 @@ describe('POST /auth/sign-up', () => {
     ]);
   });
 
+  it('never changes an unverified account with no deadline (from before slice 1e): a notice, the hold kept', async () => {
+    const owner = await seedUser(1, {
+      username: 'Himmel',
+      email: 'himmel@example.test',
+      verified: false,
+      pendingExpiresAt: null,
+    });
+    await seedToken(7, owner);
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: owner },
+    });
+
+    await signUp({ ...SIGN_UP, email: 'himmel@example.test' }).expect(202);
+
+    expect(argon2.derives).toBe(1);
+    expect(await prisma.user.findMany()).toEqual([before]);
+    expect(await prisma.authToken.count()).toBe(1);
+    expect(await sentAfterSettling()).toEqual([
+      { kind: 'sign_up_notice', to: 'himmel@example.test' },
+    ]);
+    expect(await prisma.usernameHold.findMany()).toEqual([
+      { usernameKey: 'frieren', expiresAt: at(DAY) },
+    ]);
+  });
+
   it.each([
     ['pending', at(HOUR)],
     ['stale (past its deadline)', NOW],
@@ -611,13 +636,13 @@ describe('POST /auth/sign-up', () => {
     await signUp(SIGN_UP, from(OTHER_IP)).expect(202);
   });
 
-  it('answers 503 and writes nothing while no email can be sent (ADR 0020 N5)', async () => {
+  it('answers 403 SIGN_UP_CLOSED and writes nothing while no email can be sent (ADR 0020 N5)', async () => {
     mail.open = false;
 
-    const response = await signUp(SIGN_UP).expect(503);
+    const response = await signUp(SIGN_UP).expect(403);
 
     expect(response.body).toEqual({
-      error: { code: 'SERVICE_UNAVAILABLE', message: SIGN_UP_CLOSED_MESSAGE },
+      error: { code: 'SIGN_UP_CLOSED', message: SIGN_UP_CLOSED_MESSAGE },
     });
     expect(await prisma.authRateLimit.count()).toBe(0);
     expect(argon2.derives).toBe(0);
@@ -647,6 +672,29 @@ describe('POST /auth/sign-up', () => {
     expect(logged).not.toContain(
       (response.body as SignUpResponse).bindingToken,
     );
+  });
+
+  it('still answers 202 when the notice to a registered owner fails, and logs no address', async () => {
+    await seedUser(1, {
+      username: 'Himmel',
+      email: 'himmel@example.test',
+      verified: true,
+      pendingExpiresAt: null,
+    });
+    mail.failing = true;
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    await signUp({ ...SIGN_UP, email: 'himmel@example.test' }).expect(202);
+
+    expect(await sentAfterSettling()).toEqual([
+      { kind: 'sign_up_notice', to: 'himmel@example.test' },
+    ]);
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      'Sending the sign_up_notice email to a registered account failed; not retried.',
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('himmel@');
   });
 
   it.each<[string, Record<string, string>]>([

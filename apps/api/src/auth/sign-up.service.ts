@@ -63,7 +63,36 @@ const stale = (now: string): Prisma.Sql =>
   Prisma.sql`email_verified_at IS NULL AND pending_expires_at <= ${now}::timestamptz`;
 
 /**
- * POST /auth/sign-up (ADR 0020). Order: no sender is 503 before anything; the attempt is counted
+ * A unique violation on `username_key`, as the pg adapter reports it: P2002, or P2010 for raw SQL
+ * with the adapter's cause naming the column or the index. The hold lock should make it
+ * impossible; should it happen anyway, the answer is the 409 it means, never a 500.
+ */
+export function isUsernameKeyConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  const adapterError: unknown = error.meta?.driverAdapterError;
+  const cause: unknown =
+    typeof adapterError === 'object' && adapterError !== null
+      ? Reflect.get(adapterError, 'cause')
+      : undefined;
+  const field = (name: string): unknown =>
+    typeof cause === 'object' && cause !== null
+      ? Reflect.get(cause, name)
+      : undefined;
+  const unique =
+    error.code === 'P2002' ||
+    (error.code === 'P2010' &&
+      (field('kind') === 'UniqueConstraintViolation' ||
+        field('originalCode') === '23505'));
+  const named = JSON.stringify([
+    error.meta?.target,
+    field('constraint'),
+    field('originalMessage'),
+  ]).includes('username_key');
+  return unique && named;
+}
+
+/**
+ * POST /auth/sign-up (ADR 0020). Order: no sender is 403 SIGN_UP_CLOSED before anything; the attempt is counted
  * per IP; a taken username is 409 before any hash; then exactly one argon2 hash, outside any
  * transaction; then one transaction that claims the username hold (the lock every sign-up of
  * that username waits on), replaces a stale row of that username, upserts the user by email and
@@ -214,16 +243,28 @@ export class SignUpService implements OnModuleDestroy {
             ${expiresAt}::timestamptz)`;
           return { kind: 'pending', userId: user.id };
         },
+        // Explicit: the design relies on READ COMMITTED re-reading a row after a lock wait.
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
       );
     } catch (error) {
-      if (error instanceof UsernameTakenRollback) return USERNAME_TAKEN;
+      if (
+        error instanceof UsernameTakenRollback ||
+        isUsernameKeyConflict(error)
+      ) {
+        return USERNAME_TAKEN;
+      }
       throw error;
     }
   }
 
-  /** Not awaited by the caller; never rejects. A synchronous throw in `send` is caught too. */
+  /**
+   * Not awaited by the caller; never rejects. `setImmediate` starts the send after this turn of
+   * the event loop, so after the answer is written. A synchronous throw in `send` is caught too.
+   */
   private dispatch(email: AuthEmail, userId: string | null): void {
-    const sending: Promise<void> = Promise.resolve()
+    const sending: Promise<void> = new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    })
       .then(() => this.mailer.send(email))
       .catch(() => {
         this.warnSendFailed(email, userId);

@@ -148,6 +148,15 @@ void describe('redactText', () => {
     );
   });
 
+  void it('masks every local-part character sign-up accepts', () => {
+    for (const address of [
+      "o'neil@example.com",
+      'a!b#c$d%e&f*g/h=i?j^k`l{m|n}o~p@example.com',
+    ]) {
+      assert.equal(redactText(`sent to ${address} ok`), 'sent to [email] ok');
+    }
+  });
+
   void it('keeps package versions in stack trace paths', () => {
     const frame =
       'at file:///repo/node_modules/.pnpm/@nestjs+core@12.1.3_@babel+core@7.29.7/node_modules/x.js:44:37';

@@ -39,9 +39,9 @@ All three need `X-Internal-Api-Key` and `X-Client-Ip` (`CredentialGuard`) and an
 
 | Route | PR | Limit per IP | Answer |
 |---|---|---|---|
-| `POST /auth/sign-up` `{ username, email, password }` | 1e-i | 5 per hour | 202 `{ bindingToken }`; 409 `USERNAME_TAKEN`; 400 `VALIDATION_FAILED`; 429 `TOO_MANY_REQUESTS` or `AUTH_BUSY`; 503 `SERVICE_UNAVAILABLE` when no sender exists |
+| `POST /auth/sign-up` `{ username, email, password }` | 1e-i | 5 per hour | 202 `{ bindingToken }`; 409 `USERNAME_TAKEN`; 400 `VALIDATION_FAILED`; 429 `TOO_MANY_REQUESTS` or `AUTH_BUSY`; 403 `SIGN_UP_CLOSED` when no sender exists |
 | `POST /auth/email-verification/confirm` `{ token, bindingToken? }` | 1e-ii | 10 per 15 min | 200 `{ outcome }`; 400 `AUTH_TOKEN_INVALID` |
-| `POST /auth/email-verification/resend` `{ email }` | 1e-ii | 10 per hour | 202 always (503 when no sender exists) |
+| `POST /auth/email-verification/resend` `{ email }` | 1e-ii | 10 per hour | 202 always (403 `SIGN_UP_CLOSED` when no sender exists) |
 | `GET /users/availability?username=` | 1e-iii | 60 per minute | 200 `{ available }` |
 
 Input rules: username 3 to 20 of `[A-Za-z0-9_]` (parity; so never "@"), stored as typed, `usernameKey` = `normaliseIdentifier(username)`. Email at most 254 raw UTF-16 units, checked for shape after `normaliseIdentifier`, and that output is what `email` stores and what mail is sent to. Password 8 to 128 code points after NFC with at least one digit or symbol.
@@ -77,7 +77,7 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 **Simplest version first.** One transaction that checks the username, inserts the user and the token, then prints the mail. It fails N1 (a known email hits the unique index and answers differently) and N2 (two submits both pass the check). The design below adds only what those two need.
 
 **Sign-up (1e-i), in order.**
-1. No sender (`EmailSender.canSend()` false): 503 before any counter, hash or write.
+1. No sender (`EmailSender.canSend()` false): 403 `SIGN_UP_CLOSED` before any counter, hash or write.
 2. Count the attempt: one per-IP key, 5 per hour. Refused: 429 with `Retry-After`.
 3. Read "is the username taken?". Yes: 409, no hash.
 4. One argon2 hash, outside any transaction. Draw the token and the `bindingToken` (32 bytes each, base64url) in every branch.
@@ -89,6 +89,8 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 6. Answer 202 `{ bindingToken }`. Then, not awaited: `email_verification` (address, username, token), or `sign_up_notice` to the owner of a permanent account. A rejected send is caught and logged without the address; no retry.
 
 `now` is one `Clock.now()` per request, so the hold, the deadline and the token expire at the same instant. Timestamps go into raw SQL as `toISOString()::timestamptz` and no timestamp is read back from raw SQL (the pg adapter drops the offset, OTA-200).
+
+**What the 409 reads.** A username is taken when a verified user has it, an unverified row the cleanup would not delete has it (pending, or no deadline), or a live hold has it. This supersedes the PROGRESS.md carry-over ("verified users and live holds only"): a pending row counts too, because resend re-arms it without touching the hold. Constraint on 1e-ii: resend must not move `pending_expires_at` past the username hold's `expires_at` (the hold and the row end together; resend extends both, or neither). Otherwise a name whose hold has ended but whose row lives on answers 409 to a probe while a free-looking name answers 202, and the taken/free probe tells whether an email is registered.
 
 **Confirm (1e-ii).** Read the token row by its hash to learn the user. Then one transaction: `SELECT … FROM app_user WHERE id = … FOR UPDATE` first (the cleanup's order, user then token, so a racing re-submit or cleanup cannot deadlock it), consume with `UPDATE auth_token SET used_at = now WHERE token_hash = … AND used_at IS NULL AND expires_at > now RETURNING`, then `UPDATE app_user SET email_verified_at = now, pending_expires_at = NULL`. The session is created after commit, only when the binding matched.
 
@@ -102,7 +104,7 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 
 **Resend (1e-ii).** `UPDATE app_user SET pending_expires_at = now + TTL WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now RETURNING id, username`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise replace the token and copy the old row's `binding_hash`, so the browser that signed up keeps its one-click path. Resend does not touch the hold: the "taken" rule reads the pending row itself, which is why that rule is wider than "verified users and live holds".
 
-**Email (1e-i).** `EmailSender` is an abstract class with `canSend()` and `send(email: AuthEmail)`; `AuthEmail` is a union of `email_verification` and `sign_up_notice`. The module provides `ConsoleEmailSender` when `NODE_ENV` is not `production` and `ClosedEmailSender` (`canSend()` false) in production, so production cannot get the console sender and sign-up stays closed there until a real adapter exists. The console sender writes one line straight to stdout (kind, address, token), not through the Logger, whose redaction would mask the token: a recorded exception to "no secret in a log", local only. `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, the link and the templates arrive with the first real adapter.
+**Email (1e-i).** `EmailSender` is an abstract class with `canSend()` and `send(email: AuthEmail)`; `AuthEmail` is a union of `email_verification` and `sign_up_notice`. The module provides `ConsoleEmailSender` when `NODE_ENV` is not `production` and `ClosedEmailSender` (`canSend()` false) in production, so production cannot get the console sender and sign-up stays closed there until a real adapter exists. The console sender writes one line straight to stdout (kind, address, token), not through the Logger, whose redaction would mask the token: a recorded exception to "no secret in a log", local only. `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, the link and the templates arrive with the first real adapter. The provider is Resend on its free plan (Farouk, 2026-11-15, PROGRESS.md), not Brevo as ADR 0015 says; the email slice writes the ADR 0015 addendum. Closed sign-up answers 403 `SIGN_UP_CLOSED`, not a 5xx: the filter logs every 5xx with a stack, and this answer is expected.
 
 **Deep dives.**
 - **N1.** Steps 2 to 4 never read the email. The three email branches differ by at most two indexed statements (about 1 ms) inside one request limited to 5 per IP per hour: accepted. Every submit that passes the username check leaves a hold, including one with a registered email.
@@ -115,7 +117,7 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 
 | PR | Scope | Estimate |
 |---|---|---|
-| 1e-i (this) | `POST /auth/sign-up`, `EmailSender` (console, closed), username and password rules, per-IP limit, `USERNAME_TAKEN`, shared types | about 400 lines of code, 300 of tests |
+| 1e-i (this) | `POST /auth/sign-up`, `EmailSender` (console, closed), username and password rules, per-IP limit, `USERNAME_TAKEN`, `SIGN_UP_CLOSED`, shared types | about 400 lines of code, 300 of tests |
 | 1e-ii | confirm and resend, `AUTH_TOKEN_INVALID`, their limits and shared types | about 340 lines of code |
 | 1e-iii | `GET /users/availability`, the 10,000 common-password list (licence check first) | small code, one data file |
 | Email slice | Resend adapter, templates, `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, email budget, ADR 0015 addendum | opens sign-up in production |
@@ -124,8 +126,12 @@ Also rejected: hashing inside the transaction (row locks held for the whole argo
 ## Consequences
 
 - Until 1e-ii merges, an account created by sign-up cannot be confirmed (local and CI only; production is closed).
-- **Gate:** the email slice must not open sign-up in production before the email budget and the common-password list are merged.
-- Web contracts for 1f: 409 `USERNAME_TAKEN` and 503 "sign-up is not open yet" are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again.
+- **Gate:** the email slice must not open sign-up in production before all of these are merged:
+  - the per-address email budget, checked before the transaction, and the common-password list;
+  - pre-hijack (security review H1/M2): a confirm without a matching binding must not activate the pending password. 1e-ii either asks for the password on that path, or verifies the email and voids the hash so the owner sets one by reset. Otherwise anyone who submits a victim's address, and anyone who re-submits it while it is pending, owns the account once the victim clicks "Confirm my email";
+  - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
+  - a reserved-username deny list.
+- Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again.
 
 **Too simple?**
 - Submitting the same form twice within 24 h answers 409 for the member's own username, and a typo in the email locks the chosen name for 24 h. Letting the same email through without leaking needs a keyed hash of the email on the hold (a column, so a migration). Follow-up ticket to open; not built here.

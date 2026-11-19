@@ -56,12 +56,15 @@ function signInLimited(retryAfterSeconds: number): ApiException {
 export const USERNAME_TAKEN_MESSAGE = 'This username is taken.';
 export const SIGN_UP_LIMITED_MESSAGE =
   'Too many sign-up attempts. Try again later.';
-/** Production has no email provider yet (ADR 0020 N5): never an account nobody can confirm. */
+/**
+ * Production has no email provider yet (ADR 0020 N5): never an account nobody can confirm. A 403,
+ * not a 503: the filter logs every 5xx with a stack, and this answer is expected, not a fault.
+ */
 export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
 
 function signUpError(
   status: HttpStatus,
-  code: 'USERNAME_TAKEN' | 'TOO_MANY_REQUESTS' | 'SERVICE_UNAVAILABLE',
+  code: 'USERNAME_TAKEN' | 'TOO_MANY_REQUESTS' | 'SIGN_UP_CLOSED',
   message: string,
   retryAfterSeconds?: number,
 ): ApiException {
@@ -108,16 +111,13 @@ export class AuthController {
   })
   @ApiForbiddenResponse({
     description:
-      'INTERNAL_KEY_REQUIRED: a caller other than the production web server.',
+      'INTERNAL_KEY_REQUIRED: a caller other than the production web server. SIGN_UP_CLOSED: no email provider yet, so no account is created.',
   })
   @ApiTooManyRequestsResponse({
     description:
       'TOO_MANY_REQUESTS: 5 submits per IP per hour. AUTH_BUSY: too many passwords being hashed (Retry-After 1).',
   })
-  @ApiServiceUnavailableResponse({
-    description:
-      'SERVICE_UNAVAILABLE: no email provider (sign-up closed), or the database is down.',
-  })
+  @ApiServiceUnavailableResponse({ description: 'The database is down.' })
   async signUp(
     @Body() body: SignUpDto,
     @ClientIp() ip: ClientIpKey,
@@ -146,8 +146,8 @@ export class AuthController {
         );
       case 'closed':
         throw signUpError(
-          HttpStatus.SERVICE_UNAVAILABLE,
-          'SERVICE_UNAVAILABLE',
+          HttpStatus.FORBIDDEN,
+          'SIGN_UP_CLOSED',
           SIGN_UP_CLOSED_MESSAGE,
         );
       default: {

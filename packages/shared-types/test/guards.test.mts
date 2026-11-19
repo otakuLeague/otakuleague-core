@@ -31,6 +31,7 @@ void describe('isApiError', () => {
       'AUTH_BUSY',
       'INVALID_CREDENTIALS',
       'USERNAME_TAKEN',
+      'SIGN_UP_CLOSED',
       'TOO_MANY_REQUESTS',
       'SERVICE_UNAVAILABLE',
     ]) {

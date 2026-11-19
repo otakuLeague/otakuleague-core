@@ -26,7 +26,9 @@ const WORD_RUN = /[\w.-]{10,}/g;
 const JWT = /^eyJ[\w-]+\.[\w-]+\.[\w-]*$/;
 
 // The domain must end in a letters-only TLD, so pnpm paths such as `core@12.1.3_x` are kept.
-const EMAIL = /[\w.+-]{1,64}@(?:[a-z\d-]{1,63}\.){1,8}[a-z]{2,24}\b/gi;
+// The local part admits every character sign-up accepts (apps/api sign-up-rules.ts EMAIL_PATTERN).
+const EMAIL =
+  /[\w.!#$%&'*+/=?^`{|}~-]{1,64}@(?:[a-z\d-]{1,63}\.){1,8}[a-z]{2,24}\b/gi;
 
 function maskValue(value: string): string {
   const quote = value.startsWith('"') || value.startsWith("'") ? value[0] : '';
