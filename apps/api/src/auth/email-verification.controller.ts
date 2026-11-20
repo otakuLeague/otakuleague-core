@@ -23,7 +23,6 @@ import type {
   EmailVerificationResendResponse,
 } from '@otakuleague/shared-types';
 import { ApiException } from '../common/api.exception';
-import { SIGN_UP_CLOSED_MESSAGE } from './auth.controller';
 import type { ClientIpKey } from './auth-rate-limit-rules';
 import { ClientIp, CredentialGuard } from './credential.guard';
 import {
@@ -32,6 +31,7 @@ import {
 } from './email-verification.dto';
 import { EmailVerificationService } from './email-verification.service';
 import { SignUpService } from './sign-up.service';
+import { SIGN_UP_CLOSED_MESSAGE } from './sign-up-rules';
 
 /** One answer for an unknown, malformed, used or expired token: never says which. */
 export const AUTH_TOKEN_INVALID_MESSAGE =

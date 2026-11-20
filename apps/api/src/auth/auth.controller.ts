@@ -30,6 +30,7 @@ import { SignInDto } from './sign-in.dto';
 import { SignInService } from './sign-in.service';
 import { SignUpDto } from './sign-up.dto';
 import { SignUpService } from './sign-up.service';
+import { SIGN_UP_CLOSED_MESSAGE } from './sign-up-rules';
 
 /** The one sign-in failure: unknown account, unverified email and wrong password alike (ADR 0015). */
 export const INVALID_CREDENTIALS_MESSAGE =
@@ -56,11 +57,6 @@ function signInLimited(retryAfterSeconds: number): ApiException {
 export const USERNAME_TAKEN_MESSAGE = 'This username is taken.';
 export const SIGN_UP_LIMITED_MESSAGE =
   'Too many sign-up attempts. Try again later.';
-/**
- * Production has no email provider yet (ADR 0020 N5): never an account nobody can confirm. A 403,
- * not a 503: the filter logs every 5xx with a stack, and this answer is expected, not a fault.
- */
-export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
 
 function signUpError(
   status: HttpStatus,

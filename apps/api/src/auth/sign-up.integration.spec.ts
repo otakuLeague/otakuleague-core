@@ -27,7 +27,6 @@ import {
 import { truncateAllTables } from '../testing/test-database';
 import { Argon2id, type Argon2idInput } from './argon2id';
 import {
-  SIGN_UP_CLOSED_MESSAGE,
   SIGN_UP_LIMITED_MESSAGE,
   USERNAME_TAKEN_MESSAGE,
 } from './auth.controller';
@@ -36,7 +35,7 @@ import { type AuthEmail, EmailSender } from './email-sender';
 import { PasswordHasher } from './password-hasher';
 import { SESSION_TOKEN_PATTERN } from './session-rules';
 import { SignUpService } from './sign-up.service';
-import { hashAuthToken } from './sign-up-rules';
+import { hashAuthToken, SIGN_UP_CLOSED_MESSAGE } from './sign-up-rules';
 
 const NOW = new Date('2026-11-19T12:00:00.000Z');
 const HOUR = 60 * 60 * 1000;

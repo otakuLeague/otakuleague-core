@@ -31,7 +31,7 @@ import { truncateAllTables } from '../testing/test-database';
 import { Argon2id, type Argon2idInput } from './argon2id';
 import { CLIENT_IP_REQUIRED_MESSAGE } from './credential.guard';
 import { type AuthEmail, EmailSender } from './email-sender';
-import { SIGN_UP_CLOSED_MESSAGE } from './auth.controller';
+import { AuthCleanupService } from './auth-cleanup.service';
 import { AuthRateLimiter } from './auth-rate-limiter';
 import {
   AUTH_TOKEN_INVALID_MESSAGE,
@@ -43,7 +43,7 @@ import { PasswordHasher } from './password-hasher';
 import { SessionService } from './session.service';
 import { SESSION_IDLE_MS, SESSION_TOKEN_PATTERN } from './session-rules';
 import { SignUpService } from './sign-up.service';
-import { hashAuthToken } from './sign-up-rules';
+import { hashAuthToken, SIGN_UP_CLOSED_MESSAGE } from './sign-up-rules';
 
 const NOW = new Date('2026-11-19T12:00:00.000Z');
 const HOUR = 60 * 60 * 1000;
@@ -1058,9 +1058,10 @@ describe('POST /auth/email-verification', () => {
     it('copies the deadline to the millisecond and writes no column of the account or the hold', async () => {
       const deadline = at(5 * HOUR + 123);
       const userId = await seedAccount(1, { pendingExpiresAt: deadline });
+      // Another expiry than the account's: the upsert must overwrite it with the deadline.
       await seedToken('fake-old-token', userId, {
         bindingToken: 'fake-old-binding',
-        expiresAt: deadline,
+        expiresAt: at(HOUR),
       });
       await prisma.usernameHold.create({
         data: { usernameKey: 'member1', expiresAt: at(3 * HOUR + 7) },
@@ -1110,6 +1111,10 @@ describe('POST /auth/email-verification', () => {
       [
         'an unverified account with no deadline',
         (n) => seedAccount(n, { pendingExpiresAt: null }),
+      ],
+      [
+        'a verified account that still has a live deadline',
+        (n) => seedAccount(n, { pendingExpiresAt: at(DAY), verified: true }),
       ],
     ])(
       'answers %s exactly like a pending one, sends nothing and changes nothing',
@@ -1293,7 +1298,8 @@ describe('POST /auth/email-verification', () => {
 
       const response = await resend({ email: 'member1@example.test' });
 
-      expect(response.status).toBeGreaterThanOrEqual(500);
+      // A generic error is a 500; a Prisma connection error would be the 503.
+      expect(response.status).toBe(500);
       expect(response.text).not.toContain('member1');
       expect(await prisma.authToken.count({ where: { userId } })).toBe(0);
       expect(await verificationMails()).toEqual([]);
@@ -1355,35 +1361,53 @@ describe('POST /auth/email-verification', () => {
       },
     );
 
-    describe('races (each one forced by a held row lock or a held hash)', () => {
-      /** Holds the account's row lock while `resends` resends queue on it, then runs `write` and commits. */
-      async function whileResendsWait(
+    describe('races (forced by a held row lock or a held hash; a confirm or re-submit committing first is simulated by the lock holder, the cleanup is real)', () => {
+      const resendFrieren = (): Promise<request.Response> =>
+        resend({ email: SIGN_UP.email }).then((response) => response);
+      /** The real cleanup at the account's deadline, while the resend's clock is still 24 h earlier. */
+      const sweepAtDeadline = (): Promise<number> =>
+        new AuthCleanupService(
+          prisma,
+          new FixedClock(at(DAY)),
+        ).removeExpiredPendingSignUps();
+
+      /**
+       * Holds the account's row lock and starts each call in turn, each queued on the lock before
+       * the next starts (Postgres grants a row lock to its waiters in that order), then runs `write`
+       * and commits. Every call is settled before this returns, even when the holder fails.
+       */
+      async function whileLocked<const T extends readonly unknown[]>(
         userId: string,
-        resends: number,
-        write: (tx: TransactionClient) => Promise<void>,
-      ): Promise<request.Response[]> {
-        let started: Promise<request.Response>[] = [];
-        await prisma.$transaction(
-          async (tx) => {
-            await tx.$queryRaw`
-              SELECT id FROM app_user WHERE id = ${userId}::uuid FOR UPDATE`;
-            started = Array.from({ length: resends }, () =>
-              resend({ email: SIGN_UP.email }).then((response) => response),
-            );
-            await waitForLockWaiter(resends);
-            await write(tx);
-          },
-          { timeout: 10_000 },
-        );
-        return Promise.all(started);
+        queued: { readonly [K in keyof T]: () => Promise<T[K]> },
+        write: (tx: TransactionClient) => Promise<void> = () =>
+          Promise.resolve(),
+      ): Promise<T> {
+        const started: Promise<unknown>[] = [];
+        try {
+          await prisma.$transaction(
+            async (tx) => {
+              await tx.$queryRaw`
+                SELECT id FROM app_user WHERE id = ${userId}::uuid FOR UPDATE`;
+              for (const start of queued) {
+                started.push(start());
+                await waitForLockWaiter(started.length);
+              }
+              await write(tx);
+            },
+            { timeout: 10_000 },
+          );
+        } finally {
+          await Promise.allSettled(started);
+        }
+        return (await Promise.all(started)) as unknown as T;
       }
 
       it('confirm commits first: the resend finds a verified account, mails nothing and revives no token', async () => {
         const pending = await signUp();
 
-        const [response] = await whileResendsWait(
+        const [response] = await whileLocked(
           pending.userId,
-          1,
+          [resendFrieren],
           async (tx) => {
             await tx.$executeRaw`
             UPDATE auth_token SET used_at = ${NOW.toISOString()}::timestamptz
@@ -1434,9 +1458,9 @@ describe('POST /auth/email-verification', () => {
         const pending = await signUp();
         const deadline = at(DAY + 5 * HOUR);
 
-        const [response] = await whileResendsWait(
+        const [response] = await whileLocked(
           pending.userId,
-          1,
+          [resendFrieren],
           async (tx) => {
             await tx.$executeRaw`
             UPDATE app_user SET username = 'Fern', username_key = 'fern',
@@ -1507,26 +1531,44 @@ describe('POST /auth/email-verification', () => {
       it('cleanup deletes the account first: the resend answers 202, mails nothing and inserts nothing', async () => {
         const pending = await signUp();
 
-        const [response] = await whileResendsWait(
-          pending.userId,
-          1,
-          async (tx) => {
-            await tx.$executeRaw`DELETE FROM app_user WHERE id = ${pending.userId}::uuid`;
-          },
-        );
+        const [removed, response] = await whileLocked(pending.userId, [
+          sweepAtDeadline,
+          resendFrieren,
+        ]);
 
-        expect(response?.status).toBe(202);
-        expect(response?.body).toEqual({});
+        expect(removed).toBe(1);
+        expect(response.status).toBe(202);
+        expect(response.body).toEqual({});
         expect(await verificationMails()).toHaveLength(1);
         expect(await prisma.authToken.count()).toBe(0);
+      });
+
+      it('resend locks the account first: the cleanup waits, then deletes the account and the new token by cascade', async () => {
+        const pending = await signUp();
+
+        const [response, removed] = await whileLocked(pending.userId, [
+          resendFrieren,
+          sweepAtDeadline,
+        ]);
+
+        expect(response.status).toBe(202);
+        expect(removed).toBe(1);
+        expect(await prisma.user.count()).toBe(0);
+        expect(await prisma.authToken.count()).toBe(0);
+        // The mail of a deleted account carries a link that can only answer 400.
+        await confirm({
+          token: await lastMailedToken(),
+          bindingToken: pending.bindingToken,
+        }).expect(400, TOKEN_INVALID);
       });
 
       it('two resends queued on one account: both 202, one row, only the later token works', async () => {
         const pending = await signUp();
 
-        const responses = await whileResendsWait(pending.userId, 2, () =>
-          Promise.resolve(),
-        );
+        const responses = await whileLocked(pending.userId, [
+          resendFrieren,
+          resendFrieren,
+        ]);
 
         expect(responses.map((response) => response.status)).toEqual([
           202, 202,
