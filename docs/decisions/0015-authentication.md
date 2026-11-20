@@ -172,6 +172,41 @@ Added 2026-11-20 (OTA-139 slice 1f-iv), written before the code. The slice does 
 
 **Not verified by running:** that Next re-renders the root layout after a Server Action that sets a cookie and redirects (the header must change on sign-in and sign-out: check on beta in iv-c), and the `<noscript>` fallback in a browser with JavaScript off.
 
+## Addendum (1f-iv-b)
+Added 2026-11-20 (OTA-139 slice 1f-iv-b), written before the code. It refines decisions 4 and 5 of [Addendum (1f-iv)](#addendum-1f-iv); nothing there is reversed. The six items listed for iv-b come to about 480 changed lines with tests, so iv-b ships as two: **iv-b** session lifecycle (`deleteSession`, `signOutAction`, `redirectToSignedOut`, old-session delete after sign-in, sign-in fault reports; the sign-in changes are live, `signOutAction` has no caller until iv-c) and **iv-b2** credential-call follow-ups (the loopback host check of decision 6, unchanged, and the reporter file renamed to `auth-reports.ts`). iv-b2 depends on nothing in iv-b and must merge before sign-up opens (1f-v).
+
+| # | Requirement |
+|---|---|
+| F2, F3 | As in 1f-iv: a member can sign out; signing in over an old cookie deletes the session it held. |
+| F4 | A misconfigured sign-in or sign-out (key refused, body off contract) reaches Sentry without a visitor being able to cause it. |
+| N3 | As in 1f-iv, and it now holds when the call throws: at most 1 `POST /auth/sign-out` (2,000 ms, never retried), cookie cleared on 100 % of same-origin submits. |
+| N4 | As in 1f-iv: at most 1 Sentry event per fault kind per instance per 10 minutes. |
+| N6 | Sign-in over a well-formed old cookie makes exactly 1 extra call (2,000 ms, never retried), 0 otherwise; a failed delete fails 0 sign-ins. Worst case for one sign-in: 5,000 + 2,000 ms. |
+| N7 | A sign-out from another origin, without `Origin`, or on a preview makes 0 API calls and 0 cookie writes. |
+
+**Consistency vs availability.** Unchanged: this browser's cookie is consistent (always cleared, always replaced), the session row is best-effort and idles out in 30 days. **Entities:** none new. **API:** none new (`POST /auth/sign-out`: 204, or 401 already gone).
+
+**Data flow.** Sign-out: preview → return; `Origin` is not `WEB_PUBLIC_URL` → return; read the cookie; a well-formed token → `deleteSession`; set `clearedSessionCookie`; `redirectToSignedOut()`. Sign-in: as before up to the form check; read the old token; `credentialCall`; report a fault; on success `deleteSession(old)` when there was one; set the new cookie; `redirectTo(next)`.
+
+**Decisions.**
+1. **`deleteSession(session)`** (`src/auth/delete-session.ts`) is the one place that calls `POST /auth/sign-out`, for both actions. It is total like `loadViewer` (only Next's control-flow signals pass, through `unstable_rethrow`) and returns nothing: 204 and 401 are both "gone", an `AuthCallFault` is reported, a throw is reported as `configuration`. This is what makes N3 and N6 true when `INTERNAL_API_KEY` is missing: without it a throw would skip the cookie clear, or lose a sign-in the API already accepted.
+2. **The report's route tag names the API route called**, so the old-session delete inside sign-in reports as `sign-out`; `sign-in` is only the credential call. `signInAction` itself keeps no try/catch: its configuration errors still surface.
+3. **A preview sign-out returns before `WEB_PUBLIC_URL` is read** (previews have none, and no session can exist there). A refused `Origin` returns the same way: no cookie read, no redirect, no report.
+4. **`redirectToSignedOut()`** takes no argument and holds the constant `/`; the lint allowlist is unchanged.
+
+**Rejected.**
+- **`deleteSession` exported from `sign-out-action.ts`.** Every export of a `'use server'` file is a public endpoint; this one would take a token from any caller. The action files export their action only.
+- **One PR for all six items.** The host check and the rename touch `src/api/client-ip.ts` and every reporter import, and share nothing with the session code; together they pass the 400-line limit and blur the review of the part that deletes sessions.
+
+**Too simple?**
+- Two sign-ins submitted at once from one browser both read the same old token: one new session ends in the cookie, the other is orphaned until it idles out. Accepted.
+- A 404 or another unexpected 4xx envelope on `POST /auth/sign-out` is no fault under decision 3 of 1f-iv, so a missing route would fail silently. Accepted: the API's integration spec covers the route.
+- A refused sign-out shows nothing. It needs a host that is not `WEB_PUBLIC_URL`, where sign-in is refused too.
+
+**Too complicated?** No guard for "the new token equals the old one" (only the API issues tokens). The host check is close to redundant for sign-in, where `isSameOrigin` already refuses a browser on another host; its value is for `credentialCall`'s later callers (sign-up, reset), so iv-b2 decides again whether it earns its lines.
+
+**Not verified by running:** `signOutAction` from a browser (no caller before iv-c).
+
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
 - Each signed-in page costs one extra API call (`GET /me`), and viewer-dependent UI must sit outside the static shell (ADR 0014). `apiClient()` calls that carry a session are always `no-store`, which closes the open point of ADR 0003.
