@@ -40,8 +40,8 @@ vi.mock('./session-call', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./session-call')>()),
   sessionCall: mocks.sessionCall,
 }));
-vi.mock('./report-credential-refusal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
+vi.mock('./auth-reports', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./auth-reports')>()),
   reportClientIpUnknown: mocks.reportClientIpUnknown,
   reportAuthCallFault: mocks.reportAuthCallFault,
 }));
@@ -66,12 +66,13 @@ const failedWith = (failure: ApiFailure) => ({
   result: { ok: false, failure },
 });
 const apiError = (
+  status: number,
   code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>,
   retryAfterSeconds?: number,
 ) =>
   failedWith({
     kind: 'api_error',
-    status: 429,
+    status,
     error: { error: { code, message: 'x' } },
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
   });
@@ -140,6 +141,7 @@ describe('signInAction', () => {
     ].map((mock) => mock.mock.invocationCallOrder[0] ?? 0);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
+    expect(mocks.reportAuthCallFault).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -158,15 +160,20 @@ describe('signInAction', () => {
   );
 
   it.each([
-    ['throws', () => mocks.sessionCall.mockRejectedValue(new Error('no key'))],
+    [
+      'throws',
+      () => mocks.sessionCall.mockRejectedValue(new Error('no key')),
+      'configuration',
+    ],
     [
       'times out',
       () =>
         mocks.sessionCall.mockResolvedValue(failedWith({ kind: 'timeout' })),
+      'revocation_unconfirmed',
     ],
   ])(
-    'still sets the new cookie and redirects when the real old-session delete %s',
-    async (_, arrange) => {
+    'still sets the new cookie and redirects when the real old-session delete %s, reported as sign-out %s',
+    async (_, arrange, kind) => {
       const actual =
         await vi.importActual<typeof import('./delete-session')>(
           './delete-session',
@@ -179,6 +186,9 @@ describe('signInAction', () => {
       expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
       expect(mocks.setCookie.mock.calls[0]?.[1]).toBe(TOKEN);
       expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
+      expect(mocks.reportAuthCallFault.mock.calls).toEqual([
+        ['sign-out', kind],
+      ]);
     },
   );
 
@@ -195,20 +205,33 @@ describe('signInAction', () => {
     expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
   });
 
+  // A fault is reported; the visitor's input, an outage and a refusal are not (ADR 0015 N9).
   it.each([
-    [apiError('INVALID_CREDENTIALS'), { kind: 'invalid_credentials' }],
-    [apiError('AUTH_BUSY', 1), { kind: 'busy' }],
+    [apiError(401, 'INVALID_CREDENTIALS'), { kind: 'invalid_credentials' }],
+    [apiError(429, 'AUTH_BUSY', 1), { kind: 'busy' }],
     [
-      apiError('TOO_MANY_REQUESTS', 120),
+      apiError(429, 'TOO_MANY_REQUESTS', 120),
       { kind: 'rate_limited', retryAfterSeconds: 120 },
     ],
-    [apiError('INTERNAL_KEY_REQUIRED'), UNAVAILABLE],
+    [
+      apiError(403, 'INTERNAL_KEY_REQUIRED'),
+      UNAVAILABLE,
+      'internal_key_refused',
+    ],
+    [
+      failedWith({ kind: 'invalid_response', status: 200 }),
+      UNAVAILABLE,
+      'invalid_response',
+    ],
+    [failedWith({ kind: 'invalid_response', status: 502 }), UNAVAILABLE],
+    [apiError(503, 'SERVICE_UNAVAILABLE'), UNAVAILABLE],
+    [failedWith({ kind: 'network' }), UNAVAILABLE],
     [failedWith({ kind: 'timeout' }), UNAVAILABLE],
     [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
     [CLIENT_IP_UNKNOWN, UNAVAILABLE],
   ])(
-    'returns %o as %o: no cookie, no redirect, the old session kept, a report only for client_ip_unknown',
-    async (callResult, formState) => {
+    'returns %o as %o, reporting fault %s: no cookie, no redirect, the old session kept',
+    async (callResult, formState, fault?: string) => {
       mocks.credentialCall.mockResolvedValue(callResult);
       const state = await signInAction(IDLE, signInForm({ next: '/my-list' }));
       expect(state).toEqual(formState);
@@ -217,6 +240,9 @@ describe('signInAction', () => {
       expect(mocks.deleteSession).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown.mock.calls).toEqual(
         callResult === CLIENT_IP_UNKNOWN ? [['sign-in']] : [],
+      );
+      expect(mocks.reportAuthCallFault.mock.calls).toEqual(
+        fault === undefined ? [] : [['sign-in', fault]],
       );
     },
   );
@@ -246,6 +272,7 @@ describe('signInAction', () => {
       expect(mocks.setCookie).not.toHaveBeenCalled();
       expect(mocks.deleteSession).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
+      expect(mocks.reportAuthCallFault).not.toHaveBeenCalled();
     },
   );
 
@@ -265,7 +292,9 @@ describe('signInAction', () => {
   );
 
   it('ignores a forged previous state', async () => {
-    mocks.credentialCall.mockResolvedValue(apiError('INVALID_CREDENTIALS'));
+    mocks.credentialCall.mockResolvedValue(
+      apiError(401, 'INVALID_CREDENTIALS'),
+    );
     const forged = { kind: 'signed_in', sessionToken: TOKEN };
     expect(
       await signInAction(forged as unknown as SignInFormState, signInForm()),

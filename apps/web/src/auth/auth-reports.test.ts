@@ -1,12 +1,12 @@
 // @vitest-environment node
-import type { ApiErrorCode } from '@otakuleague/shared-types';
+import { scrubErrorEvent, type ApiErrorCode } from '@otakuleague/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import {
   authCallFaultOf,
   isRefusalReportDue,
   type AuthCallFault,
-} from './report-credential-refusal';
+} from './auth-reports';
 
 const mocks = vi.hoisted(() => ({
   captureMessage: vi.fn(),
@@ -23,7 +23,7 @@ const REPORT = [
   'Credential call refused: client IP unknown',
   {
     level: 'error',
-    tags: { credential_route: 'sign-in' },
+    tags: { auth_route: 'sign-in' },
     fingerprint: ['credential-call-client-ip-unknown'],
   },
 ];
@@ -31,7 +31,7 @@ const REPORT = [
 /** A fresh module, so the per-instance throttle starts empty. */
 async function freshReporter() {
   vi.resetModules();
-  const { reportClientIpUnknown } = await import('./report-credential-refusal');
+  const { reportClientIpUnknown } = await import('./auth-reports');
   return reportClientIpUnknown;
 }
 
@@ -111,10 +111,10 @@ describe('reportAuthCallFault', () => {
     },
   ];
 
-  it('throttles per fault kind across routes, with only the tags and a fixed fingerprint', async () => {
+  it('throttles per report kind across routes, with only the tags and a fixed fingerprint', async () => {
     vi.clearAllMocks();
     vi.resetModules();
-    const reporters = await import('./report-credential-refusal');
+    const reporters = await import('./auth-reports');
     reporters.reportAuthCallFault('me', 'invalid_response', 5_000);
     reporters.reportAuthCallFault('sign-out', 'invalid_response', 604_999);
     reporters.reportAuthCallFault('me', 'configuration', 5_001);
@@ -131,9 +131,45 @@ describe('reportAuthCallFault', () => {
     expect(mocks.flush.mock.calls).toEqual([[2000]]);
   });
 
+  it('throttles revocation_unconfirmed on its own: an outage never hides configuration or the reverse', async () => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    const { reportAuthCallFault } = await import('./auth-reports');
+    reportAuthCallFault('sign-out', 'revocation_unconfirmed', 5_000);
+    reportAuthCallFault('sign-out', 'configuration', 5_001);
+    reportAuthCallFault('sign-out', 'revocation_unconfirmed', 604_999);
+    reportAuthCallFault('sign-out', 'configuration', 604_999);
+    reportAuthCallFault('sign-out', 'revocation_unconfirmed', 605_000);
+
+    expect(mocks.captureMessage.mock.calls).toEqual([
+      faultReport('sign-out', 'revocation_unconfirmed'),
+      faultReport('sign-out', 'configuration'),
+      faultReport('sign-out', 'revocation_unconfirmed'),
+    ]);
+  });
+
+  it("sends tags and a fingerprint that Sentry's beforeSend scrubber keeps unchanged", async () => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    const reporters = await import('./auth-reports');
+    reporters.reportClientIpUnknown('sign-in', 5_000);
+    reporters.reportAuthCallFault('sign-in', 'internal_key_refused', 5_000);
+    reporters.reportAuthCallFault('me', 'invalid_response', 5_000);
+    reporters.reportAuthCallFault('sign-out', 'configuration', 5_000);
+    reporters.reportAuthCallFault('sign-out', 'revocation_unconfirmed', 5_000);
+
+    const sent = mocks.captureMessage.mock.calls.map(
+      ([, context]: unknown[]) => context,
+    );
+    expect(sent).toHaveLength(5);
+    expect(
+      sent.map((context) => scrubErrorEvent({ ...(context as object) })),
+    ).toEqual(sent);
+  });
+
   it('never throws, even when after() does (outside a request)', async () => {
     vi.resetModules();
-    const { reportAuthCallFault } = await import('./report-credential-refusal');
+    const { reportAuthCallFault } = await import('./auth-reports');
     mocks.after.mockImplementationOnce(() => {
       throw new Error('after() outside a request scope');
     });

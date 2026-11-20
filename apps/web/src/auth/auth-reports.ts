@@ -42,7 +42,8 @@ export function reportClientIpUnknown(
   instanceLastReportedAtMs = nowMs;
   Sentry.captureMessage('Credential call refused: client IP unknown', {
     level: 'error',
-    tags: { credential_route: route },
+    // `auth_route`, never `credential_route`: the event scrubber masks keys matching `credential`.
+    tags: { auth_route: route },
     fingerprint: ['credential-call-client-ip-unknown'],
   });
   after(() => Sentry.flush(2000));
@@ -72,28 +73,35 @@ export function authCallFaultOf(
     : undefined;
 }
 
-// One throttle per fault kind, so one fault never hides another; shared by every route.
-const faultLastReportedAtMs = new Map<AuthCallFault, number>();
+/**
+ * A fault, or a sign-out whose revocation the API did not confirm (anything but 204, a 401 envelope
+ * or a fault: an outage, a 429, another 4xx). Only `deleteSession` reports the latter (1f-iv-b2).
+ */
+export type AuthReportKind = AuthCallFault | 'revocation_unconfirmed';
+
+// One throttle per kind, so an outage never hides a misconfiguration or the reverse; shared by every route.
+const kindLastReportedAtMs = new Map<AuthReportKind, number>();
 
 /**
- * At most one Sentry error per fault kind per instance every 10 minutes, carrying the route and the
- * fault as tags and nothing else (never a token, a username, an IP or an error message).
+ * At most one Sentry error per kind per instance every 10 minutes. Our tags are the route and the
+ * kind only (never a token, a username, an IP or an error message); the SDK adds its stack and
+ * request context, which `scrubErrorEvent` strips of the query and the user.
  */
 export function reportAuthCallFault(
   route: AuthCallRoute,
-  fault: AuthCallFault,
+  kind: AuthReportKind,
   nowMs: number = Date.now(),
 ): void {
-  if (!isRefusalReportDue(faultLastReportedAtMs.get(fault), nowMs)) {
+  if (!isRefusalReportDue(kindLastReportedAtMs.get(kind), nowMs)) {
     return;
   }
-  faultLastReportedAtMs.set(fault, nowMs);
+  kindLastReportedAtMs.set(kind, nowMs);
   // Never thrown: a report must not break the render it describes (loadViewer, ADR 0015 N2).
   try {
     Sentry.captureMessage('Auth call fault', {
       level: 'error',
-      tags: { auth_route: route, auth_fault: fault },
-      fingerprint: ['auth-call-fault', fault],
+      tags: { auth_route: route, auth_fault: kind },
+      fingerprint: ['auth-call-fault', kind],
     });
     after(() => Sentry.flush(2000));
   } catch {

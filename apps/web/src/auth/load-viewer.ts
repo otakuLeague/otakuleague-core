@@ -1,11 +1,8 @@
 import { isMeResponse } from '@otakuleague/shared-types';
 import { unstable_rethrow } from 'next/navigation';
 import { connection } from 'next/server';
+import { authCallFaultOf, reportAuthCallFault } from './auth-reports';
 import { credentialRoutesOff } from './credential-call';
-import {
-  authCallFaultOf,
-  reportAuthCallFault,
-} from './report-credential-refusal';
 import { readSessionToken, sessionCall } from './session-call';
 import { viewerFrom, type Viewer } from './viewer';
 import { readWebPublicUrl } from './web-public-url';
