@@ -83,7 +83,7 @@ async function controllersInSource(): Promise<object[]> {
   for (const file of files) {
     const exported: unknown = await import(join(SRC, file));
     if (typeof exported !== 'object' || exported === null) continue;
-    for (const value of Object.values(exported)) {
+    for (const value of Object.values(exported as Record<string, unknown>)) {
       if (typeof value === 'function' && pathsOf(value).length > 0) {
         controllers.push(value);
       }
