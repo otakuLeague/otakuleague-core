@@ -23,6 +23,7 @@ import {
 } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { Argon2id, type Argon2idInput } from './argon2id';
+import { USERNAME_TAKEN_MESSAGE } from './auth.controller';
 import { AuthRateLimiter } from './auth-rate-limiter';
 import { CLIENT_IP_REQUIRED_MESSAGE } from './credential.guard';
 import { EmailSender } from './email-sender';
@@ -36,6 +37,11 @@ const DAY = 24 * 60 * 60 * 1000;
 const FAKE_KEY = 'fake-internal-api-key-'.padEnd(64, '0');
 const FAKE_PREVIEW_KEY = 'fake-preview-api-key-'.padEnd(64, '0');
 const IP = '203.0.113.7';
+// Three /64s of one /48 and a /64 of the next /48, in the documentation range (RFC 3849).
+const SITE_64_A = '2001:db8:aa:1::7';
+const SITE_64_B = '2001:db8:aa:2::7';
+const SITE_64_C = '2001:db8:aa:3::7';
+const OTHER_SITE_64 = '2001:db8:ab:1::7';
 const WEB = { 'X-Internal-Api-Key': FAKE_KEY, 'X-Client-Ip': IP };
 const PASSWORD = 'fake password 1 for tests';
 
@@ -248,6 +254,61 @@ describe('GET /users/availability', () => {
       'X-Client-Ip': '198.51.100.9',
     }).expect(200);
   });
+
+  it('caps one IPv6 /48 at 120 a minute, counted after its /64s: a refused /64 never spends the site (G1, G2)', async () => {
+    const from = (ip: string) =>
+      check('?username=Free', { ...WEB, 'X-Client-Ip': ip });
+    const limited = {
+      error: {
+        code: 'TOO_MANY_REQUESTS',
+        message: AVAILABILITY_LIMITED_MESSAGE,
+      },
+    };
+
+    for (let n = 0; n < 60; n += 1) await from(SITE_64_A).expect(200);
+    const refusedAt64 = await from(SITE_64_A).expect(429);
+    expect(refusedAt64.body).toEqual(limited);
+    // The site counted A's 60 answered checks only, so B still gets its own 60.
+    for (let n = 0; n < 60; n += 1) await from(SITE_64_B).expect(200);
+
+    const queries = vi.spyOn(prisma, '$queryRaw');
+    const refusedAt48 = await from(SITE_64_C).expect(429);
+
+    expect(refusedAt48.body).toEqual(refusedAt64.body);
+    expect(refusedAt48.headers['retry-after']).toBe('60');
+    expect(refusedAt48.headers['cache-control']).toBe('no-store');
+    // C's fresh /64 counter, then the site's 121st: two upserts, no "taken" read.
+    expect(queries).toHaveBeenCalledTimes(2);
+    expect(takenReads(queries.mock.calls)).toBe(0);
+    // Three /64 counters and one counter for the whole site.
+    expect(await prisma.authRateLimit.count()).toBe(4);
+
+    await from(OTHER_SITE_64).expect(200, { available: true });
+    await from(IP).expect(200, { available: true });
+  });
+
+  it.each(['Availability', 'ADMIN'])(
+    'treats the reserved %s as taken on both routes, before any read or hash (A1, G4)',
+    async (name) => {
+      const queries = vi.spyOn(prisma, '$queryRaw');
+
+      await check(`?username=${name}`).expect(200, { available: false });
+      // The counter only.
+      expect(queries).toHaveBeenCalledTimes(1);
+      expect(takenReads(queries.mock.calls)).toBe(0);
+      queries.mockClear();
+
+      const submit = await signUp(name, '198.51.100.9').expect(409);
+
+      expect(submit.body).toEqual({
+        error: { code: 'USERNAME_TAKEN', message: USERNAME_TAKEN_MESSAGE },
+      });
+      expect(takenReads(queries.mock.calls)).toBe(0);
+      expect(argon2.derives).toBe(0);
+      expect(await prisma.user.count()).toBe(0);
+      expect(await prisma.usernameHold.count()).toBe(0);
+    },
+  );
 
   it("never spends availability's counter on sign-up: five submits leave 60 checks", async () => {
     for (const name of ['One', 'Two', 'Three', 'Four', 'Five']) {

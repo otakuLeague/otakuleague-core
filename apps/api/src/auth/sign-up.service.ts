@@ -11,6 +11,7 @@ import {
 } from './credential-rules';
 import { type AuthEmail, EmailSender } from './email-sender';
 import { PasswordHasher } from './password-hasher';
+import { isReservedUsername } from './reserved-usernames';
 import {
   AUTH_TOKEN_BYTES,
   hashAuthToken,
@@ -293,13 +294,15 @@ export class SignUpService implements OnModuleDestroy {
   }
 
   /**
-   * A live hold, or a user row of that key that is not stale (a null deadline is never stale).
-   * Only a read: it saves the hash on the common 409; the claim in `register` is the safe check.
+   * A reserved name (no read), a live hold, or a user row of that key that is not stale (a null
+   * deadline is never stale). Only a read: it saves the hash on the common 409; the claim in
+   * `register` is the safe check (it refuses a reserved key as well).
    */
   private async isUsernameTaken(
     usernameKey: NormalisedIdentifier,
     now: string,
   ): Promise<boolean> {
+    if (isReservedUsername(usernameKey)) return true;
     const [row] = await this.prisma.$queryRaw<{ taken: boolean }[]>`
       SELECT EXISTS (SELECT 1 FROM auth_username_hold
           WHERE username_key = ${usernameKey} AND expires_at > ${now}::timestamptz)
@@ -312,10 +315,12 @@ export class SignUpService implements OnModuleDestroy {
    * Five statements, locks in the order hold, app_user, auth_token (ADR 0020). The hold upsert
    * locks the hold row even when its WHERE fails, so a second sign-up of the username waits for
    * this commit, then claims nothing. Only sign-up writes `username_key`, always under that lock,
-   * so the existence check cannot go stale before the upsert.
+   * so the existence check cannot go stale before the upsert. A reserved key is refused here too,
+   * before any statement: every writer of `username_key` checks the list itself.
    */
   private async register(record: SignUpRecord): Promise<Registration> {
     const { usernameKey, now, expiresAt } = record;
+    if (isReservedUsername(usernameKey)) return USERNAME_TAKEN;
     try {
       return await this.prisma.$transaction(
         async (tx): Promise<Registration> => {

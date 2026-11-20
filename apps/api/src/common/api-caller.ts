@@ -126,6 +126,26 @@ export function visitorKeyFromClientIp(header: unknown): VisitorKey {
   return asVisitorKey(`${prefix.join(':')}::/64`);
 }
 
+/** An IPv6 /64 key exactly as visitorKeyFromClientIp spells it; the first three groups are the /48. */
+const IPV6_PREFIX_KEY =
+  /^([0-9a-f]{1,4}:[0-9a-f]{1,4}:[0-9a-f]{1,4}):[0-9a-f]{1,4}::\/64$/;
+
+declare const ipv6SiteKeyBrand: unique symbol;
+
+/** An IPv6 /48 ("site"), spelt like the /64 key. Branded: only ipv6SiteKeyOf makes one. */
+export type Ipv6SiteKey = string & { readonly [ipv6SiteKeyBrand]: true };
+
+/**
+ * The /48 that holds an IPv6 /64 visitor key ("2001:db8:0:5::/64" gives "2001:db8:0::/48"), for a
+ * second counter over its 65,536 /64s (ADR 0020 Addendum 1f gate). A /48 may be one customer's
+ * site or a carrier pool shared by many subscribers, one /64 each: unrelated visitors can share it.
+ * Null for an IPv4 (a mapped IPv6 is keyed as its IPv4), `unknown` and `preview`. Pure.
+ */
+export function ipv6SiteKeyOf(visitorKey: VisitorKey): Ipv6SiteKey | null {
+  const site = IPV6_PREFIX_KEY.exec(visitorKey)?.[1];
+  return site === undefined ? null : (`${site}::/48` as Ipv6SiteKey);
+}
+
 /** Request -> caller, written only by InternalKeyGuard: no header or body can write here. */
 const callers = new WeakMap<object, ApiCaller>();
 

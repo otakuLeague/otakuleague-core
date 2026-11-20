@@ -359,11 +359,40 @@ sequenceDiagram
 **Size.** About 150 lines of code and 250 of tests in one PR, the data file apart.
 
 **Gate / follow-ups (1e-iii review).**
-- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one.
-- (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route.
+- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one. Done: the /48 counter, Addendum (1f gate).
+- (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route. Done: Addendum (1f gate).
 - (c) The typed username travels in a query string, so it reaches the platform's access logs. Accepted: usernames are public.
 - (d) Guard refusals (400 `BAD_REQUEST`, 403) carry no `no-store`: Nest sets `@Header` after the guards run. Existing behaviour on every guarded route; low, since neither status is cached by default.
 - The licence notice is emitted as a `/*! */` header of `common-passwords.data.ts`, which `removeComments` keeps, so it ships in `dist` with the list.
+
+## Addendum (1f gate)
+
+Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f exposes the availability route. No schema migration, no new variable, no new dependency, no new error code.
+
+| # | Requirement |
+|---|---|
+| G1 | Enumeration bound per /48: 120 availability checks per IPv6 /48 per minute, so 172,800 a day per /48, where its 65,536 /64s at 60 each allowed 3,932,160 a minute. A /48 may be one customer's site or a carrier pool that gives each subscriber a /64, so unrelated visitors can share the 120 ("Too simple?"). |
+| G2 | The /64 counts first: a check its /64 refuses never spends the /48, so one busy /64 uses at most 60 of its /48's 120. |
+| G3 | Cost: an answered IPv6 check is 3 statements (2 counter upserts, the read); refused by its /64, 1 upsert; refused by its /48, 2 upserts; 0 reads and 0 hashes either way. A check refused by its /48 still writes its /64's counter row (a new row for a new /64), kept until the cleanup (24 h). IPv4 and mapped IPv4 are unchanged (1 counter). |
+| G4 | Reserved usernames are taken: whole-key match on `normaliseIdentifier` output, before any read. Availability answers `false` with 0 reads; sign-up answers 409 `USERNAME_TAKEN` with 0 reads and 0 hashes. The 50 entries, each matching `USERNAME_PATTERN`: `availability`, `search`, `new`, `top`, `random`, `all`, `settings`, `leaderboard`, `edit`, `login`, `signup`, `sign_up`, `profile`, `account`, `api`, `user`, `users`, `admin`, `admins`, `administrator`, `moderator`, `moderators`, `mod`, `mods`, `staff`, `support`, `help`, `system`, `official`, `security`, `root`, `owner`, `team`, `bot`, `otakuleague`, `otaku_league`, `otaku`, `null`, `undefined`, `anonymous`, `deleted`, `everyone`, `guest`, `unknown`, `nobody`, `none`, `self`, `__proto__`, `constructor`, `prototype`. |
+
+**Decisions.**
+1. **A site limit table.** `PER_IPV6_SITE_LIMITS` (`auth-rate-limit-rules.ts`) holds `username-availability` only; `perIpHits` returns the /64 hit, then the /48 hit (scope `ipv6Site`, branded `Ipv6SiteKey`) for a route in that table and an IPv6 caller. `AuthRateLimiter.check` already counts in order and stops at the first refusal, which gives G2 with no limiter change. An IPv6 key (it has a colon) that yields no /48 on such a route throws (500), so a later change of the key spelling fails loudly instead of dropping the /48 bound.
+2. **A pure /48 function** beside `visitorKeyFromClientIp`, which owns the key format: `ipv6SiteKeyOf` maps `2001:db8:0:5::/64` to `2001:db8:0::/48` and gives null for IPv4, mapped IPv4, `unknown` and `preview`. The key is HMAC'd like every other part: no prefix is stored.
+3. **Reserved means taken.** `isUsernameTaken` returns true for a reserved key before its read, so both routes keep one rule (A1) and the web needs no new state. `register` refuses a reserved key too, before any statement (defence in depth, one `Set` lookup). Any later writer of `username_key` (a rename, the OTA-149 import, an OAuth sign-up) must call `isReservedUsername` itself.
+4. **The list is API-local** (`reserved-usernames.ts`, like `RESERVED_SLUGS`), with a structural test: it reads the Nest path metadata of every controller declared with `@Controller(` in `apps/api/src` (spec files apart) and fails when the first segment after `/users/` (case ignored, the braces of an optional group dropped) could be a username and is not reserved. Its limits: it does not see a prefix added by `RouterModule` or a global prefix, nor the web's Next `app/` routes; a web `/users/<name>` route in 1f needs its own check.
+
+**Rejected.**
+- **A route-wide cap.** One busy visitor would deny every other visitor the hint; the /48 bounds the cheap address space and leaves other /48s alone.
+- **Reserved as 400 from a list in shared types.** It adds a web state and ships the list to the browser for no gain; taken already covers it.
+- **The /48 counter on every per-IP route in this slice.** Confirm and resend are bounded per hour or per account. Sign-up and sign-in are the accepted risk below, closed by a Gate item.
+
+**Too simple?**
+- A carrier pool /48 shares 120 checks a minute among unrelated subscribers, and two busy /64s can use them all for the rest of the pool for up to a minute. Accepted: the hint is optional, and 1f treats 429 as unknown and never blocks the submit.
+- A reserved name answers without the read, so timing can tell reserved from taken. Accepted: the list is public in the repository.
+- **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens.
+
+**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one. Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
 
 ## Consequences
 
@@ -372,19 +401,20 @@ sequenceDiagram
   - the per-address email budget, checked before the transaction, and the common-password list (the list: done in 1e-iii, Addendum (1e-iii));
   - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
   - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
-  - a reserved-username deny list;
+  - a reserved-username deny list (done in the 1f gate, Addendum (1f gate));
   - UNIQUE(`user_id`, `purpose`) on `auth_token` (a migration), moved here from "Later migration" and due with 1e-ii-b: resend is the next writer of verification tokens, and the constraint makes "one live token per account" a database rule rather than a habit of each writer. Done in 1e-ii-b (migration `20261120120000_auth_token_one_per_purpose`);
   - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30;
   - the email budget (5 per address per 24 h, 20 per IP per 24 h, a global cap) enforced in `dispatch` before any real `EmailSender` adapter lands, with a test that fails if `canSend()` can be true in production without it;
   - no API rollback below the 1e-ii-b build once sign-up is open: an older build's delete-then-insert meets the UNIQUE index and answers 500 (23505) to a re-submit of a pending email;
-  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link.
+  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link;
+  - a /48 tier for sign-up and sign-in (or a measured hash budget), so one IPv6 /48 cannot drive argon2 hashes from its 65,536 /64s (the accepted risk of Addendum (1f gate)).
 - Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
 
 **Too simple?**
 - Submitting the same form twice within 24 h answers 409 for the member's own username, and a typo in the email locks the chosen name for 24 h. Letting the same email through without leaking needs a keyed hash of the email on the hold (a column, so a migration). Follow-up ticket to open; not built here.
 - Two submits whose stale rows hold each other's username can deadlock; Postgres aborts one, which answers 5xx once. No data is damaged. Not worth an ordering scheme.
 - A permanent unverified row (no deadline) is stuck: it counts as taken and no route re-arms it. None exists in production; the OTA-149 import decides what such members get.
-- No reserved-username list, no CAPTCHA, no retry of a failed send (ADR 0015 accepts the last two).
+- No CAPTCHA, no retry of a failed send (ADR 0015 accepts both; the reserved-username list came with Addendum (1f gate)).
 
 **Too complicated?** The hold table and the two-step username check are both needed (Option A and N4). Left out on purpose: advisory locks, serializable retries, an outbox, extending the hold on resend, a provider variable before a provider exists.
 
