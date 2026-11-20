@@ -55,7 +55,7 @@ describe('ViewerActionsView', () => {
 
     const summary = screen.getByText('KA');
     expect(summary.tagName).toBe('SUMMARY');
-    expect(summary.getAttribute('aria-label')).toBe('Account menu');
+    expect(summary.getAttribute('aria-label')).toBe('Account menu, kaito_tanaka');
     expect(summary.classList.contains('sh-avatar')).toBe(true);
     const head = screen.getByText('kaito_tanaka');
     expect(head.classList.contains('sh-menu__head')).toBe(true);

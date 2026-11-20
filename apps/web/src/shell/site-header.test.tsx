@@ -1,16 +1,25 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
+import { use } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SiteHeader } from './site-header';
+
+const viewer = vi.hoisted(() => ({ suspends: false }));
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/leaderboard' }));
 vi.mock('./viewer-actions', () => ({
   GuestActionsSizer: () => <div data-testid="sizer" />,
-  ViewerActions: () => <div data-testid="viewer-actions" />,
+  ViewerActions: function ViewerActions() {
+    if (viewer.suspends) use(new Promise<never>(() => {}));
+    return <div data-testid="viewer-actions" />;
+  },
   ViewerFallback: () => <div data-testid="viewer-fallback" />,
 }));
 
 describe('SiteHeader', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    viewer.suspends = false;
+  });
 
   it('links home and holds the main nav for the current path', () => {
     render(<SiteHeader />);
@@ -51,5 +60,17 @@ describe('SiteHeader', () => {
         child.getAttribute('data-testid'),
       ),
     ).toEqual(['sizer', 'viewer-actions']);
+  });
+
+  it('shows the fallback beside the sizer while the viewer streams', () => {
+    viewer.suspends = true;
+    const { container } = render(<SiteHeader />);
+
+    const right = container.querySelector('.sh-right');
+    expect(
+      Array.from(right?.children ?? [], (child) =>
+        child.getAttribute('data-testid'),
+      ),
+    ).toEqual(['sizer', 'viewer-fallback']);
   });
 });

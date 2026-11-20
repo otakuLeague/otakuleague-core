@@ -140,6 +140,35 @@ describe('loadViewer', () => {
     expect(mocks.report).not.toHaveBeenCalled();
   });
 
+  describe('on http://localhost:3000 (off Vercel)', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL', undefined);
+      vi.stubEnv('VERCEL_ENV', undefined);
+      vi.stubEnv('WEB_PUBLIC_URL', 'http://localhost:3000');
+    });
+
+    it('is signed in after exactly one GET /me with a plain ol_session cookie', async () => {
+      mocks.jar = new Map([['ol_session', TOKEN]]);
+
+      expect(await loadViewer()).toEqual({
+        kind: 'signed_in',
+        username: ME.username,
+      });
+      expect(mocks.sessionCall.mock.calls).toEqual([
+        [{ ...ME_CALL, timeoutMs: 2000 }],
+      ]);
+      expect(mocks.report).not.toHaveBeenCalled();
+    });
+
+    it('is signed out with only __Host-ol_session, after 0 API calls and 0 reports', async () => {
+      mocks.jar = new Map([['__Host-ol_session', TOKEN]]);
+
+      expect(await loadViewer()).toEqual(OUT);
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
+      expect(mocks.report).not.toHaveBeenCalled();
+    });
+  });
+
   it.each([
     ['a 401 (expired or replayed)', EXPIRED, OUT, []],
     ['a 403', KEY_REFUSED, NONE, ['internal_key_refused']],

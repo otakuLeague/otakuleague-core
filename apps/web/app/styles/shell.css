@@ -82,7 +82,8 @@ body {
   .sh-nav__link,
   .sh-menu a,
   .sh-foot a,
-  .sh-seg button
+  .sh-seg button,
+  .sh-avatar
 ):focus-visible,
 .sh-search__field:focus-within {
   outline: 2px solid var(--accent);
@@ -303,6 +304,11 @@ details[open] > .sh-pop {
   list-style: none;
   cursor: pointer;
   user-select: none;
+  transition: background-color var(--dur-press) var(--ease-enter);
+}
+.sh-avatar:hover,
+details[open] > .sh-avatar {
+  background: color-mix(in oklab, var(--ink) 8%, var(--surface-2));
 }
 .sh-avatar::-webkit-details-marker {
   display: none;

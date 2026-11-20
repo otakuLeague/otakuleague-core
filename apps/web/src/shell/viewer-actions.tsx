@@ -4,7 +4,7 @@ import type { Viewer } from '../auth/viewer';
 import { Disclosure } from './disclosure';
 
 /** One list for the guest links and the hidden sizer, so a renamed label resizes the slot (ADR 0015 1f-iv-c). */
-export const GUEST_ACTIONS = [
+const GUEST_ACTIONS = [
   {
     label: 'Sign in',
     href: '/auth?mode=sign-in',
@@ -67,7 +67,7 @@ function AccountMenu({ username }: { readonly username: string }) {
     <Disclosure
       summary={viewerInitials(username)}
       summaryClassName="sh-avatar"
-      summaryLabel="Account menu"
+      summaryLabel={`Account menu, ${username}`}
     >
       <p className="sh-menu__head">{username}</p>
     </Disclosure>
