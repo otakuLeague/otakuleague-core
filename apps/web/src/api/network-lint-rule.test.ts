@@ -103,31 +103,23 @@ describe('network lint rule', () => {
   describe('auth gate: credential calls only through credentialCall()', () => {
     const AUTH_FILE = 'src/auth/web-public-url.ts';
 
-    it.each(['apiClient', 'createApiClient'])(
-      'forbids importing %s in auth code',
-      async (name) => {
-        const code = `import { ${name} } from '../api/client';\nexport const build = ${name};\n`;
-
-        expect(await ruleIdsFor(code, AUTH_FILE)).toContain(
-          'no-restricted-imports',
-        );
-      },
-    );
-
-    it('allows apiClient in src/auth/credential-call.ts', async () => {
-      const code =
-        "import { apiClient } from '../api/client';\nexport const build = apiClient;\n";
-
-      expect(
-        await ruleIdsFor(code, 'src/auth/credential-call.ts'),
-      ).not.toContain('no-restricted-imports');
+    it.each([
+      "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
+      "import { createApiClient } from '../api/client.ts';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\nexport const send = request;\n",
+    ])('forbids in auth code:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, AUTH_FILE)).toContain(
+        'no-restricted-imports',
+      );
     });
 
-    it('allows type imports from the client in auth code', async () => {
-      const code =
-        "import type { ApiResult } from '../api/client';\nexport type Answer = ApiResult<string>;\n";
+    it.each([
+      ['src/auth/credential-call.ts', 'import { apiClient }', 'apiClient'],
+      [AUTH_FILE, 'import type { ApiResult }', '{} as ApiResult<string>'],
+    ])('allows in %s: %s', async (filePath, imported, exported) => {
+      const code = `${imported} from '../api/client';\nexport const build = ${exported};\n`;
 
-      expect(await ruleIdsFor(code, AUTH_FILE)).not.toContain(
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
         'no-restricted-imports',
       );
     });

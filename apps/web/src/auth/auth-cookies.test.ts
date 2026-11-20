@@ -1,36 +1,28 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { sessionCookie } from './auth-cookies';
+import { clearedSessionCookie, sessionCookie } from './auth-cookies';
 import { parseWebPublicUrl } from './web-public-url';
 
-describe('sessionCookie', () => {
-  it('is __Host- and Secure on https, with no Domain', () => {
-    expect(
-      sessionCookie(parseWebPublicUrl('https://beta.otakuleague.com')),
-    ).toStrictEqual({
-      name: '__Host-ol_session',
-      options: {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 15_552_000,
-      },
+describe.each([
+  // https: __Host- and Secure, so no subdomain or plain-http page can set or shadow it.
+  ['https://beta.otakuleague.com', '__Host-ol_session', true],
+  // Loopback http: browsers refuse a Secure cookie there, so no prefix and no Secure.
+  ['http://localhost:3000', 'ol_session', false],
+] as const)('on %s', (origin, name, secure) => {
+  const webPublicUrl = parseWebPublicUrl(origin);
+  const options = { httpOnly: true, secure, sameSite: 'lax', path: '/' };
+
+  it('sets the session for 180 days, with no Domain', () => {
+    expect(sessionCookie(webPublicUrl)).toStrictEqual({
+      name,
+      options: { ...options, maxAge: 15_552_000 },
     });
   });
 
-  it('drops the prefix and Secure on loopback http, which browsers would refuse', () => {
-    expect(
-      sessionCookie(parseWebPublicUrl('http://localhost:3000')),
-    ).toStrictEqual({
-      name: 'ol_session',
-      options: {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 15_552_000,
-      },
+  it('clears it with the same name and attributes and Max-Age 0', () => {
+    expect(clearedSessionCookie(webPublicUrl)).toStrictEqual({
+      name,
+      options: { ...options, maxAge: 0 },
     });
   });
 });

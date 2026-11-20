@@ -26,7 +26,10 @@ export function safeNextPath(
     return HOME;
   }
   const path = `${url.pathname}${url.search}`;
-  return hasOneLeadingSlash(path) ? `/${path.slice(1)}` : HOME;
+  // Percent-encoding can grow the path up to 9 times, past what a Location header should carry.
+  return hasOneLeadingSlash(path) && path.length <= MAX_NEXT_LENGTH
+    ? `/${path.slice(1)}`
+    : HOME;
 }
 
 /** `/x`, never `//x` or `/\x`: both are another host to a browser. */

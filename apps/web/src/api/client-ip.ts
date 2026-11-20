@@ -1,17 +1,19 @@
 import { isIP } from 'node:net';
 import { headers } from 'next/headers';
-import type { WebPublicUrl } from '../auth/web-public-url';
 
 declare const clientIpBrand: unique symbol;
 
-/** One IPv4 or IPv6 address, read from the request's `x-forwarded-for` (ADR 0019). */
+/**
+ * One IPv4 or IPv6 address: Vercel's `x-forwarded-for` (ADR 0019), or the loopback constant that
+ * `readCredentialClientIp` sends off Vercel. Only this file makes one.
+ */
 export type ClientIp = string & { readonly [clientIpBrand]: true };
 
 /**
  * One IPv4 or IPv6 address and nothing else. `isIP` accepts an IPv6 zone id (`%eth0`), which the
  * API refuses, so it is refused here too.
  */
-export function isClientIp(value: unknown): value is ClientIp {
+function isClientIp(value: unknown): value is ClientIp {
   return typeof value === 'string' && !value.includes('%') && isIP(value) !== 0;
 }
 
@@ -43,17 +45,29 @@ export async function readClientIp(): Promise<ClientIp | undefined> {
 const LOOPBACK_CLIENT_IP = '127.0.0.1' as ClientIp;
 
 /**
- * The IP a credential call (sign-in, sign-up, reset) sends, which the API rate-limits by. On Vercel,
- * Vercel's `x-forwarded-for` or nothing. Off Vercel nobody overwrites that header, so it is never
- * read: a loopback web (http, which `readWebPublicUrl` allows only there) is one machine and sends
- * 127.0.0.1; an https web off Vercel (another host, or Vercel with its system variables hidden)
- * cannot know the visitor and gives nothing, so the call is refused rather than share one bucket.
+ * The IP a credential call (sign-in, sign-up, reset) sends, which the API rate-limits by. On Vercel:
+ * Vercel's `x-forwarded-for`, or nothing (the caller refuses the call) when it is missing or
+ * malformed, or when Next re-sent a Server Action between its own workers (`x-action-forwarded`):
+ * that hop's `x-forwarded-for` is Vercel's egress address, shared by every visitor. Off Vercel
+ * nobody overwrites the header, so it is never read: a loopback web (http, which `readWebPublicUrl`
+ * allows only there) is one machine and sends 127.0.0.1; an https web off Vercel (another host, or
+ * Vercel with its system variables hidden) throws rather than put every visitor in one bucket.
  */
 export async function readCredentialClientIp({
   isHttps,
-}: WebPublicUrl): Promise<ClientIp | undefined> {
+}: {
+  readonly isHttps: boolean;
+}): Promise<ClientIp | undefined> {
   if (process.env.VERCEL === '1') {
-    return clientIpFromHeaders(await headers());
+    const incomingHeaders = await headers();
+    return incomingHeaders.has('x-action-forwarded')
+      ? undefined
+      : clientIpFromHeaders(incomingHeaders);
   }
-  return isHttps ? undefined : LOOPBACK_CLIENT_IP;
+  if (isHttps) {
+    throw new Error(
+      'Invalid web configuration: credential calls off Vercel need an http loopback WEB_PUBLIC_URL; on Vercel keep "Automatically expose System Environment Variables" on (VERCEL=1).',
+    );
+  }
+  return LOOPBACK_CLIENT_IP;
 }

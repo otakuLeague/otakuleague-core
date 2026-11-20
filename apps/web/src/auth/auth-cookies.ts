@@ -1,7 +1,10 @@
 import type { WebPublicUrl } from './web-public-url';
 
-/** 180 days, the API's hard stop for a session (ADR 0015); the API still refuses an idle one sooner. */
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 15_552_000;
+/**
+ * 180 days: keep equal to `SESSION_MAX_AGE_MS` in apps/api/src/auth/session-rules.ts, the API's
+ * hard stop for a session (ADR 0015); the API still refuses an idle one sooner.
+ */
+export const SESSION_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
 /** The session cookie's name and attributes, ready for `cookies().set(name, value, options)`. */
 export interface SessionCookie {
@@ -31,4 +34,16 @@ export function sessionCookie({ isHttps }: WebPublicUrl): SessionCookie {
       maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
     },
   };
+}
+
+/**
+ * The same cookie with `Max-Age=0`, for `cookies().set(name, '', options)`. Never
+ * `cookies().delete()` for this cookie: it sends no `Secure`, and browsers ignore a `__Host-`
+ * cookie without it, so the stale session would stay.
+ */
+export function clearedSessionCookie(
+  webPublicUrl: WebPublicUrl,
+): SessionCookie {
+  const { name, options } = sessionCookie(webPublicUrl);
+  return { name, options: { ...options, maxAge: 0 } };
 }

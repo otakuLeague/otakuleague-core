@@ -1,5 +1,5 @@
 import { apiClient, type ApiPath, type ApiResult } from '../api/client';
-import { isClientIp, readCredentialClientIp } from '../api/client-ip';
+import { readCredentialClientIp } from '../api/client-ip';
 import { readWebPublicUrl } from './web-public-url';
 
 // The only auth file allowed to import apiClient() (lint gate in eslint.config.mjs): every call that
@@ -32,8 +32,10 @@ export interface CredentialRequest<T> {
 
 /**
  * One POST with the internal key and the visitor's IP, or a refusal before any request. A refusal
- * is a page state, not an error; a missing key or `WEB_PUBLIC_URL` throws (configuration), and
- * nothing is retried: each attempt counts against the visitor's limits (ADR 0020).
+ * is a page state; `client_ip_unknown` on Vercel means the platform header was missing or wrong,
+ * so the calling action reports it to Sentry (never with an IP). A missing key or
+ * `WEB_PUBLIC_URL`, or an https web off Vercel, throws (configuration). Nothing is retried: each
+ * attempt counts against the visitor's limits (ADR 0020).
  */
 export async function credentialCall<T>({
   path,
@@ -44,8 +46,8 @@ export async function credentialCall<T>({
     return { kind: 'refused', reason: 'preview_deployment' };
   }
   const clientIp = await readCredentialClientIp(readWebPublicUrl(process.env));
-  // Checked again at runtime: a missing IP must refuse the call, never send it without one.
-  if (!isClientIp(clientIp)) {
+  // Never sent without one: the API would refuse it, but only after the password crossed.
+  if (clientIp === undefined) {
     return { kind: 'refused', reason: 'client_ip_unknown' };
   }
   const result = await apiClient().call(path, {

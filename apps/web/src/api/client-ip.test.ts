@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseWebPublicUrl } from '../auth/web-public-url';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import {
   clientIpFromHeaders,
   readClientIp,
@@ -87,42 +88,50 @@ describe('readClientIp', () => {
 });
 
 describe('readCredentialClientIp', () => {
-  const HTTPS_WEB = parseWebPublicUrl('https://beta.otakuleague.com');
-  const LOOPBACK_WEB = parseWebPublicUrl('http://localhost:3000');
+  const VISITOR = { 'x-forwarded-for': '203.0.113.7' };
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
   it.each([
-    ['one address', '203.0.113.7', '203.0.113.7'],
-    ['no header', undefined, undefined],
-    ['a list', '203.0.113.7, 198.51.100.1', undefined],
-  ])('on Vercel reads x-forwarded-for: %s', async (_label, value, expected) => {
+    ['one address', VISITOR, '203.0.113.7'],
+    ['no header', {}, undefined],
+    ['a list', { 'x-forwarded-for': '203.0.113.7, 198.51.100.1' }, undefined],
+    // Next re-sends a Server Action between workers; that hop carries Vercel's egress address.
+    [
+      'a forwarded action hop',
+      { ...VISITOR, 'x-action-forwarded': '1' },
+      undefined,
+    ],
+  ])('on Vercel, %s', async (_label, headers, expected) => {
     vi.stubEnv('VERCEL', '1');
-    incoming.headers = new Headers(
-      value === undefined ? {} : { 'x-forwarded-for': value },
-    );
+    incoming.headers = new Headers(headers);
 
-    expect(await readCredentialClientIp(HTTPS_WEB)).toBe(expected);
+    expect(await readCredentialClientIp({ isHttps: true })).toBe(expected);
   });
 
   it.each([undefined, '', '0'])(
     'off Vercel (VERCEL=%j) sends loopback and never reads a forged header',
     async (vercel) => {
       vi.stubEnv('VERCEL', vercel);
-      incoming.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
+      incoming.headers = new Headers(VISITOR);
       incoming.reads = 0;
 
-      expect(await readCredentialClientIp(LOOPBACK_WEB)).toBe('127.0.0.1');
+      expect(await readCredentialClientIp({ isHttps: false })).toBe(
+        '127.0.0.1',
+      );
       expect(incoming.reads).toBe(0);
     },
   );
 
-  it('gives nothing to an https web off Vercel, which cannot know the visitor', async () => {
-    vi.stubEnv('VERCEL', '');
-    incoming.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
+  it('still matches the header name Next sets on a forwarded action', () => {
+    const require = createRequire(import.meta.url);
+    const actionHandler = readFileSync(
+      require.resolve('next/dist/server/app-render/action-handler.js'),
+      'utf8',
+    );
 
-    expect(await readCredentialClientIp(HTTPS_WEB)).toBeUndefined();
+    expect(actionHandler).toContain("'x-action-forwarded'");
   });
 });

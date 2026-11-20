@@ -85,7 +85,7 @@ export default defineConfig([
           paths: NETWORK_IMPORTS,
           patterns: [
             {
-              group: ['**/api/client'],
+              group: ['**/api/client', '**/api/client.*'],
               importNames: ['apiClient', 'createApiClient'],
               message:
                 'Auth code calls the API through credentialCall() (src/auth/credential-call.ts).',

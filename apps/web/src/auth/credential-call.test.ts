@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FetchFunction } from '../api/client';
 
 /** The incoming request seen by `headers()`, and how often it was read. */
@@ -14,6 +14,7 @@ vi.mock('next/headers', () => ({
 const KEY = 'fake-internal-api-key-for-tests-only-0123456789';
 const VISITOR_IP = '203.0.113.7';
 const PASSWORD = 'never-echo-this-password';
+const SIGN_IN_BODY = { identifier: 'farouk', password: PASSWORD };
 const PRODUCTION = {
   VERCEL: '1',
   VERCEL_ENV: 'production',
@@ -22,23 +23,20 @@ const PRODUCTION = {
   INTERNAL_API_KEY: KEY,
 };
 
-interface RecordedRequest {
-  readonly url: string;
-  readonly init: RequestInit | undefined;
-}
-
 const isSignedIn = (body: unknown): body is { readonly signedIn: true } =>
   typeof body === 'object' && body !== null && 'signedIn' in body;
 
 const answer = (status: number, body: unknown, headers = {}) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers }));
+const refused = (reason: string) => ({ kind: 'refused', reason });
+const BUSY = { error: { code: 'AUTH_BUSY', message: 'Busy' } };
 
 /** credentialCall over the real apiClient() and a stubbed global fetch, with a fresh module graph. */
 async function credentialCallWith(
   env: Readonly<Record<string, string | undefined>>,
   respond: () => Promise<Response> = () => answer(200, { signedIn: true }),
 ) {
-  const requests: RecordedRequest[] = [];
+  const requests: { readonly url: string; readonly init?: RequestInit }[] = [];
   const fetchFunction: FetchFunction = (input, init) => {
     requests.push({
       url: input instanceof Request ? input.url : input.toString(),
@@ -55,7 +53,7 @@ async function credentialCallWith(
   const call = () =>
     credentialCall({
       path: '/auth/sign-in',
-      body: { identifier: 'farouk', password: PASSWORD },
+      body: SIGN_IN_BODY,
       isExpectedBody: isSignedIn,
     });
   return { call, requests };
@@ -73,54 +71,50 @@ function expectNoSecretIn(value: unknown): void {
 }
 
 describe('credentialCall', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
-    incoming.headers = new Headers();
+  const OFF_VERCEL = { VERCEL: undefined, VERCEL_ENV: undefined };
+
+  beforeEach(() => {
+    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
     incoming.reads = 0;
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
   it.each(['preview', 'development', undefined, ''])(
-    'refuses on Vercel with VERCEL_ENV=%j before reading the request or calling the API',
+    'refuses on Vercel with VERCEL_ENV=%j before reading the request, the config or the API',
     async (vercelEnv) => {
-      incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+      // A preview's config: no WEB_PUBLIC_URL, no production key. Reading either first would throw.
       const { call, requests } = await credentialCallWith({
         VERCEL_ENV: vercelEnv,
+        WEB_PUBLIC_URL: undefined,
+        INTERNAL_API_KEY: '',
       });
 
-      expect(await call()).toEqual({
-        kind: 'refused',
-        reason: 'preview_deployment',
-      });
+      expect(await call()).toEqual(refused('preview_deployment'));
       expect(requests).toEqual([]);
       expect(incoming.reads).toBe(0);
     },
   );
 
-  const OFF_VERCEL = { VERCEL: undefined, VERCEL_ENV: undefined };
-
+  // Malformed headers are covered by client-ip.test.ts; these two prove the refusal sends nothing.
   it.each([
-    ['production without x-forwarded-for', {}, {}],
+    ['without x-forwarded-for', {}],
     [
-      'production with a list',
-      { 'x-forwarded-for': `${VISITOR_IP}, 1.2.3.4` },
-      {},
+      'on a forwarded Server Action hop',
+      { 'x-forwarded-for': VISITOR_IP, 'x-action-forwarded': '1' },
     ],
-    ['production with text', { 'x-forwarded-for': 'unknown' }, {}],
-    ['an https web off Vercel (system variables hidden)', {}, OFF_VERCEL],
-  ])('refuses in %s', async (_label, headers, env) => {
+  ])('refuses in production %s', async (_label, headers) => {
     incoming.headers = new Headers(headers);
-    const { call, requests } = await credentialCallWith(env);
+    const { call, requests } = await credentialCallWith({});
 
-    expect(await call()).toEqual({
-      kind: 'refused',
-      reason: 'client_ip_unknown',
-    });
+    expect(await call()).toEqual(refused('client_ip_unknown'));
     expect(requests).toEqual([]);
   });
 
-  it('sends one uncached POST with the key and the visitor IP in production', async () => {
-    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
+  it('sends one uncached POST with the key, the visitor IP and the body in production', async () => {
     const { call, requests } = await credentialCallWith({});
 
     expect(await call()).toEqual({
@@ -128,20 +122,17 @@ describe('credentialCall', () => {
       result: { ok: true, data: { signedIn: true } },
     });
     expect(requests).toHaveLength(1);
-    const [request] = requests;
-    expect(request?.url).toBe('https://api.otakuleague.test/auth/sign-in');
-    expect(request?.init?.method).toBe('POST');
-    expect(request?.init?.cache).toBe('no-store');
-    expect(new Headers(request?.init?.headers).get('x-internal-api-key')).toBe(
-      KEY,
-    );
-    expect(new Headers(request?.init?.headers).get('x-client-ip')).toBe(
-      VISITOR_IP,
-    );
+    const init = requests[0]?.init;
+    const sent = new Headers(init?.headers);
+    expect(requests[0]?.url).toBe('https://api.otakuleague.test/auth/sign-in');
+    expect([init?.method, init?.cache]).toEqual(['POST', 'no-store']);
+    expect(sent.get('x-internal-api-key')).toBe(KEY);
+    expect(sent.get('x-client-ip')).toBe(VISITOR_IP);
+    expect(typeof init?.body).toBe('string');
+    expect(JSON.parse(init?.body as string)).toEqual(SIGN_IN_BODY);
   });
 
   it('sends loopback off Vercel and ignores a forged x-forwarded-for', async () => {
-    incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
     const { call, requests } = await credentialCallWith({
       ...OFF_VERCEL,
       WEB_PUBLIC_URL: 'http://localhost:3000',
@@ -162,19 +153,18 @@ describe('credentialCall', () => {
       /INTERNAL_API_KEY is not set/,
     ],
     [
-      'an API base URL the key may not go to',
-      { API_BASE_URL: 'http://api.otakuleague.test' },
-      /neither https nor loopback/,
-    ],
-    [
       'no WEB_PUBLIC_URL',
       { WEB_PUBLIC_URL: undefined },
       /WEB_PUBLIC_URL is missing/,
     ],
+    [
+      'an https web off Vercel (system variables hidden)',
+      OFF_VERCEL,
+      /credential calls off Vercel/,
+    ],
   ])(
     'throws with %s, before any request and without a secret',
     async (_label, env, message) => {
-      incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
       const { call, requests } = await credentialCallWith(env);
 
       const error: unknown = await call().catch((cause: unknown) => cause);
@@ -188,18 +178,8 @@ describe('credentialCall', () => {
   it.each([
     [
       'a 429 AUTH_BUSY',
-      () =>
-        answer(
-          429,
-          { error: { code: 'AUTH_BUSY', message: 'Busy' } },
-          { 'retry-after': '30' },
-        ),
-      {
-        kind: 'api_error',
-        status: 429,
-        error: { error: { code: 'AUTH_BUSY', message: 'Busy' } },
-        retryAfterSeconds: 30,
-      },
+      () => answer(429, BUSY, { 'retry-after': '30' }),
+      { kind: 'api_error', status: 429, error: BUSY, retryAfterSeconds: 30 },
     ],
     [
       'a network failure',
@@ -207,14 +187,13 @@ describe('credentialCall', () => {
       { kind: 'network' },
     ],
     [
-      'a timeout',
-      () => Promise.reject(new DOMException('timed out', 'TimeoutError')),
-      { kind: 'timeout' },
+      'a 200 of the wrong shape',
+      () => answer(200, {}),
+      { kind: 'invalid_response', status: 200 },
     ],
   ])(
     'returns %s after exactly one request, never retried',
     async (_label, respond, failure) => {
-      incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
       const { call, requests } = await credentialCallWith({}, respond);
 
       const outcome = await call();
