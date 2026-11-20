@@ -6,6 +6,7 @@ import {
   type AnimeFranchiseView,
   type AnimeListCardPage,
 } from './anime';
+import type { EmailVerificationConfirmResponse, SignInResponse } from './auth';
 
 export const APP_NAME = 'OtakuLeague';
 
@@ -23,6 +24,7 @@ export const API_ERROR_CODES = [
   'INVALID_CREDENTIALS',
   'USERNAME_TAKEN',
   'SIGN_UP_CLOSED',
+  'AUTH_TOKEN_INVALID',
   'TOO_MANY_REQUESTS',
   'CLIENT_ERROR',
   'SERVICE_UNAVAILABLE',
@@ -110,6 +112,44 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
     (value.status === 'ok' && database === 'up') ||
     (value.status === 'error' && database === 'down')
   );
+}
+
+/** What the web writes into the session cookie: 43 base64url characters, nothing a header could split on. */
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+function isSignInResponse(value: unknown): value is SignInResponse {
+  return (
+    isRecord(value) &&
+    typeof value.sessionToken === 'string' &&
+    SESSION_TOKEN_PATTERN.test(value.sessionToken) &&
+    typeof value.expiresAt === 'string' &&
+    isIsoInstant(value.expiresAt)
+  );
+}
+
+/** Exactly what `Date.toISOString()` writes, as the API sends it; '2026' or a bare date is not one. */
+function isIsoInstant(value: string): boolean {
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+/**
+ * True when `value` is a POST /auth/email-verification/confirm body (ADR 0020). A `session` key is
+ * accepted on `verified` only, so the web never sets a cookie from any other outcome.
+ */
+export function isEmailVerificationConfirmResponse(
+  value: unknown,
+): value is EmailVerificationConfirmResponse {
+  if (!isRecord(value)) return false;
+  switch (value.outcome) {
+    case 'verified':
+      return value.session === null || isSignInResponse(value.session);
+    case 'already_verified':
+    case 'confirmation_required':
+      return !('session' in value);
+    default:
+      return false;
+  }
 }
 
 const FRANCHISE_STATES: readonly unknown[] = [
@@ -210,6 +250,8 @@ export {
 } from './redaction';
 export * from './anime';
 export type {
+  EmailVerificationConfirmRequest,
+  EmailVerificationConfirmResponse,
   MeResponse,
   SignInRequest,
   SignInResponse,

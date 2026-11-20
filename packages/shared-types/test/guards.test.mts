@@ -4,6 +4,7 @@ import {
   isAnimeFranchise,
   isAnimeListPage,
   isApiError,
+  isEmailVerificationConfirmResponse,
   isHealthResponse,
 } from '@otakuleague/shared-types';
 
@@ -25,13 +26,14 @@ void describe('isApiError', () => {
     );
   });
 
-  void it('accepts every auth error code a sign-in or a sign-up can answer (ADR 0015, 0020)', () => {
+  void it('accepts every auth error code a sign-in, a sign-up or a confirm can answer (ADR 0015, 0020)', () => {
     for (const code of [
       'UNAUTHORIZED',
       'AUTH_BUSY',
       'INVALID_CREDENTIALS',
       'USERNAME_TAKEN',
       'SIGN_UP_CLOSED',
+      'AUTH_TOKEN_INVALID',
       'TOO_MANY_REQUESTS',
       'SERVICE_UNAVAILABLE',
     ]) {
@@ -156,6 +158,95 @@ void describe('isHealthResponse', () => {
     assert.equal(
       isHealthResponse({
         error: { code: 'SERVICE_UNAVAILABLE', message: 'x' },
+      }),
+      false,
+    );
+  });
+});
+
+void describe('isEmailVerificationConfirmResponse', () => {
+  const SESSION = {
+    sessionToken: 'A'.repeat(43),
+    expiresAt: '2026-12-19T12:00:00.000Z',
+  };
+
+  void it('accepts the three outcomes, a session only on verified', () => {
+    for (const body of [
+      { outcome: 'verified', session: SESSION },
+      { outcome: 'verified', session: null },
+      { outcome: 'already_verified' },
+      { outcome: 'confirmation_required' },
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(body),
+        true,
+        JSON.stringify(body),
+      );
+    }
+  });
+
+  void it('rejects non-objects, an unknown outcome and a missing session on verified', () => {
+    for (const candidate of NOT_OBJECTS) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(candidate),
+        false,
+        String(candidate),
+      );
+    }
+    for (const body of [
+      {},
+      { outcome: 'signed_in', session: SESSION },
+      { outcome: 'VERIFIED', session: null },
+      { outcome: 'verified' },
+      { outcome: 'verified', session: undefined },
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(body),
+        false,
+        JSON.stringify(body),
+      );
+    }
+  });
+
+  void it('rejects a session on already_verified or confirmation_required, even null', () => {
+    for (const outcome of ['already_verified', 'confirmation_required']) {
+      for (const session of [SESSION, null]) {
+        assert.equal(
+          isEmailVerificationConfirmResponse({ outcome, session }),
+          false,
+          `${outcome} ${JSON.stringify(session)}`,
+        );
+      }
+    }
+  });
+
+  void it('rejects a session token that could not go into a cookie, or a bad expiry', () => {
+    for (const session of [
+      { ...SESSION, sessionToken: 'A'.repeat(42) },
+      { ...SESSION, sessionToken: `${'A'.repeat(42)};` },
+      { ...SESSION, sessionToken: `${'A'.repeat(41)}\r\n` },
+      { ...SESSION, sessionToken: 43 },
+      { ...SESSION, expiresAt: 'tomorrow' },
+      { ...SESSION, expiresAt: '2026' },
+      { ...SESSION, expiresAt: '2026-12-19' },
+      { ...SESSION, expiresAt: '2026-12-19T12:00:00Z' },
+      { ...SESSION, expiresAt: '2026-12-19T13:00:00.000+01:00' },
+      { ...SESSION, expiresAt: 1 },
+      { sessionToken: SESSION.sessionToken },
+      [],
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse({ outcome: 'verified', session }),
+        false,
+        JSON.stringify(session),
+      );
+    }
+  });
+
+  void it('rejects an error envelope', () => {
+    assert.equal(
+      isEmailVerificationConfirmResponse({
+        error: { code: 'AUTH_TOKEN_INVALID', message: 'x' },
       }),
       false,
     );

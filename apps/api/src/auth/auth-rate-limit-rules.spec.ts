@@ -6,7 +6,9 @@ import {
 } from '../common/api-caller';
 import {
   type ClientIpKey,
+  CONFIRM_PASSWORD_LIMIT,
   clientIpKey,
+  confirmPasswordHits,
   decide,
   PER_IP_LIMITS,
   perIpHits,
@@ -52,16 +54,65 @@ describe('SIGN_IN_LIMITS', () => {
 });
 
 describe('PER_IP_LIMITS', () => {
-  it('pins the ADR 0015 sign-up number: 5 per IP per hour', () => {
+  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min', () => {
     expect(PER_IP_LIMITS).toEqual({
       'sign-up': { limit: 5, windowMs: 60 * 60_000 },
+      'email-verification-confirm': { limit: 10, windowMs: 15 * 60_000 },
     });
   });
 
   it('keeps every window within the cleanup horizon', () => {
-    for (const rule of Object.values(PER_IP_LIMITS)) {
+    for (const rule of [
+      ...Object.values(PER_IP_LIMITS),
+      CONFIRM_PASSWORD_LIMIT,
+    ]) {
       expect(rule.windowMs).toBeLessThanOrEqual(RATE_LIMIT_LONGEST_WINDOW_MS);
     }
+  });
+});
+
+describe('confirmPasswordHits', () => {
+  it('pins the ADR 0020 number: 10 password checks per account per hour', () => {
+    expect(CONFIRM_PASSWORD_LIMIT).toEqual({
+      limit: 10,
+      windowMs: 60 * 60_000,
+    });
+  });
+
+  it('counts the account email alone, under that rule', () => {
+    expect(confirmPasswordHits(HMAC_KEY, FRIEREN)).toEqual([
+      {
+        key: rateLimitKey(
+          HMAC_KEY,
+          'email-verification-confirm',
+          'identifier',
+          [FRIEREN],
+        ),
+        rule: CONFIRM_PASSWORD_LIMIT,
+      },
+    ]);
+  });
+
+  it("never shares a counter with sign-in's identifier key or the confirm per-IP key", () => {
+    const [password] = confirmPasswordHits(HMAC_KEY, FRIEREN);
+    const signIn = signInHits(HMAC_KEY, IP, FRIEREN).map(({ key }) => hex(key));
+    const [perIp] = perIpHits(HMAC_KEY, 'email-verification-confirm', IP);
+
+    expect(signIn).not.toContain(hex(password.key));
+    expect(hex(password.key)).not.toBe(hex(perIp.key));
+  });
+
+  it('differs by account and HMAC key, never by IP (it has none)', () => {
+    const key = (hmacKey: typeof HMAC_KEY, email: NormalisedIdentifier) =>
+      hex(confirmPasswordHits(hmacKey, email)[0].key);
+
+    expect(key(HMAC_KEY, FRIEREN)).not.toBe(
+      key(HMAC_KEY, normaliseIdentifier('himmel@example.com')),
+    );
+    expect(key(HMAC_KEY, FRIEREN)).not.toBe(key(OTHER_HMAC_KEY, FRIEREN));
+    expect(key(HMAC_KEY, FRIEREN)).toBe(
+      key(HMAC_KEY, normaliseIdentifier(' FRIEREN@example.com ')),
+    );
   });
 });
 
@@ -75,11 +126,14 @@ describe('perIpHits', () => {
     ]);
   });
 
-  it('never shares a counter with sign-in for the same IP', () => {
+  it('never shares a counter with sign-in or another route for the same IP', () => {
     const [signUp] = perIpHits(HMAC_KEY, 'sign-up', IP);
+    const [confirm] = perIpHits(HMAC_KEY, 'email-verification-confirm', IP);
     const [signIn] = signInHits(HMAC_KEY, IP, FRIEREN);
 
     expect(hex(signUp.key)).not.toBe(hex(signIn.key));
+    expect(hex(confirm.key)).not.toBe(hex(signIn.key));
+    expect(hex(confirm.key)).not.toBe(hex(signUp.key));
   });
 
   it('differs by IP and HMAC key, and counts a whole IPv6 /64 as one visitor', () => {
