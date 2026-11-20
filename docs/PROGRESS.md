@@ -1,18 +1,18 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-20 (1f-iii-b)
+Updated: 2026-11-20 (1f-iii-c)
 ## Current milestone
-W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
+W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b merged as #124, 1f-iii-c in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
 ## Last session
-OTA-139 slice 1f-iii-b (`/auth` sign-in UI, not reachable until merge): `/auth` page with `SignInForm` (useActionState; identifier uncontrolled, password clears on submit); `parseAuthMode` (sign-up mode shows sign-in plus "New accounts aren't open yet"); `/sign-in` 308 → `/auth?mode=sign-in` keeping `next`.
-`signInAction` Origin guard (missing/null/foreign → unavailable); `redirectTo` uses `RedirectType.replace`; `logging.serverFunctions: false`; `auth.css`, first `app/auth` lint row, `auth-sign-in` screenshot.
+OTA-139 slice 1f-iii-c (lint and constants, nothing new reachable): `redirect`/`permanentRedirect` value imports from `next/navigation` and `next/dist/` banned app-wide with a 3-file allowlist (`redirect-to.ts`, `resolve-tab.ts`, `season-redirect.ts`); dynamic `import()` gate (string literal only, no `api/client` or network modules); `noInlineConfig` outside tests.
+`resolveTab` checks the canonical slug pattern before its 308; `IDENTIFIER_MAX` (254) and `PASSWORD_RAW_MAX` (1024) moved to `packages/shared-types` (values unchanged); ADR 0015 addendum, pointer in ADR 0003.
 ## In progress
-- OTA-139 1f-iii-b: PR from `feat/OTA-139-sign-in-ui`.
+- OTA-139 1f-iii-c: PR from `feat/OTA-139-redirect-ban`.
 - OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4; OTA-147 `/contact` (needs email provider). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
 - Email on Resend free plan only (decided 2026-11-15): 80 sign-up + 20 reset/day, Sentry alert at 75; ADR 0015 addendum in the email slice.
 ## Next 3 tasks
-1. OTA-139 1f-iii-c/1f-iv: redirect ban + L3 dynamic `import()` gate, then Viewer/loadViewer/signOutAction + `sessionCall` + best-effort sign-out of the old session after sign-in; report `INTERNAL_KEY_REQUIRED`/`invalid_response` through the throttled reporter; move `IDENTIFIER_MAX`/`PASSWORD_RAW_MAX` to shared-types; L2 host check; identifier stays client-side (state never echoes it). 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
+1. OTA-139 1f-iv: Viewer/loadViewer/signOutAction (signed-out redirect = second helper in `redirect-to.ts`) + `sessionCall` + best-effort sign-out of the old session after sign-in; report `INTERNAL_KEY_REQUIRED`/`invalid_response` through the throttled reporter; L2 host check; identifier stays client-side (state never echoes it). 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
 2. OTA-186 Mailpit + seed accounts.
 3. OTA-184 browser data ADR (now unblocked).
 Later: OTA-198 `claimsSlugs` gate decision; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 follow-up (shared `currentSeason`).
