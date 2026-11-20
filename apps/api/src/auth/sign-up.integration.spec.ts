@@ -27,7 +27,6 @@ import {
 import { truncateAllTables } from '../testing/test-database';
 import { Argon2id, type Argon2idInput } from './argon2id';
 import {
-  SIGN_UP_CLOSED_MESSAGE,
   SIGN_UP_LIMITED_MESSAGE,
   USERNAME_TAKEN_MESSAGE,
 } from './auth.controller';
@@ -36,7 +35,7 @@ import { type AuthEmail, EmailSender } from './email-sender';
 import { PasswordHasher } from './password-hasher';
 import { SESSION_TOKEN_PATTERN } from './session-rules';
 import { SignUpService } from './sign-up.service';
-import { hashAuthToken } from './sign-up-rules';
+import { hashAuthToken, SIGN_UP_CLOSED_MESSAGE } from './sign-up-rules';
 
 const NOW = new Date('2026-11-19T12:00:00.000Z');
 const HOUR = 60 * 60 * 1000;
@@ -393,6 +392,11 @@ describe('POST /auth/sign-up', () => {
         pendingExpiresAt: deadline,
       });
       await seedToken(7, userId);
+      // Used: the upsert must revive the one row, never leave the new token consumed.
+      await prisma.authToken.update({
+        where: { tokenHash: digest(7) },
+        data: { usedAt: at(-HOUR) },
+      });
 
       const response = await signUp(SIGN_UP).expect(202);
 
@@ -416,6 +420,13 @@ describe('POST /auth/sign-up', () => {
       expect(bytes(tokens[0]?.bindingHash ?? null)).toEqual(
         bytes(hashAuthToken((response.body as SignUpResponse).bindingToken)),
       );
+      expect(tokens[0]).toMatchObject({
+        purpose: 'EMAIL_VERIFICATION',
+        userId,
+        createdAt: NOW,
+        expiresAt: at(DAY),
+        usedAt: null,
+      });
       expect(await hasher.verify(PASSWORD, user.passwordHash)).toBe('match');
     },
   );

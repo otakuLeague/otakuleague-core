@@ -147,11 +147,19 @@ describe('AuthCleanupService on Postgres', () => {
   });
 
   it('removes expired tokens, used or not, and keeps live ones, used or not', async () => {
-    const userId = await seedUser(1, { verified: true, createdAt: at(-DAY) });
-    await seedToken(1, userId, { expiresAt: NOW });
-    await seedToken(2, userId, { expiresAt: at(-HOUR), usedAt: at(-2 * HOUR) });
-    await seedToken(3, userId, { expiresAt: at(1) });
-    await seedToken(4, userId, { expiresAt: at(1), usedAt: at(-HOUR) });
+    // One account per token: an account holds at most one token per purpose.
+    const owner = (n: number): Promise<string> =>
+      seedUser(n, { verified: true, createdAt: at(-DAY) });
+    await seedToken(1, await owner(1), { expiresAt: NOW });
+    await seedToken(2, await owner(2), {
+      expiresAt: at(-HOUR),
+      usedAt: at(-2 * HOUR),
+    });
+    await seedToken(3, await owner(3), { expiresAt: at(1) });
+    await seedToken(4, await owner(4), {
+      expiresAt: at(1),
+      usedAt: at(-HOUR),
+    });
 
     expect(await cleanup.removeExpiredTokens()).toBe(2);
 
@@ -287,5 +295,38 @@ describe('AuthCleanupService on Postgres', () => {
       insert(digest(4), 'EMAIL_VERIFICATION', digest(9)),
     ).resolves.toBe(1);
     await expect(insert(digest(5), 'PASSWORD_RESET', null)).resolves.toBe(1);
+  });
+
+  it('refuses a second token of one purpose for one account, used or not, and allows one per purpose', async () => {
+    const userId = await seedUser(1, { verified: false, createdAt: at(-DAY) });
+    const otherId = await seedUser(2, { verified: false, createdAt: at(-DAY) });
+    await seedToken(1, userId, { expiresAt: at(HOUR), usedAt: at(-HOUR) });
+
+    await expect(seedToken(2, userId, { expiresAt: at(HOUR) })).rejects.toThrow(
+      'auth_token_user_id_purpose_key',
+    );
+    await expect(
+      prisma.authToken.create({
+        data: {
+          tokenHash: digest(3),
+          purpose: 'PASSWORD_RESET',
+          userId,
+          createdAt: NOW,
+          expiresAt: at(HOUR),
+        },
+      }),
+    ).resolves.toMatchObject({ userId, purpose: 'PASSWORD_RESET' });
+    await expect(
+      seedToken(4, otherId, { expiresAt: at(HOUR) }),
+    ).resolves.toBeUndefined();
+
+    const rows = await prisma.authToken.findMany({
+      orderBy: { tokenHash: 'asc' },
+    });
+    expect(rows.map((row) => [row.tokenHash[0], row.purpose])).toEqual([
+      [1, 'EMAIL_VERIFICATION'],
+      [3, 'PASSWORD_RESET'],
+      [4, 'EMAIL_VERIFICATION'],
+    ]);
   });
 });

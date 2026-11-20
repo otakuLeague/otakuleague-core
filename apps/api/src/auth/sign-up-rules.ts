@@ -13,6 +13,13 @@ import {
 export const PENDING_SIGN_UP_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Production has no email provider yet (ADR 0020 N5): never an account nobody can confirm. A 403,
+ * not a 503: the filter logs every 5xx with a stack, and this answer is expected, not a fault.
+ * Sign-up and resend give the same answer.
+ */
+export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
+
+/**
  * Parity (PARITY.md): 3 to 20 ASCII letters, digits or "_". Never "@", which sign-in reads as an
  * email (identifierKind), and nothing normaliseIdentifier could change but the letter case.
  */

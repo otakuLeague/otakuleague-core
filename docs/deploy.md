@@ -75,6 +75,7 @@ API service:
 - Each migration file runs in its own implicit transaction, so a failed file is rolled back. Earlier files in the same run stay applied, and statements such as `CREATE INDEX CONCURRENTLY` are not transactional.
 - A failed migration stays recorded in `_prisma_migrations`. Every later `migrate deploy` then fails with P3009 until someone runs `prisma migrate resolve --rolled-back <name>` against production (from Farouk's machine through the TCP proxy, permanent since OTA-170, see Backups; or a one-off pre-deploy command). Then fix forward with a new migration.
 - The dangerous case is a migration that applies and breaks the old code still running. So migrations are additive: expand first, then contract in a later PR.
+- Deliberate exception: `20261120120000_auth_token_one_per_purpose` (OTA-139, ADR 0020 Addendum 1e-ii-b) breaks an API build from before the token upsert, whose delete-then-insert answers 500 to a re-submit of a pending email. Safe only while sign-up is closed in production; once it is open, never roll the API back below that build.
 
 ## Rollback
 

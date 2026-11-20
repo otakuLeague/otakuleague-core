@@ -62,9 +62,10 @@ export class AuthCleanupService {
    * Unverified accounts past their `pendingExpiresAt`; their sessions and tokens go with them
    * (ON DELETE CASCADE). A null deadline (every account from before slice 1e) is never
    * deleted. Slice 1e sets the deadline to now + PENDING_SIGN_UP_TTL_MS in the same UPDATE
-   * that re-arms an account on submit and resend, and clears it on verification. Both are
-   * columns of the row this DELETE locks, and Postgres re-checks them after waiting on that
-   * lock, so a re-submit or a verification racing the cleanup keeps the account.
+   * that re-arms an account on submit (resend never moves it), and clears it on
+   * verification. Both are columns of the row this DELETE locks, and Postgres re-checks them
+   * after waiting on that lock, so a re-submit or a verification racing the cleanup keeps the
+   * account.
    */
   async removeExpiredPendingSignUps(): Promise<number> {
     const { count } = await this.prisma.user.deleteMany({

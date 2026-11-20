@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { EmailVerificationConfirmRequest } from '@otakuleague/shared-types';
+import type {
+  EmailVerificationConfirmRequest,
+  EmailVerificationResendRequest,
+} from '@otakuleague/shared-types';
 import {
   IsNotEmpty,
   IsString,
@@ -7,8 +10,9 @@ import {
   Validate,
   ValidateIf,
 } from 'class-validator';
-import { PASSWORD_MAX } from './credential-rules';
+import { IDENTIFIER_MAX, PASSWORD_MAX } from './credential-rules';
 import { PasswordMaxLength } from './sign-in.dto';
+import { EmailAddress } from './sign-up.dto';
 
 /**
  * Upper bound on a token or bindingToken (ours are 43 characters). No pattern: a malformed token is
@@ -49,4 +53,22 @@ export class EmailVerificationConfirmDto implements EmailVerificationConfirmRequ
   @IsNotEmpty()
   @Validate(PasswordMaxLength)
   readonly password?: string;
+}
+
+/**
+ * ADR 0020 Addendum (1e-ii-b): sign-up's email rule (at most 254 raw characters, then the shape
+ * after normaliseIdentifier), so a malformed address is 400 before any counter. No message
+ * echoes the value.
+ */
+export class EmailVerificationResendDto implements EmailVerificationResendRequest {
+  @ApiProperty({
+    description:
+      'The address signed up with; matched trimmed and lower-cased. The answer is the same for any address.',
+    maxLength: IDENTIFIER_MAX,
+    example: 'frieren@example.com',
+  })
+  @IsString()
+  @MaxLength(IDENTIFIER_MAX)
+  @Validate(EmailAddress)
+  readonly email!: string;
 }

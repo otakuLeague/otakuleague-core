@@ -299,6 +299,8 @@ enum AuthTokenPurpose {
 // A single-use emailed link (ADR 0015): only the SHA-256 of the token is stored, and of the
 // sign-up's bindingToken on a verification token. CHECK constraints (migration
 // auth_token_username_hold): token_hash of 32 bytes; binding_hash of 32 bytes, verification only.
+// One row per account and purpose (ADR 0020 Addendum 1e-ii-b): a new token is an upsert on
+// (user_id, purpose) that overwrites the old hash, so the old token stops existing.
 model AuthToken {
   tokenHash   Bytes            @id @map("token_hash")
   purpose     AuthTokenPurpose
@@ -309,7 +311,7 @@ model AuthToken {
   expiresAt   DateTime         @map("expires_at") @db.Timestamptz(3)
   usedAt      DateTime?        @map("used_at") @db.Timestamptz(3)
 
-  @@index([userId])
+  @@unique([userId, purpose])
   @@map("auth_token")
 }
 
