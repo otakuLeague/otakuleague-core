@@ -33,6 +33,8 @@ export const PER_IP_LIMITS = {
   'sign-up': { limit: 5, windowMs: HOUR_MS },
   'email-verification-confirm': { limit: 10, windowMs: 15 * MINUTE_MS },
   'email-verification-resend': { limit: 10, windowMs: HOUR_MS },
+  /** ADR 0020 Addendum (1e-iii) A2: about 86,400 names per IP per day. */
+  'username-availability': { limit: 60, windowMs: MINUTE_MS },
 } as const satisfies Record<string, RateLimitRule>;
 
 /**

@@ -259,4 +259,5 @@ export type {
   SignInResponse,
   SignUpRequest,
   SignUpResponse,
+  UsernameAvailabilityResponse,
 } from './auth';

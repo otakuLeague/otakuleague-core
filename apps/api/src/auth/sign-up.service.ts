@@ -48,6 +48,20 @@ export type ResendVerificationOutcome =
   | { readonly kind: 'rate_limited'; readonly retryAfterSeconds: number }
   | { readonly kind: 'closed' };
 
+export interface UsernameAvailabilityCheck {
+  /** Checked by UsernameAvailabilityQueryDto (USERNAME_PATTERN, sign-up's rule). */
+  readonly username: string;
+  readonly ip: ClientIpKey;
+}
+
+/** `taken` for a taken and a held name alike (ADR 0020 Addendum 1e-iii). */
+export type UsernameAvailabilityOutcome =
+  | { readonly kind: 'available' }
+  | { readonly kind: 'taken' }
+  | { readonly kind: 'rate_limited'; readonly retryAfterSeconds: number };
+
+const AVAILABLE = { kind: 'available' } as const;
+const TAKEN = { kind: 'taken' } as const;
 const USERNAME_TAKEN = { kind: 'username_taken' } as const;
 const CLOSED = { kind: 'closed' } as const;
 const RESEND_ACCEPTED = { kind: 'accepted' } as const;
@@ -236,6 +250,30 @@ export class SignUpService implements OnModuleDestroy {
       );
     }
     return RESEND_ACCEPTED;
+  }
+
+  /**
+   * GET /users/availability (ADR 0020 Addendum 1e-iii). Order, never reordered: the attempt is
+   * counted per IP; one instant; `normaliseIdentifier`; then the very read sign-up's 409 runs, so
+   * the two routes agree in every state (A1). No `canSend()` check: nothing is created, so it
+   * answers while sign-up is closed. No hash, no write but the counter, logs nothing. Database
+   * errors propagate (503): never an uncounted pass.
+   */
+  async usernameAvailability(
+    check: UsernameAvailabilityCheck,
+  ): Promise<UsernameAvailabilityOutcome> {
+    const decision = await this.limiter.check(
+      perIpHits(this.secrets.hmacKey(), 'username-availability', check.ip),
+    );
+    if (decision.kind === 'limited') {
+      return {
+        kind: 'rate_limited',
+        retryAfterSeconds: decision.retryAfterSeconds,
+      };
+    }
+    const now = this.clock.now().toISOString();
+    const usernameKey = normaliseIdentifier(check.username);
+    return (await this.isUsernameTaken(usernameKey, now)) ? TAKEN : AVAILABLE;
   }
 
   /** Waits for every send in progress. */
