@@ -96,7 +96,7 @@ export function isUsernameKeyConflict(error: unknown): boolean {
  * per IP; a taken username is 409 before any hash; then exactly one argon2 hash, outside any
  * transaction; then one transaction that claims the username hold (the lock every sign-up of
  * that username waits on), replaces a stale row of that username, upserts the user by email and
- * replaces its verification token. A registered email is never changed: its owner gets a notice.
+ * upserts its one verification token. A registered email is never changed: its owner gets a notice.
  * The answer never says which email case it was. Mail leaves after the answer, never awaited; a
  * failed send is one warning with the user id only. Database errors propagate (503).
  */
@@ -232,15 +232,17 @@ export class SignUpService implements OnModuleDestroy {
           WHERE account.email_verified_at IS NULL AND account.pending_expires_at IS NOT NULL
           RETURNING id::text AS id`;
           if (user === undefined) return { kind: 'registered' };
+          // One row per account and purpose: overwriting the hash cancels the older token, and
+          // the binding is always the one of the submit that wrote the current password hash.
           await tx.$executeRaw`
-          WITH cancelled AS (
-            DELETE FROM auth_token WHERE user_id = ${user.id}::uuid
-              AND purpose = 'EMAIL_VERIFICATION'::auth_token_purpose)
           INSERT INTO auth_token (token_hash, purpose, user_id, binding_hash, created_at,
             expires_at)
           VALUES (${record.tokenHash}, 'EMAIL_VERIFICATION'::auth_token_purpose,
             ${user.id}::uuid, ${record.bindingHash}, ${now}::timestamptz,
-            ${expiresAt}::timestamptz)`;
+            ${expiresAt}::timestamptz)
+          ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash,
+            binding_hash = EXCLUDED.binding_hash, created_at = EXCLUDED.created_at,
+            expires_at = EXCLUDED.expires_at, used_at = NULL`;
           return { kind: 'pending', userId: user.id };
         },
         // Explicit: the design relies on READ COMMITTED re-reading a row after a lock wait.

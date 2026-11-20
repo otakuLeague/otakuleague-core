@@ -393,6 +393,11 @@ describe('POST /auth/sign-up', () => {
         pendingExpiresAt: deadline,
       });
       await seedToken(7, userId);
+      // Used: the upsert must revive the one row, never leave the new token consumed.
+      await prisma.authToken.update({
+        where: { tokenHash: digest(7) },
+        data: { usedAt: at(-HOUR) },
+      });
 
       const response = await signUp(SIGN_UP).expect(202);
 
@@ -416,6 +421,13 @@ describe('POST /auth/sign-up', () => {
       expect(bytes(tokens[0]?.bindingHash ?? null)).toEqual(
         bytes(hashAuthToken((response.body as SignUpResponse).bindingToken)),
       );
+      expect(tokens[0]).toMatchObject({
+        purpose: 'EMAIL_VERIFICATION',
+        userId,
+        createdAt: NOW,
+        expiresAt: at(DAY),
+        usedAt: null,
+      });
       expect(await hasher.verify(PASSWORD, user.passwordHash)).toBe('match');
     },
   );
