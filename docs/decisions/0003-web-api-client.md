@@ -190,4 +190,6 @@ type ApiFailure =
 
 **1f-ii (2026-11-20):** `credentialCall` (`src/auth/credential-call.ts`) reads the client IP itself (`readCredentialClientIp`) instead of taking a `ClientIp`, so no caller can pass a wrong one; off Vercel it sends 127.0.0.1 only for a loopback (http) `WEB_PUBLIC_URL` and throws a configuration error otherwise; on Vercel a missing or malformed `x-forwarded-for`, or a Server Action hop re-sent by Next (`x-action-forwarded`), is refused as `client_ip_unknown`.
 
+**1f-iii-c (2026-11-20):** the static import gates above cannot be bypassed by a dynamic import: `import()` anywhere in apps/web takes a string literal and never a specifier ending in `api/client` (inside `src/api`, `import('./client')` stays allowed); see ADR 0015 Addendum (1f-iii-c), which also bans `redirect`/`permanentRedirect` outside three files.
+
 **Configuration.** `WEB_PUBLIC_URL` (ADR 0015) joins `WEB_ENV_VARIABLES`: the web's own origin, https, or http only for `localhost`, `127.0.0.1` and `[::1]`. Read on first use by `readWebPublicUrl()` (`src/auth/web-public-url.ts`), never at build, so a deploy without it still serves public pages. It names the session cookie (`__Host-ol_session` with `Secure` on https, `ol_session` on http) and later checks `next` and `Origin`.
