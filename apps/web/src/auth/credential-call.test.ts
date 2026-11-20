@@ -97,26 +97,20 @@ describe('credentialCall', () => {
     },
   );
 
+  const OFF_VERCEL = { VERCEL: undefined, VERCEL_ENV: undefined };
+
   it.each([
-    ['no x-forwarded-for', {}],
-    ['a list', { 'x-forwarded-for': `${VISITOR_IP}, 198.51.100.1` }],
-    ['text', { 'x-forwarded-for': 'unknown' }],
-  ])('refuses in production with %s', async (_label, headers) => {
+    ['production without x-forwarded-for', {}, {}],
+    [
+      'production with a list',
+      { 'x-forwarded-for': `${VISITOR_IP}, 1.2.3.4` },
+      {},
+    ],
+    ['production with text', { 'x-forwarded-for': 'unknown' }, {}],
+    ['an https web off Vercel (system variables hidden)', {}, OFF_VERCEL],
+  ])('refuses in %s', async (_label, headers, env) => {
     incoming.headers = new Headers(headers);
-    const { call, requests } = await credentialCallWith({});
-
-    expect(await call()).toEqual({
-      kind: 'refused',
-      reason: 'client_ip_unknown',
-    });
-    expect(requests).toEqual([]);
-  });
-
-  it('refuses an https web off Vercel (system variables hidden)', async () => {
-    const { call, requests } = await credentialCallWith({
-      VERCEL: undefined,
-      VERCEL_ENV: undefined,
-    });
+    const { call, requests } = await credentialCallWith(env);
 
     expect(await call()).toEqual({
       kind: 'refused',
@@ -149,8 +143,7 @@ describe('credentialCall', () => {
   it('sends loopback off Vercel and ignores a forged x-forwarded-for', async () => {
     incoming.headers = new Headers({ 'x-forwarded-for': VISITOR_IP });
     const { call, requests } = await credentialCallWith({
-      VERCEL: undefined,
-      VERCEL_ENV: undefined,
+      ...OFF_VERCEL,
       WEB_PUBLIC_URL: 'http://localhost:3000',
       API_BASE_URL: 'http://127.0.0.1:3001',
     });
