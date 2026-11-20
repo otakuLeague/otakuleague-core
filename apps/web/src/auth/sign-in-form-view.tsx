@@ -159,7 +159,7 @@ export function PreviewOffNotice() {
 export function SignUpClosedNote() {
   return (
     <p className="au-sub">
-      New accounts aren&apos;t open yet. Already have one? Sign in below.
+      New accounts aren&apos;t open yet. Already have one? Sign in with it here.
     </p>
   );
 }

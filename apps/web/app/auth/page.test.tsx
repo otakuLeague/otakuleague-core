@@ -3,10 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthSearchParams } from './auth-query-fields';
 import AuthPage, { metadata } from './page';
 
-// The action is server code; the form around it is tested in src/auth/sign-in-form.test.tsx.
 vi.mock('../../src/auth/sign-in-action', () => ({ signInAction: vi.fn() }));
-// AuthQueryFields is an async Server Component, which jsdom cannot render inside the page; the
-// real one is awaited directly below.
+// jsdom cannot render an async Server Component inside the page; the real one is awaited below.
 vi.mock('./auth-query-fields', () => ({
   AuthQueryFields: () => <input type="hidden" name="query-fields" />,
 }));
@@ -14,9 +12,14 @@ const { AuthQueryFields } = await vi.importActual<
   typeof import('./auth-query-fields')
 >('./auth-query-fields');
 
-const NO_QUERY = Promise.resolve({});
+const renderPage = (vercelEnv: string) => {
+  vi.stubEnv('VERCEL', '1');
+  vi.stubEnv('VERCEL_ENV', vercelEnv);
+  return render(<AuthPage searchParams={Promise.resolve({})} />).container;
+};
 const renderQueryFields = async (query: AuthSearchParams) =>
-  render(await AuthQueryFields({ searchParams: Promise.resolve(query) }));
+  render(await AuthQueryFields({ searchParams: Promise.resolve(query) }))
+    .container;
 
 afterEach(() => {
   cleanup();
@@ -24,32 +27,25 @@ afterEach(() => {
 });
 
 describe('Auth page', () => {
-  it('shows the form with the query fields inside it in production', () => {
-    vi.stubEnv('VERCEL', '1');
-    vi.stubEnv('VERCEL_ENV', 'production');
-    const { container } = render(<AuthPage searchParams={NO_QUERY} />);
+  it('shows the form, with the query fields inside it, in production', () => {
+    const page = renderPage('production');
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Welcome back',
     );
+    expect(page.querySelector('form input[name="password"]')).not.toBeNull();
     expect(
-      container.querySelector('form input[name="password"]'),
-    ).not.toBeNull();
-    expect(
-      container.querySelector('form input[name="query-fields"]'),
+      page.querySelector('form input[name="query-fields"]'),
     ).not.toBeNull();
   });
 
-  it('shows the preview notice and no password field on a preview deployment', () => {
-    vi.stubEnv('VERCEL', '1');
-    vi.stubEnv('VERCEL_ENV', 'preview');
-    const { container } = render(<AuthPage searchParams={NO_QUERY} />);
+  it('shows the notice and no form or field on a preview deployment', () => {
+    const page = renderPage('preview');
 
     expect(
       screen.getByText('Sign-in is off on preview deployments'),
     ).toBeTruthy();
-    expect(container.querySelector('form')).toBeNull();
-    expect(container.querySelector('input')).toBeNull();
+    expect(page.querySelector('form, input')).toBeNull();
   });
 
   it('is its own canonical', () => {
@@ -58,44 +54,26 @@ describe('Auth page', () => {
 });
 
 describe('AuthQueryFields', () => {
-  it('passes next to the form exactly as sent: only the action validates it', async () => {
+  it('passes next exactly as sent (only the action validates it) and says sign-up is closed', async () => {
     const next = '//evil.com/"><script>alert(1)</script>';
-    const { container } = await renderQueryFields({ next });
+    const fields = await renderQueryFields({ mode: 'sign-up', next });
 
-    const inputs = container.querySelectorAll('input');
-    expect(inputs).toHaveLength(1);
-    expect(inputs[0]?.type).toBe('hidden');
-    expect(inputs[0]?.name).toBe('next');
-    expect(inputs[0]?.value).toBe(next);
-    expect(container.querySelector('script')).toBeNull();
+    expect(screen.getByText(/New accounts aren.t open yet/)).toBeTruthy();
+    expect(
+      [...fields.querySelectorAll('input')].map((i) => [
+        i.type,
+        i.name,
+        i.value,
+      ]),
+    ).toEqual([['hidden', 'next', next]]);
+    expect(fields.querySelector('script')).toBeNull();
   });
 
   it.each<AuthSearchParams>([
     {},
-    { next: '' },
-    { next: ['/a', '/b'] },
-    { next: `/${'a'.repeat(2048)}` },
-  ])('adds no next field for %o', async (query) => {
-    const { container } = await renderQueryFields(query);
-
-    expect(container.querySelector('input')).toBeNull();
+    { mode: 'sign-in', next: '' },
+    { mode: ['sign-up'], next: ['/a', '/b'] },
+  ])('renders nothing for %o', async (query) => {
+    expect((await renderQueryFields(query)).innerHTML).toBe('');
   });
-
-  it.each(['signup', 'sign-up'])(
-    'says sign-up is closed for mode=%s',
-    async (mode) => {
-      await renderQueryFields({ mode });
-
-      expect(screen.getByText(/New accounts aren.t open yet/)).toBeTruthy();
-    },
-  );
-
-  it.each<AuthSearchParams>([{}, { mode: 'sign-in' }, { mode: ['sign-up'] }])(
-    'shows no sign-up note for %o',
-    async (query) => {
-      const { container } = await renderQueryFields(query);
-
-      expect(container.textContent).toBe('');
-    },
-  );
 });

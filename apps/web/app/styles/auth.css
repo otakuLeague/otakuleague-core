@@ -1,4 +1,19 @@
-/* Sign-in (OTA-139, design docs/design/auth/): card, fields, alert, submit. Tokens only. */
+/* Sign-in (OTA-139, design docs/design/auth/): page, card, fields, alert, submit. Tokens only. */
+.au-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: calc(400px + 2 * var(--space-4));
+  margin-inline: auto;
+  padding: var(--space-10) var(--space-4) var(--space-16);
+}
+.au-page h1 {
+  margin: 0;
+  font: 700 32px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
 .au-card {
   --au-focus: var(--accent);
   --au-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent);

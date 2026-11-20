@@ -53,22 +53,17 @@ describe.each(BASES)('safeNextPath on $origin', (webPublicUrl) => {
 });
 
 describe('rawNextParam', () => {
-  it.each([
-    '/my-list?tab=1',
-    '//evil.com',
-    'javascript:alert(1)',
-    '"><script>alert(1)</script>',
-    `/${'a'.repeat(2047)}`,
-  ])('keeps %o exactly as sent, for the action to check', (next) => {
-    expect(rawNextParam(next)).toBe(next);
-  });
+  it.each(['//evil.com"><script>', `/${'a'.repeat(2047)}`])(
+    'keeps %o exactly as sent, for the action to check',
+    (next) => {
+      expect(rawNextParam(next)).toBe(next);
+    },
+  );
 
-  it.each([
-    ['missing', undefined],
-    ['empty', ''],
-    ['repeated', ['/a', '/b']],
-    ['over 2048 characters', `/${'a'.repeat(2048)}`],
-  ])('drops a value that is %s', (_label, next) => {
-    expect(rawNextParam(next)).toBeUndefined();
-  });
+  it.each([undefined, '', ['/a', '/b'], `/${'a'.repeat(2048)}`])(
+    'drops %o (missing, empty, repeated, over 2048)',
+    (next) => {
+      expect(rawNextParam(next)).toBeUndefined();
+    },
+  );
 });

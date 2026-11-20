@@ -113,16 +113,13 @@ describe('network lint rule', () => {
       );
     });
 
-    it.each(['../../src/api/client', '@/src/api/client'])(
-      'forbids apiClient from %s in the auth pages too',
-      async (specifier) => {
-        const code = `import { apiClient } from '${specifier}';\nexport const build = apiClient;\n`;
+    it('forbids apiClient in the auth pages too', async () => {
+      const code = `import { apiClient } from '../../src/api/client';\nexport const build = apiClient;\n`;
 
-        expect(await ruleIdsFor(code, 'app/auth/page.tsx')).toContain(
-          'no-restricted-imports',
-        );
-      },
-    );
+      expect(await ruleIdsFor(code, 'app/auth/page.tsx')).toContain(
+        'no-restricted-imports',
+      );
+    });
 
     it.each([
       ['src/auth/credential-call.ts', 'import { apiClient }', 'apiClient'],

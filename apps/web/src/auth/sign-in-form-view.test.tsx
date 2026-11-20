@@ -131,7 +131,11 @@ describe('static notes', () => {
     expect(
       screen.getByText('Sign-in is off on preview deployments'),
     ).toBeTruthy();
-    expect(screen.getByText(/New accounts aren't open yet/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "New accounts aren't open yet. Already have one? Sign in with it here.",
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
