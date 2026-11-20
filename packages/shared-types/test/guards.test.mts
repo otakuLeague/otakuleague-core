@@ -7,6 +7,7 @@ import {
   isEmailVerificationConfirmResponse,
   isHealthResponse,
   isSessionToken,
+  isSignInResponse,
 } from '@otakuleague/shared-types';
 
 // Shapes that no guard may accept, whatever it checks.
@@ -188,6 +189,35 @@ void describe('isSessionToken', () => {
       { length: 43 },
     ]) {
       assert.equal(isSessionToken(candidate), false, JSON.stringify(candidate));
+    }
+  });
+});
+
+void describe('isSignInResponse', () => {
+  const SESSION = {
+    sessionToken: `${'aZ09_-'.repeat(7)}x`,
+    expiresAt: new Date(Date.UTC(2026, 11, 19, 12)).toISOString(),
+  };
+
+  void it('accepts 43 base64url characters and an expiry written by toISOString()', () => {
+    assert.equal(isSignInResponse(SESSION), true);
+  });
+
+  void it('rejects a token that could not go into a cookie, a bare date, a missing field and non-objects', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      { ...SESSION, sessionToken: 'A'.repeat(42) },
+      { ...SESSION, sessionToken: `${'A'.repeat(42)};` },
+      { ...SESSION, sessionToken: `${'A'.repeat(41)}\r\n` },
+      { ...SESSION, expiresAt: '2026-12-19' },
+      { sessionToken: SESSION.sessionToken },
+      { expiresAt: SESSION.expiresAt },
+    ]) {
+      assert.equal(
+        isSignInResponse(candidate),
+        false,
+        JSON.stringify(candidate),
+      );
     }
   });
 });

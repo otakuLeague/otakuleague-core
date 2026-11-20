@@ -125,7 +125,8 @@ export function isSessionToken(value: unknown): boolean {
   return typeof value === 'string' && SESSION_TOKEN_PATTERN.test(value);
 }
 
-function isSignInResponse(value: unknown): value is SignInResponse {
+/** True when `value` is a POST /auth/sign-in body: a token that fits a cookie, an exact ISO expiry. */
+export function isSignInResponse(value: unknown): value is SignInResponse {
   return (
     isRecord(value) &&
     isSessionToken(value.sessionToken) &&

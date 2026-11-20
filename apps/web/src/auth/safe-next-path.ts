@@ -1,7 +1,14 @@
 import type { WebPublicUrl } from './web-public-url';
 
+declare const safeNextPathBrand: unique symbol;
+
+/** A path on our own origin; only `safeNextPath` makes one, and `redirectTo` takes nothing else. */
+export type SafeNextPath = `/${string}` & {
+  readonly [safeNextPathBrand]: true;
+};
+
 const MAX_NEXT_LENGTH = 2048;
-const HOME = '/';
+const HOME = '/' as SafeNextPath;
 
 /**
  * Where to send a visitor after an auth form (ADR 0015): a path on our own origin, else `/`. An
@@ -12,7 +19,7 @@ const HOME = '/';
 export function safeNextPath(
   next: unknown,
   { origin }: WebPublicUrl,
-): `/${string}` {
+): SafeNextPath {
   if (
     typeof next !== 'string' ||
     next.length === 0 ||
@@ -28,7 +35,7 @@ export function safeNextPath(
   const path = `${url.pathname}${url.search}`;
   // Percent-encoding can grow the path up to 9 times, past what a Location header should carry.
   return hasOneLeadingSlash(path) && path.length <= MAX_NEXT_LENGTH
-    ? `/${path.slice(1)}`
+    ? (`/${path.slice(1)}` as SafeNextPath)
     : HOME;
 }
 
