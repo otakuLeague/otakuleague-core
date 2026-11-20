@@ -88,10 +88,15 @@ export function reportAuthCallFault(
     return;
   }
   faultLastReportedAtMs.set(fault, nowMs);
-  Sentry.captureMessage('Auth call fault', {
-    level: 'error',
-    tags: { auth_route: route, auth_fault: fault },
-    fingerprint: ['auth-call-fault', fault],
-  });
-  after(() => Sentry.flush(2000));
+  // Never thrown: a report must not break the render it describes (loadViewer, ADR 0015 N2).
+  try {
+    Sentry.captureMessage('Auth call fault', {
+      level: 'error',
+      tags: { auth_route: route, auth_fault: fault },
+      fingerprint: ['auth-call-fault', fault],
+    });
+    after(() => Sentry.flush(2000));
+  } catch {
+    return;
+  }
 }

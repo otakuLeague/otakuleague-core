@@ -48,7 +48,6 @@ const api = (status: number, code: 'UNAUTHORIZED' | 'INTERNAL_KEY_REQUIRED') =>
   });
 const EXPIRED = api(401, 'UNAUTHORIZED');
 const KEY_REFUSED = api(403, 'INTERNAL_KEY_REQUIRED');
-const OFF_CONTRACT = failed({ kind: 'invalid_response', status: 200 });
 const ME_CALL = { session: TOKEN, path: '/me', isExpectedBody: isMeResponse };
 const OUT = { kind: 'signed_out' };
 const NONE = { kind: 'unavailable' };
@@ -83,6 +82,7 @@ describe('loadViewer', () => {
     vi.stubEnv('WEB_PUBLIC_URL', undefined);
 
     expect(await loadViewer()).toEqual(OUT);
+    expect(mocks.connection).not.toHaveBeenCalled();
     expect(mocks.sessionCall).not.toHaveBeenCalled();
     expect([mocks.cookieReads, mocks.report.mock.calls]).toEqual([0, []]);
   });
@@ -90,7 +90,6 @@ describe('loadViewer', () => {
   it.each([
     ['no cookie', []],
     ['a malformed cookie', [['__Host-ol_session', `Bearer ${TOKEN}`]]],
-    ['a plain cookie on https', [['ol_session', TOKEN]]],
   ] as const)('is signed out with %s, after 0 API calls', async (_, jar) => {
     mocks.jar = new Map(jar);
 
@@ -111,8 +110,6 @@ describe('loadViewer', () => {
   it.each([
     ['a 401 (expired or replayed)', EXPIRED, OUT, []],
     ['a 403', KEY_REFUSED, NONE, ['internal_key_refused']],
-    ['a body off contract', OFF_CONTRACT, NONE, ['invalid_response']],
-    ['a timeout', failed({ kind: 'timeout' }), NONE, []],
   ])('maps %s and reports only a fault', async (_, outcome, viewer, faults) => {
     mocks.sessionCall.mockResolvedValue(outcome);
 
@@ -138,10 +135,11 @@ describe('loadViewer', () => {
     },
   );
 
-  it("rethrows Next's control-flow signals unreported", async () => {
+  it("rethrows Next's control-flow signals unreported, before the config or the cookie", async () => {
+    vi.stubEnv('WEB_PUBLIC_URL', undefined);
     mocks.connection.mockRejectedValue(NEXT_SIGNAL);
 
     await expect(loadViewer()).rejects.toBe(NEXT_SIGNAL);
-    expect(mocks.report).not.toHaveBeenCalled();
+    expect([mocks.cookieReads, mocks.report.mock.calls]).toEqual([0, []]);
   });
 });

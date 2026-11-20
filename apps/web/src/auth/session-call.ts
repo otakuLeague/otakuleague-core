@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { apiClient, type ApiPath, type ApiResult } from '../api/client';
 import { sessionTokenFrom, type SessionToken } from '../api/session-token';
 import { sessionCookie } from './auth-cookies';
@@ -7,7 +8,7 @@ import type { WebPublicUrl } from './web-public-url';
 
 // The second and last auth file allowed to import apiClient() (lint gate in eslint.config.mjs):
 // every call that carries a member's session goes through sessionCall (ADR 0015 Addendum 1f-iv).
-// Never inside 'use cache': the answer belongs to one member.
+// It throws in a cache scope ('use cache', through connection()): the answer belongs to one member.
 
 export type SessionCallResult<T> =
   | { readonly kind: 'called'; readonly result: ApiResult<T> }
@@ -37,6 +38,7 @@ export async function sessionCall<T>({
   if (credentialRoutesOff(process.env)) {
     return { kind: 'refused', reason: 'preview_deployment' };
   }
+  await connection();
   const result = await apiClient().call(path, {
     method,
     session,

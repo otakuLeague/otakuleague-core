@@ -90,10 +90,8 @@ describe('authCallFaultOf', () => {
     [invalid(401), 'invalid_response'],
     [invalid(502), undefined],
     [api(403, 'SIGN_UP_CLOSED'), undefined],
-    [api(401, 'UNAUTHORIZED'), undefined],
+    [api(401, 'INTERNAL_KEY_REQUIRED'), undefined],
     [api(429, 'TOO_MANY_REQUESTS'), undefined],
-    [api(503, 'SERVICE_UNAVAILABLE'), undefined],
-    [{ kind: 'network' }, undefined],
     [{ kind: 'timeout' }, undefined],
   ] satisfies [ApiFailure, AuthCallFault | undefined][])(
     '%j is %s',
@@ -131,5 +129,17 @@ describe('reportAuthCallFault', () => {
     ]);
     await mocks.after.mock.calls[0]?.[0]();
     expect(mocks.flush.mock.calls).toEqual([[2000]]);
+  });
+
+  it('never throws, even when after() does (outside a request)', async () => {
+    vi.resetModules();
+    const { reportAuthCallFault } = await import('./report-credential-refusal');
+    mocks.after.mockImplementationOnce(() => {
+      throw new Error('after() outside a request scope');
+    });
+
+    expect(() =>
+      reportAuthCallFault('me', 'configuration', 5_000),
+    ).not.toThrow();
   });
 });

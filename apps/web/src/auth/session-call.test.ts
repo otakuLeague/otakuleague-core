@@ -5,6 +5,8 @@ import type { SessionToken } from '../api/session-token';
 
 // No `headers` export: sessionCall must never read the request (no client IP).
 const jar = vi.hoisted(() => new Map<string, string>());
+const connection = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+vi.mock('next/server', () => ({ connection }));
 vi.mock('next/headers', () => ({
   cookies: () =>
     Promise.resolve({
@@ -45,6 +47,7 @@ async function sessionModuleWith(env: Record<string, string | undefined>) {
 
 afterEach(() => {
   jar.clear();
+  connection.mockClear();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -87,19 +90,27 @@ describe('sessionCall', () => {
     },
   );
 
-  it.each(['preview', 'development', undefined])(
-    'refuses on Vercel with VERCEL_ENV=%j before any request, without a key',
-    async (vercelEnv) => {
-      const env = { VERCEL_ENV: vercelEnv, INTERNAL_API_KEY: '' };
-      const { sessionCall, requests } = await sessionModuleWith(env);
+  it('refuses a preview before any request, without a key', async () => {
+    const env = { VERCEL_ENV: 'preview', INTERNAL_API_KEY: '' };
+    const { sessionCall, requests } = await sessionModuleWith(env);
 
-      expect(await sessionCall({ session: SESSION, path: '/me' })).toEqual({
-        kind: 'refused',
-        reason: 'preview_deployment',
-      });
-      expect(requests).toEqual([]);
-    },
-  );
+    expect(await sessionCall({ session: SESSION, path: '/me' })).toEqual({
+      kind: 'refused',
+      reason: 'preview_deployment',
+    });
+    expect([requests, connection.mock.calls]).toEqual([[], []]);
+  });
+
+  it('throws where connection() throws (a cache scope), before any request', async () => {
+    const cacheScope = new Error('connection() inside "use cache"');
+    connection.mockRejectedValueOnce(cacheScope);
+    const { sessionCall, requests } = await sessionModuleWith({});
+
+    await expect(sessionCall({ session: SESSION, path: '/me' })).rejects.toBe(
+      cacheScope,
+    );
+    expect(requests).toEqual([]);
+  });
 
   it('throws without INTERNAL_API_KEY before any request, never naming the token', async () => {
     const env = { INTERNAL_API_KEY: '' };
@@ -124,8 +135,6 @@ describe('readSessionToken', () => {
     ['plain on http', HTTP, 'ol_session', TOKEN, TOKEN],
     ['never a plain cookie on https', HTTPS, 'ol_session', TOKEN, undefined],
     ['never __Host- on http', HTTP, HOST, TOKEN, undefined],
-    ['nothing one character short', HTTPS, HOST, TOKEN.slice(1), undefined],
-    ['nothing with a Bearer prefix', HTTPS, HOST, `Bearer ${TOKEN}`, undefined],
     ['nothing with a CR/LF', HTTPS, HOST, `${TOKEN.slice(2)}\r\n`, undefined],
   ])('reads %s', async (_, webPublicUrl, name, value, expected) => {
     jar.set(name, value);

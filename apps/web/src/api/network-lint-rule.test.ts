@@ -121,7 +121,11 @@ describe('network lint rule', () => {
       );
     });
 
-    it.each([BUILD_OWN_CLIENT, "import { request } from 'node:http';\n"])(
+    it.each([
+      BUILD_OWN_CLIENT,
+      "import { createApiClient } from '../api/client.js';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\n",
+    ])(
       'still forbids in sessionCall():\n%s',
       async (code) => {
         expect(await ruleIdsFor(code, SESSION_CALL)).toContain(

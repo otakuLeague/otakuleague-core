@@ -107,7 +107,7 @@ export default defineConfig([
           // createApiClient takes any base URL; pages use apiClient(), built from API_BASE_URL.
           patterns: [
             {
-              group: ['**/api/client'],
+              group: ['**/api/client', '**/api/client.*'],
               importNames: ['createApiClient'],
               message: 'Use apiClient(); only src/api builds its own client.',
             },

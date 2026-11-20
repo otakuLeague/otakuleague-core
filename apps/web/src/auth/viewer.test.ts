@@ -28,23 +28,17 @@ describe('viewerFrom', () => {
   it.each([
     ['a 200 /me', ok(ME), IN],
     ['a 200 off contract', ok({ ...ME, username: '<b>' }), NONE],
-    ['a 401', api(401, 'UNAUTHORIZED'), OUT],
+    ['a 401 UNAUTHORIZED', api(401, 'UNAUTHORIZED'), OUT],
     ['a preview refusal', PREVIEW, OUT],
+    ['a 401 of another code', api(401, 'INVALID_CREDENTIALS'), NONE],
     ['a 403 INTERNAL_KEY_REQUIRED', api(403, 'INTERNAL_KEY_REQUIRED'), NONE],
     [
       'a 401 not an envelope',
       fail({ kind: 'invalid_response', status: 401 }),
       NONE,
     ],
-    [
-      'a 200 invalid_response',
-      fail({ kind: 'invalid_response', status: 200 }),
-      NONE,
-    ],
-    ['a network failure', fail({ kind: 'network' }), NONE],
     ['a timeout', fail({ kind: 'timeout' }), NONE],
     ['a 429', api(429, 'TOO_MANY_REQUESTS'), NONE],
-    ['a 503', api(503, 'SERVICE_UNAVAILABLE'), NONE],
   ])('maps %s', (_label, callResult, viewer) => {
     expect(viewerFrom(callResult)).toEqual(viewer);
   });

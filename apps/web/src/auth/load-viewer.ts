@@ -17,7 +17,8 @@ export const VIEWER_TIMEOUT_MS = 2000;
  * The viewer for a render, never thrown (only Next's control-flow signals pass): previews are
  * signed out before `WEB_PUBLIC_URL` is read, no or a malformed cookie costs no call, else exactly
  * one `GET /me`. A configuration throw is reported and `unavailable`. Reads the cookie, never
- * writes or deletes one. Never inside 'use cache': the answer belongs to one member.
+ * writes or deletes one. Never inside 'use cache': `connection()` throws there, reported as
+ * `configuration`.
  */
 export async function loadViewer(): Promise<Viewer> {
   if (credentialRoutesOff(process.env)) {
