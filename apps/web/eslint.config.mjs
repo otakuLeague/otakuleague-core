@@ -183,8 +183,7 @@ export default defineConfig([
     },
   },
   {
-    // An eslint-disable comment cannot switch a gate off in auth code or the redirect files.
-    files: ['src/auth/**', 'app/auth/**', ...REDIRECT_ALLOWLIST],
+    // An eslint-disable comment cannot switch a gate off outside tests.
     ignores: ['**/*.test.ts', '**/*.test.tsx'],
     linterOptions: { noInlineConfig: true },
   },

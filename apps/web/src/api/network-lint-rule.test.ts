@@ -246,13 +246,13 @@ describe('network lint rule', () => {
     });
   });
 
-  it('ignores eslint-disable comments in auth code, not elsewhere', async () => {
+  it('ignores eslint-disable comments outside tests', async () => {
     const code =
       "// eslint-disable-next-line no-restricted-syntax\nimport { redirect } from 'next/navigation';\n" +
       'export const leave = redirect;\n';
 
     expect(await ruleIdsFor(code, AUTH_FILE)).toContain('no-restricted-syntax');
-    expect(await ruleIdsFor(code, OUTSIDE_API_FOLDER)).not.toContain(
+    expect(await ruleIdsFor(code, OUTSIDE_CLIENT)).not.toContain(
       'no-restricted-syntax',
     );
   });

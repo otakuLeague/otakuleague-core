@@ -29,7 +29,10 @@ export async function resolveTab(
   const { canonicalSlug } = result.data;
   if (canonicalSlug !== slug) {
     // A drifted body (invalid_response): an outage, never a redirect to whatever came back.
-    if (!CANONICAL_SLUG_PATTERN.test(canonicalSlug)) {
+    if (
+      typeof canonicalSlug !== 'string' ||
+      !CANONICAL_SLUG_PATTERN.test(canonicalSlug)
+    ) {
       throw new Error('Unexpected anime slug from the API');
     }
     permanentRedirect(tabHref(canonicalSlug, segment));
