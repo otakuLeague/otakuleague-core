@@ -2,12 +2,6 @@
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
 
-/**
- * Longest identifier as typed, in UTF-16 code units (what `@MaxLength` counts), checked on the
- * raw input before normaliseIdentifier. 254 is the longest email address (RFC 5321 path limit).
- */
-export const IDENTIFIER_MAX = 254;
-
 declare const identifierBrand: unique symbol;
 
 /** An identifier after normaliseIdentifier: the only form a lookup or a rate-limit key sees. */

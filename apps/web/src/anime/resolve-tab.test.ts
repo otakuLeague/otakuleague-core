@@ -37,6 +37,18 @@ describe('resolveTab (the page-side fallback when the proxy let a request throug
     );
   });
 
+  it.each(['/evil.example', undefined, null, 42])(
+    'fails like an outage, with no redirect, on canonical slug %j',
+    async (canonicalSlug) => {
+      const data = { anilistId: 1, canonicalSlug: canonicalSlug as string };
+      call.mockResolvedValue({ ok: true, data });
+
+      await expect(resolveTab('kimetsu-no-yaiba', 'cast')).rejects.toThrow(
+        'Unexpected anime slug from the API',
+      );
+    },
+  );
+
   it('returns the resolution for the canonical slug', async () => {
     const data = { anilistId: 16498, canonicalSlug: 'attack-on-titan' };
     call.mockResolvedValue({ ok: true, data });

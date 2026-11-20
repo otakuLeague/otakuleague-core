@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SignUpRequest } from '@otakuleague/shared-types';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_RAW_MAX,
+  type SignUpRequest,
+} from '@otakuleague/shared-types';
 import {
   IsString,
   Matches,
@@ -10,12 +14,11 @@ import {
 } from 'class-validator';
 import { COMMON_PASSWORD_MESSAGE, isCommonPassword } from './common-passwords';
 import {
-  IDENTIFIER_MAX,
   normaliseIdentifier,
   PASSWORD_MAX,
   PASSWORD_MIN,
 } from './credential-rules';
-import { PASSWORD_RAW_MAX, PasswordMaxLength } from './sign-in.dto';
+import { PasswordMaxLength } from './sign-in.dto';
 import {
   isEmailAddress,
   meetsSignUpPasswordRule,

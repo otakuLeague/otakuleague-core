@@ -1,6 +1,6 @@
+import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
-  IDENTIFIER_MAX,
   identifierKind,
   normaliseIdentifier,
   normalisePassword,
@@ -20,6 +20,10 @@ const DECOMPOSED_E_ACUTE = `e${COMBINING_ACUTE}`;
 describe('credential bounds (ADR 0015)', () => {
   it('pins the password and identifier limits', () => {
     expect([PASSWORD_MIN, PASSWORD_MAX, IDENTIFIER_MAX]).toEqual([8, 128, 254]);
+  });
+
+  it('caps the raw password at 8 UTF-16 units per allowed code point', () => {
+    expect(PASSWORD_RAW_MAX).toBe(8 * PASSWORD_MAX);
   });
 });
 

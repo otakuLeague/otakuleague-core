@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type {
-  EmailVerificationConfirmRequest,
-  EmailVerificationResendRequest,
+import {
+  type EmailVerificationConfirmRequest,
+  type EmailVerificationResendRequest,
+  IDENTIFIER_MAX,
 } from '@otakuleague/shared-types';
 import {
   IsNotEmpty,
@@ -10,7 +11,7 @@ import {
   Validate,
   ValidateIf,
 } from 'class-validator';
-import { IDENTIFIER_MAX, PASSWORD_MAX } from './credential-rules';
+import { PASSWORD_MAX } from './credential-rules';
 import { PasswordMaxLength } from './sign-in.dto';
 import { EmailAddress } from './sign-up.dto';
 
