@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBadRequestResponse,
   ApiForbiddenResponse,
   ApiHeader,
@@ -17,12 +18,20 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import type { EmailVerificationConfirmResponse } from '@otakuleague/shared-types';
+import type {
+  EmailVerificationConfirmResponse,
+  EmailVerificationResendResponse,
+} from '@otakuleague/shared-types';
 import { ApiException } from '../common/api.exception';
+import { SIGN_UP_CLOSED_MESSAGE } from './auth.controller';
 import type { ClientIpKey } from './auth-rate-limit-rules';
 import { ClientIp, CredentialGuard } from './credential.guard';
-import { EmailVerificationConfirmDto } from './email-verification.dto';
+import {
+  EmailVerificationConfirmDto,
+  EmailVerificationResendDto,
+} from './email-verification.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { SignUpService } from './sign-up.service';
 
 /** One answer for an unknown, malformed, used or expired token: never says which. */
 export const AUTH_TOKEN_INVALID_MESSAGE =
@@ -30,11 +39,16 @@ export const AUTH_TOKEN_INVALID_MESSAGE =
 export const CONFIRM_PASSWORD_INVALID_MESSAGE = 'The password is incorrect.';
 export const CONFIRM_LIMITED_MESSAGE =
   'Too many confirmation attempts. Try again later.';
+export const RESEND_LIMITED_MESSAGE =
+  'Too many confirmation emails requested. Try again later.';
 
 @ApiTags('auth')
 @Controller('auth/email-verification')
 export class EmailVerificationController {
-  constructor(private readonly verifications: EmailVerificationService) {}
+  constructor(
+    private readonly verifications: EmailVerificationService,
+    private readonly signUps: SignUpService,
+  ) {}
 
   @Post('confirm')
   @HttpCode(HttpStatus.OK)
@@ -125,6 +139,62 @@ export class EmailVerificationController {
         throw new ApiException(
           HttpStatus.TOO_MANY_REQUESTS,
           { code: 'TOO_MANY_REQUESTS', message: CONFIRM_LIMITED_MESSAGE },
+          { retryAfterSeconds: outcome.retryAfterSeconds },
+        );
+      default: {
+        const unreachable: never = outcome;
+        return unreachable;
+      }
+    }
+  }
+
+  @Post('resend')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(CredentialGuard)
+  // Same answer for every address: no cache may keep or compare one.
+  @Header('Cache-Control', 'no-store')
+  @ApiHeader({
+    name: 'X-Client-Ip',
+    required: true,
+    description: "The visitor's IP, as the web server saw it.",
+  })
+  @ApiAcceptedResponse({
+    description:
+      'Always `{}`: a pending address gets a new link (the old one stops working; the account deadline does not move), any other address gets nothing, and the answer never says which.',
+    schema: { type: 'object', properties: {}, additionalProperties: false },
+  })
+  @ApiBadRequestResponse({
+    description:
+      'VALIDATION_FAILED: a missing, null, over-long or malformed email, or an unknown field. BAD_REQUEST: no valid X-Client-Ip.',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'INTERNAL_KEY_REQUIRED: a caller other than the production web server. SIGN_UP_CLOSED: no email provider yet.',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'TOO_MANY_REQUESTS: 10 per IP per hour.',
+  })
+  @ApiServiceUnavailableResponse({ description: 'The database is down.' })
+  async resend(
+    @Body() body: EmailVerificationResendDto,
+    @ClientIp() ip: ClientIpKey,
+  ): Promise<EmailVerificationResendResponse> {
+    const outcome = await this.signUps.resendVerification({
+      email: body.email,
+      ip,
+    });
+    switch (outcome.kind) {
+      case 'accepted':
+        return {};
+      case 'closed':
+        throw new ApiException(HttpStatus.FORBIDDEN, {
+          code: 'SIGN_UP_CLOSED',
+          message: SIGN_UP_CLOSED_MESSAGE,
+        });
+      case 'rate_limited':
+        throw new ApiException(
+          HttpStatus.TOO_MANY_REQUESTS,
+          { code: 'TOO_MANY_REQUESTS', message: RESEND_LIMITED_MESSAGE },
           { retryAfterSeconds: outcome.retryAfterSeconds },
         );
       default: {

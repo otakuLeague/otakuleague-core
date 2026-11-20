@@ -21,9 +21,12 @@ import {
   USERNAME_PATTERN,
 } from './sign-up-rules';
 
-/** The raw length first, so a long string is refused before normaliseIdentifier reads it. */
+/**
+ * The raw length first, so a long string is refused before normaliseIdentifier reads it. Shared
+ * with EmailVerificationResendDto: resend accepts exactly the addresses sign-up does.
+ */
 @ValidatorConstraint({ name: 'emailAddress' })
-class EmailAddress implements ValidatorConstraintInterface {
+export class EmailAddress implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
     return (
       typeof value === 'string' &&

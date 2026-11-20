@@ -31,10 +31,13 @@ import { truncateAllTables } from '../testing/test-database';
 import { Argon2id, type Argon2idInput } from './argon2id';
 import { CLIENT_IP_REQUIRED_MESSAGE } from './credential.guard';
 import { type AuthEmail, EmailSender } from './email-sender';
+import { SIGN_UP_CLOSED_MESSAGE } from './auth.controller';
+import { AuthRateLimiter } from './auth-rate-limiter';
 import {
   AUTH_TOKEN_INVALID_MESSAGE,
   CONFIRM_LIMITED_MESSAGE,
   CONFIRM_PASSWORD_INVALID_MESSAGE,
+  RESEND_LIMITED_MESSAGE,
 } from './email-verification.controller';
 import { PasswordHasher } from './password-hasher';
 import { SessionService } from './session.service';
@@ -137,7 +140,7 @@ interface PendingSignUp {
 const argon2 = new HoldingArgon2id();
 const mail = new RecordingEmailSender();
 
-describe('POST /auth/email-verification/confirm', () => {
+describe('POST /auth/email-verification', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   let hasher: PasswordHasher;
@@ -239,13 +242,13 @@ describe('POST /auth/email-verification/confirm', () => {
     expect(await prisma.session.count()).toBe(0);
   }
 
-  /** Until another connection waits on a row lock: the confirm is blocked at its FOR UPDATE. */
-  async function waitForLockWaiter(): Promise<void> {
+  /** Until `count` other connections wait on a row lock: those requests are blocked at their FOR UPDATE. */
+  async function waitForLockWaiter(count = 1): Promise<void> {
     for (let attempt = 0; attempt < 300; attempt += 1) {
       const [row] = await prisma.$queryRaw<{ waiting: number }[]>`
         SELECT count(*)::int AS waiting FROM pg_stat_activity
         WHERE datname = current_database() AND wait_event_type = 'Lock'`;
-      if ((row?.waiting ?? 0) > 0) return;
+      if ((row?.waiting ?? 0) >= count) return;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     throw new Error('No request waited on the user row lock');
@@ -910,5 +913,663 @@ describe('POST /auth/email-verification/confirm', () => {
     );
     expect(await prisma.authRateLimit.count()).toBe(counters);
     await expectUntouched(pending);
+  });
+  describe('resend (ADR 0020 Addendum 1e-ii-b)', () => {
+    const RESEND_LIMITED = {
+      error: { code: 'TOO_MANY_REQUESTS', message: RESEND_LIMITED_MESSAGE },
+    };
+    const hex = (value: Uint8Array | null): string | null =>
+      value === null ? null : Buffer.from(value).toString('hex');
+    /** The hash of a token as `tokenRows` shows it. */
+    const hexHash = (token: string): string | null => hex(hashAuthToken(token));
+
+    /** Token rows with hex hashes: Prisma reads bytes as a Uint8Array, hashAuthToken gives a Buffer. */
+    async function tokenRows(where: Prisma.AuthTokenWhereInput = {}) {
+      const rows = await prisma.authToken.findMany({
+        where,
+        orderBy: { purpose: 'asc' },
+      });
+      return rows.map((row) => ({
+        ...row,
+        tokenHash: hex(row.tokenHash),
+        bindingHash: hex(row.bindingHash),
+      }));
+    }
+
+    const resend = (body: object, headers: Record<string, string> = WEB) =>
+      request(app.getHttpServer())
+        .post('/auth/email-verification/resend')
+        .set(headers)
+        .send(body);
+
+    /** Everything a caller sees, minus the per-request date and request id. */
+    const answer = (response: request.Response) => ({
+      status: response.status,
+      text: response.text,
+      headers: Object.fromEntries(
+        Object.entries(response.headers).filter(
+          ([name]) => name !== 'date' && name !== 'x-request-id',
+        ),
+      ),
+    });
+
+    /** The verification mails sent so far, once every send settled. */
+    async function verificationMails(): Promise<
+      Extract<AuthEmail, { kind: 'email_verification' }>[]
+    > {
+      await signUps.settle();
+      return mail.sent.filter(
+        (sent): sent is Extract<AuthEmail, { kind: 'email_verification' }> =>
+          sent.kind === 'email_verification',
+      );
+    }
+
+    async function lastMailedToken(): Promise<string> {
+      const token = (await verificationMails()).at(-1)?.token;
+      if (token === undefined) throw new Error('No verification email');
+      return token;
+    }
+
+    /** A row written directly, with a deadline sign-up would never pick, so a copy is visible. */
+    async function seedAccount(
+      n: number,
+      row: {
+        readonly pendingExpiresAt: Date | null;
+        readonly verified?: boolean;
+      },
+    ): Promise<string> {
+      const userId = id(n);
+      await prisma.user.create({
+        data: {
+          id: userId,
+          email: `member${n}@example.test`,
+          username: `Member${n}`,
+          usernameKey: `member${n}`,
+          passwordHash: `$argon2id$fake-hash-${n}`,
+          emailVerifiedAt: row.verified === true ? at(-HOUR) : null,
+          pendingExpiresAt: row.pendingExpiresAt,
+          createdAt: at(-2 * HOUR),
+          updatedAt: at(-2 * HOUR),
+        },
+      });
+      return userId;
+    }
+
+    async function snapshot(userId: string) {
+      return {
+        user: await prisma.user.findUniqueOrThrow({ where: { id: userId } }),
+        tokens: await prisma.authToken.findMany({
+          where: { userId },
+          orderBy: { purpose: 'asc' },
+        }),
+        holds: await prisma.usernameHold.findMany(),
+      };
+    }
+
+    it('mails a new link to a pending account: same binding, same deadline, nothing else moves', async () => {
+      const pending = await signUp();
+      const before = await snapshot(pending.userId);
+      const derives = argon2.derives;
+
+      const response = await resend({ email: SIGN_UP.email }).expect(202);
+
+      expect(response.body).toEqual({});
+      expect(response.headers['cache-control']).toBe('no-store');
+      const mails = await verificationMails();
+      expect(mails).toHaveLength(2);
+      const newToken = await lastMailedToken();
+      expect(mails[1]).toEqual({
+        kind: 'email_verification',
+        to: 'frieren@example.test',
+        username: 'Frieren',
+        token: newToken,
+      });
+      expect(newToken).not.toBe(pending.token);
+      const after = await snapshot(pending.userId);
+      expect(after.user).toEqual(before.user);
+      expect(after.holds).toEqual(before.holds);
+      expect(after.tokens).toHaveLength(1);
+      expect(hex(after.tokens[0]?.tokenHash ?? null)).toBe(hexHash(newToken));
+      expect(hex(after.tokens[0]?.bindingHash ?? null)).toBe(
+        hex(before.tokens[0]?.bindingHash ?? null),
+      );
+      expect(after.tokens[0]).toMatchObject({
+        createdAt: NOW,
+        expiresAt: before.user.pendingExpiresAt,
+        usedAt: null,
+      });
+      expect(argon2.derives).toBe(derives);
+      // Sign-up's and resend's per-IP counters; none keyed by the email.
+      expect(await prisma.authRateLimit.count()).toBe(2);
+
+      // The older link is dead (a replay); the new one still confirms in one click.
+      await confirm({
+        token: pending.token,
+        bindingToken: pending.bindingToken,
+      }).expect(400, TOKEN_INVALID);
+      const confirmed = await confirm({
+        token: newToken,
+        bindingToken: pending.bindingToken,
+      }).expect(200);
+      expect(confirmed.body).toMatchObject({ outcome: 'verified' });
+      expect(await prisma.session.count()).toBe(1);
+    });
+
+    it('copies the deadline to the millisecond and writes no column of the account or the hold', async () => {
+      const deadline = at(5 * HOUR + 123);
+      const userId = await seedAccount(1, { pendingExpiresAt: deadline });
+      await seedToken('fake-old-token', userId, {
+        bindingToken: 'fake-old-binding',
+        expiresAt: deadline,
+      });
+      await prisma.usernameHold.create({
+        data: { usernameKey: 'member1', expiresAt: at(3 * HOUR + 7) },
+      });
+      const before = await snapshot(userId);
+
+      await resend({ email: 'member1@example.test' }).expect(202, {});
+
+      const after = await snapshot(userId);
+      expect(after.user).toEqual(before.user);
+      expect(after.holds).toEqual(before.holds);
+      expect(await tokenRows({ userId })).toEqual([
+        {
+          tokenHash: hexHash(await lastMailedToken()),
+          purpose: 'EMAIL_VERIFICATION',
+          userId,
+          bindingHash: hexHash('fake-old-binding'),
+          createdAt: NOW,
+          expiresAt: deadline,
+          usedAt: null,
+        },
+      ]);
+      expect(await prisma.authRateLimit.count()).toBe(1);
+    });
+
+    it('matches an address typed with spaces and capitals, and mails the stored one', async () => {
+      await signUp();
+
+      await resend({ email: '  FRIEREN@Example.TEST ' }).expect(202, {});
+
+      expect((await verificationMails()).at(-1)).toMatchObject({
+        to: 'frieren@example.test',
+        username: 'Frieren',
+      });
+    });
+
+    it.each<[string, (n: number) => Promise<string | null>]>([
+      ['an unknown address', () => Promise.resolve(null)],
+      [
+        'a verified account',
+        (n) => seedAccount(n, { pendingExpiresAt: null, verified: true }),
+      ],
+      [
+        'an account at its deadline (stale)',
+        (n) => seedAccount(n, { pendingExpiresAt: NOW }),
+      ],
+      [
+        'an unverified account with no deadline',
+        (n) => seedAccount(n, { pendingExpiresAt: null }),
+      ],
+    ])(
+      'answers %s exactly like a pending one, sends nothing and changes nothing',
+      async (_, seed) => {
+        const pendingId = await seedAccount(1, { pendingExpiresAt: at(DAY) });
+        const silentId = await seed(2);
+        if (silentId !== null) {
+          await seedToken('fake-silent-token', silentId, {
+            bindingToken: 'fake-silent-binding',
+            expiresAt: at(DAY),
+            usedAt: at(-HOUR),
+          });
+        }
+        const before = silentId === null ? null : await snapshot(silentId);
+        const derives = argon2.derives;
+
+        const silent = await resend({ email: 'member2@example.test' });
+        const pending = await resend({ email: 'member1@example.test' });
+
+        expect(answer(silent)).toEqual(answer(pending));
+        expect(silent.status).toBe(202);
+        const mails = await verificationMails();
+        expect(mails.map((sent) => sent.to)).toEqual(['member1@example.test']);
+        if (silentId !== null) {
+          expect(await snapshot(silentId)).toEqual(before);
+        }
+        expect(
+          await prisma.authToken.count({ where: { userId: pendingId } }),
+        ).toBe(1);
+        expect(argon2.derives).toBe(derives);
+      },
+    );
+
+    it('mails an account 1 ms before its deadline, with a token ending at that instant', async () => {
+      const userId = await seedAccount(1, { pendingExpiresAt: at(1) });
+
+      await resend({ email: 'member1@example.test' }).expect(202, {});
+
+      expect(await verificationMails()).toHaveLength(1);
+      expect(
+        await prisma.authToken.findUniqueOrThrow({
+          where: { tokenHash: hashAuthToken(await lastMailedToken()) },
+        }),
+      ).toMatchObject({ userId, expiresAt: at(1), bindingHash: null });
+    });
+
+    it('creates a token with no binding when none existed: confirming then needs the password', async () => {
+      const userId = await seedPendingUser(1);
+
+      await resend({ email: 'member1@example.test' }).expect(202, {});
+
+      const token = await lastMailedToken();
+      expect(await prisma.authToken.findMany({ where: { userId } })).toEqual([
+        expect.objectContaining({ bindingHash: null }) as unknown,
+      ]);
+      await confirm({ token, bindingToken: WRONG_BINDING }).expect(200, {
+        outcome: 'confirmation_required',
+      });
+      await confirm({ token, password: PASSWORD }).expect(200, {
+        outcome: 'verified',
+        session: null,
+      });
+    });
+
+    it('revives a used token of an unverified account as a live one, its binding kept', async () => {
+      const userId = await seedPendingUser(1);
+      await seedToken('fake-used-token', userId, {
+        bindingToken: 'fake-kept-binding',
+        expiresAt: at(DAY),
+        usedAt: at(-HOUR),
+      });
+
+      await resend({ email: 'member1@example.test' }).expect(202, {});
+
+      const token = await lastMailedToken();
+      expect(await tokenRows({ userId })).toEqual([
+        expect.objectContaining({
+          tokenHash: hexHash(token),
+          bindingHash: hexHash('fake-kept-binding'),
+          usedAt: null,
+        }) as unknown,
+      ]);
+      await confirm({ token, bindingToken: 'fake-kept-binding' }).expect(200);
+      expect(await prisma.session.count()).toBe(1);
+    });
+
+    it("never touches another account's token or a reset token of the same account (wrong user, other purpose)", async () => {
+      const frieren = await signUp();
+      const himmel = await signUp(HIMMEL);
+      await seedToken('fake-reset-token', frieren.userId, {
+        purpose: 'PASSWORD_RESET',
+        expiresAt: at(HOUR),
+      });
+      const himmelBefore = await snapshot(himmel.userId);
+      const resetBefore = await prisma.authToken.findUniqueOrThrow({
+        where: { tokenHash: hashAuthToken('fake-reset-token') },
+      });
+
+      await resend({ email: SIGN_UP.email }).expect(202, {});
+
+      expect(await snapshot(himmel.userId)).toEqual(himmelBefore);
+      expect(
+        await prisma.authToken.findUniqueOrThrow({
+          where: { tokenHash: hashAuthToken('fake-reset-token') },
+        }),
+      ).toEqual(resetBefore);
+      expect(
+        await prisma.authToken.count({ where: { userId: frieren.userId } }),
+      ).toBe(2);
+    });
+
+    it('refuses the 11th resend from one IP in an hour, whatever the address (brute force); another IP still gets 202', async () => {
+      await seedAccount(1, { pendingExpiresAt: at(DAY) });
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await resend({ email: 'member1@example.test' }).expect(202);
+      }
+
+      const refused = await resend({ email: 'member1@example.test' }).expect(
+        429,
+      );
+      const otherAddress = await resend({
+        email: 'member9@example.test',
+      }).expect(429);
+      await resend({ email: 'member1@example.test' }, from(OTHER_IP)).expect(
+        202,
+        {},
+      );
+
+      expect(refused.body).toEqual(RESEND_LIMITED);
+      expect(refused.headers['retry-after']).toBe('3600');
+      expect(refused.headers['cache-control']).toBe('no-store');
+      expect(otherAddress.body).toEqual(RESEND_LIMITED);
+      // 10 from the first IP and 1 from the other: the refused ones mailed nothing.
+      expect(await verificationMails()).toHaveLength(11);
+      expect(await prisma.authRateLimit.count()).toBe(2);
+    });
+
+    it('answers 403 SIGN_UP_CLOSED while no email can be sent, before any counter or write', async () => {
+      const userId = await seedAccount(1, { pendingExpiresAt: at(DAY) });
+      const before = await snapshot(userId);
+      vi.spyOn(mail, 'canSend').mockReturnValue(false);
+
+      const response = await resend({ email: 'member1@example.test' }).expect(
+        403,
+      );
+
+      expect(response.body).toEqual({
+        error: { code: 'SIGN_UP_CLOSED', message: SIGN_UP_CLOSED_MESSAGE },
+      });
+      expect(await prisma.authRateLimit.count()).toBe(0);
+      expect(await snapshot(userId)).toEqual(before);
+      expect(await verificationMails()).toEqual([]);
+    });
+
+    it('still answers 202 when the mail fails, and logs the user id only, never the address or the token', async () => {
+      const userId = await seedAccount(1, { pendingExpiresAt: at(DAY) });
+      vi.spyOn(mail, 'send').mockRejectedValueOnce(
+        new Error('fake provider failure for member1@example.test'),
+      );
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+
+      await resend({ email: 'member1@example.test' }).expect(202, {});
+      await signUps.settle();
+
+      expect(await prisma.authToken.count({ where: { userId } })).toBe(1);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const line = JSON.stringify(warn.mock.calls);
+      expect(line).toContain(userId);
+      expect(line).not.toContain('member1');
+      expect(line).not.toContain('fake provider failure');
+    });
+
+    it('fails closed when the rate limiter cannot count: no 202, no token, no mail', async () => {
+      const userId = await seedAccount(1, { pendingExpiresAt: at(DAY) });
+      vi.spyOn(app.get(AuthRateLimiter), 'check').mockRejectedValueOnce(
+        new Error('fake database outage'),
+      );
+      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+      const response = await resend({ email: 'member1@example.test' });
+
+      expect(response.status).toBeGreaterThanOrEqual(500);
+      expect(response.text).not.toContain('member1');
+      expect(await prisma.authToken.count({ where: { userId } })).toBe(0);
+      expect(await verificationMails()).toEqual([]);
+    });
+
+    it.each<[string, Record<string, unknown>]>([
+      ['a missing email', {}],
+      ['a null email', { email: null }],
+      ['a malformed email', { email: 'frieren.example.test' }],
+      [
+        'an email of 255 characters',
+        { email: `${'a'.repeat(242)}@example.test` },
+      ],
+      [
+        'a userId field (the account never comes from the body)',
+        { email: SIGN_UP.email, userId: id(1) },
+      ],
+    ])(
+      'answers 400 VALIDATION_FAILED to %s, before any counter',
+      async (_, body) => {
+        const response = await resend(body).expect(400);
+
+        expect((response.body as ApiError).error.code).toBe(
+          'VALIDATION_FAILED',
+        );
+        expect(response.text).not.toContain('frieren');
+        expect(await prisma.authRateLimit.count()).toBe(0);
+      },
+    );
+
+    it.each<[string, Record<string, string>, number, string]>([
+      [
+        'no X-Client-Ip',
+        { 'X-Internal-Api-Key': FAKE_KEY },
+        400,
+        'BAD_REQUEST',
+      ],
+      ['a malformed X-Client-Ip', from('not-an-ip'), 400, 'BAD_REQUEST'],
+      ['no internal key', { 'X-Client-Ip': IP }, 403, 'INTERNAL_KEY_REQUIRED'],
+      [
+        'the preview key',
+        { ...WEB, 'X-Internal-Api-Key': FAKE_PREVIEW_KEY },
+        403,
+        'INTERNAL_KEY_REQUIRED',
+      ],
+    ])(
+      'answers %s with %i, before any counter or mail',
+      async (_, headers, status, code) => {
+        await seedAccount(1, { pendingExpiresAt: at(DAY) });
+
+        const response = await resend(
+          { email: 'member1@example.test' },
+          headers,
+        ).expect(status);
+
+        expect((response.body as ApiError).error.code).toBe(code);
+        expect(await prisma.authRateLimit.count()).toBe(0);
+        expect(await verificationMails()).toEqual([]);
+      },
+    );
+
+    describe('races (each one forced by a held row lock or a held hash)', () => {
+      /** Holds the account's row lock while `resends` resends queue on it, then runs `write` and commits. */
+      async function whileResendsWait(
+        userId: string,
+        resends: number,
+        write: (tx: TransactionClient) => Promise<void>,
+      ): Promise<request.Response[]> {
+        let started: Promise<request.Response>[] = [];
+        await prisma.$transaction(
+          async (tx) => {
+            await tx.$queryRaw`
+              SELECT id FROM app_user WHERE id = ${userId}::uuid FOR UPDATE`;
+            started = Array.from({ length: resends }, () =>
+              resend({ email: SIGN_UP.email }).then((response) => response),
+            );
+            await waitForLockWaiter(resends);
+            await write(tx);
+          },
+          { timeout: 10_000 },
+        );
+        return Promise.all(started);
+      }
+
+      it('confirm commits first: the resend finds a verified account, mails nothing and revives no token', async () => {
+        const pending = await signUp();
+
+        const [response] = await whileResendsWait(
+          pending.userId,
+          1,
+          async (tx) => {
+            await tx.$executeRaw`
+            UPDATE auth_token SET used_at = ${NOW.toISOString()}::timestamptz
+            WHERE user_id = ${pending.userId}::uuid`;
+            await tx.$executeRaw`
+            UPDATE app_user SET email_verified_at = ${NOW.toISOString()}::timestamptz,
+              pending_expires_at = NULL WHERE id = ${pending.userId}::uuid`;
+          },
+        );
+
+        expect(response?.status).toBe(202);
+        expect(await verificationMails()).toHaveLength(1);
+        expect(await tokenRows()).toEqual([
+          expect.objectContaining({
+            tokenHash: hexHash(pending.token),
+            usedAt: NOW,
+          }) as unknown,
+        ]);
+      });
+
+      it('resend commits first: the confirm holding the old token gets 400 and verifies nothing; the new mail works', async () => {
+        const pending = await signUp();
+        const release = argon2.holdNext();
+        const confirming = confirm({
+          token: pending.token,
+          password: PASSWORD,
+        }).then((response) => response);
+        await waitForDerives(2);
+
+        await resend({ email: SIGN_UP.email }).expect(202, {});
+        const newToken = await lastMailedToken();
+        release();
+
+        expect((await confirming).body).toEqual(TOKEN_INVALID);
+        expect(
+          await prisma.user.findUniqueOrThrow({
+            where: { id: pending.userId },
+          }),
+        ).toMatchObject({ emailVerifiedAt: null });
+        await confirm({
+          token: newToken,
+          bindingToken: pending.bindingToken,
+        }).expect(200);
+        expect(await prisma.session.count()).toBe(1);
+      });
+
+      it("re-submit commits first: the resend mails the re-armed account and keeps the re-submit's binding and deadline", async () => {
+        const pending = await signUp();
+        const deadline = at(DAY + 5 * HOUR);
+
+        const [response] = await whileResendsWait(
+          pending.userId,
+          1,
+          async (tx) => {
+            await tx.$executeRaw`
+            UPDATE app_user SET username = 'Fern', username_key = 'fern',
+              password_hash = '$argon2id$fake-resubmit-hash',
+              pending_expires_at = ${deadline.toISOString()}::timestamptz
+            WHERE id = ${pending.userId}::uuid`;
+            await tx.$executeRaw`
+            UPDATE auth_token SET token_hash = ${hashAuthToken('fake-resubmit-token')},
+              binding_hash = ${hashAuthToken('fake-resubmit-binding')},
+              expires_at = ${deadline.toISOString()}::timestamptz
+            WHERE user_id = ${pending.userId}::uuid`;
+          },
+        );
+
+        expect(response?.status).toBe(202);
+        const mails = await verificationMails();
+        expect(mails.at(-1)).toMatchObject({
+          to: SIGN_UP.email,
+          username: 'Fern',
+        });
+        expect(await tokenRows()).toEqual([
+          expect.objectContaining({
+            tokenHash: hexHash(await lastMailedToken()),
+            bindingHash: hexHash('fake-resubmit-binding'),
+            expiresAt: deadline,
+          }) as unknown,
+        ]);
+        expect(
+          await prisma.user.findUniqueOrThrow({
+            where: { id: pending.userId },
+          }),
+        ).toMatchObject({
+          passwordHash: '$argon2id$fake-resubmit-hash',
+          pendingExpiresAt: deadline,
+        });
+      });
+
+      it('resend commits before a re-submit: sign-up then replaces token and binding together', async () => {
+        const victim = await signUp();
+        const release = argon2.holdNext();
+        const resubmitting = request(app.getHttpServer())
+          .post('/auth/sign-up')
+          .set(from(ATTACKER_IP))
+          .send({ ...SIGN_UP, username: 'Fern', password: ATTACKER_PASSWORD })
+          .then((response) => response);
+        await waitForDerives(2);
+
+        await resend({ email: SIGN_UP.email }).expect(202, {});
+        const resent = await lastMailedToken();
+        release();
+        const resubmit = await resubmitting;
+        const attackerBinding = (resubmit.body as SignUpResponse).bindingToken;
+        const latest = await lastMailedToken();
+
+        expect(resubmit.status).toBe(202);
+        expect(await tokenRows()).toEqual([
+          expect.objectContaining({
+            tokenHash: hexHash(latest),
+            bindingHash: hexHash(attackerBinding),
+          }) as unknown,
+        ]);
+        await confirm({
+          token: resent,
+          bindingToken: victim.bindingToken,
+        }).expect(400, TOKEN_INVALID);
+      });
+
+      it('cleanup deletes the account first: the resend answers 202, mails nothing and inserts nothing', async () => {
+        const pending = await signUp();
+
+        const [response] = await whileResendsWait(
+          pending.userId,
+          1,
+          async (tx) => {
+            await tx.$executeRaw`DELETE FROM app_user WHERE id = ${pending.userId}::uuid`;
+          },
+        );
+
+        expect(response?.status).toBe(202);
+        expect(response?.body).toEqual({});
+        expect(await verificationMails()).toHaveLength(1);
+        expect(await prisma.authToken.count()).toBe(0);
+      });
+
+      it('two resends queued on one account: both 202, one row, only the later token works', async () => {
+        const pending = await signUp();
+
+        const responses = await whileResendsWait(pending.userId, 2, () =>
+          Promise.resolve(),
+        );
+
+        expect(responses.map((response) => response.status)).toEqual([
+          202, 202,
+        ]);
+        const tokens = (await verificationMails())
+          .slice(1)
+          .map((sent) => sent.token);
+        expect(tokens).toHaveLength(2);
+        const [row] = await prisma.authToken.findMany();
+        expect(await prisma.authToken.count()).toBe(1);
+        const live = tokens.filter(
+          (token) => hexHash(token) === hex(row?.tokenHash ?? null),
+        );
+        const dead = tokens.filter((token) => !live.includes(token));
+        expect(live).toHaveLength(1);
+        await confirm({
+          token: dead[0] ?? '',
+          bindingToken: pending.bindingToken,
+        }).expect(400, TOKEN_INVALID);
+        await confirm({
+          token: live[0] ?? '',
+          bindingToken: pending.bindingToken,
+        }).expect(200);
+      });
+
+      it('gives five 202s, no 500 and exactly one token row to five resends of one address at once', async () => {
+        const pending = await signUp();
+        const before = await snapshot(pending.userId);
+
+        const responses = await Promise.all(
+          Array.from({ length: 5 }, () => resend({ email: SIGN_UP.email })),
+        );
+
+        expect(responses.map((response) => response.status)).toEqual([
+          202, 202, 202, 202, 202,
+        ]);
+        const after = await snapshot(pending.userId);
+        expect(after.tokens).toHaveLength(1);
+        expect(hex(after.tokens[0]?.bindingHash ?? null)).toBe(
+          hex(before.tokens[0]?.bindingHash ?? null),
+        );
+        expect(after.user).toEqual(before.user);
+      });
+    });
   });
 });
