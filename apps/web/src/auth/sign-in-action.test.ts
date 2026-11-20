@@ -105,7 +105,7 @@ describe('signInAction', () => {
     expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
   });
 
-  it.each([
+  it.each<Readonly<Record<string, string | Blob>>>([
     { next: '//evil.com/my-list' },
     { next: '/\\evil.com' },
     { next: 'https://evil.com/' },

@@ -53,7 +53,7 @@ describe('readSignInFields', () => {
     expect(readSignInFields(formWith(fields))).toEqual(fields);
   });
 
-  it.each([
+  it.each<Readonly<Record<string, string | Blob>>>([
     { identifier: 'i'.repeat(255), password: 'p' },
     { identifier: 'i', password: 'p'.repeat(1025) },
     { identifier: '', password: 'p' },
