@@ -17,11 +17,14 @@ import {
 export function Disclosure({
   summary,
   summaryClassName,
+  summaryLabel,
   active = false,
   children,
 }: {
   readonly summary: ReactNode;
   readonly summaryClassName: string;
+  /** Accessible name when the summary text alone says too little (the account menu's initials). */
+  readonly summaryLabel?: string;
   readonly active?: boolean;
   readonly children: ReactNode;
 }) {
@@ -77,6 +80,7 @@ export function Disclosure({
     >
       <summary
         className={summaryClassName}
+        aria-label={summaryLabel}
         data-active={active ? '' : undefined}
       >
         {summary}

@@ -1,12 +1,18 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
 import { HeaderNav, HeaderNavView } from './header-nav';
 import { Logo } from './logo';
+import {
+  GuestActionsSizer,
+  ViewerActions,
+  ViewerFallback,
+} from './viewer-actions';
 
 /**
- * The guest header on every route (ADR 0014, slice 2a). Server-rendered and static: only the
+ * The header on every route (ADR 0014, slice 2a). Server-rendered and static: only the
  * nav reads the path, inside a Suspense boundary whose fallback is the same nav with nothing
  * active, so a prerender with an unknown param still ships working links.
+ * The viewer's actions are the one other hole: laid over a hidden sizer in one grid cell, so the
+ * slot never changes width (ADR 0015 Addendum 1f-iv-c).
  * The search is a plain GET form: it submits without JavaScript; live results come with OTA-98.
  * Links to routes that do not exist yet skip prefetching (a 404 per link on every page view).
  */
@@ -34,20 +40,10 @@ export function SiteHeader() {
           </label>
         </form>
         <div className="sh-right">
-          <Link
-            className="ol-btn ol-btn--ghost ol-btn--sm"
-            href="/auth?mode=sign-in"
-            prefetch={false}
-          >
-            Sign in
-          </Link>
-          <Link
-            className="ol-btn ol-btn--primary ol-btn--sm sh-only-desktop"
-            href="/auth?mode=sign-up"
-            prefetch={false}
-          >
-            Sign up
-          </Link>
+          <GuestActionsSizer />
+          <Suspense fallback={<ViewerFallback />}>
+            <ViewerActions />
+          </Suspense>
         </div>
       </div>
     </header>

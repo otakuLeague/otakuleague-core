@@ -112,10 +112,22 @@ html {
 .sh-spacer {
   flex: 1;
 }
+/* One grid cell: every viewer state is laid over the hidden guest-actions sizer (ADR 0015 1f-iv-c). */
 .sh-right {
+  display: grid;
+  align-items: center;
+  justify-items: end;
+}
+.sh-right > * {
+  grid-area: 1 / 1;
+}
+.sh-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+.sh-sizer {
+  visibility: hidden;
 }
 
 /* ---------- Main nav ---------- */
@@ -278,6 +290,41 @@ details[open] > .sh-pop {
   color: var(--accent-ink);
   font-size: 15px;
 }
+/* ---------- Account menu: avatar summary, panel aligned to the header's end ---------- */
+.sh-avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 700 14px/1 var(--font-sans);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.sh-avatar::-webkit-details-marker {
+  display: none;
+}
+.sh-right .sh-pop {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  transform-origin: top right;
+}
+.sh-right .sh-menu {
+  min-inline-size: 220px;
+  max-inline-size: min(300px, calc(100vw - 2 * var(--space-4)));
+}
+.sh-menu__head {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+  color: var(--ink);
+  font: 600 15px/1.3 var(--font-sans);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 /* Reduced motion: no scale or rotation; menus fade in only. */
 @media (prefers-reduced-motion: reduce) {
   .sh-chev {
@@ -426,6 +473,10 @@ details[open] > .sh-pop {
   .sh-search,
   .sh-only-desktop {
     display: none;
+  }
+  .sh-avatar {
+    inline-size: 44px;
+    block-size: 44px;
   }
   .sh-foot__in {
     grid-template-columns: 1fr 1fr;

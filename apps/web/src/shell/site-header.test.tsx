@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SiteHeader } from './site-header';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/leaderboard' }));
+vi.mock('./viewer-actions', () => ({
+  GuestActionsSizer: () => <div data-testid="sizer" />,
+  ViewerActions: () => <div data-testid="viewer-actions" />,
+  ViewerFallback: () => <div data-testid="viewer-fallback" />,
+}));
 
 describe('SiteHeader', () => {
   afterEach(cleanup);
@@ -37,15 +42,14 @@ describe('SiteHeader', () => {
     expect(input.getAttribute('maxlength')).toBe('100');
   });
 
-  it('offers a guest Sign in and Sign up', () => {
-    render(<SiteHeader />);
+  it('lays the viewer actions over the sizer in one cell', () => {
+    const { container } = render(<SiteHeader />);
 
+    const right = container.querySelector('.sh-right');
     expect(
-      screen.getByRole('link', { name: 'Sign in' }).getAttribute('href'),
-    ).toBe('/auth?mode=sign-in');
-    const signUp = screen.getByRole('link', { name: 'Sign up' });
-    expect(signUp.getAttribute('href')).toBe('/auth?mode=sign-up');
-    // Below 768 px only Sign in stays, until the mobile sheet (ADR 0014).
-    expect(signUp.classList.contains('sh-only-desktop')).toBe(true);
+      Array.from(right?.children ?? [], (child) =>
+        child.getAttribute('data-testid'),
+      ),
+    ).toEqual(['sizer', 'viewer-actions']);
   });
 });
