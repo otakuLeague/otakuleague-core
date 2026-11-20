@@ -1,10 +1,6 @@
+import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import type { FormEvent, ReactNode } from 'react';
-import {
-  SIGN_IN_IDENTIFIER_MAX,
-  SIGN_IN_PASSWORD_RAW_MAX,
-  type SignInFailureState,
-  type SignInFormState,
-} from './sign-in-form-state';
+import type { SignInFailureState, SignInFormState } from './sign-in-form-state';
 
 type SignInFormViewProps = {
   readonly state: SignInFormState;
@@ -131,7 +127,7 @@ export function SignInFormView({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            maxLength={SIGN_IN_IDENTIFIER_MAX}
+            maxLength={IDENTIFIER_MAX}
             required
             readOnly={pending}
             defaultValue={identifier}
@@ -147,7 +143,7 @@ export function SignInFormView({
             name="password"
             type="password"
             autoComplete="current-password"
-            maxLength={SIGN_IN_PASSWORD_RAW_MAX}
+            maxLength={PASSWORD_RAW_MAX}
             required
             readOnly={pending}
             {...fieldError}

@@ -1,3 +1,17 @@
+/**
+ * Longest identifier as typed, in UTF-16 code units (what `@MaxLength` counts), checked on the
+ * raw input before normaliseIdentifier. 254 is the longest email address (RFC 5321 path limit).
+ * The API's DTOs and the web's sign-in form both use it (ADR 0015).
+ */
+export const IDENTIFIER_MAX = 254;
+
+/**
+ * Raw password UTF-16 units accepted before NFC runs: NFC on a long run of combining marks is slow
+ * (1.7 s measured on 96 KB) and runs before the rate limiter, so a longer string is refused unread.
+ * 8 × the API's `PASSWORD_MAX` (128 code points after NFC): NFC never folds 8 units into one.
+ */
+export const PASSWORD_RAW_MAX = 1024;
+
 /** GET /me body: the member the session belongs to (ADR 0015). Never cached (`no-store`). */
 export interface MeResponse {
   readonly id: string;

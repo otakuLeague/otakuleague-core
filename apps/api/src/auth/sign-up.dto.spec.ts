@@ -1,9 +1,9 @@
+import { PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { COMMON_PASSWORD_MESSAGE } from './common-passwords';
 import { PASSWORD_MAX } from './credential-rules';
-import { PASSWORD_RAW_MAX } from './sign-in.dto';
 import { SignUpDto } from './sign-up.dto';
 
 const VALID = {

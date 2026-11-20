@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  IDENTIFIER_MAX,
   isAnimeFranchise,
   isAnimeListPage,
   isApiError,
@@ -8,6 +9,7 @@ import {
   isHealthResponse,
   isSessionToken,
   isSignInResponse,
+  PASSWORD_RAW_MAX,
 } from '@otakuleague/shared-types';
 
 // Shapes that no guard may accept, whatever it checks.
@@ -190,6 +192,12 @@ void describe('isSessionToken', () => {
     ]) {
       assert.equal(isSessionToken(candidate), false, JSON.stringify(candidate));
     }
+  });
+});
+
+void describe('credential bounds (ADR 0015)', () => {
+  void it('pins the raw identifier and password limits both apps check', () => {
+    assert.deepEqual([IDENTIFIER_MAX, PASSWORD_RAW_MAX], [254, 1024]);
   });
 });
 

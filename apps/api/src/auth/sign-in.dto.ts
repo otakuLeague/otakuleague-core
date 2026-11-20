@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SignInRequest } from '@otakuleague/shared-types';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_RAW_MAX,
+  type SignInRequest,
+} from '@otakuleague/shared-types';
 import {
   IsNotEmpty,
   IsString,
@@ -10,11 +14,7 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
-import {
-  IDENTIFIER_MAX,
-  PASSWORD_MAX,
-  passwordLength,
-} from './credential-rules';
+import { PASSWORD_MAX, passwordLength } from './credential-rules';
 
 /** PostgreSQL cannot store or compare U+0000 in text (22021): refused here, never a 500. */
 @ValidatorConstraint({ name: 'withoutNul' })
@@ -27,13 +27,6 @@ class WithoutNul implements ValidatorConstraintInterface {
     return `${args.property} must not contain U+0000`;
   }
 }
-
-/**
- * Raw UTF-16 units accepted before NFC runs: NFC on a long run of combining marks is slow (1.7 s
- * measured on 96 KB) and runs before the rate limiter, so a longer string is refused unread.
- * Generous: NFC never folds 8 units into one code point.
- */
-export const PASSWORD_RAW_MAX = 8 * PASSWORD_MAX;
 
 /** Counted like sign-up will count it (code points after NFC); the message never echoes the value. */
 @ValidatorConstraint({ name: 'passwordMaxLength' })

@@ -257,6 +257,7 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
+export { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from './auth';
 export type {
   EmailVerificationConfirmRequest,
   EmailVerificationConfirmResponse,

@@ -1,4 +1,9 @@
-import type { SignInRequest, SignInResponse } from '@otakuleague/shared-types';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_RAW_MAX,
+  type SignInRequest,
+  type SignInResponse,
+} from '@otakuleague/shared-types';
 import type { ApiFailure } from '../api/client';
 import type { CredentialCallResult } from './credential-call';
 
@@ -23,11 +28,6 @@ export type SignInOutcome =
   | { readonly kind: 'signed_in'; readonly sessionToken: string }
   | { readonly kind: 'failed'; readonly formState: SignInFailureState };
 
-/** Keep equal to `IDENTIFIER_MAX` in apps/api/src/auth/credential-rules.ts. */
-export const SIGN_IN_IDENTIFIER_MAX = 254;
-/** UTF-16 units before NFC; keep equal to `PASSWORD_RAW_MAX` in apps/api/src/auth/sign-in.dto.ts. */
-export const SIGN_IN_PASSWORD_RAW_MAX = 1024;
-
 /**
  * Both fields exactly as typed (no trim, no case change: the API matches them itself), or nothing
  * when a field is missing, empty, a file or too long; no request goes out then. A forged action
@@ -39,8 +39,8 @@ export function readSignInFields(formData: unknown): SignInRequest | undefined {
   }
   const identifier = formData.get('identifier');
   const password = formData.get('password');
-  return isFieldWithin(identifier, SIGN_IN_IDENTIFIER_MAX) &&
-    isFieldWithin(password, SIGN_IN_PASSWORD_RAW_MAX)
+  return isFieldWithin(identifier, IDENTIFIER_MAX) &&
+    isFieldWithin(password, PASSWORD_RAW_MAX)
     ? { identifier, password }
     : undefined;
 }

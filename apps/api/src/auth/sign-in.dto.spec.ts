@@ -1,8 +1,9 @@
+import { PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { PASSWORD_MAX } from './credential-rules';
-import { PASSWORD_RAW_MAX, SignInDto } from './sign-in.dto';
+import { SignInDto } from './sign-in.dto';
 
 const PASSWORD = 'fake password for tests 1';
 
