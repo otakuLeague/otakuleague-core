@@ -316,6 +316,6 @@ describe('GET /users/availability', () => {
     const response = await check('?username=Frieren').expect(503);
 
     expect((response.body as ApiError).error.code).toBe('SERVICE_UNAVAILABLE');
-    expect(response.text).not.toContain('available');
+    expect(response.body).not.toHaveProperty('available');
   });
 });
