@@ -101,16 +101,17 @@ describe('credentialCall', () => {
 
   // Malformed headers are covered by client-ip.test.ts; these two prove the refusal sends nothing.
   it.each([
-    ['without x-forwarded-for', {}],
+    ['without x-forwarded-for', {}, 'client_ip_unknown'],
     [
       'on a forwarded Server Action hop',
       { 'x-forwarded-for': VISITOR_IP, 'x-action-forwarded': '1' },
+      'action_forwarded',
     ],
-  ])('refuses in production %s', async (_label, headers) => {
+  ])('refuses in production %s', async (_label, headers, reason) => {
     incoming.headers = new Headers(headers);
     const { call, requests } = await credentialCallWith({});
 
-    expect(await call()).toEqual(refused('client_ip_unknown'));
+    expect(await call()).toEqual(refused(reason));
     expect(requests).toEqual([]);
   });
 

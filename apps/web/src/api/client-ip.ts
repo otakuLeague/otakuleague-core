@@ -44,30 +44,43 @@ export async function readClientIp(): Promise<ClientIp | undefined> {
 
 const LOOPBACK_CLIENT_IP = '127.0.0.1' as ClientIp;
 
+/** The IP a credential call sends, or why it must not be sent (the caller refuses the call). */
+export type CredentialClientIp =
+  | { readonly kind: 'known'; readonly clientIp: ClientIp }
+  | {
+      readonly kind: 'refused';
+      readonly reason: 'action_forwarded' | 'client_ip_unknown';
+    };
+
 /**
  * The IP a credential call (sign-in, sign-up, reset) sends, which the API rate-limits by. On Vercel:
- * Vercel's `x-forwarded-for`, or nothing (the caller refuses the call) when it is missing or
- * malformed, or when Next re-sent a Server Action between its own workers (`x-action-forwarded`):
- * that hop's `x-forwarded-for` is Vercel's egress address, shared by every visitor. Off Vercel
- * nobody overwrites the header, so it is never read: a loopback web (http, which `readWebPublicUrl`
- * allows only there) is one machine and sends 127.0.0.1; an https web off Vercel (another host, or
- * Vercel with its system variables hidden) throws rather than put every visitor in one bucket.
+ * Vercel's `x-forwarded-for`, else `client_ip_unknown` when it is missing or malformed (a platform
+ * fault), or `action_forwarded` when `x-action-forwarded` is present: Next sets it when it re-sends a
+ * Server Action between its own workers, whose `x-forwarded-for` is Vercel's egress address shared
+ * by every visitor, but a visitor can send it too. Off Vercel nobody overwrites the header, so it is
+ * never read: a loopback web (http, which `readWebPublicUrl` allows only there) is one machine and
+ * sends 127.0.0.1; an https web off Vercel (another host, or Vercel with its system variables
+ * hidden) throws rather than put every visitor in one bucket.
  */
 export async function readCredentialClientIp({
   isHttps,
 }: {
   readonly isHttps: boolean;
-}): Promise<ClientIp | undefined> {
+}): Promise<CredentialClientIp> {
   if (process.env.VERCEL === '1') {
     const incomingHeaders = await headers();
-    return incomingHeaders.has('x-action-forwarded')
-      ? undefined
-      : clientIpFromHeaders(incomingHeaders);
+    if (incomingHeaders.has('x-action-forwarded')) {
+      return { kind: 'refused', reason: 'action_forwarded' };
+    }
+    const clientIp = clientIpFromHeaders(incomingHeaders);
+    return clientIp === undefined
+      ? { kind: 'refused', reason: 'client_ip_unknown' }
+      : { kind: 'known', clientIp };
   }
   if (isHttps) {
     throw new Error(
       'Invalid web configuration: credential calls off Vercel need an http loopback WEB_PUBLIC_URL; on Vercel keep "Automatically expose System Environment Variables" on (VERCEL=1).',
     );
   }
-  return LOOPBACK_CLIENT_IP;
+  return { kind: 'known', clientIp: LOOPBACK_CLIENT_IP };
 }
