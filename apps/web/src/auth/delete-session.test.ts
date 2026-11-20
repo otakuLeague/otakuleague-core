@@ -5,8 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import type { SessionToken } from '../api/session-token';
 import { deleteSession } from './delete-session';
+import type { SessionRequest } from './session-call';
 
-const mocks = vi.hoisted(() => ({ sessionCall: vi.fn(), report: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  sessionCall: vi.fn<(request: SessionRequest<unknown>) => Promise<unknown>>(),
+  report: vi.fn(),
+}));
 vi.mock('next/server', () => ({ connection: vi.fn(), after: vi.fn() }));
 vi.mock('./session-call', () => ({ sessionCall: mocks.sessionCall }));
 vi.mock('./auth-reports', async (importOriginal) => ({
@@ -50,10 +54,20 @@ describe('deleteSession', () => {
           path: '/auth/sign-out',
           method: 'POST',
           timeoutMs: 2000,
+          isExpectedBody: expect.any(Function) as unknown,
         },
       ],
     ]);
     expect(mocks.report).not.toHaveBeenCalled();
+  });
+
+  it('counts only an empty 204 body as revoked: a 2xx with a body fails the guard', async () => {
+    await deleteSession(TOKEN);
+    const isExpectedBody = mocks.sessionCall.mock.calls[0]?.[0].isExpectedBody;
+
+    expect(
+      [undefined, null, {}, ''].map((body) => isExpectedBody?.(body)),
+    ).toEqual([true, false, false, false]);
   });
 
   it.each([
@@ -74,6 +88,7 @@ describe('deleteSession', () => {
     ['a 503 envelope', api(503, 'SERVICE_UNAVAILABLE')],
     ['a non-envelope 5xx', failed({ kind: 'invalid_response', status: 502 })],
     ['a 404 envelope', api(404, 'NOT_FOUND')],
+    ['a 401 envelope other than UNAUTHORIZED', api(401, 'INVALID_CREDENTIALS')],
   ])(
     'resolves on %s, once, never retried, reported once as revocation_unconfirmed',
     async (_, outcome) => {

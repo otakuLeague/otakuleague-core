@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { ApiErrorCode } from '@otakuleague/shared-types';
+import { scrubErrorEvent, type ApiErrorCode } from '@otakuleague/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import {
@@ -111,7 +111,7 @@ describe('reportAuthCallFault', () => {
     },
   ];
 
-  it('throttles per fault kind across routes, with only the tags and a fixed fingerprint', async () => {
+  it('throttles per report kind across routes, with only the tags and a fixed fingerprint', async () => {
     vi.clearAllMocks();
     vi.resetModules();
     const reporters = await import('./auth-reports');
@@ -146,6 +146,25 @@ describe('reportAuthCallFault', () => {
       faultReport('sign-out', 'configuration'),
       faultReport('sign-out', 'revocation_unconfirmed'),
     ]);
+  });
+
+  it("sends tags and a fingerprint that Sentry's beforeSend scrubber keeps unchanged", async () => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    const reporters = await import('./auth-reports');
+    reporters.reportClientIpUnknown('sign-in', 5_000);
+    reporters.reportAuthCallFault('sign-in', 'internal_key_refused', 5_000);
+    reporters.reportAuthCallFault('me', 'invalid_response', 5_000);
+    reporters.reportAuthCallFault('sign-out', 'configuration', 5_000);
+    reporters.reportAuthCallFault('sign-out', 'revocation_unconfirmed', 5_000);
+
+    const sent = mocks.captureMessage.mock.calls.map(
+      ([, context]: unknown[]) => context,
+    );
+    expect(sent).toHaveLength(5);
+    expect(
+      sent.map((context) => scrubErrorEvent({ ...(context as object) })),
+    ).toEqual(sent);
   });
 
   it('never throws, even when after() does (outside a request)', async () => {

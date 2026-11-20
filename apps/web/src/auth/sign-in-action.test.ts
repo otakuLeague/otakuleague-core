@@ -160,15 +160,20 @@ describe('signInAction', () => {
   );
 
   it.each([
-    ['throws', () => mocks.sessionCall.mockRejectedValue(new Error('no key'))],
+    [
+      'throws',
+      () => mocks.sessionCall.mockRejectedValue(new Error('no key')),
+      'configuration',
+    ],
     [
       'times out',
       () =>
         mocks.sessionCall.mockResolvedValue(failedWith({ kind: 'timeout' })),
+      'revocation_unconfirmed',
     ],
   ])(
-    'still sets the new cookie and redirects when the real old-session delete %s',
-    async (_, arrange) => {
+    'still sets the new cookie and redirects when the real old-session delete %s, reported as sign-out %s',
+    async (_, arrange, kind) => {
       const actual =
         await vi.importActual<typeof import('./delete-session')>(
           './delete-session',
@@ -181,6 +186,9 @@ describe('signInAction', () => {
       expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
       expect(mocks.setCookie.mock.calls[0]?.[1]).toBe(TOKEN);
       expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
+      expect(mocks.reportAuthCallFault.mock.calls).toEqual([
+        ['sign-out', kind],
+      ]);
     },
   );
 
@@ -216,6 +224,8 @@ describe('signInAction', () => {
       'invalid_response',
     ],
     [failedWith({ kind: 'invalid_response', status: 502 }), UNAVAILABLE],
+    [apiError(503, 'SERVICE_UNAVAILABLE'), UNAVAILABLE],
+    [failedWith({ kind: 'network' }), UNAVAILABLE],
     [failedWith({ kind: 'timeout' }), UNAVAILABLE],
     [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
     [CLIENT_IP_UNKNOWN, UNAVAILABLE],

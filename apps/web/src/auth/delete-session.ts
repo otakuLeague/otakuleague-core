@@ -9,8 +9,9 @@ const SESSION_DELETE_TIMEOUT_MS = 2000;
 
 /**
  * The one caller of `POST /auth/sign-out` (ADR 0015 Addendum 1f-iv-b2): exactly one attempt, never
- * retried, and total (only Next's control-flow signals pass). 204 and a 401 envelope both mean the
- * session is gone; any other answer is one report, the fault when there is one, else
+ * retried, and total (only Next's control-flow signals pass). 204 with no body and a 401
+ * `UNAUTHORIZED` envelope both mean the session is gone (a 2xx with a body is `invalid_response`,
+ * a fault); any other answer is one report, the fault when there is one, else
  * `revocation_unconfirmed` (an outage, a 429, another 4xx: the row idles out); a throw (a missing
  * key) is `configuration`; a preview refusal made no call. The caller still clears or replaces the
  * cookie. The route tag is the API route called, so a delete inside sign-in reports as `sign-out`.
@@ -22,6 +23,7 @@ export async function deleteSession(session: SessionToken): Promise<void> {
       path: '/auth/sign-out',
       method: 'POST',
       timeoutMs: SESSION_DELETE_TIMEOUT_MS,
+      isExpectedBody: isNoContent,
     });
     const failure =
       callResult.kind === 'called' && !callResult.result.ok
@@ -39,7 +41,16 @@ export async function deleteSession(session: SessionToken): Promise<void> {
   }
 }
 
-/** A 401 envelope: the session was already gone (expired, replayed or revoked). */
+/** The API's 204 carries no body; the client parses an empty 204 as `undefined`. */
+function isNoContent(body: unknown): body is undefined {
+  return body === undefined;
+}
+
+/** A 401 `UNAUTHORIZED` envelope (as `viewerFrom`): the session was already gone (expired, replayed or revoked). */
 function isSessionGone(failure: ApiFailure): boolean {
-  return failure.kind === 'api_error' && failure.status === 401;
+  return (
+    failure.kind === 'api_error' &&
+    failure.status === 401 &&
+    failure.error.error.code === 'UNAUTHORIZED'
+  );
 }

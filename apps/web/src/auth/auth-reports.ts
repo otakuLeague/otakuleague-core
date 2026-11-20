@@ -83,8 +83,9 @@ export type AuthReportKind = AuthCallFault | 'revocation_unconfirmed';
 const kindLastReportedAtMs = new Map<AuthReportKind, number>();
 
 /**
- * At most one Sentry error per kind per instance every 10 minutes, carrying the route and the kind
- * as tags and nothing else (never a token, a username, an IP or an error message).
+ * At most one Sentry error per kind per instance every 10 minutes. Our tags are the route and the
+ * kind only (never a token, a username, an IP or an error message); the SDK adds its stack and
+ * request context, which `scrubErrorEvent` strips of the query and the user.
  */
 export function reportAuthCallFault(
   route: AuthCallRoute,

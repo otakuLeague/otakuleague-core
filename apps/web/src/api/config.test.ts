@@ -113,6 +113,9 @@ describe('isSecureApiBaseUrl', () => {
     'https://api.otakuleague.example/v1',
     'http://127.0.0.1:3001',
     'http://[::1]:3001',
+    // Numeric spellings the URL parser turns into 127.0.0.1.
+    'http://127.1:3001',
+    'http://0x7f.0.0.1:3001',
   ])('allows %j', (baseUrl) => {
     expect(isSecureApiBaseUrl(baseUrl)).toBe(true);
   });
