@@ -6,6 +6,7 @@ import {
   isApiError,
   isEmailVerificationConfirmResponse,
   isHealthResponse,
+  isSessionToken,
 } from '@otakuleague/shared-types';
 
 // Shapes that no guard may accept, whatever it checks.
@@ -161,6 +162,33 @@ void describe('isHealthResponse', () => {
       }),
       false,
     );
+  });
+});
+
+void describe('isSessionToken', () => {
+  void it('accepts 43 base64url characters', () => {
+    for (const token of ['A'.repeat(43), `${'aZ09_-'.repeat(7)}x`]) {
+      assert.equal(isSessionToken(token), true, token);
+    }
+  });
+
+  void it('rejects another length, base64 padding or symbols, whitespace and non-strings', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      '',
+      'A'.repeat(42),
+      'A'.repeat(44),
+      `${'A'.repeat(42)}+`,
+      `${'A'.repeat(42)}/`,
+      `${'A'.repeat(42)}=`,
+      `${'A'.repeat(42)} `,
+      ` ${'A'.repeat(42)}`,
+      `${'A'.repeat(41)}\r\n`,
+      `${'A'.repeat(42)};`,
+      { length: 43 },
+    ]) {
+      assert.equal(isSessionToken(candidate), false, JSON.stringify(candidate));
+    }
   });
 });
 
