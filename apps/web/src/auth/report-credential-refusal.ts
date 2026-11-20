@@ -10,7 +10,9 @@ export type CredentialRoute = 'sign-in';
 /** One report per server instance every 10 minutes: a broken header refuses every visitor at once. */
 export const REFUSAL_REPORT_INTERVAL_MS = 600_000;
 
-let lastReportAtMs: number | undefined;
+// One throttle for the whole instance, not one per route, on purpose: every route shares the
+// fingerprint, and the cause is the same platform header whichever route sees it first.
+let instanceLastReportedAtMs: number | undefined;
 
 export function isRefusalReportDue(
   lastReportedAtMs: number | undefined,
@@ -24,7 +26,8 @@ export function isRefusalReportDue(
 
 /**
  * `client_ip_unknown` on a credential route: on Vercel the platform's `x-forwarded-for` was missing
- * or not one address, so sign-in is down for everyone until it is fixed. The event carries the
+ * or not one address, so sign-in is down for everyone until it is fixed (never `action_forwarded`,
+ * which a visitor can cause at will). The event carries the
  * route only (never an IP, a header or a form field) and is flushed after the response, since a
  * serverless instance can freeze before Sentry's queue drains.
  */
@@ -32,10 +35,10 @@ export function reportClientIpUnknown(
   route: CredentialRoute,
   nowMs: number = Date.now(),
 ): void {
-  if (!isRefusalReportDue(lastReportAtMs, nowMs)) {
+  if (!isRefusalReportDue(instanceLastReportedAtMs, nowMs)) {
     return;
   }
-  lastReportAtMs = nowMs;
+  instanceLastReportedAtMs = nowMs;
   Sentry.captureMessage('Credential call refused: client IP unknown', {
     level: 'error',
     tags: { credential_route: route },

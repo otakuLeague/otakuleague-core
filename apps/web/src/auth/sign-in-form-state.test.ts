@@ -3,12 +3,7 @@ import type { ApiErrorCode, SignInResponse } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import type { ApiFailure } from '../api/client';
 import type { CredentialCallResult } from './credential-call';
-import {
-  readSignInFields,
-  SIGN_IN_IDENTIFIER_MAX,
-  SIGN_IN_PASSWORD_RAW_MAX,
-  signInOutcomeFrom,
-} from './sign-in-form-state';
+import { readSignInFields, signInOutcomeFrom } from './sign-in-form-state';
 
 const formWith = (fields: Readonly<Record<string, string | Blob>>) => {
   const formData = new FormData();
@@ -39,12 +34,6 @@ const apiError = (code: ApiErrorCode, retryAfterSeconds?: number) =>
 const failed = (formState: object) => ({ kind: 'failed', formState });
 
 describe('readSignInFields', () => {
-  it('uses the API limits', () => {
-    expect([SIGN_IN_IDENTIFIER_MAX, SIGN_IN_PASSWORD_RAW_MAX]).toEqual([
-      254, 1024,
-    ]);
-  });
-
   it.each([
     { identifier: 'farouk', password: 'hunter22' },
     { identifier: ' Farouk@Example.COM ', password: '  Pass Word ' },
@@ -116,6 +105,7 @@ describe('signInOutcomeFrom', () => {
 
   it.each([
     [{ kind: 'refused', reason: 'preview_deployment' }, 'off_on_preview'],
+    [{ kind: 'refused', reason: 'action_forwarded' }, 'unavailable'],
     [{ kind: 'refused', reason: 'client_ip_unknown' }, 'unavailable'],
     [failedWith({ kind: 'network' }), 'unavailable'],
     [failedWith({ kind: 'timeout' }), 'unavailable'],

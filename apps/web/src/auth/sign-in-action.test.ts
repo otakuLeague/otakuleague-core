@@ -45,13 +45,18 @@ const failedWith = (failure: ApiFailure) => ({
   kind: 'called',
   result: { ok: false, failure },
 });
-const apiError = (code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>) =>
+const apiError = (
+  code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>,
+  retryAfterSeconds?: number,
+) =>
   failedWith({
     kind: 'api_error',
-    status: 401,
+    status: 429,
     error: { error: { code, message: 'x' } },
+    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
   });
 const CLIENT_IP_UNKNOWN = { kind: 'refused', reason: 'client_ip_unknown' };
+const UNAVAILABLE = { kind: 'unavailable' };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -119,18 +124,22 @@ describe('signInAction', () => {
   });
 
   it.each([
-    [apiError('INVALID_CREDENTIALS'), 'invalid_credentials'],
-    [apiError('AUTH_BUSY'), 'busy'],
-    [apiError('INTERNAL_KEY_REQUIRED'), 'unavailable'],
-    [failedWith({ kind: 'timeout' }), 'unavailable'],
-    [CLIENT_IP_UNKNOWN, 'unavailable'],
+    [apiError('INVALID_CREDENTIALS'), { kind: 'invalid_credentials' }],
+    [apiError('AUTH_BUSY', 1), { kind: 'busy' }],
+    [
+      apiError('TOO_MANY_REQUESTS', 120),
+      { kind: 'rate_limited', retryAfterSeconds: 120 },
+    ],
+    [apiError('INTERNAL_KEY_REQUIRED'), UNAVAILABLE],
+    [failedWith({ kind: 'timeout' }), UNAVAILABLE],
+    [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
+    [CLIENT_IP_UNKNOWN, UNAVAILABLE],
   ])(
-    'returns %o as %s: no cookie, no redirect, nothing typed',
-    async (callResult, kind) => {
+    'returns %o as %o: no cookie, no redirect, a report only for client_ip_unknown',
+    async (callResult, formState) => {
       mocks.credentialCall.mockResolvedValue(callResult);
       const state = await signInAction(IDLE, signInForm({ next: '/my-list' }));
-      expect(state).toEqual({ kind });
-      expect(JSON.stringify(state)).not.toMatch(/farouk|never-echo/i);
+      expect(state).toEqual(formState);
       expect(mocks.setCookie).not.toHaveBeenCalled();
       expect(mocks.redirect).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown.mock.calls).toEqual(
@@ -156,11 +165,11 @@ describe('signInAction', () => {
     signInForm({ identifier: 'i'.repeat(255) }),
     'identifier=a&password=b' as unknown as FormData,
   ])(
-    'answers invalid_credentials to %o without calling the API',
+    'answers invalid_credentials to %o without calling the API or echoing a field',
     async (formData) => {
-      expect(await signInAction(IDLE, formData)).toEqual({
-        kind: 'invalid_credentials',
-      });
+      const state = await signInAction(IDLE, formData);
+      expect(state).toEqual({ kind: 'invalid_credentials' });
+      expect(JSON.stringify(state)).not.toMatch(/farouk|never-echo/i);
       expect(mocks.credentialCall).not.toHaveBeenCalled();
     },
   );

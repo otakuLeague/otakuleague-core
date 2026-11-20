@@ -1,22 +1,22 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-20
+Updated: 2026-11-20 (1f-iii-a)
 ## Current milestone
-W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-i (1f-i merged as #121); 1f-ii (auth server core) in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
+W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122); 1f-iii-a (`signInAction`) in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
 ## Last session
-OTA-139 slice 1f-ii (web, nothing reachable yet): `sessionCookie`/`clearedSessionCookie` (never `cookies().delete()`: no Secure, ignored for `__Host-`), `safeNextPath` (one leading `/` before and after resolving, output ≤ 2048), `readCredentialClientIp` (Vercel: x-forwarded-for, refused on `x-action-forwarded`; off Vercel: 127.0.0.1 only for an http loopback web, https throws), `credentialCall` (preview refused before any read, one uncached POST, never retried), lint gate: `src/auth/**`, `app/auth/**` cannot import `apiClient`.
+OTA-139 slice 1f-iii-a (web, nothing reachable yet): `signInAction` ('use server', no try/catch, preview check before reading the form, cookie only on a 200 that passes the now-exported `isSignInResponse`, then `redirectTo(SafeNextPath)`); pure `SignInFormState` (`idle | invalid_credentials | rate_limited | busy | unavailable | off_on_preview`) mapped by error code; local caps 254/1024 equal to the API's; `readCredentialClientIp` now tags `action_forwarded` (visitor-forgeable, not reported) vs `client_ip_unknown` (Sentry, throttled 1/instance/10 min). ADR 0015 addendum: old session deleted from 1f-iv.
 ## In progress
-- OTA-139 1f-ii: PR from `feat/OTA-139-auth-server-core`.
+- OTA-139 1f-iii-a: PR from `feat/OTA-139-sign-in-action`.
 - OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4; OTA-147 `/contact` (needs email provider). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
 - Email on Resend free plan only (decided 2026-11-15): 80 sign-up + 20 reset/day, Sentry alert at 75; ADR 0015 addendum in the email slice.
 ## Next 3 tasks
-1. OTA-139 1f-iii-a `signInAction` + pure `SignInFormState` union (`idle | invalid_credentials | rate_limited | busy | unavailable | off_on_preview`), export `isSignInResponse` from shared-types, Sentry report on `client_ip_unknown` (no IP); `redirect()` outside try. Then 1f-iii-b `/auth` sign-in UI + `/sign-in` 308 (PARITY `/auth?mode=signin|signup`) with the first `app/auth` lint test; 1f-iv Viewer/loadViewer/signOutAction + a `sessionCall` wrapper allowed by the gate; 1f-v sign-up + check-email (`ol_signup` etc. via a `__Host-` helper; confirm 5 s timeout covers argon2 + mail); 1f-vi verification link handler, assertSameOrigin route-walker test, confirm page; 1f-vii resend + debounced availability.
+1. OTA-139 1f-iii-b `/auth` sign-in UI + `/sign-in` 308 (PARITY `/auth?mode=signin|signup`) with the first `app/auth` lint test, lint ban on `redirect`/`permanentRedirect` outside `redirect-to.ts` (+ `permanentRedirectTo`), L3 dynamic `import()` gate; identifier kept client-side (state never echoes it); decide `RedirectType.replace`. Then 1f-iv Viewer/loadViewer/signOutAction + `sessionCall` + best-effort sign-out of the old session after sign-in; report `INTERNAL_KEY_REQUIRED`/`invalid_response` through the throttled reporter; move `IDENTIFIER_MAX`/`PASSWORD_RAW_MAX` to shared-types; L2 host check. 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
 2. OTA-186 Mailpit + seed accounts.
 3. OTA-184 browser data ADR (now unblocked).
 Later: OTA-198 `claimsSlugs` gate decision; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 follow-up (shared `currentSeason`).
 ## Blockers
-- Before 1f-iii deploys: confirm on beta that a forwarded Server Action hop (`x-action-forwarded`) is refused and `x-forwarded-for` is the visitor's; Vercel system env vars must stay exposed (else credential calls throw).
+- Before 1f-iii-b deploys: confirm on beta that a forwarded Server Action hop (`x-action-forwarded`) is refused and `x-forwarded-for` is the visitor's (also on the post-redirect prefetch: sign in with `next=/season`, check the API's `X-Client-Ip`); under `pnpm dev`, check Next's server-function log doesn't print FormData (else `logging.serverFunctions: false`); Vercel system env vars must stay exposed (else credential calls throw).
 - Runtime-proof checkpoint 2026-11-23 (needs OTA-139 1a–1f merged).
 - Before 1f-iii deploys: Farouk confirms Vercel Production `WEB_PUBLIC_URL` is exactly `https://beta.otakuleague.com`; Preview has none.
 - `AUTH_HMAC_KEY` on Railway (API): `[A-Za-z0-9_-]{43,128}`, distinct from every `INTERNAL_API_KEY*`; boot fails without it.

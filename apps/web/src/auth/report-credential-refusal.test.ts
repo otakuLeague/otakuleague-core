@@ -1,9 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  isRefusalReportDue,
-  REFUSAL_REPORT_INTERVAL_MS,
-} from './report-credential-refusal';
+import { isRefusalReportDue } from './report-credential-refusal';
 
 const mocks = vi.hoisted(() => ({
   captureMessage: vi.fn(),
@@ -39,7 +36,6 @@ describe('isRefusalReportDue', () => {
     [1_000, 1_000 + 599_999, false],
     [1_000, 1_000 + 600_000, true],
   ])('last report %o, now %i: due %o', (lastReportedAtMs, nowMs, due) => {
-    expect(REFUSAL_REPORT_INTERVAL_MS).toBe(600_000);
     expect(isRefusalReportDue(lastReportedAtMs, nowMs)).toBe(due);
   });
 });

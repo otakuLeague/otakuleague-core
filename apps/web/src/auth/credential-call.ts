@@ -20,7 +20,8 @@ export type CredentialCallResult<T> =
   | { readonly kind: 'called'; readonly result: ApiResult<T> }
   | {
       readonly kind: 'refused';
-      readonly reason: 'preview_deployment' | 'client_ip_unknown';
+      readonly reason:
+        'preview_deployment' | 'action_forwarded' | 'client_ip_unknown';
     };
 
 export interface CredentialRequest<T> {
@@ -33,7 +34,8 @@ export interface CredentialRequest<T> {
 /**
  * One POST with the internal key and the visitor's IP, or a refusal before any request. A refusal
  * is a page state; `client_ip_unknown` on Vercel means the platform header was missing or wrong,
- * so the calling action reports it to Sentry (never with an IP). A missing key or
+ * so the calling action reports it to Sentry (never with an IP); `action_forwarded` is not
+ * reported, since a visitor can send that header. A missing key or
  * `WEB_PUBLIC_URL`, or an https web off Vercel, throws (configuration). Nothing is retried: each
  * attempt counts against the visitor's limits (ADR 0020).
  */
@@ -45,15 +47,17 @@ export async function credentialCall<T>({
   if (credentialRoutesOff(process.env)) {
     return { kind: 'refused', reason: 'preview_deployment' };
   }
-  const clientIp = await readCredentialClientIp(readWebPublicUrl(process.env));
+  const credentialIp = await readCredentialClientIp(
+    readWebPublicUrl(process.env),
+  );
   // Never sent without one: the API would refuse it, but only after the password crossed.
-  if (clientIp === undefined) {
-    return { kind: 'refused', reason: 'client_ip_unknown' };
+  if (credentialIp.kind === 'refused') {
+    return { kind: 'refused', reason: credentialIp.reason };
   }
   const result = await apiClient().call(path, {
     method: 'POST',
     body,
-    clientIp,
+    clientIp: credentialIp.clientIp,
     requiresInternalKey: true,
     isExpectedBody,
   });

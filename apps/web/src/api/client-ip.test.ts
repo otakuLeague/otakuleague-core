@@ -94,21 +94,24 @@ describe('readCredentialClientIp', () => {
     vi.unstubAllEnvs();
   });
 
+  const UNKNOWN = { kind: 'refused', reason: 'client_ip_unknown' };
+
   it.each([
-    ['one address', VISITOR, '203.0.113.7'],
-    ['no header', {}, undefined],
-    ['a list', { 'x-forwarded-for': '203.0.113.7, 198.51.100.1' }, undefined],
+    ['one address', VISITOR, { kind: 'known', clientIp: '203.0.113.7' }],
+    ['no header', {}, UNKNOWN],
+    ['a list', { 'x-forwarded-for': '203.0.113.7, 198.51.100.1' }, UNKNOWN],
     // Next re-sends a Server Action between workers; that hop carries Vercel's egress address.
+    // A visitor can send the header too, so it is its own reason, never reported.
     [
       'a forwarded action hop',
       { ...VISITOR, 'x-action-forwarded': '1' },
-      undefined,
+      { kind: 'refused', reason: 'action_forwarded' },
     ],
   ])('on Vercel, %s', async (_label, headers, expected) => {
     vi.stubEnv('VERCEL', '1');
     incoming.headers = new Headers(headers);
 
-    expect(await readCredentialClientIp({ isHttps: true })).toBe(expected);
+    expect(await readCredentialClientIp({ isHttps: true })).toEqual(expected);
   });
 
   it.each([undefined, '', '0'])(
@@ -118,9 +121,10 @@ describe('readCredentialClientIp', () => {
       incoming.headers = new Headers(VISITOR);
       incoming.reads = 0;
 
-      expect(await readCredentialClientIp({ isHttps: false })).toBe(
-        '127.0.0.1',
-      );
+      expect(await readCredentialClientIp({ isHttps: false })).toEqual({
+        kind: 'known',
+        clientIp: '127.0.0.1',
+      });
       expect(incoming.reads).toBe(0);
     },
   );
