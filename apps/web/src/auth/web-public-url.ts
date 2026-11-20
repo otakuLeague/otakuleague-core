@@ -57,3 +57,14 @@ export function parseWebPublicUrl(rawValue: string | undefined): WebPublicUrl {
   }
   return { origin: url.origin, isHttps };
 }
+
+/**
+ * Login CSRF guard for the auth actions: the request's `Origin` header must be exactly our origin.
+ * A missing header, `null` (an opaque origin) or any other origin is refused (deny by default).
+ */
+export function isSameOrigin(
+  originHeader: string | null,
+  { origin }: WebPublicUrl,
+): boolean {
+  return originHeader === origin;
+}

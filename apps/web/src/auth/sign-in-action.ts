@@ -1,7 +1,7 @@
 'use server';
 
 import { isSignInResponse } from '@otakuleague/shared-types';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { sessionCookie } from './auth-cookies';
 import { credentialCall, credentialRoutesOff } from './credential-call';
 import { redirectTo } from './redirect-to';
@@ -12,12 +12,16 @@ import {
   signInOutcomeFrom,
   type SignInFormState,
 } from './sign-in-form-state';
-import { readWebPublicUrl } from './web-public-url';
+import { isSameOrigin, readWebPublicUrl } from './web-public-url';
 
 /**
  * The sign-in form's Server Action (ADR 0015): at most one credential call, then the session
- * cookie and a redirect to a safe `next`, or a form state that never echoes what was typed. The
- * previous state is ignored (a client can forge it). No try/catch: `redirectTo` throws Next's
+ * cookie and a redirect to a safe `next`, or a form state that never echoes what was typed. Next
+ * already aborts an action whose `Origin` is `null` or names another host; `isSameOrigin`, before
+ * the form is read, also refuses a missing `Origin` and a real browser on a host that is not
+ * `WEB_PUBLIC_URL` (a vercel.app alias, a second domain, a stale value after cutover). That case
+ * shows `unavailable` and is not reported (a visitor can cause it at will). The previous state is
+ * ignored (a client can forge it). No try/catch: `redirectTo` throws Next's
  * redirect signal, and a configuration error must surface, never read as a sign-in.
  */
 export async function signInAction(
@@ -26,6 +30,10 @@ export async function signInAction(
 ): Promise<SignInFormState> {
   if (credentialRoutesOff(process.env)) {
     return { kind: 'off_on_preview' };
+  }
+  const webPublicUrl = readWebPublicUrl(process.env);
+  if (!isSameOrigin((await headers()).get('origin'), webPublicUrl)) {
+    return { kind: 'unavailable' };
   }
   const fields = readSignInFields(formData);
   if (fields === undefined) {
@@ -46,7 +54,6 @@ export async function signInAction(
   if (outcome.kind === 'failed') {
     return outcome.formState;
   }
-  const webPublicUrl = readWebPublicUrl(process.env);
   const { name, options } = sessionCookie(webPublicUrl);
   (await cookies()).set(name, outcome.sessionToken, options);
   redirectTo(safeNextPath(formData.get('next'), webPublicUrl));

@@ -39,6 +39,18 @@ export function safeNextPath(
     : HOME;
 }
 
+/**
+ * The `?next=` query value as the visitor sent it, for the form's hidden field: one string of
+ * 1 to 2048 characters, else nothing. Not validated here: only `safeNextPath`, in the action, does.
+ */
+export function rawNextParam(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_NEXT_LENGTH
+    ? value
+    : undefined;
+}
+
 /** `/x`, never `//x` or `/\x`: both are another host to a browser. */
 function hasOneLeadingSlash(path: string): boolean {
   return path.startsWith('/') && path[1] !== '/' && path[1] !== '\\';

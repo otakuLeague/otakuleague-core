@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { parseWebPublicUrl, readWebPublicUrl } from './web-public-url';
+import {
+  isSameOrigin,
+  parseWebPublicUrl,
+  readWebPublicUrl,
+} from './web-public-url';
 
 describe('parseWebPublicUrl', () => {
   it.each([
@@ -85,5 +89,28 @@ describe('readWebPublicUrl', () => {
         WEB_PUBLIC_URL: 'https://beta.otakuleague.com/',
       }),
     ).toEqual({ origin: 'https://beta.otakuleague.com', isHttps: true });
+  });
+});
+
+describe('isSameOrigin', () => {
+  const webPublicUrl = parseWebPublicUrl('https://beta.otakuleague.com');
+
+  it('accepts exactly our origin', () => {
+    expect(isSameOrigin('https://beta.otakuleague.com', webPublicUrl)).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    null,
+    'null',
+    '',
+    'https://evil.com',
+    'http://beta.otakuleague.com',
+    'https://beta.otakuleague.com/',
+    'https://beta.otakuleague.com.evil.com',
+    'https://BETA.otakuleague.com',
+  ])('refuses %o', (originHeader) => {
+    expect(isSameOrigin(originHeader, webPublicUrl)).toBe(false);
   });
 });

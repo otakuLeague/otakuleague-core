@@ -5,6 +5,7 @@ import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import { checkInternalApiKeyConfig } from './src/api/config';
+import { LEGACY_AUTH_REDIRECTS } from './src/auth/legacy-auth-redirects';
 import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
 // Next reads .env files from apps/web only; the repo keeps a single .env at its root (ADR 0003).
@@ -65,6 +66,9 @@ const nextConfig: NextConfig = {
   // endpoint (GHSA-2464-fhr4-w9xw, OTA-131) stays unused. Also skips next/image's host check.
   images: { unoptimized: true },
   headers: () => Promise.resolve(robotsHeaders(SEARCH_INDEXING)),
+  redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),
+  // Keeps Server Action arguments (could include credentials) out of the dev log (OTA-139).
+  logging: { serverFunctions: false },
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {
     SENTRY_ENVIRONMENT:
