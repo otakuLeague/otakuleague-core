@@ -1,6 +1,6 @@
 # 0020: Sign-up and email verification (OTA-139 slice 1e)
 
-Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration. Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert.
+Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration until the [Addendum (1e-ii-b)](#addendum-1e-ii-b). Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert.
 
 ## Context
 
@@ -188,7 +188,7 @@ Added 2026-11-20 with the 1e-ii-b plan (resend and the UNIQUE migration). It kee
 
 | # | Requirement |
 |---|---|
-| R1 | No enumeration: the five kinds of address get the same status (202), body (`{}`) and headers, cost 0 hashes and differ by 1 indexed statement (about 1 ms); no counter is keyed by the email, so no 429 depends on it; mail leaves after the response. |
+| R1 | No enumeration: the five kinds of address get the same status (202), body (`{}`) and headers, cost 0 hashes and differ by 1 indexed statement (about 1 ms); no counter is keyed by the email, so no 429 depends on it; mail leaves after the response. A pending address takes a row lock, so parallel resends of one pending address run one after the other: a timing signal that an unverified sign-up of that address exists from the last 24 h. Accepted; revisit with `SKIP LOCKED` if needed. |
 | R2 | One token: at most 1 `auth_token` row per (`user_id`, `purpose`), as a database rule. N resends of one address at once: N answers 202, exactly 1 row, 0 answers 500. A re-submit of a pending email: 0 answers 500. |
 | R3 | Nothing moves: resend writes 0 columns of `app_user` and of `auth_username_hold`; the token's `expires_at` equals the account's `pending_expires_at` to the millisecond; its `binding_hash` is the one the last submit wrote, byte for byte. |
 | R4 | Abuse bound: 10 per IP per hour (a burst across a window boundary can reach 19); a refused request costs 1 upsert; so at most 10 mails per IP per hour until the email budget exists (Gate; production is closed). |
@@ -288,8 +288,11 @@ sequenceDiagram
   - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
   - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
   - a reserved-username deny list;
-  - UNIQUE(`user_id`, `purpose`) on `auth_token` (a migration), moved here from "Later migration" and due with 1e-ii-b: resend is the next writer of verification tokens, and the constraint makes "one live token per account" a database rule rather than a habit of each writer;
-  - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30.
+  - UNIQUE(`user_id`, `purpose`) on `auth_token` (a migration), moved here from "Later migration" and due with 1e-ii-b: resend is the next writer of verification tokens, and the constraint makes "one live token per account" a database rule rather than a habit of each writer. Done in 1e-ii-b (migration `20261120120000_auth_token_one_per_purpose`);
+  - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30;
+  - the email budget (5 per address per 24 h, 20 per IP per 24 h, a global cap) enforced in `dispatch` before any real `EmailSender` adapter lands, with a test that fails if `canSend()` can be true in production without it;
+  - no API rollback below the 1e-ii-b build once sign-up is open: an older build's delete-then-insert meets the UNIQUE index and answers 500 (23505) to a re-submit of a pending email;
+  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link.
 - Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
 
 **Too simple?**
