@@ -14,7 +14,10 @@ const fail = (failure: ApiFailure): Result => ({
   kind: 'called',
   result: { ok: false, failure },
 });
-const api = (status: number, code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>) =>
+const api = (
+  status: number,
+  code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>,
+) =>
   fail({ kind: 'api_error', status, error: { error: { code, message: 'x' } } });
 const IN: Viewer = { kind: 'signed_in', username: ME.username };
 const OUT: Viewer = { kind: 'signed_out' };
@@ -28,8 +31,16 @@ describe('viewerFrom', () => {
     ['a 401', api(401, 'UNAUTHORIZED'), OUT],
     ['a preview refusal', PREVIEW, OUT],
     ['a 403 INTERNAL_KEY_REQUIRED', api(403, 'INTERNAL_KEY_REQUIRED'), NONE],
-    ['a 401 not an envelope', fail({ kind: 'invalid_response', status: 401 }), NONE],
-    ['a 200 invalid_response', fail({ kind: 'invalid_response', status: 200 }), NONE],
+    [
+      'a 401 not an envelope',
+      fail({ kind: 'invalid_response', status: 401 }),
+      NONE,
+    ],
+    [
+      'a 200 invalid_response',
+      fail({ kind: 'invalid_response', status: 200 }),
+      NONE,
+    ],
     ['a network failure', fail({ kind: 'network' }), NONE],
     ['a timeout', fail({ kind: 'timeout' }), NONE],
     ['a 429', api(429, 'TOO_MANY_REQUESTS'), NONE],

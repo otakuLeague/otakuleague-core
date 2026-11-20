@@ -173,9 +173,7 @@ describe('network lint rule', () => {
     it.each(
       everywhere([OUTSIDE_API_FOLDER, AUTH_FILE, AUTH_PAGE], REDIRECT_IMPORTS),
     )('fires in %s:\n%s', async (filePath, code) => {
-      expect(await ruleIdsFor(code, filePath)).toContain(
-        'no-restricted-syntax',
-      );
+      expect(await ruleIdsFor(code, filePath)).toContain('no-restricted-syntax');
     });
 
     it.each([OUTSIDE_API_FOLDER, CLIENT])(
@@ -201,20 +199,20 @@ describe('network lint rule', () => {
     );
 
     it.each([
-      ...everywhere(
-        [OUTSIDE_API_FOLDER, AUTH_FILE],
-        [
-          "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
-          "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
-          "export type * from 'next/navigation';\n",
-        ],
-      ),
+      ...everywhere([OUTSIDE_API_FOLDER, AUTH_FILE], [
+        "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
+        "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
+        "export type * from 'next/navigation';\n",
+      ]),
       ...everywhere(REDIRECT_ALLOWLIST, REDIRECT_IMPORTS.slice(0, 2)),
-    ])('allows in %s:\n%s', async (filePath, code) => {
-      expect(await ruleIdsFor(code, filePath)).not.toContain(
-        'no-restricted-syntax',
-      );
-    });
+    ])(
+      'allows in %s:\n%s',
+      async (filePath, code) => {
+        expect(await ruleIdsFor(code, filePath)).not.toContain(
+          'no-restricted-syntax',
+        );
+      },
+    );
   });
 
   describe('dynamic import gate: a literal import() of a gated module is refused', () => {
@@ -237,9 +235,7 @@ describe('network lint rule', () => {
       [OUTSIDE_API_FOLDER, importing('name', NAME)],
       [OUTSIDE_API_FOLDER, importing('`next/${name}`', NAME)],
     ])('fires in %s:\n%s', async (filePath, code) => {
-      expect(await ruleIdsFor(code, filePath)).toContain(
-        'no-restricted-syntax',
-      );
+      expect(await ruleIdsFor(code, filePath)).toContain('no-restricted-syntax');
     });
 
     it.each([

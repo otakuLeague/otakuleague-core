@@ -23,7 +23,10 @@ vi.mock('next/headers', () => ({
     return Promise.resolve({ get, set: mocks.writes, delete: mocks.writes });
   },
 }));
-vi.mock('next/server', () => ({ connection: mocks.connection, after: vi.fn() }));
+vi.mock('next/server', () => ({
+  connection: mocks.connection,
+  after: vi.fn(),
+}));
 vi.mock('./session-call', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./session-call')>()),
   sessionCall: mocks.sessionCall,
@@ -38,7 +41,15 @@ const ME = { id: 'u1', username: 'Frieren_99' };
 const called = (result: unknown) => ({ kind: 'called', result });
 const failed = (failure: ApiFailure) => called({ ok: false, failure });
 const api = (status: number, code: 'UNAUTHORIZED' | 'INTERNAL_KEY_REQUIRED') =>
-  failed({ kind: 'api_error', status, error: { error: { code, message: 'x' } } });
+  failed({
+    kind: 'api_error',
+    status,
+    error: { error: { code, message: 'x' } },
+  });
+const EXPIRED = api(401, 'UNAUTHORIZED');
+const KEY_REFUSED = api(403, 'INTERNAL_KEY_REQUIRED');
+const OFF_CONTRACT = failed({ kind: 'invalid_response', status: 200 });
+const ME_CALL = { session: TOKEN, path: '/me', isExpectedBody: isMeResponse };
 const OUT = { kind: 'signed_out' };
 const NONE = { kind: 'unavailable' };
 const NEXT_SIGNAL: unknown = (() => {
@@ -88,34 +99,44 @@ describe('loadViewer', () => {
   });
 
   it('is signed in after exactly one GET /me with the cookie and a 2 s timeout', async () => {
-    expect(await loadViewer()).toEqual({ kind: 'signed_in', username: 'Frieren_99' });
+    const viewer = await loadViewer();
+
+    expect(viewer).toEqual({ kind: 'signed_in', username: ME.username });
     expect(mocks.sessionCall.mock.calls).toEqual([
-      [{ session: TOKEN, path: '/me', isExpectedBody: isMeResponse, timeoutMs: 2000 }],
+      [{ ...ME_CALL, timeoutMs: 2000 }],
     ]);
     expect(mocks.report).not.toHaveBeenCalled();
   });
 
   it.each([
-    ['a 401 (expired or replayed)', api(401, 'UNAUTHORIZED'), OUT, []],
-    ['a 403', api(403, 'INTERNAL_KEY_REQUIRED'), NONE, ['internal_key_refused']],
-    ['a body off contract', failed({ kind: 'invalid_response', status: 200 }), NONE, ['invalid_response']],
+    ['a 401 (expired or replayed)', EXPIRED, OUT, []],
+    ['a 403', KEY_REFUSED, NONE, ['internal_key_refused']],
+    ['a body off contract', OFF_CONTRACT, NONE, ['invalid_response']],
     ['a timeout', failed({ kind: 'timeout' }), NONE, []],
   ])('maps %s and reports only a fault', async (_, outcome, viewer, faults) => {
     mocks.sessionCall.mockResolvedValue(outcome);
 
     expect(await loadViewer()).toEqual(viewer);
-    expect(mocks.report.mock.calls).toEqual(faults.map((fault) => ['me', fault]));
+    expect(mocks.report.mock.calls).toEqual(
+      faults.map((fault) => ['me', fault]),
+    );
   });
 
   it.each([
     ['no WEB_PUBLIC_URL', () => vi.stubEnv('WEB_PUBLIC_URL', undefined)],
-    ['a throwing sessionCall', () => mocks.sessionCall.mockRejectedValue(new Error('no key'))],
-  ])('is unavailable with %s, reported as configuration', async (_, arrange) => {
-    arrange();
+    [
+      'a throwing sessionCall',
+      () => mocks.sessionCall.mockRejectedValue(new Error('no key')),
+    ],
+  ])(
+    'is unavailable with %s, reported as configuration',
+    async (_, arrange) => {
+      arrange();
 
-    expect(await loadViewer()).toEqual(NONE);
-    expect(mocks.report.mock.calls).toEqual([['me', 'configuration']]);
-  });
+      expect(await loadViewer()).toEqual(NONE);
+      expect(mocks.report.mock.calls).toEqual([['me', 'configuration']]);
+    },
+  );
 
   it("rethrows Next's control-flow signals unreported", async () => {
     mocks.connection.mockRejectedValue(NEXT_SIGNAL);

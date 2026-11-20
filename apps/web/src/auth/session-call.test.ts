@@ -23,10 +23,17 @@ const SESSION = TOKEN as SessionToken;
 async function sessionModuleWith(env: Record<string, string | undefined>) {
   const requests: [string, RequestInit | undefined][] = [];
   const fetchFunction: FetchFunction = (input, init) => {
-    requests.push([input instanceof Request ? input.url : input.toString(), init]);
+    requests.push([
+      input instanceof Request ? input.url : input.toString(),
+      init,
+    ]);
     return Promise.resolve(new Response(null, { status: 204 }));
   };
-  const production = { VERCEL: '1', VERCEL_ENV: 'production', INTERNAL_API_KEY: KEY };
+  const production = {
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    INTERNAL_API_KEY: KEY,
+  };
   for (const [name, value] of Object.entries({ ...production, ...env })) {
     vi.stubEnv(name, value);
   }
@@ -51,13 +58,28 @@ describe('sessionCall', () => {
       const { sessionCall, requests } = await sessionModuleWith({});
 
       const path = '/auth/sign-out';
-      const outcome = await sessionCall({ session: SESSION, path, method, timeoutMs: 2000 });
+      const outcome = await sessionCall({
+        session: SESSION,
+        path,
+        method,
+        timeoutMs: 2000,
+      });
 
-      expect(outcome).toEqual({ kind: 'called', result: { ok: true, data: undefined } });
+      expect(outcome).toEqual({
+        kind: 'called',
+        result: { ok: true, data: undefined },
+      });
       const [url, init] = requests[0] ?? [];
       const sent = new Headers(init?.headers);
-      expect([requests.length, url]).toEqual([1, `https://api.otakuleague.test${path}`]);
-      expect([init?.method, init?.cache, init?.body]).toEqual([method, 'no-store', undefined]);
+      expect([requests.length, url]).toEqual([
+        1,
+        `https://api.otakuleague.test${path}`,
+      ]);
+      expect([init?.method, init?.cache, init?.body]).toEqual([
+        method,
+        'no-store',
+        undefined,
+      ]);
       expect(sent.get('authorization')).toBe(`Bearer ${TOKEN}`);
       expect(sent.get('x-internal-api-key')).toBe(KEY);
       expect(sent.has('x-client-ip')).toBe(false);
