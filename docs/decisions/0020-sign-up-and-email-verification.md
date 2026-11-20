@@ -1,6 +1,6 @@
 # 0020: Sign-up and email verification (OTA-139 slice 1e)
 
-Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration. Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend).
+Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration. Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert.
 
 ## Context
 
@@ -165,7 +165,7 @@ The password is verified once, outside any transaction, and only in the last two
 
 A re-submit that lands between the read and the transaction deletes the token, so step 2 finds nothing; the predicate in step 3 states C1 in the statement itself and does not depend on that. The session is created after commit, on the binding path only. If that insert fails the member is verified without a session: the retry answers `already_verified` and they sign in.
 
-**Resend: neither deadline moves.** One transaction: `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise one statement deletes that user's `EMAIL_VERIFICATION` tokens and inserts the new one with the deleted row's `binding_hash` (NULL when there was none: password path only) and `expires_at` = the account's `pending_expires_at`, copied inside SQL. The hash, the account's deadline and the hold are not written. So "Resend" works for 24 h after the last submit; after that it answers 202 and sends nothing (what ADR 0015's sign-up row already says), and the member submits the form again.
+**Resend: neither deadline moves.** One transaction: `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise one statement deletes that user's `EMAIL_VERIFICATION` tokens and inserts the new one with the deleted row's `binding_hash` (NULL when there was none: password path only) and `expires_at` = the account's `pending_expires_at`, copied inside SQL. The hash, the account's deadline and the hold are not written. So "Resend" works for 24 h after the last submit; after that it answers 202 and sends nothing (what ADR 0015's sign-up row already says), and the member submits the form again. The "deletes and inserts" statement is replaced by an upsert in the [Addendum (1e-ii-b)](#addendum-1e-ii-b); the rest of this paragraph stands.
 
 Rejected: resend extends the account and its hold together. A submit with a registered email leaves a hold but no pending row, and resend cannot find that hold from the email. After 24 h the name would be free when the email was registered and still taken when it was new: the probe "What the 409 reads" forbids. It becomes possible with the keyed email hash on the hold (a migration, already in the Gate).
 
@@ -179,6 +179,106 @@ Rejected: resend extends the account and its hold together. A submit with a regi
 - Resend can mail a pending address 10 times per IP per hour until the email budget exists (Gate; production is closed).
 
 **Too complicated?** The password counter is the one part an attack has not yet asked for: without it the per-IP limit still gives 960 guesses per IP per day against a stranger's pending password (a typo in the address is enough to send the token to someone else). It is one more key in the existing limiter; drop it if the PR must shrink. Left out on purpose: a session on the password path, a dummy hash, a new outcome for a wrong password, extending the hold.
+
+## Addendum (1e-ii-b)
+
+Added 2026-11-20 with the 1e-ii-b plan (resend and the UNIQUE migration). It keeps every rule of the Addendum (1e-ii) and replaces one thing: the token is no longer deleted and inserted, by resend or by sign-up; it is one row per account and purpose, replaced by an upsert. One schema migration.
+
+**Requirements.** Functional: (1) a pending member asks again and gets a mail whose new token works until the account's own deadline; (2) the browser that signed up still confirms in one click after a resend, any other browser still types the password; (3) any other address (unknown, verified, stale, unverified with no deadline) gets the same answer and nothing is sent or changed. Consistency over availability, as above: database down is 503.
+
+| # | Requirement |
+|---|---|
+| R1 | No enumeration: the five kinds of address get the same status (202), body (`{}`) and headers, cost 0 hashes and differ by 1 indexed statement (about 1 ms); no counter is keyed by the email, so no 429 depends on it; mail leaves after the response. |
+| R2 | One token: at most 1 `auth_token` row per (`user_id`, `purpose`), as a database rule. N resends of one address at once: N answers 202, exactly 1 row, 0 answers 500. A re-submit of a pending email: 0 answers 500. |
+| R3 | Nothing moves: resend writes 0 columns of `app_user` and of `auth_username_hold`; the token's `expires_at` equals the account's `pending_expires_at` to the millisecond; its `binding_hash` is the one the last submit wrote, byte for byte. |
+| R4 | Abuse bound: 10 per IP per hour (a burst across a window boundary can reach 19); a refused request costs 1 upsert; so at most 10 mails per IP per hour until the email budget exists (Gate; production is closed). |
+| R5 | Lock time: 1 transaction of 2 statements, each on a unique index, locks in the order `app_user`, `auth_token`. The migration is 3 statements in 1 transaction and cannot fail on existing rows. |
+
+**Core entities.** `User` (pending), `AuthToken` (now one per user and purpose), `AuthRateLimit`, `AuthEmail` (`email_verification`). No new entity.
+
+**API.** `POST /auth/email-verification/resend`, `CredentialGuard`, `Cache-Control: no-store`, body `{ email }` under sign-up's email rule (at most 254 raw units, then the shape after `normaliseIdentifier`).
+
+| Answer | When |
+|---|---|
+| 202 `{}` | always, once the request is counted. The body is an empty JSON object, not zero bytes: `apiClient()` accepts a zero-length body only on 204 and 205 (ADR 0003). This is what C3's "empty body" means. |
+| 400 `VALIDATION_FAILED` | a missing, null, over-long or malformed email, or an unknown field; decided from the input alone, no counter spent |
+| 400 `BAD_REQUEST`, 403 `INTERNAL_KEY_REQUIRED` | the guard, as on confirm |
+| 403 `SIGN_UP_CLOSED` | no sender, before any counter or read |
+| 429 `TOO_MANY_REQUESTS` with `Retry-After` | the 11th request of one IP in an hour |
+
+**Data flow.**
+
+```mermaid
+sequenceDiagram
+  participant W as Web server
+  participant A as SignUpService.resendVerification
+  participant D as Postgres
+  participant E as EmailSender
+  W->>A: POST /auth/email-verification/resend (key, client IP)
+  A->>D: count the attempt (10 per IP per hour)
+  A->>A: draw the token (every branch)
+  A->>D: BEGIN, lock the pending user by email
+  A->>D: upsert its token (pending only), COMMIT
+  A-->>W: 202 {}
+  A-)E: send email_verification (pending only, not awaited)
+```
+
+**Simplest version first.** Read the pending user, delete its tokens, insert a new one with the deleted row's binding, send. Two things break it. Without a lock on the user, a confirm that commits in between leaves a verified member with a fresh live token and a mail (reproduced on Postgres 16). And with UNIQUE(`user_id`, `purpose`) the statement sign-up uses today, `WITH cancelled AS (DELETE …) INSERT …`, fails with 23505 on every re-submit of a pending email: Postgres runs a data-modifying CTE the main query does not read after that query, so the insert meets the old row (reproduced on Postgres 16). The design adds the lock and turns both writers into an upsert.
+
+**Decision.**
+
+1. **Migration `20261120120000_auth_token_one_per_purpose`** (hand-written, Prisma's names; `schema.prisma` swaps `@@index([userId])` for `@@unique([userId, purpose])`):
+
+   ```sql
+   -- Sign-up never left two rows, so this deletes nothing; it is here so the index cannot fail.
+   -- Keeps the newest row per account and purpose, the token hash breaking a tie.
+   DELETE FROM "auth_token" AS "older" USING "auth_token" AS "newer"
+   WHERE "older"."user_id" = "newer"."user_id" AND "older"."purpose" = "newer"."purpose"
+     AND ("older"."created_at", "older"."token_hash") < ("newer"."created_at", "newer"."token_hash");
+   DROP INDEX "auth_token_user_id_idx";
+   CREATE UNIQUE INDEX "auth_token_user_id_purpose_key" ON "auth_token"("user_id", "purpose");
+   ```
+
+   The old index goes because the new one starts with `user_id` and serves the cascade the same way. No timestamp literal (OTA-200). The table is empty in production (sign-up is closed there), so the lock is instant and the deploy order does not matter.
+
+2. **Sign-up's token statement becomes an upsert** (same PR, or re-submit answers 500): `INSERT … VALUES (…) ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash, binding_hash = EXCLUDED.binding_hash, created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at, used_at = NULL`. The old token stops existing because its hash is overwritten: "a new token cancels the older ones" is now one row changing its key.
+
+3. **Resend**, in this order: no sender is 403; count the IP (`email-verification-resend`, 10 per hour); one `Clock.now()`; normalise the email; draw the token; then one transaction (READ COMMITTED):
+   - `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row: commit, 202, nothing sent.
+   - `INSERT INTO auth_token (token_hash, purpose, user_id, created_at, expires_at) SELECT <hash>, 'EMAIL_VERIFICATION', id, now, pending_expires_at FROM app_user WHERE id = … ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash, created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at, used_at = NULL`.
+
+   The update does not name `binding_hash`, so the binding stays; that is the whole "copy". With no previous row the insert leaves it NULL (password path only). The deadline is copied inside SQL and never read back. Then 202 `{}`, then the mail (address and username as stored, the new token), through sign-up's `dispatch`.
+
+4. **Where it lives.** `SignUpService.resendVerification`, called by `EmailVerificationController`. Sign-up already owns the sender, the token draw, the closed check and the after-response dispatch, and the two writers of verification tokens then sit in one file, where the rule "the binding belongs to the submit that wrote the current hash" can be read in one place. Its outcome is `accepted`, `rate_limited` or `closed`: the controller cannot tell whether a mail left.
+
+**Deep dives.**
+- **R1.** The four silent cases stop at the locked read; the pending case adds one upsert. Same size of difference as sign-up's N1, accepted. A wait on the user lock happens only while a confirm or a re-submit of that same account is in flight.
+- **R2 and the races.** Every writer locks the user row before the token (sign-up: hold, user, token), so no pair can deadlock.
+  - Confirm commits first: the locked read re-checks `email_verified_at IS NULL` after the wait and finds nothing. No token, no mail.
+  - Resend commits first: the confirm holds the old hash, its consuming UPDATE finds no row, 400 `AUTH_TOKEN_INVALID`, nothing verified. The new mail works, with the same binding.
+  - Re-submit commits first: the locked read returns the re-armed row (new username), and the upsert replaces the re-submit's token but keeps its binding and takes its deadline. Both mails leave; the later one works.
+  - Resend commits first, then a re-submit: sign-up overwrites hash, binding and token together, as before.
+  - Cleanup deletes the account first: no row, nothing sent, no foreign-key error. Resend first: the cleanup waits, then deletes the account and its token by cascade if it is stale.
+  - Two resends: the second waits, then replaces the first's token. One row.
+- **R3.** Resend has no statement that writes `app_user` or the hold. A used token on an unverified account cannot be produced by confirm (one transaction); if seeded, the upsert makes it a live one.
+- **R4.** One more entry in `PER_IP_LIMITS`, pinned by the existing test. No email budget exists in code yet; it is not built here (Gate).
+- **R5.** The migration was run on Postgres 16 against rows seeded with duplicates (three tokens of one purpose, two sharing `created_at`): one row left per pair, index created.
+
+**Rejected.**
+- **Keep delete then insert.** As one statement it fails under the constraint (above). As two it works, but resend must carry the binding through `DELETE … RETURNING`; the upsert keeps it by not writing it.
+- **One guarded upsert, no transaction** (`INSERT … SELECT … FROM app_user WHERE` pending). One statement fewer. Rejected: it waits on the token row behind a confirm, then revives the token of a member who has just been verified, and mails it.
+- Also rejected: a partial unique index on unused tokens only (two rows per account again, and nothing reads a used one); a separate dispatcher class or resend service now (do it when password reset, OTA-140, becomes the third sender).
+
+**Too simple?**
+- Anyone who knows a pending address can have it mailed 10 times per IP per hour, and each resend kills the previous link. The newest mail always works and the binding is kept, so no takeover; the per-address budget (Gate) bounds it.
+- Two resends at once send two mails and only the later token works. A member who clicks the other one gets 400 and uses the newer mail.
+- The duplicate cleanup in the migration has no automated test (the suite migrates an empty database); it was checked by hand, and production holds no row.
+- An API rolled back to a build from before the upsert would answer 500 to a re-submit. Only where sign-up is open, so nowhere in production.
+- One token per purpose also binds the reset slice (OTA-140): a new reset request replaces the last one, which is ADR 0015's rule.
+
+**Too complicated?** The duplicate cleanup guards against rows that should not exist: four lines against a failed migration that blocks every later deploy (P3009). Dropping the old index is optional and one line. The transaction is needed (second rejected option). Left out on purpose: the email budget, a per-email resend counter (it would answer 429 by address), a response guard in shared types (the web reads the status only), moving the deadline.
+
+**Size.** About 200 lines of code and 300 of tests in one PR. If it must be cut, the migration with sign-up's upsert goes first as its own PR and the route second; never the route first, because its `ON CONFLICT` needs the index.
 
 ## Consequences
 
