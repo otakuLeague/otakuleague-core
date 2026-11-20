@@ -8,9 +8,13 @@ import type { SignInFormState } from './sign-in-form-state';
 
 const mocks = vi.hoisted(() => ({
   credentialCall: vi.fn(),
+  jar: new Map<string, string>(),
   setCookie: vi.fn(),
   redirect: vi.fn(),
+  deleteSession: vi.fn(),
+  sessionCall: vi.fn(),
   reportClientIpUnknown: vi.fn(),
+  reportAuthCallFault: vi.fn(),
   requestHeaders: new Headers(),
 }));
 vi.mock('./credential-call', async (importOriginal) => ({
@@ -18,21 +22,35 @@ vi.mock('./credential-call', async (importOriginal) => ({
   credentialCall: mocks.credentialCall,
 }));
 vi.mock('next/headers', () => ({
-  cookies: () => Promise.resolve({ set: mocks.setCookie }),
+  cookies: () => {
+    const get = (name: string) => {
+      const value = mocks.jar.get(name);
+      return value === undefined ? undefined : { name, value };
+    };
+    return Promise.resolve({ get, set: mocks.setCookie });
+  },
   headers: () => Promise.resolve(mocks.requestHeaders),
 }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
   redirect: mocks.redirect,
 }));
-vi.mock('./report-credential-refusal', () => ({
+vi.mock('./delete-session', () => ({ deleteSession: mocks.deleteSession }));
+vi.mock('./session-call', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./session-call')>()),
+  sessionCall: mocks.sessionCall,
+}));
+vi.mock('./report-credential-refusal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
   reportClientIpUnknown: mocks.reportClientIpUnknown,
+  reportAuthCallFault: mocks.reportAuthCallFault,
 }));
 
 const REDIRECT_SIGNAL = new Error('NEXT_REDIRECT (test sentinel)');
 const IDENTIFIER = ' Farouk@Example.com';
 const PASSWORD = 'never-echo-this-password';
 const TOKEN = 'A'.repeat(43);
+const OLD_TOKEN = 'B'.repeat(43);
 const IDLE: SignInFormState = { kind: 'idle' };
 
 const signInForm = (extra: Readonly<Record<string, string | Blob>> = {}) => {
@@ -69,6 +87,8 @@ beforeEach(() => {
   mocks.requestHeaders = new Headers({
     origin: 'https://beta.otakuleague.com',
   });
+  mocks.jar = new Map([['__Host-ol_session', OLD_TOKEN]]);
+  mocks.deleteSession.mockResolvedValue(undefined);
   mocks.credentialCall.mockResolvedValue({
     kind: 'called',
     result: {
@@ -111,11 +131,56 @@ describe('signInAction', () => {
     expect(mocks.redirect.mock.calls).toEqual([
       ['/my-list?tab=watching', 'replace'],
     ]);
-    expect(mocks.setCookie.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.redirect.mock.invocationCallOrder[0] ?? 0,
-    );
+    expect(mocks.deleteSession.mock.calls).toEqual([[OLD_TOKEN]]);
+    const order = [
+      mocks.credentialCall,
+      mocks.deleteSession,
+      mocks.setCookie,
+      mocks.redirect,
+    ].map((mock) => mock.mock.invocationCallOrder[0] ?? 0);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['no old cookie', []],
+    ['a malformed old cookie', [['__Host-ol_session', `Bearer ${OLD_TOKEN}`]]],
+  ] as const)(
+    'with %s, deletes no session and still signs in',
+    async (_, jar) => {
+      mocks.jar = new Map(jar);
+      await expect(signInAction(IDLE, signInForm())).rejects.toBe(
+        REDIRECT_SIGNAL,
+      );
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
+      expect(mocks.setCookie.mock.calls[0]?.[1]).toBe(TOKEN);
+    },
+  );
+
+  it.each([
+    ['throws', () => mocks.sessionCall.mockRejectedValue(new Error('no key'))],
+    [
+      'times out',
+      () =>
+        mocks.sessionCall.mockResolvedValue(failedWith({ kind: 'timeout' })),
+    ],
+  ])(
+    'still sets the new cookie and redirects when the real old-session delete %s',
+    async (_, arrange) => {
+      const actual =
+        await vi.importActual<typeof import('./delete-session')>(
+          './delete-session',
+        );
+      mocks.deleteSession.mockImplementation(actual.deleteSession);
+      arrange();
+      await expect(signInAction(IDLE, signInForm())).rejects.toBe(
+        REDIRECT_SIGNAL,
+      );
+      expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
+      expect(mocks.setCookie.mock.calls[0]?.[1]).toBe(TOKEN);
+      expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
+    },
+  );
 
   it.each<Readonly<Record<string, string | Blob>>>([
     { next: '//evil.com/my-list' },
@@ -142,13 +207,14 @@ describe('signInAction', () => {
     [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
     [CLIENT_IP_UNKNOWN, UNAVAILABLE],
   ])(
-    'returns %o as %o: no cookie, no redirect, a report only for client_ip_unknown',
+    'returns %o as %o: no cookie, no redirect, the old session kept, a report only for client_ip_unknown',
     async (callResult, formState) => {
       mocks.credentialCall.mockResolvedValue(callResult);
       const state = await signInAction(IDLE, signInForm({ next: '/my-list' }));
       expect(state).toEqual(formState);
       expect(mocks.setCookie).not.toHaveBeenCalled();
       expect(mocks.redirect).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown.mock.calls).toEqual(
         callResult === CLIENT_IP_UNKNOWN ? [['sign-in']] : [],
       );
@@ -164,6 +230,7 @@ describe('signInAction', () => {
         kind: 'off_on_preview',
       });
       expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
     },
   );
 
@@ -177,6 +244,7 @@ describe('signInAction', () => {
       });
       expect(mocks.credentialCall).not.toHaveBeenCalled();
       expect(mocks.setCookie).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
     },
   );
@@ -192,6 +260,7 @@ describe('signInAction', () => {
       expect(state).toEqual({ kind: 'invalid_credentials' });
       expect(JSON.stringify(state)).not.toMatch(/farouk|never-echo/i);
       expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
     },
   );
 
@@ -212,5 +281,6 @@ describe('signInAction', () => {
     );
     expect(mocks.setCookie).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.deleteSession).not.toHaveBeenCalled();
   });
 });

@@ -25,7 +25,7 @@ const NEXT_NAVIGATION = '/(^|\\u002F)next\\u002Fnavigation(\\.js)?$/';
 const NEXT_DIST = '/(^|\\u002F)next\\u002Fdist\\u002F/';
 const REDIRECT_NAMES = '/^(redirect|permanentRedirect)$/';
 const REDIRECT_MESSAGE =
-  'Redirect through redirectTo() (src/auth/redirect-to.ts), which takes only a SafeNextPath (ADR 0015 Addendum 1f-iii-c).';
+  'Redirect through redirectTo() (a SafeNextPath only) or redirectToSignedOut() in src/auth/redirect-to.ts (ADR 0015 Addendum 1f-iii-c).';
 // Type-only imports and exports load nothing: allowed, like the auth gate's.
 const VALUE = "[importKind!='type']";
 const VALUE_EXPORT = "[exportKind!='type']";

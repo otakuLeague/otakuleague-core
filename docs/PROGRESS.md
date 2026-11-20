@@ -1,17 +1,17 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-20 (1f-iv-a)
+Updated: 2026-11-20 (1f-iv-b)
 ## Current milestone
-W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b merged as #124, 1f-iii-c merged as #125, 1f-iv-a in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
+W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b merged as #124, 1f-iii-c merged as #125, 1f-iv-a merged as #126, 1f-iv-b in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
 ## Last session
-OTA-139 slice 1f-iv-a (session core, nothing new reachable): `sessionCall` + `readSessionToken` (`src/auth/session-call.ts`, second file of the apiClient gate), pure `viewerFrom` and total `loadViewer` (`signed_out`/`signed_in`/`unavailable`, only a 401 `UNAUTHORIZED` is signed out, previews and guests 0 API calls), `reportAuthCallFault` (tags only, throttled per fault, never throws), `isMeResponse`, `USERNAME_PATTERN` in shared-types. ADR 0015 Addendum (1f-iv) covers iv-a..c. Details and review follow-ups: `docs/progress/OTA-139.md`.
+OTA-139 slice 1f-iv-b (sign-out, no caller until iv-c): `signOutAction` (preview/refused Origin → no-op; token only from the cookie; clears with `set('', maxAge 0)`, never `delete()`; `redirectToSignedOut()` to `/`), total `deleteSession` (one `POST /auth/sign-out`, faults reported), sign-in deletes the old cookie's session after success. ADR 0015 Addendum (1f-iv-b). Details and review follow-ups: `docs/progress/OTA-139.md`.
 ## In progress
-- OTA-139 1f-iv-a: PR from `feat/OTA-139-viewer-sign-out`.
+- OTA-139 1f-iv-b: PR from `feat/OTA-139-sign-out`.
 - OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4; OTA-147 `/contact` (needs email provider). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
 - Email on Resend free plan only (decided 2026-11-15): 80 sign-up + 20 reset/day, Sentry alert at 75; ADR 0015 addendum in the email slice.
 ## Next 3 tasks
-1. OTA-139 1f-iv-b sign-out (`signOutAction`, `redirectToSignedOut` in `redirect-to.ts`, old-session delete after sign-in via `sessionCall`, sign-in `reportAuthCallFault`, loopback host check); 1f-iv-c header `Viewer` slot + sign-out button; 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
+1. OTA-139 1f-iv-b2 (loopback host check, sign-in `reportAuthCallFault`, `auth-reports.ts` rename, `revocation_unconfirmed`; before 1f-v); 1f-iv-c header `Viewer` slot + sign-out button (`refused` state); 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
 2. OTA-186 Mailpit + seed accounts.
 3. OTA-184 browser data ADR (now unblocked).
 Later: OTA-198 `claimsSlugs` gate decision; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 follow-up (shared `currentSeason`).

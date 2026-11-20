@@ -10,3 +10,8 @@ import type { SafeNextPath } from './safe-next-path';
 export function redirectTo(path: SafeNextPath): never {
   redirect(path, RedirectType.replace);
 }
+
+/** After sign-out: always home, a constant, replacing the history entry like `redirectTo`. */
+export function redirectToSignedOut(): never {
+  redirect('/', RedirectType.replace);
+}
