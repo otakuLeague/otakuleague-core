@@ -151,12 +151,12 @@ Added 2026-11-20 (OTA-139 slice 1f-iv), written before the code. The slice does 
 
 **Decisions.**
 1. **`sessionCall`** (`src/auth/session-call.ts`) is the second and last auth file allowed to import `apiClient()` (lint `ignores` plus rows in `network-lint-rule.test.ts`). It takes a `SessionToken` (never a raw string), sends the Bearer with the key, no `X-Client-Ip`, GET or POST only, one attempt. On a preview (`credentialRoutesOff`) it refuses before any request: preview code never sends a Bearer. `readSessionToken(webPublicUrl)` beside it is the only reader of the session cookie.
-2. **`loadViewer` is total.** Preview → `signed_out` before `WEB_PUBLIC_URL` is read (previews have none). No cookie or a malformed one → `signed_out`, no call. 200 with a body that passes `isMeResponse` (`username` matches `USERNAME_PATTERN`) → `signed_in`; 401 → `signed_out`; everything else → `unavailable`. A thrown configuration error (missing key or `WEB_PUBLIC_URL`) is caught after `unstable_rethrow`, reported, and is `unavailable`: in an action a throw breaks one submit, in the root layout it would replace every page with `global-error`. Rendering never writes or deletes a cookie.
+2. **`loadViewer` is total.** Preview → `signed_out` before `WEB_PUBLIC_URL` is read (previews have none). No cookie or a malformed one → `signed_out`, no call. 200 with a body that passes `isMeResponse` (`username` matches `USERNAME_PATTERN`) → `signed_in`; 401 → `signed_out`; everything else → `unavailable`. A thrown configuration error (missing key or `WEB_PUBLIC_URL`) is caught after `unstable_rethrow`, reported, and is `unavailable`: in an action a throw breaks one submit, in the root layout it would replace every page with `global-error`. Rendering never writes or deletes a cookie. *Amended by [Addendum (1f-iv-c)](#addendum-1f-iv-c), decision 5: no cookie under either name is `signed_out` before `WEB_PUBLIC_URL` is read.*
 3. **Reports.** `reportAuthCallFault(route, fault)` with `fault` = `internal_key_refused` (403 `INTERNAL_KEY_REQUIRED`), `invalid_response` or `configuration`, one throttle per fault kind (a `Map` with three keys) so one fault cannot hide another; routes `sign-in`, `sign-out`, `me`. Network, timeout, 429 and 5xx are not reported (the API reports its own 5xx). *Amended by [Addendum (1f-iv-b2)](#addendum-1f-iv-b2) for sign-out only: an unconfirmed revocation is reported as `revocation_unconfirmed`, a fourth key.*
 4. **Sign-out.** `isSameOrigin` first: otherwise nothing changes. Then at most one `POST /auth/sign-out` when the cookie holds a well-formed token, then `clearedSessionCookie` whatever the answer (never `cookies().delete()`), then `redirectToSignedOut()`: a second helper in `redirect-to.ts` that takes no argument and goes to the constant `/` with `RedirectType.replace`. A failed delete (anything but 204 or 401) is reported under decision 3 where it is a fault, and the row idles out.
 5. **Old session after sign-in.** The old token is read before the credential call and deleted only after a successful sign-in, awaited with the 2,000 ms timeout, result ignored, before the new cookie is set. Not in `after()`: one more moving part for a rare path.
 6. *Withdrawn by [Addendum (1f-iv-b2)](#addendum-1f-iv-b2), decision 4: never built.* **Loopback host check** (security L2 of slice 1f-iii-a, as understood from its one-line note): off Vercel, `readCredentialClientIp` sends 127.0.0.1 only when the request's `Host` equals the host of `WEB_PUBLIC_URL`, else refuses (`host_mismatch`, shown as `unavailable`, not reported). It reads `host` only, never `x-forwarded-for`; the test "never reads a header off Vercel" changes to match. A guard against a dev server reachable beyond loopback, not against a forged header.
-7. **Header.** `SiteHeader` stays synchronous; the actions become `<Suspense fallback={<ViewerSlot />}><ViewerActions /></Suspense>`. `ViewerSlot` is the empty slot the size of the guest actions, with the guest links inside `<noscript>` (N5). `signed_in` shows the username and a `<form action={signOutAction}>` button; the account menu of ADR 0014 slice 2b stays its own ticket.
+7. **Header.** `SiteHeader` stays synchronous; the actions become `<Suspense fallback={<ViewerSlot />}><ViewerActions /></Suspense>`. `ViewerSlot` is the empty slot the size of the guest actions, with the guest links inside `<noscript>` (N5). `signed_in` shows the username and a `<form action={signOutAction}>` button; the account menu of ADR 0014 slice 2b stays its own ticket. *Replaced by [Addendum (1f-iv-c)](#addendum-1f-iv-c): a hidden sizer plus a `<noscript>` fallback, and the account menu for `signed_in`.*
 
 **Rejected.**
 - **Guest links as the Suspense fallback.** A member would see "Sign in" on every hard load until `/me` answers, and for 2 s when the API is slow.
@@ -245,6 +245,59 @@ Added 2026-11-20 (OTA-139 slice 1f-iv-b2), written before the code. It finishes 
 **Too complicated?** Nothing added but one union member and two call sites. The complicated part was the `Host` check, withdrawn above.
 
 **Not verified by running:** nothing new (`signOutAction` from a browser still waits for iv-c). Now tests rather than claims: the reporters' tags and fingerprints come out of `scrubErrorEvent` unchanged (`auth-reports.test.ts`); the loopback rule refuses `127.0.0.1@evil.example`, `[::ffff:127.0.0.1]` and `0.0.0.0` and allows `127.1` and `0x7f.0.0.1`, which the URL parser turns into `127.0.0.1` (`config.test.ts`, run in CI on Node 24). Checked by hand only, on Node 22: `127.0.0.2` refused, `2130706433` loopback.
+
+## Addendum (1f-iv-c)
+Added 2026-11-20 (OTA-139 slice 1f-iv-c), written before the code. It replaces decision 7 of [Addendum (1f-iv)](#addendum-1f-iv) and amends its decision 2. ADR 0014's `ShellViewer` (slice 2b, never built) is dropped for `Viewer`. The viewer slot and the sign-out form come to about 500 lines with tests, so this ships as two: **iv-c** the viewer slot (guest, member, unknown) and **iv-c2** the sign-out form (`refused`, "Could not sign out"). Web only: no API change, no new variable, dependency or error code.
+
+| # | Requirement |
+|---|---|
+| F1 | Refines 1f-iv: on every page a member sees an avatar with their initials and, in the account menu, their username; a guest sees Sign in and Sign up; an unknown viewer sees neither. |
+| F2 | As in 1f-iv, from the account menu; a sign-out that did not happen says "Could not sign out" (iv-c2). |
+| F7 | A visitor with no session cookie gets the guest links whatever the auth configuration. |
+| N1 | As in 1f-iv, made precise: 0 calls without a cookie; with one, exactly 1 `GET /me` (2,000 ms) per document render (hard load, refresh, after an action) and 0 per soft navigation, which does not render the root layout again. |
+| N5 | As in 1f-iv: with JavaScript off, 100 % of the guest header links stay reachable. |
+| N10 | 0 px of layout shift in the header when the slot fills, in all three states and at every width. |
+| N11 | Static shell: 0 request-time reads outside the one `Suspense` (`next build` fails otherwise) and 0 usernames in prerendered HTML. |
+| N12 | iv-c adds 0 client components (one optional prop on `Disclosure`); iv-c2 adds one island, estimated under 1 kB gzipped, inside ADR 0014's 30 kB. |
+
+**Consistency vs availability.** Availability, unchanged: the header never waits more than 2,000 ms and never fails a page, and it may show a signed-in state that ended elsewhere until the next document render. **Entities:** `Viewer`; `SignOutFormState` (iv-c2). **API:** none new.
+
+```
+SiteHeader (server, synchronous, static)
+└─ div.sh-right                             one grid cell, content aligned to the end
+   ├─ GuestActionsSizer                     aria-hidden, visibility: hidden, spans: holds the width
+   └─ Suspense fallback=<ViewerFallback />  <noscript> guest links
+      └─ ViewerActions (async) = <ViewerActionsView viewer={await loadViewer()} />
+           signed_out  → GuestActions (Sign in, Sign up)
+           unavailable → nothing
+           signed_in   → Disclosure "Account menu": summary = initials, panel = username [+ SignOutForm, iv-c2]
+```
+
+**Decisions.**
+1. **The slot's size comes from a hidden copy, not from a number** (N10). `GuestActionsSizer` renders the guest actions' labels as `span`s with the same button classes, `aria-hidden` and `visibility: hidden`, in the static shell; every state is laid over it in the same grid cell. Both come from one `GUEST_ACTIONS` list, so a renamed label resizes the slot. This and the fallback below are what decision 7 called `ViewerSlot`.
+2. **The fallback is the guest links inside `<noscript>`** (N5); `unavailable` renders nothing.
+3. **`src/shell/viewer-actions.tsx`** holds a pure `ViewerActionsView({ viewer })` (exhaustive switch, tested for the three states) and a one-line async `ViewerActions`. `SiteHeader` stays synchronous and never receives the viewer as a prop.
+4. **`signed_in` is the account menu now**, not a flat username and button: an existing `Disclosure` (new optional `summaryLabel`; the panel is end-aligned by CSS under `.sh-right`) whose summary is `viewerInitials(username)` (first two characters, upper case: PARITY) and whose panel starts with the username. A 64 px bar has no place for "Could not sign out"; the open panel does. Profile, My List, Settings, the theme radios, level and XP stay OTA-152 slice 2b.
+5. **`loadViewer` answers `signed_out` before `WEB_PUBLIC_URL` is read when the request carries neither session cookie name** (F7; amends decision 2 of 1f-iv). With a caller in the root layout, every environment without the variable (the PR screenshot job, a local `.env` older than it) would otherwise lose Sign in on every page. `hasSessionCookie()` beside `readSessionToken` checks presence only, under `SESSION_COOKIE_NAMES` (`auth-cookies.ts`); the token is still read under the configured name only, and a configuration error is still `unavailable` and reported for a cookie holder.
+6. **A preview shows the guest links** (`loadViewer` is `signed_out` there, resolved at build time); they lead to `/auth`, which already says "Sign-in is off on preview deployments". No new copy in the header.
+7. **iv-c2.** `signOutAction` keeps no parameter and returns a `SignOutFormState` (`sign-out-state.ts`: `idle` or `refused`); both early returns are `refused`, not told apart (no member UI is ever rendered on a preview). `SignOutForm` (`src/auth/sign-out-form.tsx`, client, `useActionState`) shows the alert in the open panel, hidden while pending. The header sits above every `error.tsx`, so an action that throws or cannot be reached (offline, a deploy that changed the action ids) would replace the page with `global-error`: a small class boundary around the form shows the same alert instead and passes Next's signals on with `unstable_rethrow`. A test fails if any non-test source under `app/`, `src/`, `proxy.ts` or `next.config.ts` holds `no-referrer` (a same-origin POST would then send `Origin: null`); the emailed-token 303 of 1f-vi gets a named exception.
+
+**Rejected.**
+- **A measured `min-inline-size` for the slot.** Two pixel values (above and below 768 px) to keep in step with the labels, the button padding and the font swap.
+- **The viewer fetched in the browser through a route handler** (ADR 0017). Every page would stay fully static, but the browser client only lands with OTA-142, and every hard load would flash from empty to the answer after hydration instead of streaming with the document.
+- **`WEB_PUBLIC_URL` added to the screenshot workflow instead of decision 5.** A protected path, and it fixes one environment out of three.
+- **One PR for the slot and the form.** About 500 lines, and the action change deserves its own security review.
+
+**Too simple?**
+- Between iv-c and iv-c2 the account menu holds only the username: a member still cannot sign out, as today.
+- `/faq` and the legal pages stop being fully static: every document request now runs the function for the hole (no API call for a guest). Assumed fine under 1,000 page views a day on beta; not checked against Vercel's included usage.
+- The header shows two initials; the username needs the menu open. A no-JS member still sees the guest links (1f-iv).
+- A refused sign-out leaves the member one way out, clearing the site's cookies, and the alert does not say so. Refusals are not reported: a visitor can cause them.
+- The `no-referrer` test reads source files only: a header set in the Vercel dashboard is out of its reach.
+
+**Too complicated?** The hidden sizer is the one non-obvious part; it replaces a number that three things can silently change. The boundary of iv-c2 is about 15 lines against a full-page error on the first sign-out after any deploy. Left out: React `cache()` around `loadViewer` (still one caller), a toast, `revalidatePath` in the actions.
+
+**Not verified by running:** that the header changes after sign-in and sign-out without a reload (Next documents that setting a cookie in a Server Action renders the page and its layouts again); `<noscript>` as a grid item with JavaScript off; the sizer's width against the real actions at 390, 768, 1100 and 1280 px; `summary` as an inline grid in Safari; `unstable_rethrow` inside `getDerivedStateFromError` in the browser, on which the boundary of iv-c2 depends (if it does not pass a redirect on, iv-c2 catches in a client wrapper around the action instead).
 
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
