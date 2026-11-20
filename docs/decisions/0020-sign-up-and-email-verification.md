@@ -359,7 +359,7 @@ sequenceDiagram
 **Size.** About 150 lines of code and 250 of tests in one PR, the data file apart.
 
 **Gate / follow-ups (1e-iii review).**
-- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one. Done: the /48 counter, Addendum (1f gate).
+- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one (local calls send 127.0.0.1: ADR 0003, 1f-ii note). Done: the /48 counter, Addendum (1f gate).
 - (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route. Done: Addendum (1f gate).
 - (c) The typed username travels in a query string, so it reaches the platform's access logs. Accepted: usernames are public.
 - (d) Guard refusals (400 `BAD_REQUEST`, 403) carry no `no-store`: Nest sets `@Header` after the guards run. Existing behaviour on every guarded route; low, since neither status is cached by default.
@@ -392,7 +392,7 @@ Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f e
 - A reserved name answers without the read, so timing can tell reserved from taken. Accepted: the list is public in the repository.
 - **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens.
 
-**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one. Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
+**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one; credential calls use `readCredentialClientIp()`, which sends 127.0.0.1 locally (ADR 0003, 1f-ii note). Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
 
 ## Consequences
 

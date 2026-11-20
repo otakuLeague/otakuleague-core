@@ -72,4 +72,27 @@ export default defineConfig([
       'no-restricted-imports': ['error', { paths: NETWORK_IMPORTS }],
     },
   },
+  {
+    // Auth code calls the API only through credentialCall(), which always sends the key and the
+    // client IP and refuses previews (ADR 0003 OTA-139 addendum). A later block replaces the rule's
+    // options, so the network imports are repeated here.
+    files: ['src/auth/**', 'app/auth/**'],
+    ignores: ['src/auth/credential-call.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: NETWORK_IMPORTS,
+          patterns: [
+            {
+              group: ['**/api/client', '**/api/client.*'],
+              importNames: ['apiClient', 'createApiClient'],
+              message:
+                'Auth code calls the API through credentialCall() (src/auth/credential-call.ts).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

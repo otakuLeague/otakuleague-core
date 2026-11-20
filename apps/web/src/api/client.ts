@@ -49,7 +49,8 @@ export interface CallOptions<T> {
   /** Checks a 2xx body. Without it the body is trusted by type (ADR 0003). */
   readonly isExpectedBody?: (body: unknown) => body is T;
   /**
-   * The visitor's IP from `readClientIp()`, only on calls that can make the API call AniList for the visitor (imports, list pages; ADR 0019 OTA-195 addendum).
+   * The visitor's IP from `readClientIp()`, only on calls that can make the API call AniList for the visitor (imports, list pages; ADR 0019 OTA-195 addendum),
+   * or from `readCredentialClientIp()` on credential calls, which only `credentialCall()` makes.
    * Sent as X-Client-Ip only with the internal key. Refused on a cached call: a per-visitor header
    * would split Next's data cache by visitor.
    */

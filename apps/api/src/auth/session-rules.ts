@@ -6,7 +6,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const SESSION_IDLE_MS = 30 * DAY_MS;
 /** Renewed only when less than this remains: one write per session per 15 days at most. */
 export const SESSION_RENEW_BELOW_MS = 15 * DAY_MS;
-/** Hard stop after creation, however often the session was renewed. */
+/** Hard stop after creation, however often the session was renewed. Keep equal to the web's `SESSION_COOKIE_MAX_AGE_SECONDS` (apps/web/src/auth/auth-cookies.ts). */
 export const SESSION_MAX_AGE_MS = 180 * DAY_MS;
 
 /** Random bytes in a new session token (ADR 0015). */

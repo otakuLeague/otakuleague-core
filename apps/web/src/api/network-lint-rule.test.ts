@@ -100,6 +100,31 @@ describe('network lint rule', () => {
     }
   });
 
+  describe('auth gate: credential calls only through credentialCall()', () => {
+    const AUTH_FILE = 'src/auth/web-public-url.ts';
+
+    it.each([
+      "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
+      "import { createApiClient } from '../api/client.ts';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\nexport const send = request;\n",
+    ])('forbids in auth code:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, AUTH_FILE)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      ['src/auth/credential-call.ts', 'import { apiClient }', 'apiClient'],
+      [AUTH_FILE, 'import type { ApiResult }', '{} as ApiResult<string>'],
+    ])('allows in %s: %s', async (filePath, imported, exported) => {
+      const code = `${imported} from '../api/client';\nexport const build = ${exported};\n`;
+
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-imports',
+      );
+    });
+  });
+
   it('allows createApiClient inside src/api, where the tests live', async () => {
     const code = BUILD_OWN_CLIENT.replace('../src/api/client', './client');
 

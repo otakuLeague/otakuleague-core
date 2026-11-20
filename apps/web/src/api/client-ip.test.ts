@@ -1,10 +1,19 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clientIpFromHeaders, readClientIp } from './client-ip';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import {
+  clientIpFromHeaders,
+  readClientIp,
+  readCredentialClientIp,
+} from './client-ip';
 
-const incoming = vi.hoisted(() => ({ headers: new Headers() }));
+const incoming = vi.hoisted(() => ({ headers: new Headers(), reads: 0 }));
 vi.mock('next/headers', () => ({
-  headers: () => Promise.resolve(incoming.headers),
+  headers: () => {
+    incoming.reads += 1;
+    return Promise.resolve(incoming.headers);
+  },
 }));
 
 const forwardedFor = (value: string) =>
@@ -76,4 +85,53 @@ describe('readClientIp', () => {
       expect(await readClientIp()).toBeUndefined();
     },
   );
+});
+
+describe('readCredentialClientIp', () => {
+  const VISITOR = { 'x-forwarded-for': '203.0.113.7' };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['one address', VISITOR, '203.0.113.7'],
+    ['no header', {}, undefined],
+    ['a list', { 'x-forwarded-for': '203.0.113.7, 198.51.100.1' }, undefined],
+    // Next re-sends a Server Action between workers; that hop carries Vercel's egress address.
+    [
+      'a forwarded action hop',
+      { ...VISITOR, 'x-action-forwarded': '1' },
+      undefined,
+    ],
+  ])('on Vercel, %s', async (_label, headers, expected) => {
+    vi.stubEnv('VERCEL', '1');
+    incoming.headers = new Headers(headers);
+
+    expect(await readCredentialClientIp({ isHttps: true })).toBe(expected);
+  });
+
+  it.each([undefined, '', '0'])(
+    'off Vercel (VERCEL=%j) sends loopback and never reads a forged header',
+    async (vercel) => {
+      vi.stubEnv('VERCEL', vercel);
+      incoming.headers = new Headers(VISITOR);
+      incoming.reads = 0;
+
+      expect(await readCredentialClientIp({ isHttps: false })).toBe(
+        '127.0.0.1',
+      );
+      expect(incoming.reads).toBe(0);
+    },
+  );
+
+  it('still matches the header name Next sets on a forwarded action', () => {
+    const require = createRequire(import.meta.url);
+    const actionHandler = readFileSync(
+      require.resolve('next/dist/server/app-render/action-handler.js'),
+      'utf8',
+    );
+
+    expect(actionHandler).toContain("'x-action-forwarded'");
+  });
 });
