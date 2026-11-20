@@ -1,4 +1,7 @@
-import type { AnimeSlugResolution } from '@otakuleague/shared-types';
+import {
+  type AnimeSlugResolution,
+  CANONICAL_SLUG_PATTERN,
+} from '@otakuleague/shared-types';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { resolveAnimeSlug } from './data';
 import { type AnimeTabSegment, tabHref } from './tabs';
@@ -23,8 +26,13 @@ export async function resolveTab(
     }
     throw new Error(`Could not resolve anime slug (${result.failure.kind})`);
   }
-  if (result.data.canonicalSlug !== slug) {
-    permanentRedirect(tabHref(result.data.canonicalSlug, segment));
+  const { canonicalSlug } = result.data;
+  if (canonicalSlug !== slug) {
+    // A drifted body (invalid_response): an outage, never a redirect to whatever came back.
+    if (!CANONICAL_SLUG_PATTERN.test(canonicalSlug)) {
+      throw new Error('Unexpected anime slug from the API');
+    }
+    permanentRedirect(tabHref(canonicalSlug, segment));
   }
   return result.data;
 }

@@ -151,7 +151,10 @@ describe('network lint rule', () => {
       "import navigation from 'next/navigation.js';\nexport const leave = navigation.redirect;\n",
       "import { default as navigation } from 'next/navigation';\nexport const leave = navigation.redirect;\n",
       "import { 'redirect' as leave } from 'next/navigation';\nexport const go = leave;\n",
+      "import { redirect } from '../../node_modules/next/navigation';\nexport const leave = redirect;\n",
     ];
+    // Banned in the allowlisted files too: only a named redirect import is freed there.
+    const NEVER_ALLOWED = REDIRECT_IMPORTS.slice(2, 8);
     const everywhere = (files: readonly string[], codes: readonly string[]) =>
       files.flatMap((file) => codes.map((code) => [file, code] as const));
 
@@ -174,7 +177,23 @@ describe('network lint rule', () => {
       },
     );
 
-    it.each(everywhere(REDIRECT_ALLOWLIST, REDIRECT_IMPORTS.slice(0, 2)))(
+    it.each(everywhere(REDIRECT_ALLOWLIST, NEVER_ALLOWED))(
+      'fires in the allowlisted %s:\n%s',
+      async (filePath, code) => {
+        expect(await ruleIdsFor(code, filePath)).toContain(
+          'no-restricted-syntax',
+        );
+      },
+    );
+
+    it.each([
+      ...everywhere([OUTSIDE_API_FOLDER, AUTH_FILE], [
+        "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
+        "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
+        "export type * from 'next/navigation';\n",
+      ]),
+      ...everywhere(REDIRECT_ALLOWLIST, REDIRECT_IMPORTS.slice(0, 2)),
+    ])(
       'allows in %s:\n%s',
       async (filePath, code) => {
         expect(await ruleIdsFor(code, filePath)).not.toContain(
@@ -184,7 +203,7 @@ describe('network lint rule', () => {
     );
   });
 
-  describe('dynamic import gate (L3): import() cannot hide a gated module', () => {
+  describe('dynamic import gate: a literal import() of a gated module is refused', () => {
     const importing = (source: string, before = '') =>
       `${before}export async function load(): Promise<unknown> {\n  return await import(${source});\n}\n`;
     const NAME = "const name = 'next/navigation';\n";
@@ -196,6 +215,11 @@ describe('network lint rule', () => {
       [AUTH_FILE, importing("'../api/client.ts'")],
       [AUTH_FILE, importing("'@/src/api/client'")],
       [AUTH_PAGE, importing("'../../src/api/client'")],
+      ['src/anime/resolve-tab.ts', importing("'../api/client'")],
+      ['src/anime/season-redirect.ts', importing('name', NAME)],
+      [OUTSIDE_API_FOLDER, importing("'node:https'")],
+      [AUTH_FILE, importing("'undici'")],
+      [OUTSIDE_CLIENT, importing("'http'")],
       [OUTSIDE_API_FOLDER, importing('name', NAME)],
       [OUTSIDE_API_FOLDER, importing('`next/${name}`', NAME)],
     ])('fires in %s:\n%s', async (filePath, code) => {
@@ -220,6 +244,17 @@ describe('network lint rule', () => {
         '@typescript-eslint/no-require-imports',
       );
     });
+  });
+
+  it('ignores eslint-disable comments in auth code, not elsewhere', async () => {
+    const code =
+      "// eslint-disable-next-line no-restricted-syntax\nimport { redirect } from 'next/navigation';\n" +
+      'export const leave = redirect;\n';
+
+    expect(await ruleIdsFor(code, AUTH_FILE)).toContain('no-restricted-syntax');
+    expect(await ruleIdsFor(code, OUTSIDE_API_FOLDER)).not.toContain(
+      'no-restricted-syntax',
+    );
   });
 
   it('allows createApiClient inside src/api, where the tests live', async () => {

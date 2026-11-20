@@ -19,33 +19,48 @@ const NETWORK_IMPORTS = [
   'undici',
 ].map((name) => ({ name, message: NETWORK_RULE_MESSAGE }));
 
-// esquery ends a selector regex at its first "/", so a slash inside one is written /.
+// esquery ends a selector regex at its first "/", so a slash inside one is written as the escape \u002F.
 // next has no exports map: 'next/navigation.js' and next/dist load the same redirect().
-const NEXT_NAVIGATION = '/^next\\u002Fnavigation(\\.js)?$/';
-// A CommonJS module's default import is the whole module, redirect() included.
-const REDIRECT_NAMES = '/^(redirect|permanentRedirect|default)$/';
+const NEXT_NAVIGATION = '/(^|\\u002F)next\\u002Fnavigation(\\.js)?$/';
+const NEXT_DIST = '/(^|\\u002F)next\\u002Fdist\\u002F/';
+const REDIRECT_NAMES = '/^(redirect|permanentRedirect)$/';
 const REDIRECT_MESSAGE =
   'Redirect through redirectTo() (src/auth/redirect-to.ts), which takes only a SafeNextPath (ADR 0015 Addendum 1f-iii-c).';
+// Type-only imports and exports load nothing: allowed, like the auth gate's.
+const VALUE = "[importKind!='type']";
+const VALUE_EXPORT = "[exportKind!='type']";
+const NAVIGATION_IMPORT = `ImportDeclaration${VALUE}[source.value=${NEXT_NAVIGATION}]`;
 
 /** @param {[string, string][]} rows selector, message */
 const syntaxBans = (rows) =>
   rows.map(([selector, message]) => ({ selector, message }));
 
-const REDIRECT_SELECTORS = syntaxBans(
+// The one form the three allowlisted files use.
+const NAMED_REDIRECT_IMPORT = syntaxBans([
   [
-    `ImportDeclaration[source.value=${NEXT_NAVIGATION}] > ImportSpecifier:matches([imported.name=${REDIRECT_NAMES}], [imported.value=${REDIRECT_NAMES}])`,
-    `ImportDeclaration[source.value=${NEXT_NAVIGATION}] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)`,
-    `ExportNamedDeclaration[source.value=${NEXT_NAVIGATION}] > ExportSpecifier:matches([local.name=${REDIRECT_NAMES}], [local.value=${REDIRECT_NAMES}])`,
-    `ExportAllDeclaration[source.value=${NEXT_NAVIGATION}]`,
-    ':matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration)[source.value=/^next\\u002Fdist\\u002F/]',
-  ].map((selector) => [selector, REDIRECT_MESSAGE]),
-);
+    `${NAVIGATION_IMPORT} > ImportSpecifier${VALUE}:matches([imported.name=${REDIRECT_NAMES}], [imported.value=${REDIRECT_NAMES}])`,
+    REDIRECT_MESSAGE,
+  ],
+]);
 
-// L3: a dynamic import() is invisible to no-restricted-imports and to the selectors above. Inside
-// src/api, import('./client') stays allowed: the client's own folder (its tests reset modules so).
+// Banned in the allowlisted files too. A CommonJS module's default import is the whole module.
+const OTHER_REDIRECT_SELECTORS = syntaxBans([
+  ...[
+    `${NAVIGATION_IMPORT} > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier, ImportSpecifier${VALUE}:matches([imported.name='default'], [imported.value='default']))`,
+    `ExportNamedDeclaration${VALUE_EXPORT}[source.value=${NEXT_NAVIGATION}] > ExportSpecifier${VALUE_EXPORT}:matches([local.name=/^(redirect|permanentRedirect|default)$/], [local.value=/^(redirect|permanentRedirect|default)$/])`,
+    `ExportAllDeclaration${VALUE_EXPORT}[source.value=${NEXT_NAVIGATION}]`,
+  ].map((selector) => [selector, REDIRECT_MESSAGE]),
+  [
+    `:matches(ImportDeclaration${VALUE}, ExportNamedDeclaration${VALUE_EXPORT}, ExportAllDeclaration${VALUE_EXPORT})[source.value=${NEXT_DIST}]`,
+    'next/dist is internal: import the public entry (ADR 0015 Addendum 1f-iii-c).',
+  ],
+]);
+
+// Dynamic import gate: import() is invisible to no-restricted-imports and to the selectors above.
+// Inside src/api, import('./client') stays allowed: the client's own folder (its tests reset modules so).
 const DYNAMIC_IMPORT_SELECTORS = syntaxBans([
   [
-    'ImportExpression[source.value=/^next\\u002F(navigation|dist\\u002F)/]',
+    'ImportExpression[source.value=/(^|\\u002F)next\\u002F(navigation|dist\\u002F)/]',
     'Import next/navigation statically, so the redirect gate can see it (ADR 0015 Addendum 1f-iii-c).',
   ],
   [
@@ -53,10 +68,20 @@ const DYNAMIC_IMPORT_SELECTORS = syntaxBans([
     'Import the API client statically, so the network and auth gates can see it (ADR 0003).',
   ],
   [
+    `ImportExpression[source.value=/^(${NETWORK_IMPORTS.map(({ name }) => name).join('|')})$/]`,
+    NETWORK_RULE_MESSAGE,
+  ],
+  [
     "ImportExpression[source.type!='Literal']",
     'import() takes a string literal only, so the lint gates can see what it loads.',
   ],
 ]);
+
+const REDIRECT_ALLOWLIST = [
+  'src/auth/redirect-to.ts',
+  'src/anime/resolve-tab.ts',
+  'src/anime/season-redirect.ts',
+];
 
 // The base already ships typescript-eslint's type-checked rules, a superset of
 // eslint-config-next/typescript, so only the Next.js and React rules are added here.
@@ -138,7 +163,8 @@ export default defineConfig([
     rules: {
       'no-restricted-syntax': [
         'error',
-        ...REDIRECT_SELECTORS,
+        ...NAMED_REDIRECT_IMPORT,
+        ...OTHER_REDIRECT_SELECTORS,
         ...DYNAMIC_IMPORT_SELECTORS,
       ],
     },
@@ -146,14 +172,20 @@ export default defineConfig([
   {
     // The only redirect() callers. The two anime files redirect to tabHref() built from the
     // API-validated canonical slug, never from request input. This block replaces the options
-    // above for these files, so the dynamic import() gate is repeated: it applies everywhere.
-    files: [
-      'src/auth/redirect-to.ts',
-      'src/anime/resolve-tab.ts',
-      'src/anime/season-redirect.ts',
-    ],
+    // above for these files, so every other selector is repeated: only the named import is freed.
+    files: REDIRECT_ALLOWLIST,
     rules: {
-      'no-restricted-syntax': ['error', ...DYNAMIC_IMPORT_SELECTORS],
+      'no-restricted-syntax': [
+        'error',
+        ...OTHER_REDIRECT_SELECTORS,
+        ...DYNAMIC_IMPORT_SELECTORS,
+      ],
     },
+  },
+  {
+    // An eslint-disable comment cannot switch a gate off in auth code or the redirect files.
+    files: ['src/auth/**', 'app/auth/**', ...REDIRECT_ALLOWLIST],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    linterOptions: { noInlineConfig: true },
   },
 ]);
