@@ -117,8 +117,11 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
 /** What the web writes into the session cookie: 43 base64url characters, nothing a header could split on. */
 const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-/** True when `value` could be a session token: the web checks a cookie with it before sending it as a Bearer. */
-export function isSessionToken(value: unknown): value is string {
+/**
+ * True when `value` could be a session token: the web checks a cookie with it before sending it as
+ * a Bearer. A boolean, not a type guard: a refused string is still a string.
+ */
+export function isSessionToken(value: unknown): boolean {
   return typeof value === 'string' && SESSION_TOKEN_PATTERN.test(value);
 }
 

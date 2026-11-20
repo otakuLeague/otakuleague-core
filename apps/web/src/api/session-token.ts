@@ -12,5 +12,7 @@ export type SessionToken = string & { readonly [sessionTokenBrand]: true };
 export function sessionTokenFrom(
   value: string | undefined,
 ): SessionToken | undefined {
-  return isSessionToken(value) ? (value as SessionToken) : undefined;
+  return value !== undefined && isSessionToken(value)
+    ? (value as SessionToken)
+    : undefined;
 }

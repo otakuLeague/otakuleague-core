@@ -149,7 +149,7 @@ The addendum ADR 0015 assigned to OTA-139. It closes "Caching and auth" (Consequ
 
 **Consistency vs availability:** consistency, as ADR 0015: an answer given to one session is never reused, and a configuration that cannot carry a secret safely stops the call instead of degrading.
 
-**Entities:** `SessionToken`, `WebPublicUrl`, `SessionCookie`.
+**Entities:** `SessionToken`, `WebPublicUrl`, `SessionCookie` (lands in slice 1f-ii with `auth-cookies.ts`).
 
 **Contract** (TypeScript; the HTTP routes are ADR 0015's and do not change).
 
@@ -176,7 +176,7 @@ type ApiFailure =
 3. No `headers` option, now or later: every header the client sends is one of five it writes itself.
 
 **Deep dives.**
-- **S1.** Throw, not a silent `no-store`: a caller that asked for `revalidate` believes its page is cached, and the mistake should fail its first test. `cookies()` cannot be read inside `'use cache'`, so a session cannot reach a cached scope by accident either.
+- **S1.** Throw, not a silent `no-store`: a caller that asked for `revalidate` believes its page is cached, and the mistake should fail its first test. The check sees only the fetch options, not a `'use cache'` scope: a session call is never made inside `'use cache'`. `cookies()` cannot be read there, but a token passed in as an argument would become part of the cache key, so the rule is what holds, not the runtime. `requiresInternalKey` is refused on a cached call too (security review M1): a credential call is never replayed.
 - **S2.** Without the key the Bearer is not dropped (see Rejected) and not sent (the API would answer 403 to an open caller, after the token crossed for nothing). Locally this means accounts need `INTERNAL_API_KEY` in the root `.env` and the default `API_BASE_URL=http://127.0.0.1:3001`; the API already needs the key for `GET /me`. A visitor without a cookie never makes a session call, so public pages are unaffected.
 - **S3.** The failure for a session call is built by the same code as today, from status and contract fields only; a test sends a token and a key and searches every failure and thrown message for both.
 - **S4.** Only on a 429 that carries a valid envelope, matched by `/^[1-9][0-9]{0,4}$/` then capped at 86,400 (the longest window any API rule uses is 24 h). The API only sends whole seconds (`api-exception.filter.ts`); a date would be a proxy's, and a countdown must not trust it. Optional on the existing variant so no caller or fixture changes (S5); pages read it for the countdown and never retry by themselves (ADR 0020).

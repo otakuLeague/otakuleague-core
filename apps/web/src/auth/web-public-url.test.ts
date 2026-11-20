@@ -41,6 +41,10 @@ describe('parseWebPublicUrl', () => {
     ['javascript', 'javascript:alert(1)'],
     ['no scheme', 'beta.otakuleague.com'],
     ['a relative path', '/auth'],
+    ['a dot segment', 'https://example.com/.'],
+    ['no slashes after the scheme', 'https:example.com'],
+    ['a trailing-dot host', 'https://example.com./'],
+    ['a default port', 'https://example.com:443'],
   ])('refuses %s without echoing the value', (_label, raw) => {
     let message = '';
     try {
@@ -66,5 +70,20 @@ describe('readWebPublicUrl', () => {
 
   it('throws when it is unset, as on a Vercel preview', () => {
     expect(() => readWebPublicUrl({})).toThrow('WEB_PUBLIC_URL is missing');
+  });
+
+  it('refuses loopback http on Vercel, and keeps https there', () => {
+    expect(() =>
+      readWebPublicUrl({
+        VERCEL: '1',
+        WEB_PUBLIC_URL: 'http://localhost:3000',
+      }),
+    ).toThrow(/^Invalid web configuration: WEB_PUBLIC_URL is invalid\./);
+    expect(
+      readWebPublicUrl({
+        VERCEL: '1',
+        WEB_PUBLIC_URL: 'https://beta.otakuleague.com/',
+      }),
+    ).toEqual({ origin: 'https://beta.otakuleague.com', isHttps: true });
   });
 });

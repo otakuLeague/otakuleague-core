@@ -16,14 +16,21 @@ const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
   '[::1]',
 ]);
 
+const INVALID_MESSAGE = `Invalid web configuration: WEB_PUBLIC_URL is invalid. ${WEB_PUBLIC_URL_HINT}`;
+
 /**
  * Read on first use by the auth code, never at build, so a deploy without it still serves public
- * pages. Server configuration only, never user input.
+ * pages. Server configuration only, never user input. On Vercel (`VERCEL=1`) only https: no
+ * visitor reaches a loopback origin there, and the cookie must keep `Secure` and `__Host-`.
  */
 export function readWebPublicUrl(
   env: Readonly<Record<string, string | undefined>>,
 ): WebPublicUrl {
-  return parseWebPublicUrl(env.WEB_PUBLIC_URL);
+  const webPublicUrl = parseWebPublicUrl(env.WEB_PUBLIC_URL);
+  if (env.VERCEL === '1' && !webPublicUrl.isHttps) {
+    throw new Error(INVALID_MESSAGE);
+  }
+  return webPublicUrl;
 }
 
 /** Throws one message that names the variable and never echoes the value. */
@@ -38,15 +45,15 @@ export function parseWebPublicUrl(rawValue: string | undefined): WebPublicUrl {
   const isHttps = url?.protocol === 'https:';
   const isLocalHttp =
     url?.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname);
-  // `href` is the origin plus `/` only when nothing else is there, even an empty `?` or `#`.
+  // The input itself must be the origin, so nothing the parser normalises away (`/.`, `https:host`,
+  // an empty `?` or `#`, a default port, upper case) slips through; a trailing-dot host is another origin.
   if (
     url === null ||
     !(isHttps || isLocalHttp) ||
-    url.href !== `${url.origin}/`
+    !(raw === url.origin || raw === `${url.origin}/`) ||
+    url.hostname.endsWith('.')
   ) {
-    throw new Error(
-      `Invalid web configuration: WEB_PUBLIC_URL is invalid. ${WEB_PUBLIC_URL_HINT}`,
-    );
+    throw new Error(INVALID_MESSAGE);
   }
   return { origin: url.origin, isHttps };
 }

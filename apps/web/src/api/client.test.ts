@@ -696,6 +696,48 @@ describe('session, key-required calls and Retry-After (ADR 0003 OTA-139 addendum
     expect(requests[0]?.init?.cache).toBe('no-store');
   });
 
+  it('sends exactly the five headers on a session call with a client IP and a body', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+
+    await keyedClient(fetchFunction).call('/me/watchlist', {
+      method: 'POST',
+      body: { anilistId: 154587 },
+      session: session(FAKE_SESSION),
+      clientIp: visitorIp(VISITOR_IP),
+    });
+
+    expect(sentHeaders(requests[0])).toEqual({
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-internal-api-key': FAKE_KEY,
+      'x-client-ip': VISITOR_IP,
+      authorization: `Bearer ${FAKE_SESSION}`,
+    });
+  });
+
+  it.each([
+    ['next.revalidate 60', { next: { revalidate: 60 } }],
+    ['cache force-cache', { cache: 'force-cache' }],
+  ] satisfies [string, CallOptions<unknown>][])(
+    'refuses a credential call on a cached call (%s)',
+    async (_label, cacheOptions) => {
+      const { fetchFunction, requests } = fakeFetch(200, json({}));
+
+      const message = await thrownMessage(() =>
+        keyedClient(fetchFunction).call('/auth/sign-in', {
+          ...cacheOptions,
+          method: 'POST',
+          requiresInternalKey: true,
+        }),
+      );
+
+      expect(message).toBe(
+        'requiresInternalKey is only allowed on an uncached (no-store) call',
+      );
+      expect(requests).toHaveLength(0);
+    },
+  );
+
   it.each([
     ['next.revalidate', { next: { revalidate: 60 } }],
     ['next.revalidate 0', { next: { revalidate: 0 } }],
@@ -779,8 +821,13 @@ describe('session, key-required calls and Retry-After (ADR 0003 OTA-139 addendum
       ),
       keyedClient(fakeFetch(500, json(echoed)).fetchFunction),
       keyedClient(
-        fakeFetch(200, json(echoed), { 'retry-after': FAKE_SESSION })
-          .fetchFunction,
+        fakeFetch(
+          429,
+          json({
+            error: { code: 'TOO_MANY_REQUESTS', message: 'Too many attempts' },
+          }),
+          { 'retry-after': FAKE_SESSION },
+        ).fetchFunction,
       ),
     ];
 
@@ -798,8 +845,11 @@ describe('session, key-required calls and Retry-After (ADR 0003 OTA-139 addendum
       'timeout',
       'api_error',
       'invalid_response',
-      'invalid_response',
+      'api_error',
     ]);
+    expect(!results[4]?.ok && results[4]?.failure).not.toHaveProperty(
+      'retryAfterSeconds',
+    );
     expect(JSON.stringify(results)).not.toContain(FAKE_KEY);
     expect(JSON.stringify(results)).not.toContain(FAKE_SESSION);
   });

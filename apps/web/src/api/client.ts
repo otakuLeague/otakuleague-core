@@ -114,11 +114,16 @@ function assertTimeout(timeoutMs: number): void {
   }
 }
 
-const PER_VISITOR_OPTIONS = ['session', 'clientIp'] as const;
+const PER_VISITOR_OPTIONS = [
+  'session',
+  'clientIp',
+  'requiresInternalKey',
+] as const;
 
 /**
- * A per-visitor option on a cached call would split Next's data cache by visitor, or serve one
- * member's answer to another. Throws whether or not a key is set, so a test without one catches it.
+ * A per-visitor option on a cached call would split Next's data cache by visitor, serve one
+ * member's answer to another, or replay one visitor's credential call. Throws whether or not a key
+ * is set, so a test without one catches it. Cannot see a `'use cache'` scope: never call it there.
  */
 function assertPerVisitorUncached<T>(options: CallOptions<T>): void {
   const cached =
@@ -154,10 +159,10 @@ function assertKeyIfRequired<T>(
 }
 
 /** Every header the client sends; the client IP and the session go only with the key. */
-function outgoingHeaders<T>(
+function outgoingHeaders(
   hasBody: boolean,
   internalApiKey: string | undefined,
-  { clientIp, session }: CallOptions<T>,
+  { clientIp, session }: Pick<CallOptions<unknown>, 'clientIp' | 'session'>,
 ): Record<string, string> {
   return {
     accept: 'application/json',
@@ -174,7 +179,7 @@ function outgoingHeaders<T>(
   };
 }
 
-// The API sends whole seconds; the longest window of any of its rules is 24 h.
+// The API sends whole seconds; 86,400 s is its RATE_LIMIT_LONGEST_WINDOW_MS (24 h, apps/api/src/auth/auth-rate-limit-rules.ts).
 const RETRY_AFTER_SECONDS = /^[1-9][0-9]{0,4}$/;
 const MAX_RETRY_AFTER_SECONDS = 86_400;
 
