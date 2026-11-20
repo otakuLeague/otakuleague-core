@@ -100,6 +100,39 @@ describe('network lint rule', () => {
     }
   });
 
+  describe('auth gate: credential calls only through credentialCall()', () => {
+    const AUTH_FILE = 'src/auth/web-public-url.ts';
+
+    it.each(['apiClient', 'createApiClient'])(
+      'forbids importing %s in auth code',
+      async (name) => {
+        const code = `import { ${name} } from '../api/client';\nexport const build = ${name};\n`;
+
+        expect(await ruleIdsFor(code, AUTH_FILE)).toContain(
+          'no-restricted-imports',
+        );
+      },
+    );
+
+    it('allows apiClient in src/auth/credential-call.ts', async () => {
+      const code =
+        "import { apiClient } from '../api/client';\nexport const build = apiClient;\n";
+
+      expect(
+        await ruleIdsFor(code, 'src/auth/credential-call.ts'),
+      ).not.toContain('no-restricted-imports');
+    });
+
+    it('allows type imports from the client in auth code', async () => {
+      const code =
+        "import type { ApiResult } from '../api/client';\nexport type Answer = ApiResult<string>;\n";
+
+      expect(await ruleIdsFor(code, AUTH_FILE)).not.toContain(
+        'no-restricted-imports',
+      );
+    });
+  });
+
   it('allows createApiClient inside src/api, where the tests live', async () => {
     const code = BUILD_OWN_CLIENT.replace('../src/api/client', './client');
 

@@ -1,10 +1,18 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clientIpFromHeaders, readClientIp } from './client-ip';
+import { parseWebPublicUrl } from '../auth/web-public-url';
+import {
+  clientIpFromHeaders,
+  readClientIp,
+  readCredentialClientIp,
+} from './client-ip';
 
-const incoming = vi.hoisted(() => ({ headers: new Headers() }));
+const incoming = vi.hoisted(() => ({ headers: new Headers(), reads: 0 }));
 vi.mock('next/headers', () => ({
-  headers: () => Promise.resolve(incoming.headers),
+  headers: () => {
+    incoming.reads += 1;
+    return Promise.resolve(incoming.headers);
+  },
 }));
 
 const forwardedFor = (value: string) =>
@@ -76,4 +84,45 @@ describe('readClientIp', () => {
       expect(await readClientIp()).toBeUndefined();
     },
   );
+});
+
+describe('readCredentialClientIp', () => {
+  const HTTPS_WEB = parseWebPublicUrl('https://beta.otakuleague.com');
+  const LOOPBACK_WEB = parseWebPublicUrl('http://localhost:3000');
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['one address', '203.0.113.7', '203.0.113.7'],
+    ['no header', undefined, undefined],
+    ['a list', '203.0.113.7, 198.51.100.1', undefined],
+  ])('on Vercel reads x-forwarded-for: %s', async (_label, value, expected) => {
+    vi.stubEnv('VERCEL', '1');
+    incoming.headers = new Headers(
+      value === undefined ? {} : { 'x-forwarded-for': value },
+    );
+
+    expect(await readCredentialClientIp(HTTPS_WEB)).toBe(expected);
+  });
+
+  it.each([undefined, '', '0'])(
+    'off Vercel (VERCEL=%j) sends loopback and never reads a forged header',
+    async (vercel) => {
+      vi.stubEnv('VERCEL', vercel);
+      incoming.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
+      incoming.reads = 0;
+
+      expect(await readCredentialClientIp(LOOPBACK_WEB)).toBe('127.0.0.1');
+      expect(incoming.reads).toBe(0);
+    },
+  );
+
+  it('gives nothing to an https web off Vercel, which cannot know the visitor', async () => {
+    vi.stubEnv('VERCEL', '');
+    incoming.headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
+
+    expect(await readCredentialClientIp(HTTPS_WEB)).toBeUndefined();
+  });
 });
