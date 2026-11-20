@@ -217,3 +217,16 @@ describe('the internal key in browser code', () => {
     expect(nextConfig).toContain('checkInternalApiKeyConfig(process.env);');
   });
 });
+
+describe('next.config.ts', () => {
+  it('keeps Server Action arguments out of the dev log and sends the old /sign-in to /auth', async () => {
+    const { default: nextConfig } = await import('../../next.config');
+
+    expect(nextConfig.logging).toMatchObject({ serverFunctions: false });
+    expect(await nextConfig.redirects?.()).toContainEqual({
+      source: '/sign-in',
+      destination: '/auth?mode=sign-in',
+      permanent: true,
+    });
+  });
+});

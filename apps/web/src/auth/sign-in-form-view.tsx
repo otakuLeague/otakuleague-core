@@ -9,8 +9,9 @@ import {
 type SignInFormViewProps = {
   readonly state: SignInFormState;
   readonly pending: boolean;
+  /** The last submitted identifier: the field's default, so React's reset after a failure keeps it. */
   readonly identifier: string;
-  readonly onIdentifierChange: (value: string) => void;
+  readonly onIdentifierSubmit: (value: string) => void;
   readonly formAction: (formData: FormData) => void;
   readonly children?: ReactNode;
 };
@@ -25,12 +26,19 @@ const PREVIEW_OFF_TITLE = 'Sign-in is off on preview deployments';
 const PREVIEW_OFF_DETAIL = 'Use the live site to sign in.';
 const ALERT_ID = 'sign-in-alert';
 
-/** Retry-After in whole minutes, never less than one (ADR 0020: copy per route, never the API's). */
-export function retryMinutesCopy(retryAfterSeconds: number | null): string {
+/**
+ * Retry-After rounded up to whole minutes (at least one), or to whole hours past 60 minutes
+ * (ADR 0020: copy per route, never the API's).
+ */
+export function retryWaitCopy(retryAfterSeconds: number | null): string {
   if (retryAfterSeconds === null) {
     return 'in a few minutes';
   }
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  if (minutes > 60) {
+    const hours = Math.ceil(minutes / 60);
+    return `in ${hours} hours`;
+  }
   return `in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
 }
 
@@ -46,7 +54,7 @@ function alertCopy(state: SignInFailureState): AlertCopy {
     case 'rate_limited':
       return {
         title: 'Too many attempts.',
-        detail: `For your safety, sign-in is paused. Try again ${retryMinutesCopy(state.retryAfterSeconds)}.`,
+        detail: `For your safety, sign-in is paused. Try again ${retryWaitCopy(state.retryAfterSeconds)}.`,
         tone: 'wait',
       };
     case 'busy':
@@ -71,20 +79,17 @@ function alertCopy(state: SignInFailureState): AlertCopy {
   }
 }
 
-function blockSubmit(event: FormEvent<HTMLFormElement>): void {
-  event.preventDefault();
-}
-
 export function SignInFormView({
   state,
   pending,
   identifier,
-  onIdentifierChange,
+  onIdentifierSubmit,
   formAction,
   children,
 }: SignInFormViewProps) {
-  const copy = state.kind === 'idle' ? null : alertCopy(state);
-  const invalid = state.kind === 'invalid_credentials';
+  // Hidden while pending, so a repeated failure inserts a new alert node and is announced again.
+  const copy = state.kind === 'idle' || pending ? null : alertCopy(state);
+  const invalid = !pending && state.kind === 'invalid_credentials';
   const fieldError = invalid
     ? ({ 'aria-invalid': true, 'aria-describedby': ALERT_ID } as const)
     : {};
@@ -94,7 +99,16 @@ export function SignInFormView({
       className="au-card"
       action={formAction}
       aria-busy={pending}
-      onSubmit={pending ? blockSubmit : undefined}
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        if (pending) {
+          event.preventDefault();
+          return;
+        }
+        const submitted = new FormData(event.currentTarget).get('identifier');
+        if (typeof submitted === 'string') {
+          onIdentifierSubmit(submitted);
+        }
+      }}
     >
       {copy && (
         <div
@@ -114,11 +128,13 @@ export function SignInFormView({
             id="sign-in-identifier"
             name="identifier"
             autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             maxLength={SIGN_IN_IDENTIFIER_MAX}
             required
             readOnly={pending}
-            value={identifier}
-            onChange={(event) => onIdentifierChange(event.target.value)}
+            defaultValue={identifier}
             {...fieldError}
           />
         </div>

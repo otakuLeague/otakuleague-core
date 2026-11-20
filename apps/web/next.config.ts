@@ -67,8 +67,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   headers: () => Promise.resolve(robotsHeaders(SEARCH_INDEXING)),
   redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),
-  // The dev server logs each Server Function call with its arguments: the sign-in FormData holds a
-  // password, so the log stays off (OTA-139).
+  // Keeps Server Action arguments (could include credentials) out of the dev log (OTA-139).
   logging: { serverFunctions: false },
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {

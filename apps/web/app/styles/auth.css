@@ -26,6 +26,11 @@
 [data-theme='light'] .au-card {
   --au-focus: var(--accent-ink);
 }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .au-card {
+    --au-focus: var(--accent-ink);
+  }
+}
 .au-sub {
   margin: 0;
   color: var(--muted);
@@ -79,7 +84,7 @@
   --tone: var(--bad);
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px var(--space-3);
+  gap: var(--space-1) var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid color-mix(in oklab, var(--tone) 40%, transparent);
   border-radius: var(--radius-md);
@@ -115,15 +120,16 @@
   --icon: 'i';
 }
 
-/* Submit: full width, 48px; pending keeps its width and adds a spinner. */
+/* Submit: full width, 48px; pending keeps the primary look and its width, and adds a spinner. */
 .au-btn {
   inline-size: 100%;
   min-block-size: 48px;
   gap: var(--space-2);
 }
-.au-btn[aria-disabled='true'] {
+.ol-btn.au-btn[aria-disabled='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: progress;
-  opacity: 0.8;
 }
 .au-spin {
   inline-size: 16px;

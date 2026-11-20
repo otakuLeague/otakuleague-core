@@ -8,9 +8,10 @@ import { SignInFormView } from './sign-in-form-view';
 const IDLE: SignInFormState = { kind: 'idle' };
 
 /**
- * The sign-in form's state: the action's last answer and the identifier, held here so it survives
- * React's form reset after a failed attempt. The password stays uncontrolled, so that reset clears
- * it and it never sits in React state. `children` are the request's extra fields (`next`).
+ * The sign-in form's state: the action's last answer and the last submitted identifier, the field's
+ * default, so React's form reset after a failed attempt puts it back (both fields stay uncontrolled,
+ * so typing or autofill before hydration is never overwritten). The password is never kept, so that
+ * reset clears it. `children` are the request's extra fields (`next`).
  */
 export function SignInForm({ children }: { readonly children?: ReactNode }) {
   const [state, formAction, pending] = useActionState(signInAction, IDLE);
@@ -20,7 +21,7 @@ export function SignInForm({ children }: { readonly children?: ReactNode }) {
       state={state}
       pending={pending}
       identifier={identifier}
-      onIdentifierChange={setIdentifier}
+      onIdentifierSubmit={setIdentifier}
       formAction={formAction}
     >
       {children}

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SignInFormState } from './sign-in-form-state';
 import {
   PreviewOffNotice,
-  retryMinutesCopy,
+  retryWaitCopy,
   SignInFormView,
   SignUpClosedNote,
 } from './sign-in-form-view';
@@ -14,7 +14,7 @@ function renderForm(state: SignInFormState, pending = false) {
       state={state}
       pending={pending}
       identifier="kaito"
-      onIdentifierChange={vi.fn()}
+      onIdentifierSubmit={vi.fn()}
       formAction={vi.fn()}
     >
       <input type="hidden" name="next" value="/season" />
@@ -57,9 +57,39 @@ describe('SignInFormView', () => {
     [60, 'in 1 minute'],
     [61, 'in 2 minutes'],
     [0, 'in 1 minute'],
+    [3600, 'in 60 minutes'],
+    [3601, 'in 2 hours'],
+    [86_400, 'in 24 hours'],
     [null, 'in a few minutes'],
   ])('rounds Retry-After %s seconds up to "%s"', (seconds, copy) => {
-    expect(retryMinutesCopy(seconds)).toBe(copy);
+    expect(retryWaitCopy(seconds)).toBe(copy);
+  });
+
+  it('pending hides the previous alert, so the same failure is announced again', () => {
+    const { rerender } = renderForm({ kind: 'invalid_credentials' });
+    const first = screen.getByRole('alert');
+
+    rerender(
+      <SignInFormView
+        state={{ kind: 'invalid_credentials' }}
+        pending
+        identifier="kaito"
+        onIdentifierSubmit={vi.fn()}
+        formAction={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(identifierInput().hasAttribute('aria-describedby')).toBe(false);
+    rerender(
+      <SignInFormView
+        state={{ kind: 'invalid_credentials' }}
+        pending={false}
+        identifier="kaito"
+        onIdentifierSubmit={vi.fn()}
+        formAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('alert')).not.toBe(first);
   });
 
   it('marks both fields invalid only for wrong credentials', () => {
@@ -94,6 +124,11 @@ describe('SignInFormView', () => {
       required: true,
       value: 'kaito',
     });
+    expect(
+      ['autocapitalize', 'autocorrect', 'spellcheck'].map((name) =>
+        identifierInput().getAttribute(name),
+      ),
+    ).toEqual(['none', 'off', 'false']);
     expect(passwordInput()).toMatchObject({
       name: 'password',
       type: 'password',
@@ -110,7 +145,7 @@ describe('SignInFormView', () => {
         state={{ kind: 'idle' }}
         pending={false}
         identifier={'a'.repeat(254)}
-        onIdentifierChange={vi.fn()}
+        onIdentifierSubmit={vi.fn()}
         formAction={vi.fn()}
       />,
     );

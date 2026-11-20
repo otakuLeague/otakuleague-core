@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   setCookie: vi.fn(),
   redirect: vi.fn(),
   reportClientIpUnknown: vi.fn(),
+  requestHeaders: new Headers(),
 }));
 vi.mock('./credential-call', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./credential-call')>()),
@@ -18,6 +19,7 @@ vi.mock('./credential-call', async (importOriginal) => ({
 }));
 vi.mock('next/headers', () => ({
   cookies: () => Promise.resolve({ set: mocks.setCookie }),
+  headers: () => Promise.resolve(mocks.requestHeaders),
 }));
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
@@ -64,6 +66,9 @@ beforeEach(() => {
   vi.stubEnv('VERCEL', '1');
   vi.stubEnv('VERCEL_ENV', 'production');
   vi.stubEnv('WEB_PUBLIC_URL', 'https://beta.otakuleague.com');
+  mocks.requestHeaders = new Headers({
+    origin: 'https://beta.otakuleague.com',
+  });
   mocks.credentialCall.mockResolvedValue({
     kind: 'called',
     result: {
@@ -159,6 +164,20 @@ describe('signInAction', () => {
         kind: 'off_on_preview',
       });
       expect(mocks.credentialCall).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([[{}], [{ origin: 'null' }], [{ origin: 'https://evil.com' }]])(
+    'refuses a request with Origin %o (login CSRF) before reading the form or calling the API',
+    async (requestHeaders) => {
+      mocks.requestHeaders = new Headers(requestHeaders);
+      const notAForm = 'never read' as unknown as FormData;
+      expect(await signInAction(IDLE, notAForm)).toEqual({
+        kind: 'unavailable',
+      });
+      expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.setCookie).not.toHaveBeenCalled();
+      expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
     },
   );
 
