@@ -9,6 +9,7 @@
     },
     { "name": "anime-airing", "path": "/anime/one-piece" },
     { "name": "anime-sparse", "path": "/anime/minami-ke" },
-    { "name": "anime-not-found", "path": "/anime/no-such-anime" }
+    { "name": "anime-not-found", "path": "/anime/no-such-anime" },
+    { "name": "auth-sign-in", "path": "/auth" }
   ]
 }

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { safeNextPath } from './safe-next-path';
+import { rawNextParam, safeNextPath } from './safe-next-path';
 import { parseWebPublicUrl } from './web-public-url';
 
 const BASES = ['https://beta.otakuleague.com', 'http://localhost:3000'].map(
@@ -49,5 +49,26 @@ describe.each(BASES)('safeNextPath on $origin', (webPublicUrl) => {
 
     expect(safeNextPath(`//${host}/my-list`, webPublicUrl)).toBe('/');
     expect(safeNextPath(`/\\${host}/my-list`, webPublicUrl)).toBe('/');
+  });
+});
+
+describe('rawNextParam', () => {
+  it.each([
+    '/my-list?tab=1',
+    '//evil.com',
+    'javascript:alert(1)',
+    '"><script>alert(1)</script>',
+    `/${'a'.repeat(2047)}`,
+  ])('keeps %o exactly as sent, for the action to check', (next) => {
+    expect(rawNextParam(next)).toBe(next);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['repeated', ['/a', '/b']],
+    ['over 2048 characters', `/${'a'.repeat(2048)}`],
+  ])('drops a value that is %s', (_label, next) => {
+    expect(rawNextParam(next)).toBeUndefined();
   });
 });

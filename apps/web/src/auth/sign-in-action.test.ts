@@ -77,7 +77,7 @@ beforeEach(() => {
 });
 
 describe('signInAction', () => {
-  it('makes one call, sets the session cookie, then redirects to next; the redirect signal propagates', async () => {
+  it('makes one call, sets the session cookie, then replaces the history entry with next; the redirect signal propagates', async () => {
     await expect(
       signInAction(IDLE, signInForm({ next: '/my-list?tab=watching' })),
     ).rejects.toBe(REDIRECT_SIGNAL);
@@ -103,7 +103,9 @@ describe('signInAction', () => {
         },
       ],
     ]);
-    expect(mocks.redirect.mock.calls).toEqual([['/my-list?tab=watching']]);
+    expect(mocks.redirect.mock.calls).toEqual([
+      ['/my-list?tab=watching', 'replace'],
+    ]);
     expect(mocks.setCookie.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.redirect.mock.invocationCallOrder[0] ?? 0,
     );
@@ -120,7 +122,7 @@ describe('signInAction', () => {
     await expect(signInAction(IDLE, signInForm(extra))).rejects.toBe(
       REDIRECT_SIGNAL,
     );
-    expect(mocks.redirect.mock.calls).toEqual([['/']]);
+    expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
   });
 
   it.each([
