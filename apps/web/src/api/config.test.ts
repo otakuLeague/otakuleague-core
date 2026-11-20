@@ -218,15 +218,15 @@ describe('the internal key in browser code', () => {
   });
 });
 
-describe('next.config.ts', () => {
-  it('keeps Server Action arguments out of the dev log and sends the old /sign-in to /auth', async () => {
-    const { default: nextConfig } = await import('../../next.config');
+// Read as text: importing next.config.ts loads the real root .env and runs git.
+it('next.config.ts keeps Server Action arguments out of the dev log and serves the legacy auth redirects', () => {
+  const nextConfig = readFileSync(
+    path.resolve(__dirname, '../../next.config.ts'),
+    'utf8',
+  );
 
-    expect(nextConfig.logging).toMatchObject({ serverFunctions: false });
-    expect(await nextConfig.redirects?.()).toContainEqual({
-      source: '/sign-in',
-      destination: '/auth?mode=sign-in',
-      permanent: true,
-    });
-  });
+  expect(nextConfig).toContain('logging: { serverFunctions: false },');
+  expect(nextConfig).toContain(
+    'redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),',
+  );
 });

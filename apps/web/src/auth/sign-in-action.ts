@@ -16,11 +16,12 @@ import { isSameOrigin, readWebPublicUrl } from './web-public-url';
 
 /**
  * The sign-in form's Server Action (ADR 0015): at most one credential call, then the session
- * cookie and a redirect to a safe `next`, or a form state that never echoes what was typed. A
- * request whose `Origin` is not exactly ours (login CSRF; missing or `null` included) is refused
- * before the form is read, as `unavailable`: a real browser always sends it, so only a forged or
- * mangled request lands there, and a visitor can cause it at will, so it is not reported. The
- * previous state is ignored (a client can forge it). No try/catch: `redirectTo` throws Next's
+ * cookie and a redirect to a safe `next`, or a form state that never echoes what was typed. Next
+ * already aborts an action whose `Origin` is `null` or names another host; `isSameOrigin`, before
+ * the form is read, also refuses a missing `Origin` and a real browser on a host that is not
+ * `WEB_PUBLIC_URL` (a vercel.app alias, a second domain, a stale value after cutover). That case
+ * shows `unavailable` and is not reported (a visitor can cause it at will). The previous state is
+ * ignored (a client can forge it). No try/catch: `redirectTo` throws Next's
  * redirect signal, and a configuration error must surface, never read as a sign-in.
  */
 export async function signInAction(
