@@ -37,8 +37,8 @@ vi.mock('./session-call', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./session-call')>()),
   sessionCall: mocks.sessionCall,
 }));
-vi.mock('./report-credential-refusal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
+vi.mock('./auth-reports', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./auth-reports')>()),
   reportAuthCallFault: mocks.report,
 }));
 
@@ -104,7 +104,7 @@ describe('signOutAction', () => {
     [
       'times out',
       { kind: 'called', result: { ok: false, failure: { kind: 'timeout' } } },
-      [],
+      [['sign-out', 'revocation_unconfirmed']],
     ],
   ])(
     'still clears the cookie and redirects when the real delete call %s',

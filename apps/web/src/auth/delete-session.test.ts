@@ -9,8 +9,8 @@ import { deleteSession } from './delete-session';
 const mocks = vi.hoisted(() => ({ sessionCall: vi.fn(), report: vi.fn() }));
 vi.mock('next/server', () => ({ connection: vi.fn(), after: vi.fn() }));
 vi.mock('./session-call', () => ({ sessionCall: mocks.sessionCall }));
-vi.mock('./report-credential-refusal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
+vi.mock('./auth-reports', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./auth-reports')>()),
   reportAuthCallFault: mocks.report,
 }));
 
@@ -58,12 +58,6 @@ describe('deleteSession', () => {
 
   it.each([
     ['a 401 (expired or replayed: already gone)', api(401, 'UNAUTHORIZED')],
-    ['a timeout', failed({ kind: 'timeout' })],
-    ['a network failure', failed({ kind: 'network' })],
-    ['a 429 envelope', api(429, 'TOO_MANY_REQUESTS')],
-    ['a 503 envelope', api(503, 'SERVICE_UNAVAILABLE')],
-    ['a non-envelope 5xx', failed({ kind: 'invalid_response', status: 502 })],
-    ['a 404 envelope', api(404, 'NOT_FOUND')],
     ['a preview refusal', { kind: 'refused', reason: 'preview_deployment' }],
   ])('resolves on %s, once, never retried or reported', async (_, outcome) => {
     mocks.sessionCall.mockResolvedValue(outcome);
@@ -73,7 +67,27 @@ describe('deleteSession', () => {
     expect(mocks.report).not.toHaveBeenCalled();
   });
 
-  // A 403 INTERNAL_KEY_REQUIRED, and a non-envelope 200 or 401.
+  it.each([
+    ['a timeout', failed({ kind: 'timeout' })],
+    ['a network failure', failed({ kind: 'network' })],
+    ['a 429 envelope', api(429, 'TOO_MANY_REQUESTS')],
+    ['a 503 envelope', api(503, 'SERVICE_UNAVAILABLE')],
+    ['a non-envelope 5xx', failed({ kind: 'invalid_response', status: 502 })],
+    ['a 404 envelope', api(404, 'NOT_FOUND')],
+  ])(
+    'resolves on %s, once, never retried, reported once as revocation_unconfirmed',
+    async (_, outcome) => {
+      mocks.sessionCall.mockResolvedValue(outcome);
+
+      await expect(deleteSession(TOKEN)).resolves.toBeUndefined();
+      expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
+      expect(mocks.report.mock.calls).toEqual([
+        ['sign-out', 'revocation_unconfirmed'],
+      ]);
+    },
+  );
+
+  // A 403 INTERNAL_KEY_REQUIRED, and a non-envelope 200 or 401: the fault only, never both.
   it.each([
     ['internal_key_refused', api(403, 'INTERNAL_KEY_REQUIRED')],
     ['invalid_response', failed({ kind: 'invalid_response', status: 200 })],

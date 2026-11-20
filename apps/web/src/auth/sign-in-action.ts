@@ -3,10 +3,14 @@
 import { isSignInResponse } from '@otakuleague/shared-types';
 import { cookies, headers } from 'next/headers';
 import { sessionCookie } from './auth-cookies';
+import {
+  authCallFaultOf,
+  reportAuthCallFault,
+  reportClientIpUnknown,
+} from './auth-reports';
 import { credentialCall, credentialRoutesOff } from './credential-call';
 import { deleteSession } from './delete-session';
 import { redirectTo } from './redirect-to';
-import { reportClientIpUnknown } from './report-credential-refusal';
 import { safeNextPath } from './safe-next-path';
 import { readSessionToken } from './session-call';
 import {
@@ -23,10 +27,12 @@ import { isSameOrigin, readWebPublicUrl } from './web-public-url';
  * the form is read, also refuses a missing `Origin` and a real browser on a host that is not
  * `WEB_PUBLIC_URL` (a vercel.app alias, a second domain, a stale value after cutover). That case
  * shows `unavailable` and is not reported (a visitor can cause it at will). The previous state is
- * ignored (a client can forge it). Only after a success, and only with a well-formed old cookie,
- * `deleteSession` revokes the old session first (one session call, 2,000 ms, never fatal). No
- * try/catch: `redirectTo` throws Next's redirect signal, and a configuration error must surface,
- * never read as a sign-in.
+ * ignored (a client can forge it). A called and failed sign-in is reported only for a fault
+ * (`authCallFaultOf`: the key refused, a body off contract), never for what the visitor's input
+ * decides or for an outage (ADR 0015 Addendum 1f-iv-b2). Only after a success, and only with a
+ * well-formed old cookie, `deleteSession` revokes the old session first (one session call,
+ * 2,000 ms, never fatal). No try/catch: `redirectTo` throws Next's redirect signal, and a
+ * configuration error must surface, never read as a sign-in.
  */
 export async function signInAction(
   _previousState: SignInFormState,
@@ -54,6 +60,13 @@ export async function signInAction(
     callResult.reason === 'client_ip_unknown'
   ) {
     reportClientIpUnknown('sign-in');
+  }
+  const fault =
+    callResult.kind === 'called' && !callResult.result.ok
+      ? authCallFaultOf(callResult.result.failure)
+      : undefined;
+  if (fault !== undefined) {
+    reportAuthCallFault('sign-in', fault);
   }
   const outcome = signInOutcomeFrom(callResult);
   if (outcome.kind === 'failed') {

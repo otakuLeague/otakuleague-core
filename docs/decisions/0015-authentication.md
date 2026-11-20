@@ -244,7 +244,7 @@ Added 2026-11-20 (OTA-139 slice 1f-iv-b2), written before the code. It finishes 
 
 **Too complicated?** Nothing added but one union member and two call sites. The complicated part was the `Host` check, withdrawn above.
 
-**Not verified by running:** that Sentry receives the `auth_route` tag unmasked (read from the scrubber's code, not from an event). Checked on Node 22: `127.0.0.1.evil.com`, `localhost.evil.com`, `127.0.0.1@evil.com`, `[::ffff:127.0.0.1]`, `0.0.0.0` and `127.0.0.2` are all refused by the loopback rule; numeric spellings (`127.1`, `0x7f.0.0.1`, `2130706433`) parse to `127.0.0.1` and are loopback.
+**Not verified by running:** that Sentry receives the `auth_route` tag unmasked (read from the scrubber's code, not from an event). Checked on Node 22: `127.0.0.1.evil.com`, `localhost.evil.com`, `127.0.0.1@evil.com`, `[::ffff:127.0.0.1]`, `0.0.0.0` and `127.0.0.2` are all refused by the loopback rule (the userinfo, IPv4-mapped and `0.0.0.0` forms are now rows in `config.test.ts`); numeric spellings (`127.1`, `0x7f.0.0.1`, `2130706433`) parse to `127.0.0.1` and are loopback.
 
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.

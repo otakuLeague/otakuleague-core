@@ -31,8 +31,8 @@ vi.mock('./session-call', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./session-call')>()),
   sessionCall: mocks.sessionCall,
 }));
-vi.mock('./report-credential-refusal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
+vi.mock('./auth-reports', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./auth-reports')>()),
   reportAuthCallFault: mocks.report,
 }));
 
