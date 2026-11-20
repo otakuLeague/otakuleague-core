@@ -209,6 +209,43 @@ Added 2026-11-20 (OTA-139 slice 1f-iv-b), written before the code. It refines de
 
 **Not verified by running:** `signOutAction` from a browser (no caller before iv-c).
 
+## Addendum (1f-iv-b2)
+Added 2026-11-20 (OTA-139 slice 1f-iv-b2), written before the code. It finishes what [Addendum (1f-iv-b)](#addendum-1f-iv-b) left to this slice, amends decision 3 of [Addendum (1f-iv)](#addendum-1f-iv) for the sign-out route only, and withdraws its decision 6 (the `Host` check). No API change, no new variable, dependency or error code.
+
+| # | Requirement |
+|---|---|
+| F4 | As in 1f-iv-b, now for sign-in too: a refused key (403 `INTERNAL_KEY_REQUIRED`) or a body off contract (`invalid_response` under 500) on `POST /auth/sign-in` reaches Sentry as route `sign-in`. |
+| F5 | A sign-out whose revocation the API did not confirm reaches Sentry as `revocation_unconfirmed`, from both callers of `deleteSession`. |
+| F6 | No key, Bearer or password leaves for an `API_BASE_URL` that is neither https nor exactly `127.0.0.1` or `[::1]` (S2 of ADR 0003). Already true; restated because this slice was asked to check it. |
+| N4 | As in 1f-iv, now with four kinds: at most 1 Sentry event per kind per server instance per 10 minutes (so at most 6 an hour per kind per warm instance), tags only. |
+| N8 | A report adds 0 API calls and 0 ms of waiting to sign-in and sign-out (flushed in `after()`) and fails 0 of them (it never throws). |
+| N9 | Sign-in sends 0 reports for what the visitor's input decides (wrong password, validation, a 429 or `AUTH_BUSY` envelope) and 0 for an outage (timeout, network, 5xx). |
+
+**Consistency vs availability.** Unchanged: this browser's cookie is consistent, the session row is best-effort. A report is best-effort too and never delays or fails the action it describes. **Entities:** `AuthReportKind` = `AuthCallFault` or `revocation_unconfirmed`. **API:** none new.
+
+**Data flow.** Sign-in: as before up to `credentialCall`; a called and failed result goes through `authCallFaultOf`, and a fault is reported as `sign-in`; then the form state as before. `deleteSession`: 204 or a 401 envelope → nothing; any other failed answer → one report as `sign-out`, the fault when there is one, else `revocation_unconfirmed`; a throw → `configuration`; a preview refusal → nothing (no call was made, and a preview holds no session).
+
+**Decisions.**
+1. **Sign-in reports faults, not throws.** `signInAction` still has no try/catch (decision 2 of 1f-iv-b): a configuration error surfaces as a failed action, as before.
+2. **`revocation_unconfirmed` is everything that is neither "gone" nor a fault**: timeout, network, 429, any 5xx, and any other 4xx envelope, so the silent 404 accepted in 1f-iv-b is now reported. Never two reports for one delete. It goes through `reportAuthCallFault` with its own throttle key, so an outage cannot hide a misconfiguration or the reverse. This is the one place an outage is reported: `GET /me` and sign-in still report none (decision 3 of 1f-iv). Unlike a fault, a visitor can provoke it (a 429, a slow API), so here the throttle is the bound, not the cause.
+3. **The reporter file is `auth-reports.ts`**, and the tag of `reportClientIpUnknown` becomes `auth_route`: `credential_route` matches the key pattern of `redactValue` (`packages/shared-types/src/redaction.ts`), which runs on the whole event, so that report has been arriving with its route masked (L8 of 1f-iv-a).
+4. **Decision 6 of 1f-iv (the `Host` check) is withdrawn.** Off Vercel, `readCredentialClientIp` keeps sending 127.0.0.1 and reads no header. Every auth Server Action runs `isSameOrigin` before it reads the form, and a browser whose `Origin` is `WEB_PUBLIC_URL` is on that host, so the check would refuse no browser that guard lets through. A script can send any `Host` to a dev server bound beyond loopback. Only behind a tunnel that routes on `Host` would it stop a script, and what it protects there is the rate-limit bucket of a development database, where sharing 127.0.0.1 gives remote callers one bucket, not more attempts. Cost avoided: a `host_mismatch` reason through three unions, a `headers()` read off Vercel and about 70 lines. Decide again if the web is ever hosted off Vercel (an https `WEB_PUBLIC_URL` there throws today).
+5. **The key's loopback rule stays as it is** (`isSecureApiBaseUrl`, `src/api/config.ts`): exact `127.0.0.1` and `[::1]` after URL parsing, checked when the client is built and by `next.config.ts`; a Bearer or a credential body throws without the key, and `redirect: 'error'` keeps a redirect from carrying them elsewhere.
+
+**Rejected.**
+- **A separate `reportRevocationUnconfirmed()` at `warning` level.** A third copy of throttle, capture and flush, and one more name to mock in four test files, for a level no alert rule reads yet.
+- **Reporting from `signOutAction` only.** The old-session delete inside sign-in would stay silent; `deleteSession` is the one caller of the route.
+- **Adding `localhost` or all of 127.0.0.0/8 to the key's loopback set.** It loosens a rule that holds: a name is resolved (hosts file, DNS), and nothing here needs another loopback address.
+
+**Too simple?**
+- The throttle is per instance, not global: with N warm instances the worst case is 6 × N events an hour per kind, and a visitor who can provoke 429s or timeouts on sign-out can keep that one issue alive. Accepted; a Sentry inbound filter on the fingerprint if it is ever noisy.
+- Still no retry of a failed revocation. This report is how "if it is ever observed" (1f-iv) gets an answer.
+- `('me', 'revocation_unconfirmed')` type-checks. Accepted: one caller.
+
+**Too complicated?** Nothing added but one union member and two call sites. The complicated part was the `Host` check, withdrawn above.
+
+**Not verified by running:** that Sentry receives the `auth_route` tag unmasked (read from the scrubber's code, not from an event). Checked on Node 22: `127.0.0.1.evil.com`, `localhost.evil.com`, `127.0.0.1@evil.com`, `[::ffff:127.0.0.1]`, `0.0.0.0` and `127.0.0.2` are all refused by the loopback rule; numeric spellings (`127.1`, `0x7f.0.0.1`, `2130706433`) parse to `127.0.0.1` and are loopback.
+
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
 - Each signed-in page costs one extra API call (`GET /me`), and viewer-dependent UI must sit outside the static shell (ADR 0014). `apiClient()` calls that carry a session are always `no-store`, which closes the open point of ADR 0003.
