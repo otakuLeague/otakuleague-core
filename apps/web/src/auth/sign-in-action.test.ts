@@ -12,7 +12,9 @@ const mocks = vi.hoisted(() => ({
   setCookie: vi.fn(),
   redirect: vi.fn(),
   deleteSession: vi.fn(),
+  sessionCall: vi.fn(),
   reportClientIpUnknown: vi.fn(),
+  reportAuthCallFault: vi.fn(),
   requestHeaders: new Headers(),
 }));
 vi.mock('./credential-call', async (importOriginal) => ({
@@ -34,8 +36,14 @@ vi.mock('next/navigation', async (importOriginal) => ({
   redirect: mocks.redirect,
 }));
 vi.mock('./delete-session', () => ({ deleteSession: mocks.deleteSession }));
-vi.mock('./report-credential-refusal', () => ({
+vi.mock('./session-call', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./session-call')>()),
+  sessionCall: mocks.sessionCall,
+}));
+vi.mock('./report-credential-refusal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
   reportClientIpUnknown: mocks.reportClientIpUnknown,
+  reportAuthCallFault: mocks.reportAuthCallFault,
 }));
 
 const REDIRECT_SIGNAL = new Error('NEXT_REDIRECT (test sentinel)');
@@ -149,6 +157,31 @@ describe('signInAction', () => {
     },
   );
 
+  it.each([
+    ['throws', () => mocks.sessionCall.mockRejectedValue(new Error('no key'))],
+    [
+      'times out',
+      () =>
+        mocks.sessionCall.mockResolvedValue(failedWith({ kind: 'timeout' })),
+    ],
+  ])(
+    'still sets the new cookie and redirects when the real old-session delete %s',
+    async (_, arrange) => {
+      const actual =
+        await vi.importActual<typeof import('./delete-session')>(
+          './delete-session',
+        );
+      mocks.deleteSession.mockImplementation(actual.deleteSession);
+      arrange();
+      await expect(signInAction(IDLE, signInForm())).rejects.toBe(
+        REDIRECT_SIGNAL,
+      );
+      expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
+      expect(mocks.setCookie.mock.calls[0]?.[1]).toBe(TOKEN);
+      expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
+    },
+  );
+
   it.each<Readonly<Record<string, string | Blob>>>([
     { next: '//evil.com/my-list' },
     { next: '/\\evil.com' },
@@ -197,6 +230,7 @@ describe('signInAction', () => {
         kind: 'off_on_preview',
       });
       expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
     },
   );
 
@@ -210,6 +244,7 @@ describe('signInAction', () => {
       });
       expect(mocks.credentialCall).not.toHaveBeenCalled();
       expect(mocks.setCookie).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
       expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
     },
   );
@@ -225,6 +260,7 @@ describe('signInAction', () => {
       expect(state).toEqual({ kind: 'invalid_credentials' });
       expect(JSON.stringify(state)).not.toMatch(/farouk|never-echo/i);
       expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.deleteSession).not.toHaveBeenCalled();
     },
   );
 

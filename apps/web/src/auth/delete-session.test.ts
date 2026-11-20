@@ -60,6 +60,7 @@ describe('deleteSession', () => {
     ['a 401 (expired or replayed: already gone)', api(401, 'UNAUTHORIZED')],
     ['a timeout', failed({ kind: 'timeout' })],
     ['a network failure', failed({ kind: 'network' })],
+    ['a 429 envelope', api(429, 'TOO_MANY_REQUESTS')],
     ['a 503 envelope', api(503, 'SERVICE_UNAVAILABLE')],
     ['a non-envelope 5xx', failed({ kind: 'invalid_response', status: 502 })],
     ['a 404 envelope', api(404, 'NOT_FOUND')],

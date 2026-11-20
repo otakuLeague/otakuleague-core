@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   deleteCookie: vi.fn(),
   redirect: vi.fn(),
   deleteSession: vi.fn(),
+  sessionCall: vi.fn(),
+  report: vi.fn(),
   requestHeaders: new Headers(),
 }));
 vi.mock('next/headers', () => ({
@@ -31,6 +33,14 @@ vi.mock('next/navigation', async (importOriginal) => ({
   redirect: mocks.redirect,
 }));
 vi.mock('./delete-session', () => ({ deleteSession: mocks.deleteSession }));
+vi.mock('./session-call', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./session-call')>()),
+  sessionCall: mocks.sessionCall,
+}));
+vi.mock('./report-credential-refusal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./report-credential-refusal')>()),
+  reportAuthCallFault: mocks.report,
+}));
 
 const REDIRECT_SIGNAL = new Error('NEXT_REDIRECT (test sentinel)');
 const TOKEN = `${'aZ09_-'.repeat(7)}x`;
@@ -88,6 +98,37 @@ describe('signOutAction', () => {
     await expect(callWithInput(forged)).rejects.toBe(REDIRECT_SIGNAL);
     expect(mocks.deleteSession.mock.calls).toEqual([[TOKEN]]);
   });
+
+  it.each([
+    ['throws', new Error('no key'), [['sign-out', 'configuration']]],
+    [
+      'times out',
+      { kind: 'called', result: { ok: false, failure: { kind: 'timeout' } } },
+      [],
+    ],
+  ])(
+    'still clears the cookie and redirects when the real delete call %s',
+    async (_, outcome, reports) => {
+      const actual =
+        await vi.importActual<typeof import('./delete-session')>(
+          './delete-session',
+        );
+      mocks.deleteSession.mockImplementation(actual.deleteSession);
+      if (outcome instanceof Error) {
+        mocks.sessionCall.mockRejectedValue(outcome);
+      } else {
+        mocks.sessionCall.mockResolvedValue(outcome);
+      }
+
+      await expect(signOutAction()).rejects.toBe(REDIRECT_SIGNAL);
+      expect(mocks.sessionCall).toHaveBeenCalledTimes(1);
+      expect(mocks.setCookie.mock.calls).toEqual([
+        cleared('__Host-ol_session', true),
+      ]);
+      expect(mocks.redirect.mock.calls).toEqual([['/', 'replace']]);
+      expect(mocks.report.mock.calls).toEqual(reports);
+    },
+  );
 
   it.each([
     ['no cookie', []],

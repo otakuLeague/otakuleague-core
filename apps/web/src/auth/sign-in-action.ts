@@ -23,8 +23,10 @@ import { isSameOrigin, readWebPublicUrl } from './web-public-url';
  * the form is read, also refuses a missing `Origin` and a real browser on a host that is not
  * `WEB_PUBLIC_URL` (a vercel.app alias, a second domain, a stale value after cutover). That case
  * shows `unavailable` and is not reported (a visitor can cause it at will). The previous state is
- * ignored (a client can forge it). No try/catch: `redirectTo` throws Next's
- * redirect signal, and a configuration error must surface, never read as a sign-in.
+ * ignored (a client can forge it). Only after a success, and only with a well-formed old cookie,
+ * `deleteSession` revokes the old session first (one session call, 2,000 ms, never fatal). No
+ * try/catch: `redirectTo` throws Next's redirect signal, and a configuration error must surface,
+ * never read as a sign-in.
  */
 export async function signInAction(
   _previousState: SignInFormState,

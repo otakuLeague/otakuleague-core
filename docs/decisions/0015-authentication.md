@@ -173,20 +173,20 @@ Added 2026-11-20 (OTA-139 slice 1f-iv), written before the code. The slice does 
 **Not verified by running:** that Next re-renders the root layout after a Server Action that sets a cookie and redirects (the header must change on sign-in and sign-out: check on beta in iv-c), and the `<noscript>` fallback in a browser with JavaScript off.
 
 ## Addendum (1f-iv-b)
-Added 2026-11-20 (OTA-139 slice 1f-iv-b), written before the code. It refines decisions 4 and 5 of [Addendum (1f-iv)](#addendum-1f-iv); nothing there is reversed. The six items listed for iv-b come to about 480 changed lines with tests, so iv-b ships as two: **iv-b** session lifecycle (`deleteSession`, `signOutAction`, `redirectToSignedOut`, old-session delete after sign-in; the sign-in change is live, `signOutAction` has no caller until iv-c) and **iv-b2** credential-call follow-ups (the sign-in fault reports, moved here to keep iv-b under 400 lines; the loopback host check of decision 6, unchanged, and the reporter file renamed to `auth-reports.ts`). iv-b2 depends on nothing in iv-b and must merge before sign-up opens (1f-v).
+Added 2026-11-20 (OTA-139 slice 1f-iv-b), written before the code. It refines decisions 4 and 5 of [Addendum (1f-iv)](#addendum-1f-iv); nothing there is reversed. The six items listed for iv-b come to about 480 changed lines with tests, so iv-b ships as two: **iv-b** session lifecycle (`deleteSession`, `signOutAction`, `redirectToSignedOut`, old-session delete after sign-in; the sign-in change is live, `signOutAction` has no caller until iv-c) and **iv-b2** credential-call follow-ups (the sign-in fault reports, moved here to keep the iv-b review small; the loopback host check of decision 6, unchanged, and the reporter file renamed to `auth-reports.ts`). iv-b2 depends on nothing in iv-b and must merge before sign-up opens (1f-v).
 
 | # | Requirement |
 |---|---|
 | F2, F3 | As in 1f-iv: a member can sign out; signing in over an old cookie deletes the session it held. |
-| F4 | A misconfigured sign-in or sign-out (key refused, body off contract) reaches Sentry without a visitor being able to cause it. |
+| F4 | A misconfigured sign-out (key refused, body off contract, a throw) reaches Sentry without a visitor being able to cause it; the same for sign-in in iv-b2. |
 | N3 | As in 1f-iv, and it now holds when the call throws: at most 1 `POST /auth/sign-out` (2,000 ms, never retried), cookie cleared on 100 % of same-origin submits. |
 | N4 | As in 1f-iv: at most 1 Sentry event per fault kind per instance per 10 minutes. |
 | N6 | Sign-in over a well-formed old cookie makes exactly 1 extra call (2,000 ms, never retried), 0 otherwise; a failed delete fails 0 sign-ins. Worst case for one sign-in: 5,000 + 2,000 ms. |
 | N7 | A sign-out from another origin, without `Origin`, or on a preview makes 0 API calls and 0 cookie writes. |
 
-**Consistency vs availability.** Unchanged: this browser's cookie is consistent (always cleared, always replaced), the session row is best-effort and idles out in 30 days. **Entities:** none new. **API:** none new (`POST /auth/sign-out`: 204, or 401 already gone).
+**Consistency vs availability.** Unchanged: this browser's cookie is consistent (always cleared, always replaced), the session row is best-effort and can stay valid until it idles out (30 days without use, 180 days at most). **Entities:** none new. **API:** none new (`POST /auth/sign-out`: 204, or 401 already gone).
 
-**Data flow.** Sign-out: preview → return; `Origin` is not `WEB_PUBLIC_URL` → return; read the cookie; a well-formed token → `deleteSession`; set `clearedSessionCookie`; `redirectToSignedOut()`. Sign-in: as before up to the form check; read the old token; `credentialCall`; report a fault; on success `deleteSession(old)` when there was one; set the new cookie; `redirectTo(next)`.
+**Data flow.** Sign-out: preview → return; `Origin` is not `WEB_PUBLIC_URL` → return; read the cookie; a well-formed token → `deleteSession`; set `clearedSessionCookie`; `redirectToSignedOut()`. Sign-in: as before up to the form check; read the old token; `credentialCall`; report a fault (iv-b2); on success `deleteSession(old)` when there was one; set the new cookie; `redirectTo(next)`.
 
 **Decisions.**
 1. **`deleteSession(session)`** (`src/auth/delete-session.ts`) is the one place that calls `POST /auth/sign-out`, for both actions. It is total like `loadViewer` (only Next's control-flow signals pass, through `unstable_rethrow`) and returns nothing: 204 and 401 are both "gone", an `AuthCallFault` is reported, a throw is reported as `configuration`. This is what makes N3 and N6 true when `INTERNAL_API_KEY` is missing: without it a throw would skip the cookie clear, or lose a sign-in the API already accepted.
@@ -201,7 +201,9 @@ Added 2026-11-20 (OTA-139 slice 1f-iv-b), written before the code. It refines de
 **Too simple?**
 - Two sign-ins submitted at once from one browser both read the same old token: one new session ends in the cookie, the other is orphaned until it idles out. Accepted.
 - A 404 or another unexpected 4xx envelope on `POST /auth/sign-out` is no fault under decision 3 of 1f-iv, so a missing route would fail silently. Accepted: the API's integration spec covers the route.
-- A refused sign-out shows nothing. It needs a host that is not `WEB_PUBLIC_URL`, where sign-in is refused too.
+- A refused sign-out shows nothing and leaves the member signed in. It happens on a host that is not `WEB_PUBLIC_URL` (where sign-in is refused too), but also when a proxy or extension strips `Origin`, or when `WEB_PUBLIC_URL` changed after members signed in. iv-c must make `signOutAction` return a `refused` state and show "Could not sign out".
+- Sign-out is an unthrottled POST that costs one API call, like `GET /me` on every signed-in page; the planned general throttle covers both.
+- A failed server-side revocation (timeout, 5xx) is not reported yet: iv-b2 adds a throttled, tags-only `revocation_unconfirmed` report.
 
 **Too complicated?** No guard for "the new token equals the old one" (only the API issues tokens). The host check is close to redundant for sign-in, where `isSameOrigin` already refuses a browser on another host; its value is for `credentialCall`'s later callers (sign-up, reset), so iv-b2 decides again whether it earns its lines.
 

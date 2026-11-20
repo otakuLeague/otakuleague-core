@@ -7,7 +7,7 @@ import {
 import { sessionCall } from './session-call';
 
 /** `POST /auth/sign-out` must answer within 2 s: sign-out and sign-in never wait longer (ADR 0015 N3, N6). */
-export const SESSION_DELETE_TIMEOUT_MS = 2000;
+const SESSION_DELETE_TIMEOUT_MS = 2000;
 
 /**
  * The one caller of `POST /auth/sign-out` (ADR 0015 Addendum 1f-iv-b): exactly one attempt, never
