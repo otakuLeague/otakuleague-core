@@ -123,8 +123,14 @@ function isSignInResponse(value: unknown): value is SignInResponse {
     typeof value.sessionToken === 'string' &&
     SESSION_TOKEN_PATTERN.test(value.sessionToken) &&
     typeof value.expiresAt === 'string' &&
-    !Number.isNaN(Date.parse(value.expiresAt))
+    isIsoInstant(value.expiresAt)
   );
+}
+
+/** Exactly what `Date.toISOString()` writes, as the API sends it; '2026' or a bare date is not one. */
+function isIsoInstant(value: string): boolean {
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   vi,
 } from 'vitest';
 import { InternalKeySettings } from '../common/internal-key.guard';
+import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   createTestApp,
@@ -36,6 +37,7 @@ import {
   CONFIRM_PASSWORD_INVALID_MESSAGE,
 } from './email-verification.controller';
 import { PasswordHasher } from './password-hasher';
+import { SessionService } from './session.service';
 import { SESSION_IDLE_MS, SESSION_TOKEN_PATTERN } from './session-rules';
 import { SignUpService } from './sign-up.service';
 import { hashAuthToken } from './sign-up-rules';
@@ -77,6 +79,8 @@ const PASSWORD_INVALID = {
 const LIMITED = {
   error: { code: 'TOO_MANY_REQUESTS', message: CONFIRM_LIMITED_MESSAGE },
 };
+
+type TransactionClient = Prisma.TransactionClient;
 
 const at = (offsetMs: number): Date => new Date(NOW.getTime() + offsetMs);
 /** Outside SequentialRandom's ids (variant 8), so a seeded row never collides with a new one. */
@@ -233,6 +237,18 @@ describe('POST /auth/email-verification/confirm', () => {
     });
     expect(token.usedAt).toBeNull();
     expect(await prisma.session.count()).toBe(0);
+  }
+
+  /** Until another connection waits on a row lock: the confirm is blocked at its FOR UPDATE. */
+  async function waitForLockWaiter(): Promise<void> {
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      const [row] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`;
+      if ((row?.waiting ?? 0) > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('No request waited on the user row lock');
   }
 
   async function waitForDerives(count: number): Promise<void> {
@@ -550,6 +566,127 @@ describe('POST /auth/email-verification/confirm', () => {
       }),
     ).toMatchObject({ usedAt: null });
   });
+
+  it('answers already_verified to a password confirm that loses the race to the binding path: one session', async () => {
+    const pending = await signUp();
+    const release = argon2.holdNext();
+    const byPassword = confirm(
+      { token: pending.token, password: PASSWORD },
+      from(OTHER_IP),
+    ).then((response) => response);
+    await waitForDerives(2);
+
+    const byBinding = await confirm({
+      token: pending.token,
+      bindingToken: pending.bindingToken,
+    }).expect(200);
+    release();
+    const response = await byPassword;
+
+    expect((byBinding.body as EmailVerificationConfirmResponse).outcome).toBe(
+      'verified',
+    );
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ outcome: 'already_verified' });
+    expect(await prisma.session.count()).toBe(1);
+  });
+
+  it('answers 400, not 500, when the cleanup deletes the user while the password is checked', async () => {
+    const pending = await signUp();
+    const release = argon2.holdNext();
+    const confirming = confirm({
+      token: pending.token,
+      password: PASSWORD,
+    }).then((response) => response);
+    await waitForDerives(2);
+
+    await prisma.user.delete({ where: { id: pending.userId } });
+    release();
+    const response = await confirming;
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(TOKEN_INVALID);
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it('keeps the member verified when the session insert fails after commit; the retry is already_verified', async () => {
+    const pending = await signUp();
+    vi.spyOn(app.get(SessionService), 'create').mockRejectedValueOnce(
+      new Error('fake session insert failure'),
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const body = { token: pending.token, bindingToken: pending.bindingToken };
+
+    const failed = await confirm(body);
+    const retry = await confirm(body).expect(200);
+
+    expect(failed.status).toBeGreaterThanOrEqual(500);
+    expect(failed.text).not.toContain(pending.token);
+    expect(
+      await prisma.user.findUniqueOrThrow({ where: { id: pending.userId } }),
+    ).toMatchObject({ emailVerifiedAt: NOW });
+    expect(retry.body).toEqual({ outcome: 'already_verified' });
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it.each<[string, (tx: TransactionClient, userId: string) => Promise<void>]>([
+    [
+      'a re-submit (new hash, token replaced)',
+      async (tx, userId) => {
+        await tx.$executeRaw`
+          UPDATE app_user SET password_hash = '$argon2id$fake-attacker-hash'
+          WHERE id = ${userId}::uuid`;
+        await tx.$executeRaw`
+          DELETE FROM auth_token WHERE user_id = ${userId}::uuid`;
+        await tx.authToken.create({
+          data: {
+            tokenHash: hashAuthToken('fake-attacker-token'),
+            purpose: 'EMAIL_VERIFICATION',
+            userId,
+            bindingHash: hashAuthToken('fake-attacker-binding'),
+            createdAt: NOW,
+            expiresAt: at(DAY),
+          },
+        });
+      },
+    ],
+    [
+      'the cleanup deleting the user',
+      async (tx, userId) => {
+        await tx.$executeRaw`DELETE FROM app_user WHERE id = ${userId}::uuid`;
+      },
+    ],
+  ])(
+    'answers 400 on the binding path when %s commits while the confirm waits on the user lock',
+    async (_, write) => {
+      const pending = await signUp();
+      let confirming: Promise<request.Response> | null = null;
+
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`
+            SELECT id FROM app_user WHERE id = ${pending.userId}::uuid FOR UPDATE`;
+          confirming = confirm({
+            token: pending.token,
+            bindingToken: pending.bindingToken,
+          }).then((response) => response);
+          await waitForLockWaiter();
+          await write(tx, pending.userId);
+        },
+        { timeout: 10_000 },
+      );
+      const response = await (confirming as Promise<request.Response> | null);
+
+      expect(response?.status).toBe(400);
+      expect(response?.body).toEqual(TOKEN_INVALID);
+      expect(
+        await prisma.user.count({
+          where: { id: pending.userId, emailVerifiedAt: { not: null } },
+        }),
+      ).toBe(0);
+      expect(await prisma.session.count()).toBe(0);
+    },
+  );
 
   it('answers already_verified to a replay, with or without proof, never with a second session or a hash', async () => {
     const pending = await signUp();

@@ -1,6 +1,6 @@
 # 0020: Sign-up and email verification (OTA-139 slice 1e)
 
-Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration. Built in three PRs: 1e-i sign-up (this PR), 1e-ii confirm and resend, 1e-iii availability and the common-password list.
+Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration. Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend).
 
 ## Context
 
@@ -123,7 +123,7 @@ This table is replaced by the one in the Addendum (1e-ii): the second row (bindi
 | 1e-ii | confirm and resend, `AUTH_TOKEN_INVALID`, their limits and shared types | about 340 lines of code |
 | 1e-iii | `GET /users/availability`, the 10,000 common-password list (licence check first) | small code, one data file |
 | Email slice | Resend adapter, templates, `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, email budget, ADR 0015 addendum | opens sign-up in production |
-| Later migration | CHECK `expires_at > created_at`, UNIQUE(`user_id`, `purpose`) on `auth_token` | deferred as planned |
+| Later migration | CHECK `expires_at > created_at` on `auth_token` | deferred as planned; UNIQUE(`user_id`, `purpose`) moved to the Gate (with 1e-ii-b) |
 
 ## Addendum (1e-ii)
 
@@ -187,8 +187,10 @@ Rejected: resend extends the account and its hold together. A submit with a regi
   - the per-address email budget, checked before the transaction, and the common-password list;
   - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
   - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
-  - a reserved-username deny list.
-- Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again.
+  - a reserved-username deny list;
+  - UNIQUE(`user_id`, `purpose`) on `auth_token` (a migration), moved here from "Later migration" and due with 1e-ii-b: resend is the next writer of verification tokens, and the constraint makes "one live token per account" a database rule rather than a habit of each writer;
+  - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30.
+- Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
 
 **Too simple?**
 - Submitting the same form twice within 24 h answers 409 for the member's own username, and a typo in the email locks the chosen name for 24 h. Letting the same email through without leaking needs a keyed hash of the email on the hold (a column, so a migration). Follow-up ticket to open; not built here.

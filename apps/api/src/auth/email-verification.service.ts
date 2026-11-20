@@ -52,7 +52,7 @@ interface TokenRow {
 
 /** What the request proved besides the token; the transaction states it in its own WHERE. */
 type Proof =
-  | { readonly kind: 'binding'; readonly bindingHash: Uint8Array<ArrayBuffer> }
+  | { readonly kind: 'binding'; readonly bindingHash: Uint8Array }
   | { readonly kind: 'password'; readonly passwordHash: string };
 
 type Verification =
@@ -111,13 +111,12 @@ export class EmailVerificationService {
     if (row.verified) return ALREADY_VERIFIED;
     if (!row.live) return TOKEN_INVALID;
     const { bindingToken, password } = attempt;
-    if (
-      bindingToken !== undefined &&
-      bindingMatches(bindingToken, row.bindingHash)
-    ) {
+    const storedBinding = row.bindingHash;
+    if (storedBinding !== null && bindingMatches(bindingToken, storedBinding)) {
+      // Equal to the presented digest (just compared): step 2 requires it still on the token.
       const verification = await this.verify(row.userId, tokenHash, now, {
         kind: 'binding',
-        bindingHash: hashAuthToken(bindingToken),
+        bindingHash: storedBinding,
       });
       if (verification.kind !== 'verified') return verification;
       // After commit: if this insert fails, the member is verified and signs in (ADR 0020).
@@ -128,6 +127,8 @@ export class EmailVerificationService {
       return { kind: 'verified', session };
     }
     if (password === undefined) return CONFIRMATION_REQUIRED;
+    // On purpose, expiry stays judged at `now`, the request's start (one Clock.now() per
+    // request): a token live when the request began may be consumed after a slow hash.
     const budget = await this.limiter.check(
       confirmPasswordHits(
         this.secrets.hmacKey(),
