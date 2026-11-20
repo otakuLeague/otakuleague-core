@@ -54,10 +54,11 @@ describe('SIGN_IN_LIMITS', () => {
 });
 
 describe('PER_IP_LIMITS', () => {
-  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min', () => {
+  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min, resend 10 per IP per hour', () => {
     expect(PER_IP_LIMITS).toEqual({
       'sign-up': { limit: 5, windowMs: 60 * 60_000 },
       'email-verification-confirm': { limit: 10, windowMs: 15 * 60_000 },
+      'email-verification-resend': { limit: 10, windowMs: 60 * 60_000 },
     });
   });
 
@@ -129,11 +130,15 @@ describe('perIpHits', () => {
   it('never shares a counter with sign-in or another route for the same IP', () => {
     const [signUp] = perIpHits(HMAC_KEY, 'sign-up', IP);
     const [confirm] = perIpHits(HMAC_KEY, 'email-verification-confirm', IP);
+    const [resend] = perIpHits(HMAC_KEY, 'email-verification-resend', IP);
     const [signIn] = signInHits(HMAC_KEY, IP, FRIEREN);
 
     expect(hex(signUp.key)).not.toBe(hex(signIn.key));
     expect(hex(confirm.key)).not.toBe(hex(signIn.key));
     expect(hex(confirm.key)).not.toBe(hex(signUp.key));
+    expect(hex(resend.key)).not.toBe(hex(signIn.key));
+    expect(hex(resend.key)).not.toBe(hex(signUp.key));
+    expect(hex(resend.key)).not.toBe(hex(confirm.key));
   });
 
   it('differs by IP and HMAC key, and counts a whole IPv6 /64 as one visitor', () => {

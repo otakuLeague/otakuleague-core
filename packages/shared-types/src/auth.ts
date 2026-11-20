@@ -54,3 +54,15 @@ export type EmailVerificationConfirmResponse =
   | { readonly outcome: 'verified'; readonly session: SignInResponse | null }
   | { readonly outcome: 'already_verified' }
   | { readonly outcome: 'confirmation_required' };
+
+/** POST /auth/email-verification/resend body (ADR 0020 Addendum 1e-ii-b). Sent only by the web server. */
+export interface EmailVerificationResendRequest {
+  /** At most 254 characters; matched trimmed and lower-cased, like sign-up's. */
+  readonly email: string;
+}
+
+/**
+ * POST /auth/email-verification/resend 202 body: always `{}`, whatever the address, so it never
+ * says whether a mail left. An empty object, not an empty body (ADR 0003). Never cached.
+ */
+export type EmailVerificationResendResponse = Readonly<Record<string, never>>;

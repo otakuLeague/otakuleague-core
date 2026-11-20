@@ -33,8 +33,31 @@ export type SignUpOutcome =
   | { readonly kind: 'rate_limited'; readonly retryAfterSeconds: number }
   | { readonly kind: 'closed' };
 
+export interface ResendVerificationAttempt {
+  /** As typed; EmailVerificationResendDto checked its normalised shape, normalised here before the read. */
+  readonly email: string;
+  readonly ip: ClientIpKey;
+}
+
+/**
+ * One `accepted` for an unknown, a verified, a stale, a deadline-less and a pending address
+ * (ADR 0020 Addendum 1e-ii-b, R1): the caller cannot tell whether a mail left.
+ */
+export type ResendVerificationOutcome =
+  | { readonly kind: 'accepted' }
+  | { readonly kind: 'rate_limited'; readonly retryAfterSeconds: number }
+  | { readonly kind: 'closed' };
+
 const USERNAME_TAKEN = { kind: 'username_taken' } as const;
-const CLOSED: SignUpOutcome = { kind: 'closed' };
+const CLOSED = { kind: 'closed' } as const;
+const RESEND_ACCEPTED = { kind: 'accepted' } as const;
+
+/** The pending account a resend found and locked: where the new token is mailed. */
+interface PendingAccount {
+  readonly userId: string;
+  /** As stored, for the mail. */
+  readonly username: string;
+}
 
 /** What the transaction did: a pending account to verify, a registered one left untouched, or nothing. */
 type Registration =
@@ -165,6 +188,56 @@ export class SignUpService implements OnModuleDestroy {
     return { kind: 'accepted', bindingToken };
   }
 
+  /**
+   * POST /auth/email-verification/resend (ADR 0020 Addendum 1e-ii-b). Order: no sender is 403
+   * before anything; the attempt is counted per IP; one instant; the token is drawn in every
+   * branch; then one transaction that locks the pending account by email and upserts its token.
+   * Nothing moves: no column of `app_user` or of the hold is written, the token's deadline is the
+   * account's own (copied in SQL) and its binding stays the one the last submit wrote. Any other
+   * address is `accepted` too and nothing is sent. No hash, no counter keyed by the email; logs
+   * nothing but a failed send (user id only). Database errors propagate (503).
+   */
+  async resendVerification(
+    attempt: ResendVerificationAttempt,
+  ): Promise<ResendVerificationOutcome> {
+    if (!this.mailer.canSend()) return CLOSED;
+    const decision = await this.limiter.check(
+      perIpHits(
+        this.secrets.hmacKey(),
+        'email-verification-resend',
+        attempt.ip,
+      ),
+    );
+    if (decision.kind === 'limited') {
+      return {
+        kind: 'rate_limited',
+        retryAfterSeconds: decision.retryAfterSeconds,
+      };
+    }
+    const now = this.clock.now().toISOString();
+    const email = normaliseIdentifier(attempt.email);
+    // Drawn whatever the address: the silent cases cost what the pending one costs, bar one upsert.
+    const token = this.newToken();
+    const pending = await this.reissueVerificationToken(
+      email,
+      hashAuthToken(token),
+      now,
+    );
+    if (pending !== null) {
+      // The read matched `email = <this value>`, so it is the stored address.
+      this.dispatch(
+        {
+          kind: 'email_verification',
+          to: email,
+          username: pending.username,
+          token,
+        },
+        pending.userId,
+      );
+    }
+    return RESEND_ACCEPTED;
+  }
+
   /** Waits for every send in progress. */
   async settle(): Promise<void> {
     while (this.sending.size > 0) {
@@ -257,6 +330,43 @@ export class SignUpService implements OnModuleDestroy {
       }
       throw error;
     }
+  }
+
+  /**
+   * Two statements, locks in the order app_user, auth_token (sign-up's and the cleanup's order).
+   * The user lock is what makes it safe: after waiting on a confirm, a re-submit or the cleanup,
+   * READ COMMITTED re-checks the WHERE on the new row version, so a member verified or deleted
+   * meanwhile gets no token and no mail. The upsert never names `binding_hash`, so the binding
+   * stays (NULL with no previous row: the password path only), and copies `pending_expires_at`
+   * inside SQL, so the token ends with the account and no timestamp is read back.
+   */
+  private async reissueVerificationToken(
+    email: NormalisedIdentifier,
+    tokenHash: Uint8Array<ArrayBuffer>,
+    now: string,
+  ): Promise<PendingAccount | null> {
+    return this.prisma.$transaction(
+      async (tx): Promise<PendingAccount | null> => {
+        const [account] = await tx.$queryRaw<
+          { id: string; username: string }[]
+        >`
+        SELECT id::text AS id, username FROM app_user
+        WHERE email = ${email} AND email_verified_at IS NULL
+          AND pending_expires_at > ${now}::timestamptz
+        FOR UPDATE`;
+        if (account === undefined) return null;
+        await tx.$executeRaw`
+        INSERT INTO auth_token (token_hash, purpose, user_id, created_at, expires_at)
+        SELECT ${tokenHash}::bytea, 'EMAIL_VERIFICATION'::auth_token_purpose, id,
+          ${now}::timestamptz, pending_expires_at
+        FROM app_user WHERE id = ${account.id}::uuid
+        ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash,
+          created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at, used_at = NULL`;
+        return { userId: account.id, username: account.username };
+      },
+      // Explicit: the lock wait above relies on READ COMMITTED re-reading the row.
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   /**

@@ -252,6 +252,8 @@ export * from './anime';
 export type {
   EmailVerificationConfirmRequest,
   EmailVerificationConfirmResponse,
+  EmailVerificationResendRequest,
+  EmailVerificationResendResponse,
   MeResponse,
   SignInRequest,
   SignInResponse,
