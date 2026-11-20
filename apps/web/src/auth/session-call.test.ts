@@ -7,13 +7,16 @@ import type { SessionToken } from '../api/session-token';
 const jar = vi.hoisted(() => new Map<string, string>());
 const connection = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 vi.mock('next/server', () => ({ connection }));
+const valueReads = vi.hoisted(() => vi.fn());
 vi.mock('next/headers', () => ({
   cookies: () =>
     Promise.resolve({
       get: (name: string) => {
+        valueReads(name);
         const value = jar.get(name);
         return value === undefined ? undefined : { name, value };
       },
+      has: (name: string) => jar.has(name),
     }),
 }));
 
@@ -47,6 +50,7 @@ async function sessionModuleWith(env: Record<string, string | undefined>) {
 
 afterEach(() => {
   jar.clear();
+  valueReads.mockClear();
   connection.mockClear();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -122,6 +126,30 @@ describe('sessionCall', () => {
     expect(String(error)).toMatch(/INTERNAL_API_KEY is not set/);
     expect(`${String(error)} ${(error as Error).stack}`).not.toContain(TOKEN);
     expect(requests).toEqual([]);
+  });
+});
+
+describe('hasSessionCookie', () => {
+  it.each([
+    ['no cookies', [], false],
+    ['only an unrelated cookie', ['ol-theme'], false],
+    ['__Host-ol_session', ['__Host-ol_session'], true],
+    ['ol_session', ['ol_session'], true],
+  ])('is %s -> %s', async (_, names, expected) => {
+    for (const name of names) jar.set(name, TOKEN);
+    const { hasSessionCookie } = await sessionModuleWith({});
+
+    expect(await hasSessionCookie()).toBe(expected);
+  });
+
+  it('never reads a cookie value', async () => {
+    jar.set('__Host-ol_session', TOKEN);
+    jar.set('ol_session', TOKEN);
+    const { hasSessionCookie } = await sessionModuleWith({});
+
+    await hasSessionCookie();
+
+    expect(valueReads).not.toHaveBeenCalled();
   });
 });
 

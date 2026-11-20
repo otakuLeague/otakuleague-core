@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { connection } from 'next/server';
 import { apiClient, type ApiPath, type ApiResult } from '../api/client';
 import { sessionTokenFrom, type SessionToken } from '../api/session-token';
-import { sessionCookie } from './auth-cookies';
+import { SESSION_COOKIE_NAMES, sessionCookie } from './auth-cookies';
 import { credentialRoutesOff } from './credential-call';
 import type { WebPublicUrl } from './web-public-url';
 
@@ -50,8 +50,19 @@ export async function sessionCall<T>({
 }
 
 /**
- * The only reader of the session cookie: the name `WEB_PUBLIC_URL` gives (`__Host-` on https, so a
- * plain `ol_session` another page set is ignored), and only a well-formed token, else nothing.
+ * Whether the request carries a cookie under either session name, without reading a value or
+ * `WEB_PUBLIC_URL` (ADR 0015 Addendum 1f-iv-c decision 5). It only lets a visitor with neither skip
+ * the configuration; it never makes a cookie trusted: `true` still goes through `readSessionToken`.
+ */
+export async function hasSessionCookie(): Promise<boolean> {
+  const jar = await cookies();
+  return SESSION_COOKIE_NAMES.some((name) => jar.has(name));
+}
+
+/**
+ * The only reader of the session cookie's value: the name `WEB_PUBLIC_URL` gives (`__Host-` on
+ * https, so a plain `ol_session` another page set is ignored), and only a well-formed token, else
+ * nothing.
  */
 export async function readSessionToken(
   webPublicUrl: WebPublicUrl,

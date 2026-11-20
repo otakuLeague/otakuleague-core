@@ -20,7 +20,13 @@ vi.mock('next/headers', () => ({
       const value = mocks.jar.get(name);
       return value === undefined ? undefined : { name, value };
     };
-    return Promise.resolve({ get, set: mocks.writes, delete: mocks.writes });
+    const has = (name: string) => mocks.jar.has(name);
+    return Promise.resolve({
+      get,
+      has,
+      set: mocks.writes,
+      delete: mocks.writes,
+    });
   },
 }));
 vi.mock('next/server', () => ({
@@ -51,6 +57,11 @@ const KEY_REFUSED = api(403, 'INTERNAL_KEY_REQUIRED');
 const ME_CALL = { session: TOKEN, path: '/me', isExpectedBody: isMeResponse };
 const OUT = { kind: 'signed_out' };
 const NONE = { kind: 'unavailable' };
+/** A cookie holder, under either name, on a deployment missing WEB_PUBLIC_URL. */
+const holderWithoutWebPublicUrl = (name: string) => () => {
+  vi.stubEnv('WEB_PUBLIC_URL', undefined);
+  mocks.jar = new Map([[name, TOKEN]]);
+};
 const NEXT_SIGNAL: unknown = (() => {
   try {
     notFound();
@@ -88,14 +99,36 @@ describe('loadViewer', () => {
   });
 
   it.each([
-    ['no cookie', []],
-    ['a malformed cookie', [['__Host-ol_session', `Bearer ${TOKEN}`]]],
-  ] as const)('is signed out with %s, after 0 API calls', async (_, jar) => {
-    mocks.jar = new Map(jar);
+    ['no cookie at all', []],
+    ['only an unrelated cookie', [['ol-theme', 'dark']]],
+  ] as const)(
+    'is signed out with %s before reading WEB_PUBLIC_URL, after 0 API calls and 0 reports',
+    async (_, jar) => {
+      vi.stubEnv('WEB_PUBLIC_URL', undefined);
+      mocks.jar = new Map(jar);
 
-    expect(await loadViewer()).toEqual(OUT);
-    expect(mocks.sessionCall).not.toHaveBeenCalled();
-  });
+      expect(await loadViewer()).toEqual(OUT);
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
+      expect(mocks.report).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['a malformed cookie', [['__Host-ol_session', `Bearer ${TOKEN}`]]],
+    [
+      'only a plain ol_session on https, which never shadows __Host-',
+      [['ol_session', TOKEN]],
+    ],
+  ] as const)(
+    'is signed out with %s, after 0 API calls and 0 reports',
+    async (_, jar) => {
+      mocks.jar = new Map(jar);
+
+      expect(await loadViewer()).toEqual(OUT);
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
+      expect(mocks.report).not.toHaveBeenCalled();
+    },
+  );
 
   it('is signed in after exactly one GET /me with the cookie and a 2 s timeout', async () => {
     const viewer = await loadViewer();
@@ -105,6 +138,35 @@ describe('loadViewer', () => {
       [{ ...ME_CALL, timeoutMs: 2000 }],
     ]);
     expect(mocks.report).not.toHaveBeenCalled();
+  });
+
+  describe('on http://localhost:3000 (off Vercel)', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL', undefined);
+      vi.stubEnv('VERCEL_ENV', undefined);
+      vi.stubEnv('WEB_PUBLIC_URL', 'http://localhost:3000');
+    });
+
+    it('is signed in after exactly one GET /me with a plain ol_session cookie', async () => {
+      mocks.jar = new Map([['ol_session', TOKEN]]);
+
+      expect(await loadViewer()).toEqual({
+        kind: 'signed_in',
+        username: ME.username,
+      });
+      expect(mocks.sessionCall.mock.calls).toEqual([
+        [{ ...ME_CALL, timeoutMs: 2000 }],
+      ]);
+      expect(mocks.report).not.toHaveBeenCalled();
+    });
+
+    it('is signed out with only __Host-ol_session, after 0 API calls and 0 reports', async () => {
+      mocks.jar = new Map([['__Host-ol_session', TOKEN]]);
+
+      expect(await loadViewer()).toEqual(OUT);
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
+      expect(mocks.report).not.toHaveBeenCalled();
+    });
   });
 
   it.each([
@@ -120,7 +182,14 @@ describe('loadViewer', () => {
   });
 
   it.each([
-    ['no WEB_PUBLIC_URL', () => vi.stubEnv('WEB_PUBLIC_URL', undefined)],
+    [
+      'no WEB_PUBLIC_URL and a __Host- cookie',
+      holderWithoutWebPublicUrl('__Host-ol_session'),
+    ],
+    [
+      'no WEB_PUBLIC_URL and only a plain cookie',
+      holderWithoutWebPublicUrl('ol_session'),
+    ],
     [
       'a throwing sessionCall',
       () => mocks.sessionCall.mockRejectedValue(new Error('no key')),

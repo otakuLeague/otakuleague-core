@@ -3,7 +3,11 @@ import { unstable_rethrow } from 'next/navigation';
 import { connection } from 'next/server';
 import { authCallFaultOf, reportAuthCallFault } from './auth-reports';
 import { credentialRoutesOff } from './credential-call';
-import { readSessionToken, sessionCall } from './session-call';
+import {
+  hasSessionCookie,
+  readSessionToken,
+  sessionCall,
+} from './session-call';
 import { viewerFrom, type Viewer } from './viewer';
 import { readWebPublicUrl } from './web-public-url';
 
@@ -11,19 +15,23 @@ import { readWebPublicUrl } from './web-public-url';
 export const VIEWER_TIMEOUT_MS = 2000;
 
 /**
- * The viewer for a render, never thrown (only Next's control-flow signals pass): previews are
- * signed out before `WEB_PUBLIC_URL` is read, no or a malformed cookie costs no call, else exactly
- * one `GET /me`. A configuration throw is reported and `unavailable`. Reads the cookie, never
- * writes or deletes one. Never inside 'use cache': `connection()` throws there, reported as
- * `configuration`.
+ * The viewer for a render, never thrown (only Next's control-flow signals pass): previews, and
+ * requests with neither session cookie name, are signed out before `WEB_PUBLIC_URL` is read (F7:
+ * guest links whatever the configuration), no or a malformed token under the configured name costs
+ * no call, else exactly one `GET /me`. A configuration throw is reported and `unavailable` (only a
+ * cookie holder gets that far). Reads cookies, never writes or deletes one. Never inside
+ * 'use cache': `connection()` throws there, reported as `configuration`.
  */
 export async function loadViewer(): Promise<Viewer> {
   if (credentialRoutesOff(process.env)) {
     return { kind: 'signed_out' };
   }
   try {
-    // Request time only: a prerender stops here, before the configuration is read.
+    // Request time only: a prerender stops here, before the cookies or the configuration are read.
     await connection();
+    if (!(await hasSessionCookie())) {
+      return { kind: 'signed_out' };
+    }
     const session = await readSessionToken(readWebPublicUrl(process.env));
     if (session === undefined) {
       return { kind: 'signed_out' };
