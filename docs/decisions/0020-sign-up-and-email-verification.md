@@ -1,6 +1,6 @@
 # 0020: Sign-up and email verification (OTA-139 slice 1e)
 
-Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration until the [Addendum (1e-ii-b)](#addendum-1e-ii-b). Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert.
+Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration until the [Addendum (1e-ii-b)](#addendum-1e-ii-b). Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert. The [Addendum (1e-iii)](#addendum-1e-iii) (2026-11-20) fixes the availability route and the common-password list.
 
 ## Context
 
@@ -280,11 +280,96 @@ sequenceDiagram
 
 **Size.** About 200 lines of code and 300 of tests in one PR. If it must be cut, the migration with sign-up's upsert goes first as its own PR and the route second; never the route first, because its `ON CONFLICT` needs the index.
 
+## Addendum (1e-iii)
+
+Added 2026-11-20 with the 1e-iii plan (username availability and the common-password list). It changes no rule above and no route of ADR 0015. No schema migration, no new variable, no new dependency.
+
+**Requirements.** Functional: (1) the sign-up form asks whether a username is free and gets 200 `{ available }`; (2) sign-up refuses a password that is on the common-password list, with a message on the `password` field; (3) `available` is `false` exactly when a sign-up of that name at the same instant would answer 409 on its pre-check.
+
+| # | Requirement |
+|---|---|
+| A1 | One rule: availability runs the statement the 409 pre-check runs (`isUsernameTaken`): 1 read on 2 unique indexes, no lock. In each of the 7 states (free, verified, pending, stale, unverified with no deadline, live hold, ended hold) the two routes agree. |
+| A2 | Abuse bound: 60 per IP per minute (a burst across a window boundary can reach 119), so about 86,400 names per IP per day. A refused request costs 1 upsert and 0 reads; a malformed one costs 0 statements. |
+| A3 | Cost: 2 statements per answered call (the counter upsert, the read), each on a primary key or unique index, 0 hashes. Never cached: `no-store`. |
+| P1 | A common password costs 0 statements and 0 hashes: 400 from validation, before the closed check and any counter. One `Set` lookup; the set is built once at import from 10,001 entries (73 KB of text; under 1 MB of heap, estimated, not measured), with no file read and no network call. |
+| P2 | The list is the upstream file, entry for entry: a test rebuilds its bytes and pins their SHA-256. |
+
+**Consistency over availability**, as above, here by default rather than by need. `available: true` is a hint: a name can be taken between the check and the submit, and the claim in sign-up's transaction stays the authority. Nothing is cached, because the read is one indexed statement and a cache would be a second answer to "taken". Database down is 503: the counter cannot count, and an uncounted pass is never given. The list is static data inside the process, so it has no such choice.
+
+**Core entities.** `UsernameHold`, `User`, `AuthRateLimit` (one more route), `CommonPasswordList` (in memory, never stored). No new table.
+
+**API.** `GET /users/availability?username=`, `CredentialGuard`, `Cache-Control: no-store`.
+
+| Answer | When |
+|---|---|
+| 200 `{ available: true }` or `{ available: false }` | once the request is counted; `false` for a taken and for a held name alike, never says which |
+| 400 `VALIDATION_FAILED` | `username` missing, repeated, or not 3 to 20 of `[A-Za-z0-9_]`, or an unknown query parameter; sign-up's pattern and message; no counter spent |
+| 400 `BAD_REQUEST`, 403 `INTERNAL_KEY_REQUIRED` | the guard, as on sign-up (the preview key is refused although this is a GET) |
+| 429 `TOO_MANY_REQUESTS` with `Retry-After` | the 61st request of one IP in a minute, for a free and a taken name alike |
+
+`POST /auth/sign-up` gains one refusal: 400 `VALIDATION_FAILED` with the detail `{ field: 'password', message: 'password is too common' }`. No new error code; the message never echoes the value.
+
+**Data flow.**
+
+```mermaid
+sequenceDiagram
+  participant W as Web server
+  participant A as SignUpService.usernameAvailability
+  participant D as Postgres
+  W->>A: GET /users/availability?username= (key, client IP)
+  Note over W,A: guard, then the username pattern: 400 costs nothing
+  A->>D: count the attempt (60 per IP per minute)
+  A->>D: is the username taken? (the 409's own read)
+  A-->>W: 200 { available }
+```
+
+**Simplest version first.** Availability as its own query on `app_user` by `username_key` fails A1: it misses the holds and counts stale rows, so it would say "free" where sign-up answers 409 and "taken" where sign-up answers 202. So it calls the function sign-up calls and adds nothing else. The password list as an exact match on the file's lines lets `Password1` through while refusing `password1`; one `toLowerCase()` closes that. Nothing more is added.
+
+**Decision.**
+
+1. **Where availability lives.** `SignUpService.usernameAvailability({ username, ip })`, called by a new `UsernameAvailabilityController` (`@Controller('users')`, in the auth module). Order, never reordered: count (`username-availability`, 60 per minute, one more entry in `PER_IP_LIMITS`), one `Clock.now()`, `normaliseIdentifier`, `isUsernameTaken`. Outcome `available`, `taken` or `rate_limited`. `isUsernameTaken` stays private: both callers are in the class, so no second copy can appear. No `canSend()` check: the route creates nothing (N5 is not at stake), so it answers while sign-up is closed.
+2. **A malformed username is 400 `VALIDATION_FAILED`**, not `{ available: false }`. The query DTO uses `USERNAME_PATTERN` and sign-up's message (one shared constant). `false` would make the form say "taken" for `ab`, and a `reason` field would change the body ADR 0015 fixed.
+3. **Reserved words.** No deny list exists in the code (it is a Gate item), so `admin` is `available: true` today, as sign-up accepts it. When the list is built, it is one check that both `signUp` and `usernameAvailability` call, and the A1 test gains a row for it.
+4. **The list.** SecLists, `Passwords/Common-Credentials/10k-most-common.txt`, MIT, Copyright (c) 2018 Daniel Miessler. Fetched 2026-11-20; SHA-256 `68782d6a4a19a4768d5f15dd66bd534e7a33055cc755411e33f16d18c50fdcce`, equal to upstream `master` that day. It holds 10,001 entries, not 10,000 (ADR 0015 rounds), all lower-case ASCII, no duplicate. MIT allows use and change if the copyright and permission notice stay with the copy (ADR 0006: checked before use). It lives in `apps/api/src/auth/common-passwords/`: `common-passwords.data.ts` (one `readonly string[]`, entries and order unchanged, written by a one-off command, never by hand), `LICENSE` (the MIT text, verbatim) and `README.md` (source path, date, hash, "converted to a TypeScript array, entries unchanged").
+5. **The comparison.** `isCommonPassword(password)` in `apps/api/src/auth/common-passwords.ts`: `normalisePassword` (NFC), then `toLowerCase()`, then a whole-string lookup in a module-level `Set`. No trim (a space is part of a password), no substring or leet matching.
+6. **Where it applies.** `SignUpDto.password`, as a class-validator constraint beside `SignUpPassword`. It judges only a string within `PASSWORD_RAW_MAX` (the cap before any NFC) and does not depend on the length or digit rule, so `password` gets both messages. Next: `newPassword` of `POST /auth/password-reset/confirm` (OTA-140) and any later change-password route. Never: sign-in, the `password` of confirm (an existing password; refusing it would lock a member out), or the OTA-149 import (hashes only).
+7. **Not filtered.** Only 401 of the 10,001 entries meet today's rule (8 characters with a digit or symbol), and the whole file is kept.
+
+**Deep dives.**
+- **A1.** One integration test seeds the 7 states and, for each, compares `available` with "sign-up did not answer 409". A change to one route that forgets the other fails it.
+- **A2 and A3.** The counter is per route: 60 availability checks never spend sign-up's 5, and the reverse. Each IP has one counter row, updated in place and deleted by the daily cleanup. Load, assuming ADR 0015's 1,000 sign-ups a day and about 10 debounced checks each: 10,000 upserts and 10,000 reads a day, about 0.1 per second. Usernames are public on profiles, so 86,400 probes a day per IP reveal nothing a crawler could not read; a hold only shows that someone submitted that name in the last 24 h, which the 409 already shows.
+- **P1.** The check depends on the input alone, so it cannot tell a new email from a registered one (N1 holds). It runs in the validation pipe, like the length rule, so a refused password leaves no counter row, no hash and no user.
+- **P2.** `sha256(entries.join('\n') + '\n')` equals the hash above. The test also pins 10,001 entries, no duplicate, and every entry equal to its own NFC lower-case form (so the `Set` needs no mapping).
+
+**Rejected.**
+- **A text file read at boot** (`readFileSync`, plus an `assets` entry in `nest-cli.json`). The bytes on disk would be upstream's. Rejected: `tsc` does not copy it, so production would depend on a build step that vitest, which reads `src`, never runs; a missing file would be found when Railway boots `dist`. A TypeScript module is compiled like any other file, and P2 gives the same proof of origin.
+- **A file cut down to the 401 entries that meet the rule.** Smaller. Rejected: it ties the data to today's rule; if the digit rule is dropped later, `password` would pass with no test failing. 73 KB costs nothing.
+- Also rejected: `{ available: false }` for a malformed name (decision 2); a separate availability service (the function would have to become public or be copied); the Have I Been Pwned range API or a strength estimator (a network call or a dependency on the sign-up path; ADR 0015 chose a static list); case-sensitive matching.
+
+**Too simple?**
+- `available: true` reserves nothing. The form must still handle 409 on submit.
+- The list stops 401 passwords, in any letter case. `Password123!`, the member's own username and anything leaked but not in the top 10,001 pass. Accepted with ADR 0015; revisit with real sign-in abuse data.
+- Every answered check is one write (the counter). At 0.1 per second this is nothing; if it ever shows in Postgres metrics, lengthen the web debounce before touching the limiter.
+- Passwords that exist already (imported members) are never checked.
+
+**Too complicated?** No. Lower-casing is one call and the hash test is three lines. Left out on purpose: a closed check on availability, a filtered file, injection of the list through Nest, name suggestions, a response guard in shared types (1f adds it with the code that reads the body).
+
+**Web contract for 1f.** Call only for a name that already matches the pattern, debounced. Treat 429 and 5xx as "unknown": show nothing and never block the submit. Show the API's field message for a refused password; if the form must tell the two password refusals apart, the message constant moves to shared types then.
+
+**Size.** About 150 lines of code and 250 of tests in one PR, the data file apart.
+
+**Gate / follow-ups (1e-iii review).**
+- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one.
+- (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route.
+- (c) The typed username travels in a query string, so it reaches the platform's access logs. Accepted: usernames are public.
+- (d) Guard refusals (400 `BAD_REQUEST`, 403) carry no `no-store`: Nest sets `@Header` after the guards run. Existing behaviour on every guarded route; low, since neither status is cached by default.
+- The licence notice is emitted as a `/*! */` header of `common-passwords.data.ts`, which `removeComments` keeps, so it ships in `dist` with the list.
+
 ## Consequences
 
 - Until 1e-ii merges, an account created by sign-up cannot be confirmed (local and CI only; production is closed).
 - **Gate:** the email slice must not open sign-up in production before all of these are merged:
-  - the per-address email budget, checked before the transaction, and the common-password list;
+  - the per-address email budget, checked before the transaction, and the common-password list (the list: done in 1e-iii, Addendum (1e-iii));
   - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
   - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
   - a reserved-username deny list;

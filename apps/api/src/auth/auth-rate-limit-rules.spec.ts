@@ -54,11 +54,12 @@ describe('SIGN_IN_LIMITS', () => {
 });
 
 describe('PER_IP_LIMITS', () => {
-  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min, resend 10 per IP per hour', () => {
+  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min, resend 10 per IP per hour, availability 60 per IP per minute', () => {
     expect(PER_IP_LIMITS).toEqual({
       'sign-up': { limit: 5, windowMs: 60 * 60_000 },
       'email-verification-confirm': { limit: 10, windowMs: 15 * 60_000 },
       'email-verification-resend': { limit: 10, windowMs: 60 * 60_000 },
+      'username-availability': { limit: 60, windowMs: 60_000 },
     });
   });
 

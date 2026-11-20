@@ -8,6 +8,7 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
+import { COMMON_PASSWORD_MESSAGE, isCommonPassword } from './common-passwords';
 import {
   IDENTIFIER_MAX,
   normaliseIdentifier,
@@ -19,6 +20,7 @@ import {
   isEmailAddress,
   meetsSignUpPasswordRule,
   USERNAME_PATTERN,
+  USERNAME_RULE_MESSAGE,
 } from './sign-up-rules';
 
 /**
@@ -56,7 +58,27 @@ class SignUpPassword implements ValidatorConstraintInterface {
   }
 }
 
-/** Sign-up's rules (ADR 0020); no message echoes a value. The common-password list is 1e-iii. */
+/**
+ * ADR 0020 Addendum (1e-iii) decision 6: judges only strings within the raw bound, apart from the
+ * length and digit rule, so a password can get both messages. Never for an existing password
+ * (sign-in, confirm): refusing one there would lock a member out.
+ */
+@ValidatorConstraint({ name: 'notCommonPassword' })
+class NotCommonPassword implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return (
+      typeof value !== 'string' ||
+      value.length > PASSWORD_RAW_MAX ||
+      !isCommonPassword(value)
+    );
+  }
+
+  defaultMessage(): string {
+    return COMMON_PASSWORD_MESSAGE;
+  }
+}
+
+/** Sign-up's rules (ADR 0020); no message echoes a value. */
 export class SignUpDto implements SignUpRequest {
   @ApiProperty({
     description: '3 to 20 of A-Z, a-z, 0-9 and "_", unique in any case.',
@@ -64,9 +86,7 @@ export class SignUpDto implements SignUpRequest {
     example: 'Frieren',
   })
   @IsString()
-  @Matches(USERNAME_PATTERN, {
-    message: 'username must be 3 to 20 letters, digits or underscores',
-  })
+  @Matches(USERNAME_PATTERN, { message: USERNAME_RULE_MESSAGE })
   readonly username!: string;
 
   @ApiProperty({
@@ -80,11 +100,12 @@ export class SignUpDto implements SignUpRequest {
   readonly email!: string;
 
   @ApiProperty({
-    description: `${PASSWORD_MIN} to ${PASSWORD_MAX} characters (code points after NFC), with a digit or symbol.`,
+    description: `${PASSWORD_MIN} to ${PASSWORD_MAX} characters (code points after NFC), with a digit or symbol, and not on the common-password list in any letter case.`,
     format: 'password',
   })
   @IsString()
   @Validate(PasswordMaxLength)
   @Validate(SignUpPassword)
+  @Validate(NotCommonPassword)
   readonly password!: string;
 }

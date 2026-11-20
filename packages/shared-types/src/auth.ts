@@ -66,3 +66,12 @@ export interface EmailVerificationResendRequest {
  * says whether a mail left. An empty object, not an empty body (ADR 0003). Never cached.
  */
 export type EmailVerificationResendResponse = Readonly<Record<string, never>>;
+
+/**
+ * GET /users/availability?username= 200 body (ADR 0020 Addendum 1e-iii). Sent only to the web
+ * server. `false` for a taken and a held name alike, never says which; `true` is a hint, not a
+ * reservation: sign-up can still answer 409. Never cached (`no-store`).
+ */
+export interface UsernameAvailabilityResponse {
+  readonly available: boolean;
+}

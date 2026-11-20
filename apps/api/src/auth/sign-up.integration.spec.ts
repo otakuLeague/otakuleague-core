@@ -30,6 +30,7 @@ import {
   SIGN_UP_LIMITED_MESSAGE,
   USERNAME_TAKEN_MESSAGE,
 } from './auth.controller';
+import { COMMON_PASSWORD_MESSAGE } from './common-passwords';
 import { CLIENT_IP_REQUIRED_MESSAGE } from './credential.guard';
 import { type AuthEmail, EmailSender } from './email-sender';
 import { PasswordHasher } from './password-hasher';
@@ -774,4 +775,36 @@ describe('POST /auth/sign-up', () => {
       expect(await prisma.user.count()).toBe(0);
     },
   );
+
+  it.each(['passw0rd', 'PassW0rd', 'Qwerty123'])(
+    'answers 400 "password is too common" to %j, before any counter, hash or write (ADR 0020 Addendum 1e-iii P1)',
+    async (password) => {
+      const response = await signUp({ ...SIGN_UP, password }).expect(400);
+
+      expect(response.body).toEqual({
+        error: {
+          code: 'VALIDATION_FAILED',
+          message: 'Request validation failed.',
+          details: [{ field: 'password', message: COMMON_PASSWORD_MESSAGE }],
+        },
+      });
+      expect(response.text).not.toContain(password);
+      expect(await prisma.authRateLimit.count()).toBe(0);
+      expect(argon2.derives).toBe(0);
+      expect(await prisma.user.count()).toBe(0);
+      expect(await prisma.usernameHold.count()).toBe(0);
+      expect(await sentAfterSettling()).toEqual([]);
+    },
+  );
+
+  it('answers a common password 400 VALIDATION_FAILED, not 403 SIGN_UP_CLOSED, while sign-up is closed', async () => {
+    mail.open = false;
+
+    const response = await signUp({ ...SIGN_UP, password: 'passw0rd' }).expect(
+      400,
+    );
+
+    expect((response.body as ApiError).error.code).toBe('VALIDATION_FAILED');
+    expect(await prisma.authRateLimit.count()).toBe(0);
+  });
 });

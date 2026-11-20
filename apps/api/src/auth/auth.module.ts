@@ -24,10 +24,16 @@ import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
 import { SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
+import { UsernameAvailabilityController } from './username-availability.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [MeController, AuthController, EmailVerificationController],
+  controllers: [
+    MeController,
+    AuthController,
+    EmailVerificationController,
+    UsernameAvailabilityController,
+  ],
   providers: [
     SessionService,
     SessionGuard,
