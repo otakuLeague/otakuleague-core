@@ -4,9 +4,11 @@ import { isSignInResponse } from '@otakuleague/shared-types';
 import { cookies, headers } from 'next/headers';
 import { sessionCookie } from './auth-cookies';
 import { credentialCall, credentialRoutesOff } from './credential-call';
+import { deleteSession } from './delete-session';
 import { redirectTo } from './redirect-to';
 import { reportClientIpUnknown } from './report-credential-refusal';
 import { safeNextPath } from './safe-next-path';
+import { readSessionToken } from './session-call';
 import {
   readSignInFields,
   signInOutcomeFrom,
@@ -39,6 +41,7 @@ export async function signInAction(
   if (fields === undefined) {
     return { kind: 'invalid_credentials' };
   }
+  const oldSession = await readSessionToken(webPublicUrl);
   const callResult = await credentialCall({
     path: '/auth/sign-in',
     body: fields,
@@ -53,6 +56,10 @@ export async function signInAction(
   const outcome = signInOutcomeFrom(callResult);
   if (outcome.kind === 'failed') {
     return outcome.formState;
+  }
+  // Only after a success, and never fatal: the API already accepted this sign-in (ADR 0015 N6).
+  if (oldSession !== undefined) {
+    await deleteSession(oldSession);
   }
   const { name, options } = sessionCookie(webPublicUrl);
   (await cookies()).set(name, outcome.sessionToken, options);
