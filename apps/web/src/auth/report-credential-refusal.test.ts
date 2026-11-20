@@ -1,6 +1,12 @@
 // @vitest-environment node
+import type { ApiErrorCode } from '@otakuleague/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isRefusalReportDue } from './report-credential-refusal';
+import type { ApiFailure } from '../api/client';
+import {
+  authCallFaultOf,
+  isRefusalReportDue,
+  type AuthCallFault,
+} from './report-credential-refusal';
 
 const mocks = vi.hoisted(() => ({
   captureMessage: vi.fn(),
@@ -63,5 +69,67 @@ describe('reportClientIpUnknown', () => {
     expect(mocks.after).toHaveBeenCalledTimes(1);
     report('sign-in', 5_000 + 600_000);
     expect(mocks.captureMessage.mock.calls).toEqual([REPORT, REPORT]);
+  });
+});
+
+type Code = Exclude<ApiErrorCode, 'VALIDATION_FAILED'>;
+const api = (status: number, code: Code): ApiFailure => ({
+  kind: 'api_error',
+  status,
+  error: { error: { code, message: 'x' } },
+});
+const invalid = (status: number): ApiFailure => ({
+  kind: 'invalid_response',
+  status,
+});
+
+describe('authCallFaultOf', () => {
+  it.each([
+    [api(403, 'INTERNAL_KEY_REQUIRED'), 'internal_key_refused'],
+    [invalid(200), 'invalid_response'],
+    [invalid(401), 'invalid_response'],
+    [invalid(502), undefined],
+    [api(403, 'SIGN_UP_CLOSED'), undefined],
+    [api(401, 'UNAUTHORIZED'), undefined],
+    [api(429, 'TOO_MANY_REQUESTS'), undefined],
+    [api(503, 'SERVICE_UNAVAILABLE'), undefined],
+    [{ kind: 'network' }, undefined],
+    [{ kind: 'timeout' }, undefined],
+  ] satisfies [ApiFailure, AuthCallFault | undefined][])(
+    '%j is %s',
+    (failure, fault) => {
+      expect(authCallFaultOf(failure)).toBe(fault);
+    },
+  );
+});
+
+describe('reportAuthCallFault', () => {
+  const faultReport = (auth_route: string, auth_fault: string) => [
+    'Auth call fault',
+    {
+      level: 'error',
+      tags: { auth_route, auth_fault },
+      fingerprint: ['auth-call-fault', auth_fault],
+    },
+  ];
+
+  it('throttles per fault kind across routes, with only the tags and a fixed fingerprint', async () => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    const reporters = await import('./report-credential-refusal');
+    reporters.reportAuthCallFault('me', 'invalid_response', 5_000);
+    reporters.reportAuthCallFault('sign-out', 'invalid_response', 604_999);
+    reporters.reportAuthCallFault('me', 'configuration', 5_001);
+    reporters.reportClientIpUnknown('sign-in', 5_002);
+    reporters.reportAuthCallFault('sign-in', 'invalid_response', 605_000);
+
+    expect(mocks.captureMessage.mock.calls).toEqual([
+      faultReport('me', 'invalid_response'),
+      faultReport('me', 'configuration'),
+      REPORT,
+      faultReport('sign-in', 'invalid_response'),
+    ]);
+    await mocks.after.mock.calls[0]?.[0]();
+    expect(mocks.flush.mock.calls).toEqual([[2000]]);
   });
 });

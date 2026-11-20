@@ -12,6 +12,13 @@ export const IDENTIFIER_MAX = 254;
  */
 export const PASSWORD_RAW_MAX = 1024;
 
+/**
+ * Parity (PARITY.md): 3 to 20 ASCII letters, digits or "_". Never "@", which sign-in reads as an
+ * email, and nothing the API's identifier normalisation could change but the letter case. The API's
+ * sign-up and availability DTOs check it; the web checks `GET /me` with it (`isMeResponse`).
+ */
+export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+
 /** GET /me body: the member the session belongs to (ADR 0015). Never cached (`no-store`). */
 export interface MeResponse {
   readonly id: string;

@@ -6,7 +6,12 @@ import {
   type AnimeFranchiseView,
   type AnimeListCardPage,
 } from './anime';
-import type { EmailVerificationConfirmResponse, SignInResponse } from './auth';
+import {
+  USERNAME_PATTERN,
+  type EmailVerificationConfirmResponse,
+  type MeResponse,
+  type SignInResponse,
+} from './auth';
 
 export const APP_NAME = 'OtakuLeague';
 
@@ -135,6 +140,20 @@ export function isSignInResponse(value: unknown): value is SignInResponse {
   );
 }
 
+/**
+ * True when `value` is a GET /me body: a non-empty id and a username sign-up could have accepted,
+ * so the header never renders a name the API should not hold.
+ */
+export function isMeResponse(value: unknown): value is MeResponse {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    value.id !== '' &&
+    typeof value.username === 'string' &&
+    USERNAME_PATTERN.test(value.username)
+  );
+}
+
 /** Exactly what `Date.toISOString()` writes, as the API sends it; '2026' or a bare date is not one. */
 function isIsoInstant(value: string): boolean {
   const parsed = new Date(value);
@@ -257,7 +276,7 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
-export { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from './auth';
+export { IDENTIFIER_MAX, PASSWORD_RAW_MAX, USERNAME_PATTERN } from './auth';
 export type {
   EmailVerificationConfirmRequest,
   EmailVerificationConfirmResponse,

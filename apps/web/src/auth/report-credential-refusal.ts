@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { after } from 'next/server';
+import type { ApiFailure } from '../api/client';
 
 // Server only (next/server): never import this from src/observability/sentry.ts, which the
 // browser bundle loads.
@@ -43,6 +44,54 @@ export function reportClientIpUnknown(
     level: 'error',
     tags: { credential_route: route },
     fingerprint: ['credential-call-client-ip-unknown'],
+  });
+  after(() => Sentry.flush(2000));
+}
+
+/** The auth routes that can see an `AuthCallFault` (ADR 0015 Addendum 1f-iv). */
+export type AuthCallRoute = 'sign-in' | 'sign-out' | 'me';
+
+/** A misconfiguration a visitor cannot cause: the key refused, a body off contract, a throw. */
+export type AuthCallFault =
+  'internal_key_refused' | 'invalid_response' | 'configuration';
+
+/**
+ * Network, timeout, 429 and 5xx are no fault (an outage, which the API or the platform reports),
+ * nor any other 4xx. A non-envelope 5xx is a proxy's error page, so it stays an outage too.
+ */
+export function authCallFaultOf(
+  failure: ApiFailure,
+): AuthCallFault | undefined {
+  if (failure.kind === 'invalid_response') {
+    return failure.status < 500 ? 'invalid_response' : undefined;
+  }
+  return failure.kind === 'api_error' &&
+    failure.status === 403 &&
+    failure.error.error.code === 'INTERNAL_KEY_REQUIRED'
+    ? 'internal_key_refused'
+    : undefined;
+}
+
+// One throttle per fault kind, so one fault never hides another; shared by every route.
+const faultLastReportedAtMs = new Map<AuthCallFault, number>();
+
+/**
+ * At most one Sentry error per fault kind per instance every 10 minutes, carrying the route and the
+ * fault as tags and nothing else (never a token, a username, an IP or an error message).
+ */
+export function reportAuthCallFault(
+  route: AuthCallRoute,
+  fault: AuthCallFault,
+  nowMs: number = Date.now(),
+): void {
+  if (!isRefusalReportDue(faultLastReportedAtMs.get(fault), nowMs)) {
+    return;
+  }
+  faultLastReportedAtMs.set(fault, nowMs);
+  Sentry.captureMessage('Auth call fault', {
+    level: 'error',
+    tags: { auth_route: route, auth_fault: fault },
+    fingerprint: ['auth-call-fault', fault],
   });
   after(() => Sentry.flush(2000));
 }

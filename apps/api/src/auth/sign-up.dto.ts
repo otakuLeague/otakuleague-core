@@ -3,6 +3,7 @@ import {
   IDENTIFIER_MAX,
   PASSWORD_RAW_MAX,
   type SignUpRequest,
+  USERNAME_PATTERN,
 } from '@otakuleague/shared-types';
 import {
   IsString,
@@ -22,7 +23,6 @@ import { PasswordMaxLength } from './sign-in.dto';
 import {
   isEmailAddress,
   meetsSignUpPasswordRule,
-  USERNAME_PATTERN,
   USERNAME_RULE_MESSAGE,
 } from './sign-up-rules';
 

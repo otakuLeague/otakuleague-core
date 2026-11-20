@@ -19,13 +19,7 @@ export const PENDING_SIGN_UP_TTL_MS = 24 * 60 * 60 * 1000;
  */
 export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
 
-/**
- * Parity (PARITY.md): 3 to 20 ASCII letters, digits or "_". Never "@", which sign-in reads as an
- * email (identifierKind), and nothing normaliseIdentifier could change but the letter case.
- */
-export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
-
-/** USERNAME_PATTERN's message, for sign-up and the availability check alike; never echoes the value. */
+/** `USERNAME_PATTERN`'s (`@otakuleague/shared-types`) message, for sign-up and the availability check alike; never echoes the value. */
 export const USERNAME_RULE_MESSAGE =
   'username must be 3 to 20 letters, digits or underscores';
 

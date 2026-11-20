@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { USERNAME_PATTERN } from '@otakuleague/shared-types';
 import { IsString, Matches } from 'class-validator';
-import { USERNAME_PATTERN, USERNAME_RULE_MESSAGE } from './sign-up-rules';
+import { USERNAME_RULE_MESSAGE } from './sign-up-rules';
 
 /**
  * ADR 0020 Addendum (1e-iii) decision 2: sign-up's username rule and message, so a malformed,

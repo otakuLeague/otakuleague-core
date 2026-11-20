@@ -137,11 +137,12 @@ export default defineConfig([
     },
   },
   {
-    // Auth code calls the API only through credentialCall(), which always sends the key and the
-    // client IP and refuses previews (ADR 0003 OTA-139 addendum). A later block replaces the rule's
-    // options, so the network imports are repeated here.
+    // Auth code calls the API only through credentialCall() (key and client IP) or sessionCall()
+    // (key and Bearer), both refusing previews (ADR 0003 OTA-139 addendum, ADR 0015 Addendum
+    // 1f-iv); never a third file. A later block replaces the rule's options, so the network imports
+    // are repeated here.
     files: ['src/auth/**', 'app/auth/**'],
-    ignores: ['src/auth/credential-call.ts'],
+    ignores: ['src/auth/credential-call.ts', 'src/auth/session-call.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -152,7 +153,7 @@ export default defineConfig([
               group: ['**/api/client', '**/api/client.*'],
               importNames: ['apiClient', 'createApiClient'],
               message:
-                'Auth code calls the API through credentialCall() (src/auth/credential-call.ts).',
+                'Auth code calls the API through credentialCall() or sessionCall() (src/auth/credential-call.ts, src/auth/session-call.ts).',
             },
           ],
         },
