@@ -8,6 +8,7 @@ import {
   readApiBaseUrl,
   readInternalApiKey,
 } from './config';
+import type { SessionToken } from './session-token';
 
 // The only module in apps/web that touches the network (lint rule in eslint.config.mjs, ADR 0003).
 // Expected failures are returned, never thrown; a throw here is a programming or config error.
@@ -17,6 +18,8 @@ export type ApiFailure =
       readonly kind: 'api_error';
       readonly status: number;
       readonly error: ApiError;
+      /** On a 429 only: `Retry-After` as whole seconds, 1 to 86,400; absent otherwise. Pages never retry by themselves. */
+      readonly retryAfterSeconds?: number;
     }
   | { readonly kind: 'network' }
   | { readonly kind: 'timeout' }
@@ -51,6 +54,13 @@ export interface CallOptions<T> {
    * would split Next's data cache by visitor.
    */
   readonly clientIp?: ClientIp;
+  /**
+   * The member's session from `sessionTokenFrom()`, sent as `Authorization: Bearer` next to the
+   * key (ADR 0015). Implies `requiresInternalKey`; refused on a cached call, like `clientIp`.
+   */
+  readonly session?: SessionToken;
+  /** A route only the trusted web caller may use (passwords, emailed tokens): throws without the key. */
+  readonly requiresInternalKey?: true;
 }
 
 export interface ApiClientSettings {
@@ -77,6 +87,7 @@ type RawResponse =
       readonly ok: true;
       readonly status: number;
       readonly parsedBody: ParsedBody;
+      readonly retryAfter: string | null;
     }
   | { readonly ok: false; readonly failure: ApiFailure };
 
@@ -103,21 +114,55 @@ function assertTimeout(timeoutMs: number): void {
   }
 }
 
-/** Throws whether or not a key is set, so a test without one still catches the mistake. */
-function assertClientIpUncached<T>(options: CallOptions<T>): void {
+const PER_VISITOR_OPTIONS = [
+  'session',
+  'clientIp',
+  'requiresInternalKey',
+] as const;
+
+/**
+ * A per-visitor option on a cached call would split Next's data cache by visitor, serve one
+ * member's answer to another, or replay one visitor's credential call. Throws whether or not a key
+ * is set, so a test without one catches it. Cannot see a `'use cache'` scope: never call it there.
+ */
+function assertPerVisitorUncached<T>(options: CallOptions<T>): void {
   const cached =
     options.next?.revalidate !== undefined ||
     (options.cache !== undefined && options.cache !== 'no-store');
-  if (options.clientIp !== undefined && cached) {
-    throw new Error('clientIp is only allowed on an uncached (no-store) call');
+  const perVisitor = PER_VISITOR_OPTIONS.find(
+    (name) => options[name] !== undefined,
+  );
+  if (cached && perVisitor !== undefined) {
+    throw new Error(
+      `${perVisitor} is only allowed on an uncached (no-store) call`,
+    );
   }
 }
 
-/** The client IP goes only with the key: the API ignores it from a caller it cannot trust. */
+/**
+ * A session or a credential goes only with the key, which exists only with an https or loopback
+ * base URL: never dropped (the page would render signed out and a later action would delete a
+ * valid cookie), never sent to an API that would refuse the open caller after it crossed.
+ */
+function assertKeyIfRequired<T>(
+  options: CallOptions<T>,
+  internalApiKey: string | undefined,
+): void {
+  if (
+    internalApiKey === undefined &&
+    (options.session !== undefined || options.requiresInternalKey === true)
+  ) {
+    throw new Error(
+      'Invalid web configuration: INTERNAL_API_KEY is not set, and sessions and credentials are only sent with it (ADR 0015). Set it in the repo-root .env to the same value as the API.',
+    );
+  }
+}
+
+/** Every header the client sends; the client IP and the session go only with the key. */
 function outgoingHeaders(
   hasBody: boolean,
   internalApiKey: string | undefined,
-  clientIp: ClientIp | undefined,
+  { clientIp, session }: Pick<CallOptions<unknown>, 'clientIp' | 'session'>,
 ): Record<string, string> {
   return {
     accept: 'application/json',
@@ -127,8 +172,24 @@ function outgoingHeaders(
       : {
           'x-internal-api-key': internalApiKey,
           ...(clientIp === undefined ? {} : { 'x-client-ip': clientIp }),
+          ...(session === undefined
+            ? {}
+            : { authorization: `Bearer ${session}` }),
         }),
   };
+}
+
+// The API sends whole seconds; 86,400 s is its RATE_LIMIT_LONGEST_WINDOW_MS (24 h, apps/api/src/auth/auth-rate-limit-rules.ts).
+const RETRY_AFTER_SECONDS = /^[1-9][0-9]{0,4}$/;
+const MAX_RETRY_AFTER_SECONDS = 86_400;
+
+/** A date (a proxy's), 0, a sign, a decimal, text or more than 24 h gives nothing to count down from. */
+function parseRetryAfterSeconds(value: string | null): number | undefined {
+  if (value === null || !RETRY_AFTER_SECONDS.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  return seconds <= MAX_RETRY_AFTER_SECONDS ? seconds : undefined;
 }
 
 /** An empty body is valid only on 204 and 205, which carry none by definition. */
@@ -175,16 +236,23 @@ function copyApiError({ error }: ApiError): ApiError {
     : { error: { code: error.code, message: error.message } };
 }
 
-/** Non-2xx: the error envelope if the body is one, otherwise invalid_response. The raw body is never kept. */
+/**
+ * Non-2xx: the error envelope if the body is one, otherwise invalid_response. The raw body is never
+ * kept; `retryAfterSeconds` is set only on a 429 envelope with a valid `Retry-After`.
+ */
 function toErrorResult<T>(
   status: number,
   parsedBody: ParsedBody,
+  retryAfter: string | null,
 ): ApiResult<T> {
   if (parsedBody.kind === 'json' && isApiError(parsedBody.body)) {
+    const retryAfterSeconds =
+      status === 429 ? parseRetryAfterSeconds(retryAfter) : undefined;
     return toFailureResult({
       kind: 'api_error',
       status,
       error: copyApiError(parsedBody.body),
+      ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
     });
   }
   return toFailureResult({ kind: 'invalid_response', status });
@@ -206,7 +274,8 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
     options: CallOptions<T>,
   ): Promise<RawResponse> {
     assertSafePath(path);
-    assertClientIpUncached(options);
+    assertPerVisitorUncached(options);
+    assertKeyIfRequired(options, internalApiKey);
     const timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
     assertTimeout(timeoutMs);
     // Built before the try: a body that cannot be serialized is a programming error, not a network one.
@@ -214,11 +283,7 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
       options.body === undefined ? undefined : JSON.stringify(options.body);
     const init: RequestInit = {
       method: options.method ?? 'GET',
-      headers: outgoingHeaders(
-        body !== undefined,
-        internalApiKey,
-        options.clientIp,
-      ),
+      headers: outgoingHeaders(body !== undefined, internalApiKey, options),
       body,
       cache:
         options.cache ??
@@ -231,7 +296,12 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
     try {
       const response = await fetchFunction(`${baseUrl}${path}`, init);
       const parsedBody = parseJson(response.status, await response.text());
-      return { ok: true, status: response.status, parsedBody };
+      return {
+        ok: true,
+        status: response.status,
+        parsedBody,
+        retryAfter: response.headers.get('retry-after'),
+      };
     } catch (cause) {
       // Next.js control flow (prerender bailouts, notFound) must reach Next, not become "network".
       unstable_rethrow(cause);
@@ -252,7 +322,7 @@ export function createApiClient(settings: ApiClientSettings): ApiClient {
     }
     const { status, parsedBody } = raw;
     if (status < 200 || status > 299) {
-      return toErrorResult(status, parsedBody);
+      return toErrorResult(status, parsedBody, raw.retryAfter);
     }
     if (
       parsedBody.kind === 'not_json' ||

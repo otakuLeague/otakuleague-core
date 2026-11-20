@@ -132,3 +132,60 @@ The status was never cached: `getHealth` used `cache: 'no-store'` and ran in `He
 - `apiClient()` reads `INTERNAL_API_KEY` (server-only; empty means unset, otherwise 43 to 128 characters of `[A-Za-z0-9_-]`) and sends it as `X-Internal-Api-Key` on every call. With a key, `next.config.ts` fails the build and `createApiClient` throws unless the key is valid and the base URL is https or exactly `127.0.0.1` or `[::1]` (not `localhost`, which is resolved by name), so the key never crosses a network in clear and a bad value stops a deploy, not requests. Errors name the variable, never the value or the URL.
 - `CallOptions.clientIp` is a branded `ClientIp` that only `clientIpFromHeaders()` makes (Vercel's `x-forwarded-for`, one address). `readClientIp()` gives one only when `VERCEL=1`: only Vercel overwrites that header, and elsewhere the API counts the shared `unknown` visitor (a CDN in front of Vercel needs its own decision). It is sent as `X-Client-Ip` only next to the key, and only calls that can make the API call AniList for the visitor pass it (imports, list pages; ADR 0019 OTA-195 addendum), never inside `'use cache'`: reading `headers()` anywhere else would add request-time data to pages and the proxy for nothing. On a cached call it throws, so a per-visitor header can never split Next's data cache.
 - Unchanged: the browser still never calls the API; when it does (ADR 0017), these options stay on the server-only client. Still open (slice 2b): a 403 `INTERNAL_KEY_REQUIRED` reported to Sentry and shown as "service unavailable".
+
+## Addendum: session, key-required calls and Retry-After (2026-11-20, OTA-139 slice 1f-i, ADR 0015)
+
+The addendum ADR 0015 assigned to OTA-139. It closes "Caching and auth" (Consequences) and the caching rule left in "Still open". No new ADR: every choice applies ADR 0015; this records the client's contract. The error codes ADR 0015 listed are already in `API_ERROR_CODES`.
+
+**Requirements.** The web server can (1) call the API as the member whose session cookie it holds; (2) send a credential (password, emailed token) only as the trusted `web` caller; (3) tell a visitor how long a rate limit lasts.
+
+| # | Requirement |
+|---|---|
+| S1 | 0 answers to a call with `session` in Next's data cache: `session` with `next.revalidate` or a `cache` other than `no-store` throws. |
+| S2 | 0 Bearer tokens and 0 credential bodies leave without the internal key, so 0 cross plain HTTP off loopback (the key already refuses such a base URL). |
+| S3 | 0 secrets in what the client returns or throws: no token, key or header value in an `ApiFailure` or an error message. |
+| S4 | `retryAfterSeconds` is a whole number from 1 to 86,400, or absent: an HTTP date, 0, a sign, a decimal, text or a larger number all give absent. |
+| S5 | 0 edits to existing callers and tests of `call()`; no dependency; `fetch` stays in `client.ts` only. |
+
+**Consistency vs availability:** consistency, as ADR 0015: an answer given to one session is never reused, and a configuration that cannot carry a secret safely stops the call instead of degrading.
+
+**Entities:** `SessionToken`, `WebPublicUrl`, `SessionCookie` (lands in slice 1f-ii with `auth-cookies.ts`).
+
+**Contract** (TypeScript; the HTTP routes are ADR 0015's and do not change).
+
+```ts
+// src/api/session-token.ts: the only maker of the brand, like ClientIp
+type SessionToken = string & { readonly [sessionTokenBrand]: true };
+function sessionTokenFrom(value: string | undefined): SessionToken | undefined; // 43 base64url characters, else undefined
+
+// src/api/client.ts
+interface CallOptions<T> {
+  readonly session?: SessionToken;      // sent as `Authorization: Bearer`; implies requiresInternalKey
+  readonly requiresInternalKey?: true;  // a K route of ADR 0015
+}
+type ApiFailure =
+  | { kind: 'api_error'; status: number; error: ApiError; retryAfterSeconds?: number }
+  | … // network, timeout, invalid_response: unchanged
+```
+
+**Data flow.** Cookie value → `sessionTokenFrom()` → `call(path, { session })` → checks (uncached, key present) → `Authorization: Bearer` next to `X-Internal-Api-Key`, `no-store` → API. On a 429 envelope the client reads `Retry-After` into `retryAfterSeconds`.
+
+**Design, simplest first.** Three checks before the request, outside the `catch`, like the existing ones (a throw is a configuration or programming error, never `network`):
+1. `session` or `clientIp` on a cached call throws (`assertClientIpUncached` becomes one check for both per-visitor options).
+2. `session` or `requiresInternalKey` on a client built without a key throws one message naming `INTERNAL_API_KEY`. This is ADR 0015's "a missing key throws on the first auth call", and it is what gives S2 with no second URL check: a key exists only with an https or loopback base URL.
+3. No `headers` option, now or later: every header the client sends is one of five it writes itself.
+
+**Deep dives.**
+- **S1.** Throw, not a silent `no-store`: a caller that asked for `revalidate` believes its page is cached, and the mistake should fail its first test. The check sees only the fetch options, not a `'use cache'` scope: a session call is never made inside `'use cache'`. `cookies()` cannot be read there, but a token passed in as an argument would become part of the cache key, so the rule is what holds, not the runtime. `requiresInternalKey` is refused on a cached call too (security review M1): a credential call is never replayed.
+- **S2.** Without the key the Bearer is not dropped (see Rejected) and not sent (the API would answer 403 to an open caller, after the token crossed for nothing). Locally this means accounts need `INTERNAL_API_KEY` in the root `.env` and the default `API_BASE_URL=http://127.0.0.1:3001`; the API already needs the key for `GET /me`. A visitor without a cookie never makes a session call, so public pages are unaffected.
+- **S3.** The failure for a session call is built by the same code as today, from status and contract fields only; a test sends a token and a key and searches every failure and thrown message for both.
+- **S4.** Only on a 429 that carries a valid envelope, matched by `/^[1-9][0-9]{0,4}$/` then capped at 86,400 (the longest window any API rule uses is 24 h). The API only sends whole seconds (`api-exception.filter.ts`); a date would be a proxy's, and a countdown must not trust it. Optional on the existing variant so no caller or fixture changes (S5); pages read it for the countdown and never retry by themselves (ADR 0020).
+
+**Rejected.**
+- **A free-form `headers` option.** One line of client code, but any caller could then send `X-Client-Ip` from a browser-supplied value or the key to a path of its choosing; typed options keep each header's rule next to the header.
+- **Dropping the Bearer when no key is configured** (what `clientIp` does). The API would answer 401, the page would render signed out, and the next Server Action would delete a valid cookie (ADR 0015): a missing variable on Vercel would sign every member out. A throw is loud and destroys nothing.
+- **A new `rate_limited` failure kind.** Every existing 429 branch (`busy` on `/season`, the import limits) reads `api_error` and its code; a new kind changes them all for one number.
+
+**Too simple?** `requiresInternalKey` is opt-in, so a credential call that forgets it would post a password with whatever configuration exists: slice 1f-ii gives the auth actions one wrapper that always sets it and takes a non-optional `ClientIp`, and no action calls `apiClient()` directly. A `Retry-After` on a 503 is ignored (no page needs it). **Too complicated?** No: two options, one optional field, about 45 lines. Left out on purpose: retries, a `signal` option and the `server-only` split (ADR 0017 slice 2 moves `session`, `clientIp` and the key to that file).
+
+**Configuration.** `WEB_PUBLIC_URL` (ADR 0015) joins `WEB_ENV_VARIABLES`: the web's own origin, https, or http only for `localhost`, `127.0.0.1` and `[::1]`. Read on first use by `readWebPublicUrl()` (`src/auth/web-public-url.ts`), never at build, so a deploy without it still serves public pages. It names the session cookie (`__Host-ol_session` with `Secure` on https, `ol_session` on http) and later checks `next` and `Origin`.

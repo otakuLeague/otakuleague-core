@@ -13,12 +13,15 @@ import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 // never picks up a stray .env from a parent folder. Only the web app's own variables are copied,
 // so the database credentials in the same file stay out of this process. Variables already set win.
 // INTERNAL_API_KEY is read at request time only: never add it to `env` below (inlined in bundles).
+// WEB_PUBLIC_URL is read by the auth code on first use, never here, so a deploy without it still
+// serves public pages (ADR 0003, OTA-139 addendum).
 const WEB_ENV_VARIABLES = [
   'API_BASE_URL',
   'INTERNAL_API_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
   'SENTRY_ENVIRONMENT',
   'SENTRY_RELEASE',
+  'WEB_PUBLIC_URL',
 ] as const;
 
 const repoRoot = path.resolve(__dirname, '../..');
