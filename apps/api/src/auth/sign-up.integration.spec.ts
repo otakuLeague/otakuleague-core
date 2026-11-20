@@ -796,4 +796,15 @@ describe('POST /auth/sign-up', () => {
       expect(await sentAfterSettling()).toEqual([]);
     },
   );
+
+  it('answers a common password 400 VALIDATION_FAILED, not 403 SIGN_UP_CLOSED, while sign-up is closed', async () => {
+    mail.open = false;
+
+    const response = await signUp({ ...SIGN_UP, password: 'passw0rd' }).expect(
+      400,
+    );
+
+    expect((response.body as ApiError).error.code).toBe('VALIDATION_FAILED');
+    expect(await prisma.authRateLimit.count()).toBe(0);
+  });
 });

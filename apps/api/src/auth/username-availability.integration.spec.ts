@@ -1,9 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import type {
-  ApiError,
-  UsernameAvailabilityResponse,
-} from '@otakuleague/shared-types';
+import type { ApiError } from '@otakuleague/shared-types';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import {
@@ -109,6 +106,18 @@ function seedUser(
   });
 }
 
+/** Raw queries that read the hold table: only isUsernameTaken does, the counter never. */
+const takenReads = (calls: readonly (readonly unknown[])[]): number =>
+  calls.filter(([query]) =>
+    JSON.stringify(query).includes('auth_username_hold'),
+  ).length;
+
+const databaseUnreachable = (): Prisma.PrismaClientKnownRequestError =>
+  new Prisma.PrismaClientKnownRequestError('fake: database unreachable', {
+    code: 'P1001',
+    clientVersion: 'test',
+  });
+
 function seedHold(db: PrismaService, expiresAt: Date): Promise<unknown> {
   return db.usernameHold.create({
     data: { usernameKey: 'frieren', expiresAt },
@@ -190,9 +199,7 @@ describe('GET /users/availability', () => {
   it('answers 200 { available } with no-store, counts one attempt and hashes nothing', async () => {
     const response = await check('?username=Frieren').expect(200);
 
-    expect(response.body as UsernameAvailabilityResponse).toEqual({
-      available: true,
-    });
+    expect(response.body).toEqual({ available: true });
     expect(response.headers['cache-control']).toBe('no-store');
     expect(await prisma.authRateLimit.count()).toBe(1);
     expect(argon2.derives).toBe(0);
@@ -208,14 +215,23 @@ describe('GET /users/availability', () => {
 
   it('refuses the 61st check of one IP in a minute, for a free and a taken name alike (brute force)', async () => {
     await seedHold(prisma, at(DAY));
-    for (let n = 0; n < 60; n += 1) {
+    for (let n = 0; n < 59; n += 1) {
       await check(n % 2 === 0 ? '?username=Free' : '?username=frieren').expect(
         200,
       );
     }
+    // Count, then read: the 60th runs the counter and the "taken" read, a refused one the counter only.
+    const queries = vi.spyOn(prisma, '$queryRaw');
+    await check('?username=frieren').expect(200, { available: false });
+    expect(queries).toHaveBeenCalledTimes(2);
+    expect(takenReads(queries.mock.calls)).toBe(1);
+    queries.mockClear();
 
     for (const name of ['Free', 'frieren']) {
       const refused = await check(`?username=${name}`).expect(429);
+      expect(queries).toHaveBeenCalledTimes(1);
+      expect(takenReads(queries.mock.calls)).toBe(0);
+      queries.mockClear();
       expect(refused.body).toEqual({
         error: {
           code: 'TOO_MANY_REQUESTS',
@@ -250,6 +266,7 @@ describe('GET /users/availability', () => {
     ['a username with padding', '?username=%20Frieren%20'],
     ['a repeated username', '?username=Frieren&username=Himmel'],
     ['an unknown parameter', '?username=Frieren&userId=1'],
+    ['a bracketed username (an unknown parameter)', '?username[]=Frieren'],
   ])(
     'answers 400 VALIDATION_FAILED to %s, before any counter',
     async (_, query) => {
@@ -305,17 +322,36 @@ describe('GET /users/availability', () => {
     expect(await prisma.authRateLimit.count()).toBe(0);
   });
 
+  it('ignores a __proto__ parameter: the query parser keeps it, class-transformer drops it', async () => {
+    await check('?username=Frieren&__proto__=x').expect(200, {
+      available: true,
+    });
+  });
+
   it('answers 503 when the counter cannot count: never an uncounted pass', async () => {
     vi.spyOn(app.get(AuthRateLimiter), 'check').mockRejectedValueOnce(
-      new Prisma.PrismaClientKnownRequestError('fake: database unreachable', {
-        code: 'P1001',
-        clientVersion: 'test',
-      }),
+      databaseUnreachable(),
     );
 
     const response = await check('?username=Frieren').expect(503);
 
     expect((response.body as ApiError).error.code).toBe('SERVICE_UNAVAILABLE');
     expect(response.body).not.toHaveProperty('available');
+  });
+
+  it('answers 503 when the counter counted but the "taken" read fails: never a guess', async () => {
+    const original = prisma.$queryRaw.bind(prisma);
+    const queries = vi
+      .spyOn(prisma, '$queryRaw')
+      .mockImplementationOnce(original)
+      .mockRejectedValueOnce(databaseUnreachable());
+
+    const response = await check('?username=Frieren').expect(503);
+
+    expect((response.body as ApiError).error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(response.body).not.toHaveProperty('available');
+    expect(queries).toHaveBeenCalledTimes(2);
+    expect(takenReads(queries.mock.calls)).toBe(1);
+    expect(await prisma.authRateLimit.count()).toBe(1);
   });
 });

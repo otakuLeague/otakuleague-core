@@ -358,6 +358,13 @@ sequenceDiagram
 
 **Size.** About 150 lines of code and 250 of tests in one PR, the data file apart.
 
+**Gate / follow-ups (1e-iii review).**
+- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one.
+- (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route.
+- (c) The typed username travels in a query string, so it reaches the platform's access logs. Accepted: usernames are public.
+- (d) Guard refusals (400 `BAD_REQUEST`, 403) carry no `no-store`: Nest sets `@Header` after the guards run. Existing behaviour on every guarded route; low, since neither status is cached by default.
+- The licence notice is emitted as a `/*! */` header of `common-passwords.data.ts`, which `removeComments` keeps, so it ships in `dist` with the list.
+
 ## Consequences
 
 - Until 1e-ii merges, an account created by sign-up cannot be confirmed (local and CI only; production is closed).
