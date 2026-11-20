@@ -2,10 +2,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Controller, Get } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
+import { USERNAME_PATTERN } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import { normaliseIdentifier } from './credential-rules';
 import { isReservedUsername, RESERVED_USERNAMES } from './reserved-usernames';
-import { USERNAME_PATTERN } from './sign-up-rules';
 import { UsernameAvailabilityController } from './username-availability.controller';
 
 const SRC = join(__dirname, '..');

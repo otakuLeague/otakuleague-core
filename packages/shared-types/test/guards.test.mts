@@ -7,6 +7,7 @@ import {
   isApiError,
   isEmailVerificationConfirmResponse,
   isHealthResponse,
+  isMeResponse,
   isSessionToken,
   isSignInResponse,
   PASSWORD_RAW_MAX,
@@ -226,6 +227,40 @@ void describe('isSignInResponse', () => {
         false,
         JSON.stringify(candidate),
       );
+    }
+  });
+});
+
+void describe('isMeResponse', () => {
+  const ME = { id: 'u1', username: 'Frieren_99' };
+  const named = (username: unknown) => ({ ...ME, username });
+
+  void it('accepts a non-empty id and a username of 3 to 20 letters, digits or "_"', () => {
+    for (const username of ['abc', 'Frieren_99', 'x'.repeat(20)]) {
+      assert.equal(isMeResponse(named(username)), true, username);
+    }
+  });
+
+  void it('rejects an empty or missing id, a username sign-up would refuse, and non-objects', () => {
+    const refusedNames = [
+      'ab',
+      'x'.repeat(21),
+      'a b',
+      'a@b.c',
+      '<b>',
+      'é_é',
+      'abc\n',
+      7,
+    ];
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      { ...ME, id: '' },
+      { ...ME, id: 42 },
+      { username: ME.username },
+      { id: ME.id },
+      ...refusedNames.map(named),
+    ]) {
+      assert.equal(isMeResponse(candidate), false, JSON.stringify(candidate));
     }
   });
 });

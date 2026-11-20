@@ -108,7 +108,9 @@ describe('network lint rule', () => {
     }
   });
 
-  describe('auth gate: credential calls only through credentialCall()', () => {
+  describe('auth gate: API calls only through credentialCall() or sessionCall()', () => {
+    const SESSION_CALL = 'src/auth/session-call.ts';
+
     it.each([
       "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
       "import { createApiClient } from '../api/client.ts';\nexport const build = createApiClient;\n",
@@ -118,6 +120,19 @@ describe('network lint rule', () => {
         'no-restricted-imports',
       );
     });
+
+    it.each([
+      BUILD_OWN_CLIENT,
+      "import { createApiClient } from '../api/client.js';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\n",
+    ])(
+      'still forbids in sessionCall():\n%s',
+      async (code) => {
+        expect(await ruleIdsFor(code, SESSION_CALL)).toContain(
+          'no-restricted-imports',
+        );
+      },
+    );
 
     it('forbids apiClient in the auth pages too', async () => {
       const code = `import { apiClient } from '../../src/api/client';\nexport const build = apiClient;\n`;
@@ -129,6 +144,7 @@ describe('network lint rule', () => {
 
     it.each([
       ['src/auth/credential-call.ts', 'import { apiClient }', 'apiClient'],
+      [SESSION_CALL, 'import { apiClient }', 'apiClient'],
       [AUTH_FILE, 'import type { ApiResult }', '{} as ApiResult<string>'],
     ])('allows in %s: %s', async (filePath, imported, exported) => {
       const code = `${imported} from '../api/client';\nexport const build = ${exported};\n`;

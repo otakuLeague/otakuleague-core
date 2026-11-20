@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { USERNAME_PATTERN } from '@otakuleague/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 import { identifierKind, normaliseIdentifier } from './credential-rules';
 import {
@@ -8,7 +9,6 @@ import {
   isEmailAddress,
   meetsSignUpPasswordRule,
   PENDING_SIGN_UP_TTL_MS,
-  USERNAME_PATTERN,
 } from './sign-up-rules';
 
 // The real function, recorded: bindingMatches must compare through it, never with ===.
