@@ -59,7 +59,8 @@ export class UsernameAvailabilityController {
       'INTERNAL_KEY_REQUIRED: a caller other than the production web server.',
   })
   @ApiTooManyRequestsResponse({
-    description: 'TOO_MANY_REQUESTS: 60 per IP per minute.',
+    description:
+      'TOO_MANY_REQUESTS: 60 per IP (an IPv6 counts per /64) per minute, and 120 per IPv6 /48 per minute.',
   })
   @ApiServiceUnavailableResponse({ description: 'The database is down.' })
   async availability(

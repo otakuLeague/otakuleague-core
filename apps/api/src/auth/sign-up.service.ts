@@ -11,6 +11,7 @@ import {
 } from './credential-rules';
 import { type AuthEmail, EmailSender } from './email-sender';
 import { PasswordHasher } from './password-hasher';
+import { isReservedUsername } from './reserved-usernames';
 import {
   AUTH_TOKEN_BYTES,
   hashAuthToken,
@@ -293,13 +294,15 @@ export class SignUpService implements OnModuleDestroy {
   }
 
   /**
-   * A live hold, or a user row of that key that is not stale (a null deadline is never stale).
-   * Only a read: it saves the hash on the common 409; the claim in `register` is the safe check.
+   * A reserved name (no read), a live hold, or a user row of that key that is not stale (a null
+   * deadline is never stale). Only a read: it saves the hash on the common 409; the claim in
+   * `register` is the safe check. Reserved never changes, so `register` needs no second look.
    */
   private async isUsernameTaken(
     usernameKey: NormalisedIdentifier,
     now: string,
   ): Promise<boolean> {
+    if (isReservedUsername(usernameKey)) return true;
     const [row] = await this.prisma.$queryRaw<{ taken: boolean }[]>`
       SELECT EXISTS (SELECT 1 FROM auth_username_hold
           WHERE username_key = ${usernameKey} AND expires_at > ${now}::timestamptz)

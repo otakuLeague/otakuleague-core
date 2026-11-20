@@ -1,6 +1,8 @@
 import { createSecretKey } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  type Ipv6SiteKey,
+  ipv6SiteKeyOf,
   PREVIEW_VISITOR_KEY,
   visitorKeyFromClientIp,
 } from '../common/api-caller';
@@ -11,6 +13,7 @@ import {
   confirmPasswordHits,
   decide,
   PER_IP_LIMITS,
+  PER_IPV6_SITE_LIMITS,
   perIpHits,
   RATE_LIMIT_LONGEST_WINDOW_MS,
   rateLimitKey,
@@ -33,6 +36,12 @@ const OTHER_HMAC_KEY = createSecretKey(
 function ipKey(header: string): ClientIpKey {
   const key = clientIpKey(visitorKeyFromClientIp(header));
   if (key === null) throw new Error(`${header} is not a client IP`);
+  return key;
+}
+
+function siteKey(ip: ClientIpKey): Ipv6SiteKey {
+  const key = ipv6SiteKeyOf(ip);
+  if (key === null) throw new Error(`${ip} has no IPv6 /48`);
   return key;
 }
 
@@ -66,10 +75,27 @@ describe('PER_IP_LIMITS', () => {
   it('keeps every window within the cleanup horizon', () => {
     for (const rule of [
       ...Object.values(PER_IP_LIMITS),
+      ...Object.values(PER_IPV6_SITE_LIMITS),
       CONFIRM_PASSWORD_LIMIT,
     ]) {
       expect(rule.windowMs).toBeLessThanOrEqual(RATE_LIMIT_LONGEST_WINDOW_MS);
     }
+  });
+});
+
+describe('PER_IPV6_SITE_LIMITS', () => {
+  it('pins the ADR 0020 (1f gate) number: availability 120 per IPv6 /48 per minute', () => {
+    expect(PER_IPV6_SITE_LIMITS).toEqual({
+      'username-availability': { limit: 120, windowMs: 60_000 },
+    });
+  });
+
+  it('leaves room for two busy /64s of one site: at least twice the /64 limit, same window', () => {
+    const site = PER_IPV6_SITE_LIMITS['username-availability'];
+    const perIp = PER_IP_LIMITS['username-availability'];
+
+    expect(site.limit).toBeGreaterThanOrEqual(2 * perIp.limit);
+    expect(site.windowMs).toBe(perIp.windowMs);
   });
 });
 
@@ -142,6 +168,67 @@ describe('perIpHits', () => {
     expect(hex(resend.key)).not.toBe(hex(confirm.key));
   });
 
+  it('counts an IPv6 availability check per /64, then per /48, in that order', () => {
+    const ip = ipKey('2001:db8:aa:1::9');
+
+    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
+        rule: PER_IP_LIMITS['username-availability'],
+      },
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ipv6Site', [
+          siteKey(ip),
+        ]),
+        rule: PER_IPV6_SITE_LIMITS['username-availability'],
+      },
+    ]);
+  });
+
+  it.each([
+    ['an IPv4', '203.0.113.7'],
+    ['a mapped IPv4', '::ffff:203.0.113.7'],
+  ])('counts %s availability check once: no /48 exists', (_, header) => {
+    const ip = ipKey(header);
+
+    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
+        rule: PER_IP_LIMITS['username-availability'],
+      },
+    ]);
+  });
+
+  it.each([
+    'sign-up',
+    'email-verification-confirm',
+    'email-verification-resend',
+  ] as const)('counts an IPv6 %s once: no site rule', (route) => {
+    const ip = ipKey('2001:db8:aa:1::9');
+
+    expect(perIpHits(HMAC_KEY, route, ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, route, 'ip', [ip]),
+        rule: PER_IP_LIMITS[route],
+      },
+    ]);
+  });
+
+  it("gives the /48 its own counter: not the /64's, not another site's, shared by the site's /64s", () => {
+    const keys = (header: string): string[] =>
+      perIpHits(HMAC_KEY, 'username-availability', ipKey(header)).map(
+        ({ key }) => hex(key),
+      );
+    const [home, site] = keys('2001:db8:aa:1::9');
+    const [neighbour, neighbourSite] = keys('2001:db8:aa:2::9');
+    const [, otherSite] = keys('2001:db8:ab:1::9');
+
+    expect(site).not.toBe(home);
+    expect(neighbour).not.toBe(home);
+    expect(neighbourSite).toBe(site);
+    expect(otherSite).not.toBe(site);
+  });
+
   it('differs by IP and HMAC key, and counts a whole IPv6 /64 as one visitor', () => {
     const key = (hmacKey: typeof HMAC_KEY, ip: ClientIpKey): string =>
       hex(perIpHits(hmacKey, 'sign-up', ip)[0].key);
@@ -193,6 +280,16 @@ describe('rateLimitKey', () => {
     expect(key).toHaveLength(32);
     expect(key.toString('latin1')).not.toContain('203.0.113.7');
     expect(key.toString('latin1')).not.toContain('frieren');
+  });
+
+  it('holds no IPv6 prefix text in a /48 key', () => {
+    const key = rateLimitKey(HMAC_KEY, 'username-availability', 'ipv6Site', [
+      siteKey(ipKey('2001:db8:aa:1::9')),
+    ]);
+
+    expect(key).toHaveLength(32);
+    expect(key.toString('latin1')).not.toContain('2001');
+    expect(key.toString('latin1')).not.toContain('/48');
   });
 
   it('is stable for the same inputs', () => {

@@ -1,5 +1,10 @@
 import { createHmac, type KeyObject } from 'node:crypto';
-import { sharedVisitorBucket, type VisitorKey } from '../common/api-caller';
+import {
+  type Ipv6SiteKey,
+  ipv6SiteKeyOf,
+  sharedVisitorBucket,
+  type VisitorKey,
+} from '../common/api-caller';
 import type { NormalisedIdentifier } from './credential-rules';
 
 const MINUTE_MS = 60_000;
@@ -38,6 +43,19 @@ export const PER_IP_LIMITS = {
 } as const satisfies Record<string, RateLimitRule>;
 
 /**
+ * A second counter per IPv6 /48 ("site"), counted after the route's per-IP key, for the routes
+ * listed here only (ADR 0020 Addendum 1f gate G1); a test pins these numbers.
+ */
+export const PER_IPV6_SITE_LIMITS = {
+  /** G1: 120 per /48 per minute, where 65,536 /64s at 60 each gave 3,932,160. */
+  'username-availability': { limit: 120, windowMs: MINUTE_MS },
+} as const satisfies Partial<Record<PerIpRoute, RateLimitRule>>;
+
+/** The same table, read by any per-IP route: a route without a site rule gets undefined. */
+const SITE_RULES: Partial<Record<PerIpRoute, RateLimitRule>> =
+  PER_IPV6_SITE_LIMITS;
+
+/**
  * Password checks per pending account on the confirm route, from any number of IPs (ADR 0020
  * Addendum C4: at most 240 guesses in the account's 24 h); a test pins it.
  */
@@ -50,7 +68,7 @@ export type PerIpRoute = keyof typeof PER_IP_LIMITS;
 
 export type AuthRateLimitRoute = 'sign-in' | PerIpRoute;
 
-export type RateLimitScope = keyof typeof SIGN_IN_LIMITS;
+export type RateLimitScope = keyof ScopeParts;
 
 declare const clientIpBrand: unique symbol;
 
@@ -72,6 +90,7 @@ interface ScopeParts {
   readonly ip: readonly [ClientIpKey];
   readonly identifierIp: readonly [NormalisedIdentifier, ClientIpKey];
   readonly identifier: readonly [NormalisedIdentifier];
+  readonly ipv6Site: readonly [Ipv6SiteKey];
 }
 
 declare const rateLimitKeyBrand: unique symbol;
@@ -145,18 +164,33 @@ export function signInHits(
   return hits as SignInHits;
 }
 
-/** The one key of a route counted per IP alone; the route is in the key, so no two routes share it. */
+/**
+ * A route's keys counted per IP: the IP (an IPv6 cut to its /64) under PER_IP_LIMITS, then, for a
+ * route in PER_IPV6_SITE_LIMITS and an IPv6 caller only, its /48 under that rule. The /64 goes
+ * first, so a /64 refused at its own limit never spends its site's budget (G2). The route is in
+ * every key, so no two routes share a counter.
+ */
 export function perIpHits(
   hmacKey: KeyObject,
   route: PerIpRoute,
   ip: ClientIpKey,
 ): RateLimitHits {
-  const hits: readonly [RateLimitHit] = [
-    {
-      key: rateLimitKey(hmacKey, route, 'ip', [ip]),
-      rule: PER_IP_LIMITS[route],
-    },
-  ];
+  const ipHit: RateLimitHit = {
+    key: rateLimitKey(hmacKey, route, 'ip', [ip]),
+    rule: PER_IP_LIMITS[route],
+  };
+  const siteRule = SITE_RULES[route];
+  const site = siteRule === undefined ? null : ipv6SiteKeyOf(ip);
+  const hits: readonly [RateLimitHit, ...RateLimitHit[]] =
+    siteRule === undefined || site === null
+      ? [ipHit]
+      : [
+          ipHit,
+          {
+            key: rateLimitKey(hmacKey, route, 'ipv6Site', [site]),
+            rule: siteRule,
+          },
+        ];
   return hits as RateLimitHits;
 }
 
