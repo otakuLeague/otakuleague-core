@@ -25,6 +25,10 @@ export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
  */
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
 
+/** USERNAME_PATTERN's message, for sign-up and the availability check alike; never echoes the value. */
+export const USERNAME_RULE_MESSAGE =
+  'username must be 3 to 20 letters, digits or underscores';
+
 /** A digit, punctuation or symbol (an emoji included); a letter, a mark or a space is not one. */
 const DIGIT_OR_SYMBOL = /[\p{N}\p{P}\p{S}]/u;
 

@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
+import { COMMON_PASSWORD_MESSAGE } from './common-passwords';
 import { PASSWORD_MAX } from './credential-rules';
 import { PASSWORD_RAW_MAX } from './sign-in.dto';
 import { SignUpDto } from './sign-up.dto';
@@ -82,6 +83,38 @@ describe('SignUpDto', () => {
   ])('refuses a password of %s', async (_, password) => {
     expect(await refusedFields({ ...VALID, password })).toEqual(['password']);
   });
+
+  it.each(['passw0rd', 'PASSW0RD', 'Qwerty123', 'iloveyou!'])(
+    'refuses %j, a common password that meets the length and digit rule, with one message',
+    async (password) => {
+      expect(await messages({ ...VALID, password })).toEqual([
+        COMMON_PASSWORD_MESSAGE,
+      ]);
+    },
+  );
+
+  it('gives a short common password both messages', async () => {
+    const texts = await messages({ ...VALID, password: '123456' });
+
+    expect(texts.toSorted()).toEqual([
+      'password is too common',
+      'password must be at least 8 characters with a digit or symbol',
+    ]);
+    expect(COMMON_PASSWORD_MESSAGE).toBe('password is too common');
+  });
+
+  it('judges the NFC form: a Kelvin sign is the letter K, so "\\u212Aristin1" is "kristin1"', async () => {
+    expect(await messages({ ...VALID, password: 'Kristin1' })).toEqual([
+      COMMON_PASSWORD_MESSAGE,
+    ]);
+  });
+
+  it.each([' passw0rd', 'passw0rd2', 'p4ssw0rd!'])(
+    'accepts %j: no trim, no substring and no leet match',
+    async (password) => {
+      expect(await refusedFields({ ...VALID, password })).toEqual([]);
+    },
+  );
 
   it(`accepts ${PASSWORD_MAX} code points after NFC, from ${2 * PASSWORD_MAX - 1} before`, async () => {
     const password = `1${'é'.repeat(PASSWORD_MAX - 1)}`;
