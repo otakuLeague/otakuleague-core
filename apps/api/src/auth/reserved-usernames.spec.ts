@@ -46,7 +46,9 @@ function handlersOf(controller: object): object[] {
 /**
  * Route segments right after `/users/` that a username could spell (USERNAME_PATTERN) but the
  * list does not reserve: a future `/users/:username` would collide with them. A parameter
- * (`:username`) or a segment with `-` cannot be a username, so it needs no entry.
+ * (`:username`) or a segment with `-` cannot be a username, so it needs no entry. Routing ignores
+ * case, so `Users` counts; the braces of an optional group (`{/search}`) are dropped, so its
+ * segment is checked too. Covers Nest controllers only (see ADR 0020 Addendum 1f gate).
  */
 function unreservedUserSegments(controller: object): string[] {
   const found: string[] = [];
@@ -54,10 +56,11 @@ function unreservedUserSegments(controller: object): string[] {
     for (const handler of handlersOf(controller)) {
       for (const route of pathsOf(handler)) {
         const [first, second] = `${base}/${route}`
+          .replace(/[{}]/g, '')
           .split('/')
           .filter((segment) => segment !== '');
         if (
-          first === 'users' &&
+          first?.toLowerCase() === 'users' &&
           second !== undefined &&
           USERNAME_PATTERN.test(second) &&
           !isReservedUsername(normaliseIdentifier(second))
@@ -151,8 +154,17 @@ describe('routes under /users/', () => {
       @Get('users/himmel/watchlist')
       nested(): void {}
     }
+    @Controller('Users')
+    class FakeUpperCaseController {
+      @Get('{/eisen}')
+      optional(): void {}
+
+      @Get('{/search}')
+      reservedOptional(): void {}
+    }
 
     expect(unreservedUserSegments(FakeUsersController)).toEqual(['frieren']);
     expect(unreservedUserSegments(FakeRootController)).toEqual(['himmel']);
+    expect(unreservedUserSegments(FakeUpperCaseController)).toEqual(['eisen']);
   });
 });

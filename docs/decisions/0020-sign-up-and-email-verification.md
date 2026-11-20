@@ -371,23 +371,28 @@ Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f e
 
 | # | Requirement |
 |---|---|
-| G1 | Enumeration bound per site: 120 availability checks per IPv6 /48 per minute, so 172,800 a day per /48, where its 65,536 /64s at 60 each allowed 3,932,160 a minute. |
-| G2 | The /64 counts first: a check its /64 refuses never spends the /48, so one busy /64 uses at most 60 of its site's 120. |
-| G3 | Cost: an answered IPv6 check is 3 statements (2 counter upserts, the read); refused by its /64, 1 upsert; refused by its /48, 2 upserts; 0 reads and 0 hashes either way. IPv4 and mapped IPv4 are unchanged (1 counter). |
-| G4 | Reserved usernames are taken: whole-key match on `normaliseIdentifier` output, before any read. Availability answers `false` with 0 reads; sign-up answers 409 `USERNAME_TAKEN` with 0 reads and 0 hashes. The list: `availability`, `search`, `new`, `top`, `random`, `all`, `settings`, `leaderboard`, `edit`, `admin`, `administrator`, `moderator`, `mod`, `staff`, `support`, `help`, `system`, `official`, `security`, `root`, `otakuleague`, `otaku_league`, `null`, `undefined`, `anonymous`, `deleted`, `everyone` (each matches `USERNAME_PATTERN`). |
+| G1 | Enumeration bound per /48: 120 availability checks per IPv6 /48 per minute, so 172,800 a day per /48, where its 65,536 /64s at 60 each allowed 3,932,160 a minute. A /48 may be one customer's site or a carrier pool that gives each subscriber a /64, so unrelated visitors can share the 120 ("Too simple?"). |
+| G2 | The /64 counts first: a check its /64 refuses never spends the /48, so one busy /64 uses at most 60 of its /48's 120. |
+| G3 | Cost: an answered IPv6 check is 3 statements (2 counter upserts, the read); refused by its /64, 1 upsert; refused by its /48, 2 upserts; 0 reads and 0 hashes either way. A check refused by its /48 still writes its /64's counter row (a new row for a new /64), kept until the cleanup (24 h). IPv4 and mapped IPv4 are unchanged (1 counter). |
+| G4 | Reserved usernames are taken: whole-key match on `normaliseIdentifier` output, before any read. Availability answers `false` with 0 reads; sign-up answers 409 `USERNAME_TAKEN` with 0 reads and 0 hashes. The 50 entries, each matching `USERNAME_PATTERN`: `availability`, `search`, `new`, `top`, `random`, `all`, `settings`, `leaderboard`, `edit`, `login`, `signup`, `sign_up`, `profile`, `account`, `api`, `user`, `users`, `admin`, `admins`, `administrator`, `moderator`, `moderators`, `mod`, `mods`, `staff`, `support`, `help`, `system`, `official`, `security`, `root`, `owner`, `team`, `bot`, `otakuleague`, `otaku_league`, `otaku`, `null`, `undefined`, `anonymous`, `deleted`, `everyone`, `guest`, `unknown`, `nobody`, `none`, `self`, `__proto__`, `constructor`, `prototype`. |
 
 **Decisions.**
-1. **A site limit table.** `PER_IPV6_SITE_LIMITS` (`auth-rate-limit-rules.ts`) holds `username-availability` only; `perIpHits` returns the /64 hit, then the /48 hit (scope `ipv6Site`, branded `Ipv6SiteKey`) for a route in that table and an IPv6 caller. `AuthRateLimiter.check` already counts in order and stops at the first refusal, which gives G2 with no limiter change.
+1. **A site limit table.** `PER_IPV6_SITE_LIMITS` (`auth-rate-limit-rules.ts`) holds `username-availability` only; `perIpHits` returns the /64 hit, then the /48 hit (scope `ipv6Site`, branded `Ipv6SiteKey`) for a route in that table and an IPv6 caller. `AuthRateLimiter.check` already counts in order and stops at the first refusal, which gives G2 with no limiter change. An IPv6 key (it has a colon) that yields no /48 on such a route throws (500), so a later change of the key spelling fails loudly instead of dropping the /48 bound.
 2. **A pure /48 function** beside `visitorKeyFromClientIp`, which owns the key format: `ipv6SiteKeyOf` maps `2001:db8:0:5::/64` to `2001:db8:0::/48` and gives null for IPv4, mapped IPv4, `unknown` and `preview`. The key is HMAC'd like every other part: no prefix is stored.
-3. **Reserved means taken.** `isUsernameTaken` returns true for a reserved key before its read, so both routes keep one rule (A1) and the web needs no new state. `register` needs no second look: the list never changes at run time.
-4. **The list is API-local** (`reserved-usernames.ts`, like `RESERVED_SLUGS`), with a structural test: it reads Nest path metadata of every controller in `src` and fails when a segment right after `/users/` could be a username and is not reserved.
+3. **Reserved means taken.** `isUsernameTaken` returns true for a reserved key before its read, so both routes keep one rule (A1) and the web needs no new state. `register` refuses a reserved key too, before any statement (defence in depth, one `Set` lookup). Any later writer of `username_key` (a rename, the OTA-149 import, an OAuth sign-up) must call `isReservedUsername` itself.
+4. **The list is API-local** (`reserved-usernames.ts`, like `RESERVED_SLUGS`), with a structural test: it reads the Nest path metadata of every controller declared with `@Controller(` in `apps/api/src` (spec files apart) and fails when the first segment after `/users/` (case ignored, the braces of an optional group dropped) could be a username and is not reserved. Its limits: it does not see a prefix added by `RouterModule` or a global prefix, nor the web's Next `app/` routes; a web `/users/<name>` route in 1f needs its own check.
 
 **Rejected.**
-- **A route-wide cap.** One busy visitor would deny every other visitor the hint; the /48 bounds the cheap address space and leaves other sites alone.
-- **Reserved as 400 from a list in shared types.** A distinct answer tells a prober which names are reserved and adds a web state; the list would ship to the browser for no gain. Taken already covers it.
-- **The /48 counter on every per-IP route.** Sign-up, confirm and resend are already bounded per hour or per account; one more upsert per call there buys nothing.
+- **A route-wide cap.** One busy visitor would deny every other visitor the hint; the /48 bounds the cheap address space and leaves other /48s alone.
+- **Reserved as 400 from a list in shared types.** It adds a web state and ships the list to the browser for no gain; taken already covers it.
+- **The /48 counter on every per-IP route in this slice.** Confirm and resend are bounded per hour or per account. Sign-up and sign-in are the accepted risk below, closed by a Gate item.
 
-**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one. Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit. A reserved name reads as taken.
+**Too simple?**
+- A carrier pool /48 shares 120 checks a minute among unrelated subscribers, and two busy /64s can use them all for the rest of the pool for up to a minute. Accepted: the hint is optional, and 1f treats 429 as unknown and never blocks the submit.
+- A reserved name answers without the read, so timing can tell reserved from taken. Accepted: the list is public in the repository.
+- **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens.
+
+**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one. Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
 
 ## Consequences
 
@@ -401,7 +406,8 @@ Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f e
   - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30;
   - the email budget (5 per address per 24 h, 20 per IP per 24 h, a global cap) enforced in `dispatch` before any real `EmailSender` adapter lands, with a test that fails if `canSend()` can be true in production without it;
   - no API rollback below the 1e-ii-b build once sign-up is open: an older build's delete-then-insert meets the UNIQUE index and answers 500 (23505) to a re-submit of a pending email;
-  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link.
+  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link;
+  - a /48 tier for sign-up and sign-in (or a measured hash budget), so one IPv6 /48 cannot drive argon2 hashes from its 65,536 /64s (the accepted risk of Addendum (1f gate)).
 - Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
 
 **Too simple?**

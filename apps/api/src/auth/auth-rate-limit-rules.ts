@@ -181,6 +181,11 @@ export function perIpHits(
   };
   const siteRule = SITE_RULES[route];
   const site = siteRule === undefined ? null : ipv6SiteKeyOf(ip);
+  // Only an IPv6 key has a colon: one without a site means the key spelling changed, and a quiet
+  // single hit would drop the /48 bound. Fail the request (500), never count it short.
+  if (siteRule !== undefined && site === null && ip.includes(':')) {
+    throw new Error('An IPv6 client IP key has no /48: its spelling changed');
+  }
   const hits: readonly [RateLimitHit, ...RateLimitHit[]] =
     siteRule === undefined || site === null
       ? [ipHit]

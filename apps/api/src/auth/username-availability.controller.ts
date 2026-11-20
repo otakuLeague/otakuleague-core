@@ -43,7 +43,7 @@ export class UsernameAvailabilityController {
   })
   @ApiOkResponse({
     description:
-      '`available: false` when sign-up of this name would answer 409 now (a member, a pending sign-up or a held name, never says which). `true` is a hint, not a reservation.',
+      '`available: false` when sign-up of this name would answer 409 now (a member, a pending sign-up, a held name, or the name is reserved; never says which). `true` is a hint, not a reservation.',
     schema: {
       type: 'object',
       required: ['available'],

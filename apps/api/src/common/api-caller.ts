@@ -137,7 +137,8 @@ export type Ipv6SiteKey = string & { readonly [ipv6SiteKeyBrand]: true };
 
 /**
  * The /48 that holds an IPv6 /64 visitor key ("2001:db8:0:5::/64" gives "2001:db8:0::/48"), for a
- * second counter over the 65,536 /64s one customer site can own (ADR 0020 Addendum 1f gate).
+ * second counter over its 65,536 /64s (ADR 0020 Addendum 1f gate). A /48 may be one customer's
+ * site or a carrier pool shared by many subscribers, one /64 each: unrelated visitors can share it.
  * Null for an IPv4 (a mapped IPv6 is keyed as its IPv4), `unknown` and `preview`. Pure.
  */
 export function ipv6SiteKeyOf(visitorKey: VisitorKey): Ipv6SiteKey | null {

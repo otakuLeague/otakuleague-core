@@ -103,7 +103,7 @@ export class AuthController {
   })
   @ApiConflictResponse({
     description:
-      'USERNAME_TAKEN: a member or a pending sign-up has it, or a submit holds it (24 h).',
+      'USERNAME_TAKEN: a member or a pending sign-up has it, a submit holds it (24 h), or the name is reserved.',
   })
   @ApiForbiddenResponse({
     description:

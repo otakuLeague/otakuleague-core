@@ -214,6 +214,16 @@ describe('perIpHits', () => {
     ]);
   });
 
+  it('throws, never counts the /64 alone, when an IPv6 key yields no /48 on a route with a site rule', () => {
+    // Brand bypassed on purpose: a spelling visitorKeyFromClientIp does not make (a future change).
+    const respelt = '2001:db8:aa:1:0:0:0:0/64' as ClientIpKey;
+
+    expect(() => perIpHits(HMAC_KEY, 'username-availability', respelt)).toThrow(
+      'An IPv6 client IP key has no /48',
+    );
+    expect(perIpHits(HMAC_KEY, 'sign-up', respelt)).toHaveLength(1);
+  });
+
   it("gives the /48 its own counter: not the /64's, not another site's, shared by the site's /64s", () => {
     const keys = (header: string): string[] =>
       perIpHits(HMAC_KEY, 'username-availability', ipKey(header)).map(
