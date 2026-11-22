@@ -8,6 +8,12 @@ import type { SignOutFormState } from './sign-out-state';
 const IDLE: SignOutFormState = { kind: 'idle' };
 const FAILED: SignOutFormState = { kind: 'failed' };
 
+// `failed` asks for a reload: a page loaded before a deploy posts a stale action id until reloaded.
+const ALERT_TEXT: Record<Exclude<SignOutFormState['kind'], 'idle'>, string> = {
+  refused: 'Could not sign out',
+  failed: 'Could not sign out. Reload the page and try again.',
+};
+
 function SignOutFormView({
   initialState,
 }: {
@@ -43,7 +49,7 @@ function SignOutFormView({
       {/* After the button, so an alert never moves it under the pointer. */}
       {showAlert && (
         <p className="sh-menu__alert" role="alert">
-          Could not sign out
+          {ALERT_TEXT[state.kind]}
         </p>
       )}
     </form>
@@ -56,8 +62,10 @@ type SignOutBoundaryState = { readonly initialState: SignOutFormState };
  * The account menu's sign-out form, inside its own error boundary (ADR 0015 Addendum 1f-iv-c2). A
  * success is Next's redirect error, passed on by `unstable_rethrow` to the router's boundary. Any
  * other throw (the action threw, or never answered) mounts the form again in `failed`: the alert and
- * a Sign out button that works without a reload, never `global-error` (N2). Nothing is reported from
- * the browser: a visitor can cause it, and a throw in the action is reported by the server.
+ * a Sign out button, never `global-error` (N2). After a stale action id (a deploy since the page
+ * loaded) the button only works after a reload, so the `failed` alert says to reload (OTA-206).
+ * Nothing is reported from the browser: a visitor can cause it, and a throw in the action is
+ * reported by the server.
  */
 export class SignOutForm extends Component<object, SignOutBoundaryState> {
   state: SignOutBoundaryState = { initialState: IDLE };

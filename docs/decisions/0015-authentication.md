@@ -331,15 +331,19 @@ Added 2026-11-22 (OTA-139 slice 1f-iv-c2), written before the code. It builds de
 - **Catching in a client wrapper around the action** (the fallback of 1f-iv-c). About 15 lines less and no class, but it only catches the awaited call; the boundary also holds for a cause nobody listed, in a header that sits above every `error.tsx`. Still the way out if a browser shows the redirect not passing the boundary.
 - **The gate as `no-restricted-syntax` selectors.** Aliased, namespace and re-export forms would each need a selector; `importNames` covers them.
 - **One PR with the import gate.** Over the limit, and the gate shares no file with the form.
+- **A `stale` state via `unstable_isUnrecognizedActionError`** (OTA-206). An unstable API, a third alert text, and offline needs the reload text anyway.
+- **An automatic `window.location.reload()` after `failed`** (OTA-206). It loops when offline or when the action throws.
+- **Vercel Skew Protection** (OTA-206). Not used: the project is on Hobby and plan availability is unconfirmed; offline would still need the text.
 
 **Too simple?**
-- The alert does not say what to do next, and after a refusal the only way out is still to clear the site's cookies.
+- The alert after `failed` tells the member to reload the page (OTA-206); after a refusal it does not say what to do next, and the only way out is still to clear the site's cookies.
 - A submit before hydration is a full-page POST: after a refusal the document comes back with the menu closed, so the alert is unseen until the menu is opened.
 - The alert stays through soft navigations until the next submit or a reload. Another tab, or the back button, can show the account menu after a sign-out; its Sign out still clears the cookie and goes home.
 - A cookie a visitor sets under a session name with a well-formed value costs 1 `GET /me` (401) per document render, like a stale cookie (1f-iv); the planned general throttle (OTA-207) covers it.
 - Responses the platform serves before Next (a Vercel error page) carry no frame header.
 - An unconfirmed revocation (timeout, 5xx or 429 from `deleteSession`) still clears this browser's cookie and redirects home like a success (accepted in 1f-iv-b, reported to Sentry as `revocation_unconfirmed`): the token stays valid on the API: 30 days unused; renewable by whoever holds it until the 180-day hard stop, and the member cannot revoke it afterwards (a later sign-in only deletes the session its own cookie names). So the alert of F8 covers only refused and thrown actions, never an unconfirmed revocation. Accepted for this slice, Farouk confirms in the PR; OTA-205.
-- A page loaded before a deploy posts a stale action id: the action never runs, Next answers "not found" and the client throws, so the form lands in `failed` on every retry until a reload (and it may not be reported server-side). Accepted for this slice, Farouk confirms in the PR; OTA-206.
+- A page loaded before a deploy posts a stale action id: the action never runs, Next answers 409 with `x-nextjs-action-not-found: 1` and the client throws, so the form lands in `failed` on every retry until a reload. Closed by OTA-206 (2026-11-22): the `failed` alert reads "Could not sign out. Reload the page and try again." (`refused` keeps "Could not sign out": a reload does not help there); the cookie is untouched, so Sign out works after the reload; nothing is reported from the browser. Still open (Farouk decides): the same submit before hydration is a full-page POST that Next answers with a plain-text 409 "Server Action unavailable." (read in Next 16.4.5 `action-handler.js`, not run); Back and a reload recover. A real fix is a stable-URL sign-out route handler.
+- Known limit (OTA-206): a thrown action (a server fault) also gets the reload advice in `failed`.
 - The action has no rate limit of its own beyond the planned general throttle: a non-browser client with the right `Origin` and a well-formed cookie costs one internal-key `POST /auth/sign-out` and one render of `/` per POST. Accepted for this slice, Farouk confirms in the PR; OTA-207.
 
 **Too complicated?** The remount in `failed` is the one non-obvious part: three lines for a retry without a reload. `X-Frame-Options` repeats `frame-ancestors` for browsers that no longer need it: one line, asked for by the review. Left out: a toast, a report from the browser, a reset of the alert when the menu closes.
@@ -348,7 +352,7 @@ Added 2026-11-22 (OTA-139 slice 1f-iv-c2), written before the code. It builds de
 
 **Follow-up tickets.** The three gaps are accepted for this slice, Farouk confirms in the PR.
 - **OTA-205** (High): Sign-out: revoke the session when the API revocation was unconfirmed (retry or queue the revocation, or "sign out everywhere" through a `sessionEpoch` raise).
-- **OTA-206** (Low): Sign-out form: say "reload the page" after a stale Server Action id.
+- **OTA-206** (Low): Sign-out form: say "reload the page" after a stale Server Action id. Shipped 2026-11-22.
 - **OTA-207** (Medium): Throttle Server Action POSTs (sign-out has no rate limit). This is the "planned general throttle"; no ticket existed for it before.
 
 ## Addendum (OTA-205)

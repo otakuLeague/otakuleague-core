@@ -30,6 +30,13 @@ const REDIRECT_HOME = Object.assign(new Error('NEXT_REDIRECT'), {
   digest: 'NEXT_REDIRECT;replace;/;303;',
 });
 
+const RELOAD_TEXT = 'Could not sign out. Reload the page and try again.';
+
+// What Next's client throws when the server no longer knows the action id (a deploy since load).
+const STALE_ACTION_ID = new Error(
+  'Server Action "7f3a" was not found on the server. \nRead more: https://nextjs.org/docs/messages/failed-to-find-server-action',
+);
+
 type RouterBoundaryState = { readonly caught: string | null };
 
 /** Stands in for Next's RedirectBoundary above the header. */
@@ -53,7 +60,7 @@ const button = () => screen.getByRole('button', { name: 'Sign out' });
 const submit = () => fireEvent.click(button());
 const alertText = async () => (await screen.findByRole('alert')).textContent;
 let consoleError: MockInstance<typeof console.error>;
-// React logs every error a boundary catches: expected only in the two boundary tests.
+// React logs every error a boundary catches: expected only in the boundary tests.
 const silenceBoundaryLogs = () =>
   consoleError.mockImplementation(() => undefined);
 
@@ -95,7 +102,7 @@ describe('SignOutForm', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it('after a rejected action, shows the alert with a focused button that submits again', async () => {
+  it('after a rejected action, asks for a reload with a focused button that submits again', async () => {
     silenceBoundaryLogs();
     mocks.signOutAction.mockRejectedValue(new Error('Failed to fetch'));
     render(
@@ -105,15 +112,102 @@ describe('SignOutForm', () => {
     );
 
     submit();
-    expect(await alertText()).toBe('Could not sign out');
+    expect(await alertText()).toBe(RELOAD_TEXT);
     expect(document.activeElement).toBe(button());
     submit();
 
     await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
-    expect(await alertText()).toBe('Could not sign out');
+    expect(await alertText()).toBe(RELOAD_TEXT);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(button().nextElementSibling).toBe(screen.getByRole('alert'));
     expect(document.activeElement).toBe(button());
     expect(button().getAttribute('aria-disabled')).toBe('false');
     expect(screen.queryByText(/Router:/)).toBeNull();
+  });
+
+  it.each([
+    ['offline', new Error('Failed to fetch')],
+    ['a stale action id after a deploy', STALE_ACTION_ID],
+  ])('asks for a reload when %s rejects the action', async (_case, error) => {
+    silenceBoundaryLogs();
+    mocks.signOutAction.mockRejectedValue(error);
+    render(
+      <RouterBoundary>
+        <SignOutForm />
+      </RouterBoundary>,
+    );
+
+    submit();
+
+    expect(await alertText()).toBe(RELOAD_TEXT);
+    expect(screen.queryByText(/Router:/)).toBeNull();
+  });
+
+  it('says only that it could not sign out when a refusal follows a rejection', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction
+      .mockRejectedValueOnce(STALE_ACTION_ID)
+      .mockResolvedValueOnce({ kind: 'refused' });
+    render(<SignOutForm />);
+
+    submit();
+    expect(await alertText()).toBe(RELOAD_TEXT);
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    await waitFor(async () =>
+      expect(await alertText()).toBe('Could not sign out'),
+    );
+  });
+
+  it('asks for a reload when a rejection follows a refusal', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction
+      .mockResolvedValueOnce({ kind: 'refused' })
+      .mockRejectedValueOnce(STALE_ACTION_ID);
+    render(<SignOutForm />);
+
+    submit();
+    expect(await alertText()).toBe('Could not sign out');
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    await waitFor(async () => expect(await alertText()).toBe(RELOAD_TEXT));
+  });
+
+  it('after a rejection, hides the reload alert while the next submit is pending', async () => {
+    silenceBoundaryLogs();
+    const answer = Promise.withResolvers<SignOutFormState>();
+    mocks.signOutAction
+      .mockRejectedValueOnce(new Error('Failed to fetch'))
+      .mockReturnValueOnce(answer.promise);
+    render(<SignOutForm />);
+    submit();
+    expect(await alertText()).toBe(RELOAD_TEXT);
+
+    submit();
+
+    await waitFor(() =>
+      expect(button().getAttribute('aria-disabled')).toBe('true'),
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    await act(async () => {
+      answer.resolve({ kind: 'refused' });
+      await answer.promise;
+    });
+    expect(await alertText()).toBe('Could not sign out');
+  });
+
+  it('reports nothing from the browser after a rejection', async () => {
+    silenceBoundaryLogs();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    mocks.signOutAction.mockRejectedValue(STALE_ACTION_ID);
+    render(<SignOutForm />);
+
+    submit();
+
+    expect(await alertText()).toBe(RELOAD_TEXT);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('passes a rejection with Next redirect digest on to the router boundary, with no alert', async () => {
