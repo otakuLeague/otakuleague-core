@@ -183,7 +183,7 @@ export default defineConfig([
       ],
     },
   },
-  // The session cookie gate's one-file exceptions: each restates every option and frees one name.
+  // The session cookie gate: two exceptions free one name each, restating every other option.
   {
     files: ['src/auth/session-call.ts'],
     rules: {

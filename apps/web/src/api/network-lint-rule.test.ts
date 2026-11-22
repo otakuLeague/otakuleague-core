@@ -129,14 +129,11 @@ describe('network lint rule', () => {
       BUILD_OWN_CLIENT,
       "import { createApiClient } from '../api/client.js';\nexport const build = createApiClient;\n",
       "import { request } from 'node:http';\n",
-    ])(
-      'still forbids in sessionCall():\n%s',
-      async (code) => {
-        expect(await ruleIdsFor(code, SESSION_CALL)).toContain(
-          'no-restricted-imports',
-        );
-      },
-    );
+    ])('still forbids in sessionCall():\n%s', async (code) => {
+      expect(await ruleIdsFor(code, SESSION_CALL)).toContain(
+        'no-restricted-imports',
+      );
+    });
 
     it('forbids apiClient in the auth pages too', async () => {
       const code = `import { apiClient } from '../../src/api/client';\nexport const build = apiClient;\n`;
@@ -175,19 +172,40 @@ describe('network lint rule', () => {
     const ELSEWHERE = ['src/shell/viewer-actions.tsx', OUTSIDE_CLIENT, CLIENT];
 
     it.each([
-      ...everywhere([OUTSIDE_API_FOLDER], [
-        from(PAGE, HAS),
-        from(PAGE, NAMES),
-        from('@/src/auth/', HAS),
-        from(PAGE, NAMES).replace("cookies'", "cookies.ts'"),
-        from(PAGE, "import { hasSessionCookie as has } from './session-call';\nexport const check = has;\n"),
-        from(PAGE, "import * as cookies from './auth-cookies';\nexport const names = cookies.SESSION_COOKIE_NAMES;\n"),
-        from(PAGE, "export { SESSION_COOKIE_NAMES } from './auth-cookies';\n"),
-        from(PAGE, "export * from './session-call';\n"),
-      ]),
+      ...everywhere(
+        [OUTSIDE_API_FOLDER],
+        [
+          from(PAGE, HAS),
+          from(PAGE, NAMES),
+          from('@/src/auth/', HAS),
+          from(PAGE, NAMES).replace("cookies'", "cookies.ts'"),
+          from(
+            PAGE,
+            "import { hasSessionCookie as has } from './session-call';\nexport const check = has;\n",
+          ),
+          from(
+            PAGE,
+            "import * as cookies from './auth-cookies';\nexport const names = cookies.SESSION_COOKIE_NAMES;\n",
+          ),
+          from(
+            PAGE,
+            "export { SESSION_COOKIE_NAMES } from './auth-cookies';\n",
+          ),
+          from(PAGE, "export * from './session-call';\n"),
+        ],
+      ),
       ...everywhere([AUTH_FILE, 'src/auth/credential-call.ts'], [HAS, NAMES]),
-      // The groups have no folder part, so a path variant still ends in the gated name.
-      ...everywhere([AUTH_FILE], [HAS.replace("'./", "'./session-call/../")]),
+      ...everywhere(
+        [AUTH_FILE],
+        [
+          // The groups have no folder part, so a path variant still ends in the gated name.
+          HAS.replace("'./", "'./session-call/../"),
+          HAS.replace("call'", "call.ts'"),
+          // The core rule does not tell type-only imports apart: refused too.
+          "import type { hasSessionCookie } from './session-call';\nexport type Has = typeof hasSessionCookie;\n",
+          "import { type SESSION_COOKIE_NAMES } from './auth-cookies';\nexport type Names = typeof SESSION_COOKIE_NAMES;\n",
+        ],
+      ),
       ...everywhere(ELSEWHERE, [from(SIBLING, HAS), from(SIBLING, NAMES)]),
       // Each exception frees one name only.
       ...everywhere([LOAD_VIEWER], [NAMES]),
@@ -252,7 +270,9 @@ describe('network lint rule', () => {
     it.each(
       everywhere([OUTSIDE_API_FOLDER, AUTH_FILE, AUTH_PAGE], REDIRECT_IMPORTS),
     )('fires in %s:\n%s', async (filePath, code) => {
-      expect(await ruleIdsFor(code, filePath)).toContain('no-restricted-syntax');
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-syntax',
+      );
     });
 
     it.each([OUTSIDE_API_FOLDER, CLIENT])(
@@ -278,20 +298,20 @@ describe('network lint rule', () => {
     );
 
     it.each([
-      ...everywhere([OUTSIDE_API_FOLDER, AUTH_FILE], [
-        "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
-        "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
-        "export type * from 'next/navigation';\n",
-      ]),
+      ...everywhere(
+        [OUTSIDE_API_FOLDER, AUTH_FILE],
+        [
+          "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
+          "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
+          "export type * from 'next/navigation';\n",
+        ],
+      ),
       ...everywhere(REDIRECT_ALLOWLIST, REDIRECT_IMPORTS.slice(0, 2)),
-    ])(
-      'allows in %s:\n%s',
-      async (filePath, code) => {
-        expect(await ruleIdsFor(code, filePath)).not.toContain(
-          'no-restricted-syntax',
-        );
-      },
-    );
+    ])('allows in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-syntax',
+      );
+    });
   });
 
   describe('dynamic import gate: a literal import() of a gated module is refused', () => {
@@ -314,7 +334,9 @@ describe('network lint rule', () => {
       [OUTSIDE_API_FOLDER, importing('name', NAME)],
       [OUTSIDE_API_FOLDER, importing('`next/${name}`', NAME)],
     ])('fires in %s:\n%s', async (filePath, code) => {
-      expect(await ruleIdsFor(code, filePath)).toContain('no-restricted-syntax');
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-syntax',
+      );
     });
 
     it.each([
