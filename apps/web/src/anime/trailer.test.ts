@@ -18,7 +18,6 @@ describe('trailerOf', () => {
 
   it('builds the privacy-enhanced YouTube embed and the watch link', () => {
     expect(withTrailer({ site: 'youtube', id: 'LHtdKWJdif4' })).toEqual({
-      site: 'youtube',
       siteLabel: 'YouTube',
       embedUrl: 'https://www.youtube-nocookie.com/embed/LHtdKWJdif4?autoplay=1',
       watchUrl: 'https://www.youtube.com/watch?v=LHtdKWJdif4',
@@ -29,7 +28,6 @@ describe('trailerOf', () => {
 
   it('builds the Dailymotion embed and the watch link', () => {
     expect(withTrailer({ site: 'dailymotion', id: 'x7tgad0' })).toMatchObject({
-      site: 'dailymotion',
       siteLabel: 'Dailymotion',
       embedUrl: 'https://www.dailymotion.com/embed/video/x7tgad0?autoplay=1',
       watchUrl: 'https://www.dailymotion.com/video/x7tgad0',
@@ -57,6 +55,17 @@ describe('trailerOf', () => {
       expect(withTrailer({ site: 'dailymotion', id })).toBeNull();
     },
   );
+
+  it.each([
+    { site: 'vimeo', id: 'LHtdKWJdif4' },
+    { id: 'LHtdKWJdif4' },
+    { site: { name: 'youtube' }, id: 'LHtdKWJdif4' },
+    { site: 'youtube', id: ['LHtdKWJdif4'] },
+    { site: 'youtube' },
+  ])('fails closed on an unexpected shape %j', (trailer) => {
+    // Cast on purpose: the API could change shape before the shared type does.
+    expect(withTrailer(trailer as unknown as AnimeTrailer)).toBeNull();
+  });
 
   it('falls back from the banner to an https cover, then to a placeholder', () => {
     const trailer: AnimeTrailer = { site: 'youtube', id: 'LHtdKWJdif4' };

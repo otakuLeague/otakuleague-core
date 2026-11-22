@@ -47,7 +47,7 @@ describe('TrailerPlayer', () => {
       container.querySelector('.ov-trailer')?.getAttribute('data-state'),
     ).toBe('poster');
     expect(
-      screen.getByRole('button', { name: 'Play the trailer (YouTube)' }),
+      screen.getByRole('button', { name: 'Play trailer (YouTube)' }),
     ).toBeTruthy();
     expect(
       container.querySelector('.ov-trailer img')?.getAttribute('src'),
@@ -58,12 +58,17 @@ describe('TrailerPlayer', () => {
     );
     expect(watch.getAttribute('target')).toBe('_blank');
     expect(watch.getAttribute('rel')).toBe('noopener noreferrer');
+    // The host is named before the press, with the privacy notice one tap away.
+    expect(screen.getByText(/Plays from YouTube/u)).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'Privacy' }).getAttribute('href'),
+    ).toBe('/privacy#trailers');
   });
 
   it('swaps in the player on press, in the same box, and moves focus to it', () => {
     const { container } = render(<Overview facts={facts(YOUTUBE)} />);
     const box = container.querySelector('.ov-trailer');
-    fireEvent.click(screen.getByRole('button', { name: /Play the trailer/u }));
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
     const frame = container.querySelector('iframe');
     expect(container.querySelector('.ov-trailer')).toBe(box);
     expect(box?.getAttribute('data-state')).toBe('playing');
@@ -76,15 +81,13 @@ describe('TrailerPlayer', () => {
     expect(frame?.getAttribute('allow')).toBe(
       'autoplay; fullscreen; picture-in-picture',
     );
-    expect(frame?.hasAttribute('allowfullscreen')).toBe(true);
+    expect(frame?.hasAttribute('allowfullscreen')).toBe(false);
     expect(frame?.getAttribute('referrerpolicy')).toBe(
       'strict-origin-when-cross-origin',
     );
     expect(frame?.hasAttribute('sandbox')).toBe(false);
     expect(document.activeElement).toBe(frame);
-    expect(
-      screen.queryByRole('button', { name: /Play the trailer/u }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: /Play trailer/u })).toBeNull();
   });
 
   it('plays a Dailymotion trailer from its own embed', () => {
@@ -92,7 +95,7 @@ describe('TrailerPlayer', () => {
       <Overview facts={facts({ site: 'dailymotion', id: 'x7tgad0' })} />,
     );
     fireEvent.click(
-      screen.getByRole('button', { name: 'Play the trailer (Dailymotion)' }),
+      screen.getByRole('button', { name: 'Play trailer (Dailymotion)' }),
     );
     expect(container.querySelector('iframe')?.getAttribute('src')).toBe(
       'https://www.dailymotion.com/embed/video/x7tgad0?autoplay=1',
@@ -106,9 +109,7 @@ describe('TrailerPlayer', () => {
       />,
     );
     expect(container.querySelector('.ov-trailer img')).toBeNull();
-    expect(
-      screen.getByRole('button', { name: /Play the trailer/u }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Play trailer/u })).toBeTruthy();
     cleanup();
 
     render(<Overview facts={facts({ site: 'youtube', id: 'bad"id/../x' })} />);

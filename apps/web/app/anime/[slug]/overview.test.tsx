@@ -57,7 +57,7 @@ describe('Overview', () => {
       '2013-04-07',
     );
     expect(
-      screen.getByRole('complementary', { name: 'Key facts' }),
+      screen.getByRole('complementary', { name: 'Information' }),
     ).toBeTruthy();
     const genres = screen
       .getAllByRole('listitem')
@@ -120,7 +120,7 @@ describe('Overview', () => {
       (dd) => dd.textContent,
     );
     expect(values).toContain('20 Oct 1999');
-    expect(values).toContain('now');
+    expect(screen.queryByText('End date')).toBeNull();
     expect(screen.getByText('Airing')).toBeTruthy();
   });
 
@@ -178,8 +178,8 @@ describe('Overview', () => {
     );
   });
 
-  it('shows only the start date of a not yet released anime', () => {
-    renderOverview({ status: sourced('NOT_YET_RELEASED') });
+  it('shows the status and start date of a not yet released anime', () => {
+    renderOverview({ status: sourced('NOT_YET_RELEASED'), endDate: null });
     expect(screen.getByText('Start date')).toBeTruthy();
     expect(screen.getByText('Not yet aired')).toBeTruthy();
     expect(screen.queryByText('End date')).toBeNull();

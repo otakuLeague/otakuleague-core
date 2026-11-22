@@ -31,14 +31,12 @@ export function TrailerPlayer({
           src={trailer.embedUrl}
           title={`Trailer: ${title} (${trailer.siteLabel})`}
           allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
         />
       ) : (
         <button
           type="button"
           className="ov-trailer__frame ov-trailer__poster"
-          aria-label={`Play the trailer (${trailer.siteLabel})`}
           onClick={() => setState('playing')}
         >
           {trailer.poster.kind === 'image' && (
@@ -49,8 +47,9 @@ export function TrailerPlayer({
               sizes="(max-width: 900px) 100vw, 840px"
             />
           )}
-          <span className="ov-trailer__play" aria-hidden="true">
-            <span className="ov-trailer__badge">
+          {/* The accessible name starts with the visible label (WCAG 2.5.3). */}
+          <span className="ov-trailer__play">
+            <span className="ov-trailer__badge" aria-hidden="true">
               <svg
                 width="26"
                 height="26"
@@ -60,7 +59,10 @@ export function TrailerPlayer({
                 <path d="M8 5.5v13l11-6.5z" />
               </svg>
             </span>
-            <span className="ov-trailer__label">Play trailer</span>
+            <span className="ov-trailer__label">
+              Play trailer{' '}
+              <span className="anime-sr-only">({trailer.siteLabel})</span>
+            </span>
           </span>
         </button>
       )}

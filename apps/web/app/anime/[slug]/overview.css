@@ -162,7 +162,7 @@
 .ov-trailer__poster img {
   object-fit: cover;
 }
-/* Dims the poster under the badge, so the label reads on any banner in both themes. */
+/* Softens the poster so the badge stands out; the label carries its own solid pill for contrast. */
 .ov-trailer__poster::after {
   content: '';
   position: absolute;
@@ -197,7 +197,23 @@
   transform: scale(0.97);
 }
 .ov-trailer__label {
-  font: 600 14px / 1 var(--font-sans);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 14px / 1.4 var(--font-sans);
+}
+.ov-trailer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--space-4);
+}
+.ov-trailer__meta p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .ov-trailer__poster:focus-visible,
 .ov-trailer__frame:focus-visible {

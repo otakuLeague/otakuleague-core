@@ -15,7 +15,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   lastUpdated: '2026-11-22',
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
-    'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
+    'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of, except a trailer you choose to play, which comes from YouTube or Dailymotion under their own rules.',
     'Your data stays in the EU: the website’s functions run in Paris, our server and database in Amsterdam, error reports in Germany, and account emails go through Brevo in the EU.',
     'Write to us at any time and we delete your account and its data.',
   ],
@@ -148,7 +148,9 @@ export const PRIVACY_POLICY: LegalDocument = {
           <p>
             We only set cookies the site needs to work or that you ask for, so
             there is no consent banner. None of them track you, here or on other
-            sites.
+            sites. The one exception is a trailer you choose to play: its player
+            comes from YouTube or Dailymotion, which may set their own cookies
+            (see <a href="#trailers">Trailers</a>).
           </p>
           <LegalTable
             caption="Cookies we set"

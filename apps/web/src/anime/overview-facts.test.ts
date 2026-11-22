@@ -115,7 +115,7 @@ describe('overviewFacts', () => {
     expect(overviewFacts(upcoming).episodes).toBeNull();
   });
 
-  it('labels a not yet released anime by its premiere date only', () => {
+  it('keeps a planned end date for a not yet released anime', () => {
     const facts = overviewFacts(
       animeFixture({
         status: sourced('NOT_YET_RELEASED'),
@@ -123,10 +123,8 @@ describe('overviewFacts', () => {
         endDate: sourced({ year: 2027, month: 3, day: 27 }),
       }),
     );
-    expect(facts.aired).toEqual({
-      kind: 'upcoming',
-      start: { datetime: '2027-01-09', label: '9 Jan 2027' },
-    });
+    expect(facts.aired?.kind).toBe('range');
+    expect(facts.status).toBe('Not yet aired');
   });
 
   it('drops impossible days and years, and an end before the start', () => {
@@ -218,19 +216,25 @@ describe('durationOf', () => {
   });
 
   it('reads the whole runtime of a movie or a single episode', () => {
-    const movie = { format: sourced('MOVIE' as const), episodes: sourced(1) };
+    const movie = { format: sourced('MOVIE' as const), episodes: null };
     expect(duration(107, movie)).toBe('1 h 47 min');
     expect(duration(120, movie)).toBe('2 h');
     expect(duration(45, movie)).toBe('45 min');
     expect(duration(60, { episodes: sourced(1) })).toBe('1 h');
+    expect(duration(1440, { episodes: sourced(1) })).toBe('24 h');
+    // A movie series counts its parts: per episode.
+    expect(
+      duration(90, { format: sourced('MOVIE' as const), episodes: sourced(3) }),
+    ).toBe('90 min per ep');
   });
 
   it('hides a missing, zero, fractional or absurd runtime', () => {
     expect(duration(null)).toBeNull();
     expect(duration(0)).toBeNull();
     expect(duration(24.5)).toBeNull();
-    expect(duration(1440)).toBe('1440 min per ep');
-    expect(duration(1441)).toBeNull();
+    expect(duration(300)).toBe('300 min per ep');
+    expect(duration(301)).toBeNull();
+    expect(duration(1441, { episodes: sourced(1) })).toBeNull();
   });
 });
 
@@ -256,13 +260,11 @@ describe('informationRows', () => {
     ]);
   });
 
-  it('ends on "now" while airing and has no end before release', () => {
+  it('shows only the start date while airing: Status already says Airing', () => {
     const airing = rows({ status: sourced('RELEASING'), episodes: null });
-    expect(airing).toContainEqual(['End date', 'now', undefined]);
+    expect(airing.map(([label]) => label)).toContain('Start date');
+    expect(airing.map(([label]) => label)).not.toContain('End date');
     expect(airing.find(([label]) => label === 'Status')?.[1]).toBe('Airing');
-    const upcoming = rows({ status: sourced('NOT_YET_RELEASED') });
-    expect(upcoming.map(([label]) => label)).toContain('Start date');
-    expect(upcoming.map(([label]) => label)).not.toContain('End date');
   });
 
   it('pluralises studios, joins creators and drops empty rows', () => {

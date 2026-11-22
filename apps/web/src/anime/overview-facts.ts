@@ -9,8 +9,9 @@ const SYNOPSIS_MAX_CHARS = 20_000;
 const GENRES_MAX = 20;
 const STUDIOS_MAX = 10;
 const CREATORS_MAX = 10;
-/** A runtime over a day is a source error, never shown. */
-const DURATION_MAX_MINUTES = 24 * 60;
+/** Longer runtimes are source errors, never shown: a whole work over a day, an episode over 5 h. */
+const RUNTIME_MAX_MINUTES = 24 * 60;
+const EPISODE_MAX_MINUTES = 300;
 
 export interface OverviewSynopsis {
   /** Plain text, never HTML; never empty. */
@@ -32,9 +33,8 @@ export interface OverviewDate {
 
 export type OverviewAired =
   | { readonly kind: 'single'; readonly start: OverviewDate }
+  /** Still airing: only the start is shown (the Status row says "Airing"). */
   | { readonly kind: 'airing'; readonly start: OverviewDate }
-  /** Not yet released: the row reads "Premieres". */
-  | { readonly kind: 'upcoming'; readonly start: OverviewDate }
   | {
       readonly kind: 'range';
       readonly start: OverviewDate;
@@ -136,9 +136,6 @@ function airedOf(anime: AnimeDetails): OverviewAired | null {
   const start = dateOf(anime.startDate?.value);
   if (start === null) return null;
   if (anime.status?.value === 'RELEASING') return { kind: 'airing', start };
-  if (anime.status?.value === 'NOT_YET_RELEASED') {
-    return { kind: 'upcoming', start };
-  }
   const end = dateOf(anime.endDate?.value);
   // ISO strings of any precision compare in order; an end before the start is a source error.
   return end === null || end.datetime <= start.datetime
@@ -163,10 +160,13 @@ function runtimeLabel(minutes: number): string {
 /** Per episode for a series; the whole runtime for a movie or a single episode. */
 export function durationOf(anime: AnimeDetails): string | null {
   const minutes = count(anime.durationMinutes?.value);
-  if (minutes === null || minutes > DURATION_MAX_MINUTES) return null;
+  if (minutes === null) return null;
+  const episodes = count(anime.episodes?.value);
   const whole =
-    anime.format?.value === 'MOVIE' || count(anime.episodes?.value) === 1;
-  return whole ? runtimeLabel(minutes) : `${minutes} min per ep`;
+    episodes === 1 || (anime.format?.value === 'MOVIE' && episodes === null);
+  if (whole)
+    return minutes > RUNTIME_MAX_MINUTES ? null : runtimeLabel(minutes);
+  return minutes > EPISODE_MAX_MINUTES ? null : `${minutes} min per ep`;
 }
 
 export function overviewFacts(anime: AnimeDetails): OverviewFacts {
@@ -204,10 +204,8 @@ function airedRows(aired: OverviewAired | null): readonly InformationRow[] {
   };
   switch (aired.kind) {
     case 'single':
-    case 'upcoming':
-      return [start];
     case 'airing':
-      return [start, { label: 'End date', text: 'now' }];
+      return [start];
     case 'range':
       return [
         start,

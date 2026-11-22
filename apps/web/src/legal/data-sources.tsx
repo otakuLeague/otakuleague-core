@@ -88,8 +88,18 @@ export const DATA_SOURCES: LegalDocument = {
         <p>
           Trailers are hosted by YouTube or Dailymotion and play in their
           player; we do not copy them. Which trailer belongs to an anime comes
-          from AniList. A trailer only loads when you press play (see the{' '}
-          <Link href="/privacy#trailers">privacy policy</Link>).
+          from AniList, or MyAnimeList when AniList has none. A trailer only
+          loads when you press play (see the{' '}
+          <Link href="/privacy#trailers">privacy policy</Link>). Playing one is
+          subject to{' '}
+          <a href="https://www.youtube.com/t/terms">
+            YouTube’s Terms of Service
+          </a>{' '}
+          or{' '}
+          <a href="https://legal.dailymotion.com/en/terms-of-use/">
+            Dailymotion’s terms of use
+          </a>
+          .
         </p>
       ),
     },

@@ -1,9 +1,13 @@
 import type { AnimeDetails, AnimeTrailer } from '@otakuleague/shared-types';
 
+const YOUTUBE_EMBED_ORIGIN = 'https://www.youtube-nocookie.com';
+const YOUTUBE_WATCH_ORIGIN = 'https://www.youtube.com';
+const DAILYMOTION_ORIGIN = 'https://www.dailymotion.com';
+
 /** Hosts the trailer iframe may load from, for a future `frame-src` (OTA-214). */
 export const TRAILER_EMBED_ORIGINS = [
-  'https://www.youtube-nocookie.com',
-  'https://www.dailymotion.com',
+  YOUTUBE_EMBED_ORIGIN,
+  DAILYMOTION_ORIGIN,
 ] as const;
 
 export type TrailerPoster =
@@ -12,7 +16,6 @@ export type TrailerPoster =
 
 /** A trailer we can embed: ids are checked, so every URL is built from known parts only. */
 export interface OverviewTrailer {
-  readonly site: AnimeTrailer['site'];
   readonly siteLabel: string;
   /** Loaded only after a press on play. */
   readonly embedUrl: string;
@@ -27,27 +30,29 @@ const DAILYMOTION_ID = /^[a-zA-Z0-9]{1,32}$/u;
 function urlsOf(
   trailer: AnimeTrailer,
 ): Pick<OverviewTrailer, 'siteLabel' | 'embedUrl' | 'watchUrl'> | null {
+  // The API is trusted for shape but not content: anything unexpected means no trailer.
+  if (typeof trailer.id !== 'string') return null;
   switch (trailer.site) {
     case 'youtube':
       return YOUTUBE_ID.test(trailer.id)
         ? {
             siteLabel: 'YouTube',
-            embedUrl: `https://www.youtube-nocookie.com/embed/${trailer.id}?autoplay=1`,
-            watchUrl: `https://www.youtube.com/watch?v=${trailer.id}`,
+            embedUrl: `${YOUTUBE_EMBED_ORIGIN}/embed/${trailer.id}?autoplay=1`,
+            watchUrl: `${YOUTUBE_WATCH_ORIGIN}/watch?v=${trailer.id}`,
           }
         : null;
     case 'dailymotion':
       return DAILYMOTION_ID.test(trailer.id)
         ? {
             siteLabel: 'Dailymotion',
-            embedUrl: `https://www.dailymotion.com/embed/video/${trailer.id}?autoplay=1`,
-            watchUrl: `https://www.dailymotion.com/video/${trailer.id}`,
+            embedUrl: `${DAILYMOTION_ORIGIN}/embed/video/${trailer.id}?autoplay=1`,
+            watchUrl: `${DAILYMOTION_ORIGIN}/video/${trailer.id}`,
           }
         : null;
-    default: {
-      const unknown: never = trailer.site;
-      return unknown;
-    }
+    default:
+      // Fails closed: a site added to the shared type must be handled here first.
+      trailer.site satisfies never;
+      return null;
   }
 }
 
@@ -69,5 +74,5 @@ export function trailerOf(anime: AnimeDetails): OverviewTrailer | null {
   if (trailer === undefined) return null;
   const urls = urlsOf(trailer);
   if (urls === null) return null;
-  return { site: trailer.site, ...urls, poster: posterOf(anime) };
+  return { ...urls, poster: posterOf(anime) };
 }

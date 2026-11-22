@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { Fragment } from 'react';
 import { loadAnime } from '../../../src/anime/data';
 import {
+  type InformationRow,
   type OverviewFacts,
   informationRows,
   overviewFacts,
@@ -70,16 +72,23 @@ function Trailer({
         <h2 id="ov-trailer-h">Trailer</h2>
       </div>
       <TrailerPlayer trailer={trailer} title={title} />
-      {/* Plain link: works without JS, and when the host refuses the embed. */}
-      <a
-        className="ov-trailer__watch"
-        href={trailer.watchUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Watch on {trailer.siteLabel}
-        <span className="anime-sr-only"> (opens in a new tab)</span>
-      </a>
+      <div className="ov-trailer__meta">
+        {/* Named before the press: playing loads the host's player (privacy#trailers). */}
+        <p>
+          Plays from {trailer.siteLabel} ·{' '}
+          <Link href="/privacy#trailers">Privacy</Link>
+        </p>
+        {/* Plain link: works without JS, and when the host refuses the embed. */}
+        <a
+          className="ov-trailer__watch"
+          href={trailer.watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Watch on {trailer.siteLabel}
+          <span className="anime-sr-only"> (opens in a new tab)</span>
+        </a>
+      </div>
     </section>
   );
 }
@@ -105,13 +114,10 @@ function Genres({ genres }: { readonly genres: readonly string[] }) {
 function InformationCard({
   rows,
 }: {
-  readonly rows: ReturnType<typeof informationRows>;
+  readonly rows: readonly InformationRow[];
 }) {
   return (
-    <section
-      className="ov-card ov-sec ov-sec--info"
-      aria-labelledby="ov-info-h"
-    >
+    <section className="ov-card ov-sec ov-sec--info">
       <div className="ov-sec__head">
         <h2 id="ov-info-h">Information</h2>
       </div>
@@ -157,7 +163,7 @@ export function Overview({ facts }: { readonly facts: OverviewFacts }) {
         {facts.genres.length > 0 && <Genres genres={facts.genres} />}
       </div>
       {rows.length > 0 && (
-        <aside className="ov-side" aria-label="Key facts">
+        <aside className="ov-side" aria-labelledby="ov-info-h">
           <InformationCard rows={rows} />
         </aside>
       )}
