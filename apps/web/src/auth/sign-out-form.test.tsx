@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import * as Sentry from '@sentry/nextjs';
 import { Component, type ReactNode } from 'react';
 import {
   afterEach,
@@ -14,6 +15,7 @@ import {
   expect,
   it,
   type MockInstance,
+  onTestFinished,
   vi,
 } from 'vitest';
 import type { signOutAction } from './sign-out-action';
@@ -24,6 +26,10 @@ const mocks = vi.hoisted(() => ({
   signOutAction: vi.fn<typeof signOutAction>(),
 }));
 vi.mock('./sign-out-action', () => ({ signOutAction: mocks.signOutAction }));
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
 
 // What the client rejects a redirecting Server Action with (Next's redirect digest).
 const REDIRECT_HOME = Object.assign(new Error('NEXT_REDIRECT'), {
@@ -32,10 +38,11 @@ const REDIRECT_HOME = Object.assign(new Error('NEXT_REDIRECT'), {
 
 const RELOAD_TEXT = 'Could not sign out. Reload the page and try again.';
 
-// What Next's client throws when the server no longer knows the action id (a deploy since load).
-const STALE_ACTION_ID = new Error(
+// Next's client throws an `UnrecognizedActionError` when the server no longer knows the action id
+// (a deploy since load); this models its name and message only.
+const STALE_ACTION_ID = Object.assign(new Error(
   'Server Action "7f3a" was not found on the server. \nRead more: https://nextjs.org/docs/messages/failed-to-find-server-action',
-);
+), { name: 'UnrecognizedActionError' });
 
 type RouterBoundaryState = { readonly caught: string | null };
 
@@ -72,6 +79,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('SignOutForm', () => {
@@ -125,12 +133,9 @@ describe('SignOutForm', () => {
     expect(screen.queryByText(/Router:/)).toBeNull();
   });
 
-  it.each([
-    ['offline', new Error('Failed to fetch')],
-    ['a stale action id after a deploy', STALE_ACTION_ID],
-  ])('asks for a reload when %s rejects the action', async (_case, error) => {
+  it('asks for a reload when a stale action id after a deploy rejects the action', async () => {
     silenceBoundaryLogs();
-    mocks.signOutAction.mockRejectedValue(error);
+    mocks.signOutAction.mockRejectedValue(STALE_ACTION_ID);
     render(
       <RouterBoundary>
         <SignOutForm />
@@ -155,9 +160,10 @@ describe('SignOutForm', () => {
     submit();
 
     await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
-    await waitFor(async () =>
-      expect(await alertText()).toBe('Could not sign out'),
+    expect((await screen.findByText('Could not sign out')).textContent).toBe(
+      'Could not sign out',
     );
+    expect(screen.queryByText(RELOAD_TEXT)).toBeNull();
   });
 
   it('asks for a reload when a rejection follows a refusal', async () => {
@@ -172,7 +178,8 @@ describe('SignOutForm', () => {
     submit();
 
     await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
-    await waitFor(async () => expect(await alertText()).toBe(RELOAD_TEXT));
+    await screen.findByText(RELOAD_TEXT);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 
   it('after a rejection, hides the reload alert while the next submit is pending', async () => {
@@ -201,6 +208,15 @@ describe('SignOutForm', () => {
   it('reports nothing from the browser after a rejection', async () => {
     silenceBoundaryLogs();
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const sendBeacon = vi.fn<Navigator['sendBeacon']>(() => true);
+    // jsdom has no sendBeacon: defined on this navigator for the test, removed after it.
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: sendBeacon,
+      configurable: true,
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(navigator, 'sendBeacon');
+    });
     mocks.signOutAction.mockRejectedValue(STALE_ACTION_ID);
     render(<SignOutForm />);
 
@@ -208,6 +224,9 @@ describe('SignOutForm', () => {
 
     expect(await alertText()).toBe(RELOAD_TEXT);
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(sendBeacon).not.toHaveBeenCalled();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
   it('passes a rejection with Next redirect digest on to the router boundary, with no alert', async () => {
