@@ -33,7 +33,7 @@ export function SpoilerTags({
           <ul className="ov-chips">
             {tags.map((tag) => (
               <li key={tag.name}>
-                <TagChip tag={tag} />
+                <TagChip tag={tag} spoiler />
               </li>
             ))}
           </ul>

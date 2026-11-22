@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SpoilerTags } from './spoiler-tags';
 
 const spoilers = [
-  { name: 'Time Skip', rank: 90, visibility: 'spoiler' as const },
-  { name: 'Twist Ending', rank: 70, visibility: 'spoiler' as const },
+  { name: 'Time Skip', rank: 90 },
+  { name: 'Twist Ending', rank: 70 },
 ];
 
 describe('SpoilerTags', () => {

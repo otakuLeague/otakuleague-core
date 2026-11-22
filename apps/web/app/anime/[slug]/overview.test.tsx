@@ -281,9 +281,11 @@ describe('Overview themes, titles and links', () => {
         )}
       />,
     );
-    expect(html).toMatch(
-      /<noscript><style>\.ov-spoiler-toggle\{display:none!important\}/u,
+    expect(html).toContain(
+      '<noscript><style>.ov-spoiler-toggle,.ov-group--spoilers-only{display:none!important}',
     );
+    // Only spoiler tags: without JS the Themes group hides too.
+    expect(html).toContain('class="ov-group ov-group--spoilers-only"');
     expect(html).not.toContain('Time Skip');
   });
 
@@ -303,9 +305,7 @@ describe('Overview themes, titles and links', () => {
       'AoT',
       'SnK',
     ]);
-    expect(container.querySelector('.ov-alt bdi')?.textContent).toBe(
-      '進撃の巨人',
-    );
+    expect(container.querySelectorAll('.ov-alt dd > bdi')).toHaveLength(4);
   });
 
   it('opens links in a new tab, with the country note only for streaming', () => {
@@ -314,24 +314,31 @@ describe('Overview themes, titles and links', () => {
         { site: 'Twitter', url: 'https://twitter.com/aot', kind: 'other' },
         {
           site: 'Crunchyroll',
-          url: 'https://cr.example/aot',
+          url: 'https://www.crunchyroll.com/aot',
           kind: 'streaming',
         },
       ]),
     });
-    const links = [...container.querySelectorAll('a.ov-link')];
-    expect(links.map((a) => a.textContent)).toEqual([
-      'CWatch on Crunchyroll (opens in a new tab)↗',
-      'TTwitter (opens in a new tab)↗',
-    ]);
+    const links = [
+      screen.getByRole('link', {
+        name: 'Watch on Crunchyroll (opens in a new tab)',
+      }),
+      screen.getByRole('link', { name: 'Twitter (opens in a new tab)' }),
+    ];
+    expect(
+      [...container.querySelectorAll<HTMLAnchorElement>('a.ov-link')].map(
+        (a) => a.href,
+      ),
+    ).toEqual(['https://www.crunchyroll.com/aot', 'https://twitter.com/aot']);
     for (const a of links) {
       expect(a.getAttribute('target')).toBe('_blank');
-      expect(a.getAttribute('rel')).toBe('noopener noreferrer');
+      expect(a.getAttribute('rel')).toBe('noopener noreferrer nofollow');
+      expect(a.querySelector('bdi')).toBeTruthy();
     }
     expect(
-      (
-        container.querySelector('.ov-link__badge') as HTMLElement
-      ).style.getPropertyValue('--ov-badge'),
+      container
+        .querySelector<HTMLElement>('.ov-link__badge')
+        ?.style.getPropertyValue('--ov-badge'),
     ).toBe('#f47521');
     expect(
       screen.getByText('Streaming availability depends on your country.'),

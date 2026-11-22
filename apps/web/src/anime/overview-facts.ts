@@ -2,7 +2,7 @@ import type { AnimeDetails, PartialDate } from '@otakuleague/shared-types';
 import { type HeaderFacts, headerFacts } from './header-facts';
 import { type OfficialLink, officialLinksOf } from './link-sites';
 import {
-  type AltTitle,
+  type AltTitleGroup,
   type OverviewThemes,
   altTitlesOf,
   themesOf,
@@ -64,7 +64,7 @@ export interface OverviewFacts {
   readonly studios: readonly string[];
   readonly creators: readonly string[];
   readonly themes: OverviewThemes;
-  readonly altTitles: readonly AltTitle[];
+  readonly altTitles: readonly AltTitleGroup[];
   readonly links: readonly OfficialLink[];
 }
 

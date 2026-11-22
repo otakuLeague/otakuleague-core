@@ -128,7 +128,7 @@
   text-transform: uppercase;
 }
 .ov-tag__rank {
-  color: var(--faint);
+  color: var(--muted);
   font: 500 11px / 1 var(--font-mono);
 }
 .ov-tag--spoiler {
@@ -194,7 +194,7 @@
   font: 800 12px / 1 var(--font-display);
 }
 .ov-link__name {
-  min-width: 0;
+  min-inline-size: 0;
   overflow-wrap: anywhere;
 }
 .ov-link__arrow {

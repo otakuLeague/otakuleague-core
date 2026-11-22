@@ -196,10 +196,10 @@ describe('overviewFacts', () => {
       season: null,
       studios: [],
       creators: ['Hajime Isayama'],
-      themes: { genres: [], tags: [] },
+      themes: { genres: [], open: [], spoilers: [] },
       altTitles: [
-        { kind: 'romaji', text: 'Shingeki no Kyojin' },
-        { kind: 'native', text: '進撃の巨人' },
+        { kind: 'romaji', label: 'Romaji', texts: ['Shingeki no Kyojin'] },
+        { kind: 'native', label: 'Native', texts: ['進撃の巨人'] },
       ],
       links: [],
     });

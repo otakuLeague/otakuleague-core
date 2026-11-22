@@ -1,7 +1,7 @@
 import type { AnimeTag } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import { animeFixture, sourced } from './fixtures';
-import { altTitlesOf, themesOf } from './overview-themes';
+import { altTitlesOf, displayText, themesOf } from './overview-themes';
 
 const tag = (name: string, rank: number | null, spoiler = false): AnimeTag => ({
   name,
@@ -10,18 +10,32 @@ const tag = (name: string, rank: number | null, spoiler = false): AnimeTag => ({
 });
 const themes = (tags: readonly AnimeTag[], genres = ['Action', 'Drama']) =>
   themesOf(animeFixture({ tags: sourced(tags), genres: sourced(genres) }));
+const names = (list: readonly { name: string }[]) => list.map((t) => t.name);
+
+describe('displayText', () => {
+  it('strips bidi controls and refuses invisible or over-long text', () => {
+    expect(displayText(' ‮evil‬ ', 60)).toBe('evil');
+    expect(displayText('​⁦ ⁩﻿', 60)).toBeNull();
+    expect(displayText('x'.repeat(61), 60)).toBeNull();
+    expect(displayText('x'.repeat(60), 60)).toHaveLength(60);
+  });
+});
 
 describe('themesOf', () => {
-  it('sorts tags by rank, then name, and hides those under 60 or unranked', () => {
-    const { tags } = themes([
+  it('sorts tags by rank, then name, and hides those under 60, unranked or not finite', () => {
+    const { open } = themes([
       tag('Military', 80),
       tag('Gore', 95),
       tag('Dystopian', 80),
       tag('Survival', 60),
       tag('Tragedy', 59),
       tag('Unranked', null),
+      tag('Broken', Number.NaN),
+      tag('Huge', Number.POSITIVE_INFINITY),
+      tag('Over', 140),
     ]);
-    expect(tags.map((t) => [t.name, t.rank])).toEqual([
+    expect(open.map((t) => [t.name, t.rank])).toEqual([
+      ['Over', 100],
       ['Gore', 95],
       ['Dystopian', 80],
       ['Military', 80],
@@ -29,48 +43,65 @@ describe('themesOf', () => {
     ]);
   });
 
-  it('drops a tag that repeats a genre or another tag, whatever its case', () => {
-    const { genres, tags } = themes([
-      tag(' drama ', 90),
-      tag('Gore', 90),
-      tag('GORE', 70),
-    ]);
+  it('dedupes tags after sorting, a spoiler copy wins, and drops genre repeats', () => {
+    const { genres, open, spoilers } = themes(
+      [
+        tag(' drama ', 90),
+        tag('Gore', 70),
+        tag('GORE', 90, true),
+        tag('Twist', 65, true),
+      ],
+      ['Action', 'Drama', 'ＤＲＡＭＡ'],
+    );
     expect(genres).toEqual(['Action', 'Drama']);
-    expect(tags.map((t) => t.name)).toEqual(['Gore']);
+    expect(open).toEqual([]);
+    expect(spoilers).toEqual([
+      { name: 'GORE', rank: 90 },
+      { name: 'Twist', rank: 65 },
+    ]);
   });
 
-  it('keeps at most 30 tags and splits spoilers out', () => {
+  it('drops over-long or invisible names', () => {
+    const { genres, open } = themes(
+      [tag('y'.repeat(61), 90), tag('​', 90), tag('Gore', 90)],
+      ['x'.repeat(61), 'Action'],
+    );
+    expect(genres).toEqual(['Action']);
+    expect(names(open)).toEqual(['Gore']);
+  });
+
+  it('keeps at most 30 tags', () => {
     const many = Array.from({ length: 40 }, (_, i) =>
       tag(`Tag ${String(i).padStart(2, '0')}`, 100 - i, i % 2 === 1),
     );
-    const { tags } = themes(many);
-    expect(tags).toHaveLength(30);
-    expect(tags[0]).toEqual({ name: 'Tag 00', rank: 100, visibility: 'open' });
-    expect(tags[1]?.visibility).toBe('spoiler');
+    const { open, spoilers } = themes(many);
+    expect(open.length + spoilers.length).toBe(30);
+    expect(open[0]).toEqual({ name: 'Tag 00', rank: 100 });
+    expect(spoilers[0]?.name).toBe('Tag 01');
   });
 
   it('is empty without genres or tags', () => {
     expect(themesOf(animeFixture({ genres: null, tags: null }))).toEqual({
       genres: [],
-      tags: [],
+      open: [],
+      spoilers: [],
     });
   });
 });
 
 describe('altTitlesOf', () => {
-  it('lists the titles the page does not show, then synonyms', () => {
+  it('groups the titles the page does not show, then synonyms', () => {
     expect(
       altTitlesOf(animeFixture({ synonyms: sourced(['AoT', 'SnK', ' ']) })),
     ).toEqual([
-      { kind: 'romaji', text: 'Shingeki no Kyojin' },
-      { kind: 'native', text: '進撃の巨人' },
-      { kind: 'synonym', text: 'AoT' },
-      { kind: 'synonym', text: 'SnK' },
+      { kind: 'romaji', label: 'Romaji', texts: ['Shingeki no Kyojin'] },
+      { kind: 'native', label: 'Native', texts: ['進撃の巨人'] },
+      { kind: 'synonym', label: 'Also known as', texts: ['AoT', 'SnK'] },
     ]);
   });
 
   it('dedupes after NFKC, case and whitespace normalisation', () => {
-    const titles = altTitlesOf(
+    const groups = altTitlesOf(
       animeFixture({
         synonyms: sourced([
           'ＳＨＩＮＧＥＫＩ  no kyojin',
@@ -80,7 +111,7 @@ describe('altTitlesOf', () => {
         ]),
       }),
     );
-    expect(titles.map((t) => t.text)).toEqual([
+    expect(groups.flatMap((g) => g.texts)).toEqual([
       'Shingeki no Kyojin',
       '進撃の巨人',
       'AoT',
@@ -89,14 +120,18 @@ describe('altTitlesOf', () => {
 
   it('works without an English title (romaji is then the page title)', () => {
     expect(altTitlesOf(animeFixture({ titleEnglish: null }))).toEqual([
-      { kind: 'native', text: '進撃の巨人' },
+      { kind: 'native', label: 'Native', texts: ['進撃の巨人'] },
     ]);
   });
 
-  it('keeps at most 12', () => {
-    const synonyms = Array.from({ length: 20 }, (_, i) => `Name ${i}`);
-    expect(
-      altTitlesOf(animeFixture({ synonyms: sourced(synonyms) })),
-    ).toHaveLength(12);
+  it('drops titles over 200 characters and keeps at most 12', () => {
+    const synonyms = [
+      'z'.repeat(201),
+      ...Array.from({ length: 20 }, (_, i) => `Name ${i}`),
+    ];
+    const groups = altTitlesOf(animeFixture({ synonyms: sourced(synonyms) }));
+    const texts = groups.flatMap((g) => g.texts);
+    expect(texts).toHaveLength(12);
+    expect(texts).not.toContain('z'.repeat(201));
   });
 });
