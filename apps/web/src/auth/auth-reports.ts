@@ -5,14 +5,16 @@ import type { ApiFailure } from '../api/client';
 // Server only (next/server): never import this from src/observability/sentry.ts, which the
 // browser bundle loads.
 
-/** The credential routes that can report a refusal; each later action adds its own. */
-export type CredentialRoute = 'sign-in' | 'sign-up';
+/** The credential routes that refuse a call, and the proxy's action throttle that passes it uncounted. */
+export type ClientIpRoute = 'sign-in' | 'sign-up' | 'action-throttle';
 
 /** One report per server instance every 10 minutes: a broken header refuses every visitor at once. */
 export const REFUSAL_REPORT_INTERVAL_MS = 600_000;
 
 // One throttle for the whole instance, not one per route, on purpose: every route shares the
-// fingerprint, and the cause is the same platform header whichever route sees it first.
+// fingerprint, and the cause is the same platform header whichever route sees it first. So the
+// first route to report (`action-throttle` in the proxy, say) hides the others for 10 minutes;
+// the proxy is bundled apart from the actions, so it may hold its own copy of this state.
 let instanceLastReportedAtMs: number | undefined;
 
 export function isRefusalReportDue(
@@ -28,25 +30,30 @@ export function isRefusalReportDue(
 /**
  * `client_ip_unknown` on a credential route: on Vercel the platform's `x-forwarded-for` was missing
  * or not one address, so every credential route is down for everyone until it is fixed (never
- * `action_forwarded`, which a visitor can cause at will). The event carries the route only (never
- * an IP, a header or a form field) and is flushed after the response, since a serverless instance
- * can freeze before Sentry's queue drains.
+ * `action_forwarded`, which a visitor can cause at will); in the proxy, Server Action POSTs then
+ * pass uncounted. The event carries the route only (never an IP, a header or a form field) and is
+ * flushed after the response, since a serverless instance can freeze before Sentry's queue drains.
+ * Never thrown: a failing report must not turn the proxy's uncounted pass into a 500.
  */
 export function reportClientIpUnknown(
-  route: CredentialRoute,
+  route: ClientIpRoute,
   nowMs: number = Date.now(),
 ): void {
   if (!isRefusalReportDue(instanceLastReportedAtMs, nowMs)) {
     return;
   }
   instanceLastReportedAtMs = nowMs;
-  Sentry.captureMessage('Credential call refused: client IP unknown', {
-    level: 'error',
-    // `auth_route`, never `credential_route`: the event scrubber masks keys matching `credential`.
-    tags: { auth_route: route },
-    fingerprint: ['credential-call-client-ip-unknown'],
-  });
-  after(() => Sentry.flush(2000));
+  try {
+    Sentry.captureMessage('Client IP unknown', {
+      level: 'error',
+      // `auth_route`, never `credential_route`: the event scrubber masks keys matching `credential`.
+      tags: { auth_route: route },
+      fingerprint: ['credential-call-client-ip-unknown'],
+    });
+    after(() => Sentry.flush(2000));
+  } catch {
+    return;
+  }
 }
 
 /** The auth routes that can see an `AuthCallFault` (ADR 0015 Addendum 1f-iv). */
