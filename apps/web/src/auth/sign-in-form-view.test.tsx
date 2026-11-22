@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Activity } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SignInFormState } from './sign-in-form-state';
 import {
@@ -7,22 +8,24 @@ import {
   SignInFormView,
 } from './sign-in-form-view';
 
+const view = (state: SignInFormState, pending = false) => (
+  <SignInFormView
+    state={state}
+    pending={pending}
+    identifier="kaito"
+    onIdentifierSubmit={vi.fn()}
+    formAction={vi.fn()}
+  >
+    <input type="hidden" name="next" value="/season" />
+  </SignInFormView>
+);
+
 function renderForm(state: SignInFormState, pending = false) {
-  return render(
-    <SignInFormView
-      state={state}
-      pending={pending}
-      identifier="kaito"
-      onIdentifierSubmit={vi.fn()}
-      formAction={vi.fn()}
-    >
-      <input type="hidden" name="next" value="/season" />
-    </SignInFormView>,
-  );
+  return render(view(state, pending));
 }
 
 const identifierInput = () => screen.getByLabelText('Email or username');
-const passwordInput = () => screen.getByLabelText('Password');
+const passwordInput = () => screen.getByLabelText<HTMLInputElement>('Password');
 
 describe('SignInFormView', () => {
   afterEach(cleanup);
@@ -112,6 +115,38 @@ describe('SignInFormView', () => {
     expect(button.hasAttribute('disabled')).toBe(false);
     expect(identifierInput().hasAttribute('readonly')).toBe(true);
     expect(passwordInput().hasAttribute('readonly')).toBe(true);
+  });
+
+  it('keeps a typed password when it re-renders as pending', () => {
+    const { rerender } = renderForm({ kind: 'idle' });
+    const password = passwordInput();
+    fireEvent.change(password, { target: { value: 'secret-pass-1' } });
+
+    rerender(view({ kind: 'idle' }, true));
+    expect(password.value).toBe('secret-pass-1');
+    expect(passwordInput()).toBe(password);
+  });
+
+  it('empties a typed password when the form is hidden in an Activity', () => {
+    const inActivity = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>{view({ kind: 'idle' })}</Activity>
+    );
+    const { rerender } = render(inActivity('visible'));
+    const password = passwordInput();
+    fireEvent.change(password, { target: { value: 'secret-pass-1' } });
+    fireEvent.change(identifierInput(), { target: { value: 'mio' } });
+
+    rerender(inActivity('hidden'));
+    expect(password.value).toBe('');
+    expect(
+      document.querySelector<HTMLInputElement>('#sign-in-identifier')?.value,
+    ).toBe('mio');
+
+    // Revealed again, the ref is re-attached, so a second hide still clears.
+    rerender(inActivity('visible'));
+    fireEvent.change(password, { target: { value: 'secret-pass-2' } });
+    rerender(inActivity('hidden'));
+    expect(password.value).toBe('');
   });
 
   it('names, limits and autocompletes both fields and keeps children in the form', () => {

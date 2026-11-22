@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthSearchParams } from './auth-query-fields';
 import AuthPage, { metadata } from './page';
@@ -123,6 +123,21 @@ describe('SignUpPanel', () => {
       expect(screen.queryByRole('alert')).toBeNull();
     },
   );
+
+  it('empties the shell sign-in password when the panel mounts ("Create one" keeps the route)', async () => {
+    const page = renderPage('production');
+    const signInPassword = page.querySelector<HTMLInputElement>(
+      '[data-auth-panel="sign-in"] input[type="password"]',
+    );
+    if (!signInPassword) {
+      throw new Error('sign-in password missing');
+    }
+    fireEvent.change(signInPassword, { target: { value: 'typed-before-switch' } });
+
+    await renderSignUpPanel({ mode: 'sign-up' });
+    expect(signInPassword.isConnected).toBe(true);
+    expect(signInPassword.value).toBe('');
+  });
 
   it.each<AuthSearchParams>([{}, { mode: 'sign-in' }, { mode: ['sign-up'] }])(
     'renders nothing for %o',

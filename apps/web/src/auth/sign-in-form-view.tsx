@@ -1,5 +1,6 @@
 import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import type { FormEvent, ReactNode } from 'react';
+import { clearOnHide } from './clear-on-hide';
 import type { SignInFailureState, SignInFormState } from './sign-in-form-state';
 
 type SignInFormViewProps = {
@@ -21,6 +22,8 @@ type AlertCopy = {
 const PREVIEW_OFF_TITLE = 'Sign-in is off on preview deployments';
 const PREVIEW_OFF_DETAIL = 'Use the live site to sign in.';
 const ALERT_ID = 'sign-in-alert';
+/** The sign-in password's id: `SignUpForm` empties that field when the sign-up panel mounts. */
+export const SIGN_IN_PASSWORD_ID = 'sign-in-password';
 
 /**
  * Retry-After rounded up to whole minutes (at least one), or to whole hours past 60 minutes
@@ -136,16 +139,17 @@ export function SignInFormView({
         </div>
       </div>
       <div className="au-field">
-        <label htmlFor="sign-in-password">Password</label>
+        <label htmlFor={SIGN_IN_PASSWORD_ID}>Password</label>
         <div className="au-input" data-state={inputState}>
           <input
-            id="sign-in-password"
+            id={SIGN_IN_PASSWORD_ID}
             name="password"
             type="password"
             autoComplete="current-password"
             maxLength={PASSWORD_RAW_MAX}
             required
             readOnly={pending}
+            ref={clearOnHide}
             {...fieldError}
           />
         </div>
