@@ -1,5 +1,6 @@
-/* Overview tab (OTA-100), from docs/design/overview-tab/overview.css: only what slice 1 uses.
-   Motion: none (Read more is instant), so prefers-reduced-motion needs no override. */
+/* Overview tab (OTA-100, OTA-214 slice A; layout from docs/design/anime-page/mockup-Overview.html).
+   Motion: Read more and the trailer swap are instant; only the play badge scales on hover,
+   which reduced motion turns off. */
 
 .ov-grid {
   display: grid;
@@ -106,12 +107,6 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
-.ov-genres-h {
-  margin: var(--space-4) 0 var(--space-2);
-}
-.ov-sec__head + .ov-genres-h {
-  margin-top: 0;
-}
 .ov-chips {
   display: flex;
   flex-wrap: wrap;
@@ -134,10 +129,135 @@
   color: var(--ink);
 }
 
-/* One column in DOM order (synopsis, then facts): visual, reading and focus order match. */
+/* Trailer facade: the poster button and the iframe share one 16:9 box, so play shifts nothing. */
+.ov-trailer {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(
+      60% 70% at 70% 60%,
+      color-mix(in oklab, var(--neon-magenta) 18%, transparent),
+      transparent
+    ),
+    var(--surface-2);
+}
+.ov-trailer__frame {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+}
+.ov-trailer__poster {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.ov-trailer__poster img {
+  object-fit: cover;
+}
+/* Dims the poster under the badge, so the label reads on any banner in both themes. */
+.ov-trailer__poster::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--ground) 45%, transparent);
+}
+.ov-trailer__play {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ov-trailer__badge {
+  display: grid;
+  place-items: center;
+  inline-size: 72px;
+  block-size: 72px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow:
+    0 0 0 8px color-mix(in oklab, var(--accent) 22%, transparent),
+    0 0 40px color-mix(in oklab, var(--accent) 55%, transparent);
+  transition: transform var(--dur-press) var(--ease-enter);
+}
+.ov-trailer__poster:hover .ov-trailer__badge {
+  transform: scale(1.06);
+}
+.ov-trailer__poster:active .ov-trailer__badge {
+  transform: scale(0.97);
+}
+.ov-trailer__label {
+  font: 600 14px / 1 var(--font-sans);
+}
+.ov-trailer__poster:focus-visible,
+.ov-trailer__frame:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.ov-sec .ov-trailer__watch {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+.ov-trailer__watch::after {
+  content: '→';
+  margin-inline-start: var(--space-1);
+  color: var(--accent-ink);
+}
+.ov-sec .ov-trailer__watch:hover {
+  color: var(--ink);
+}
+.ov-trailer__watch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov-trailer__badge {
+    transition: none;
+  }
+  .ov-trailer__poster:hover .ov-trailer__badge,
+  .ov-trailer__poster:active .ov-trailer__badge {
+    transform: none;
+  }
+}
+
+/* Phones: one column. The wrappers dissolve and `order` reads trailer, synopsis, information,
+   genres. Information holds no focusable element, so focus order still matches what is seen. */
 @media (max-width: 900px) {
   .ov-grid {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-10);
+  }
+  .ov-main,
+  .ov-side {
+    display: contents;
+  }
+  .ov-sec--trailer {
+    order: 1;
+  }
+  .ov-sec--synopsis {
+    order: 2;
+  }
+  .ov-sec--info {
+    order: 3;
+  }
+  .ov-sec--genres {
+    order: 4;
   }
   .ov-card {
     padding: var(--space-3) var(--space-4) var(--space-4);

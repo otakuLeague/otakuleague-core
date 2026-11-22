@@ -152,7 +152,14 @@ describe('privacy facts', () => {
       expect(privacy.textContent).toContain(cookie);
     }
     expect(privacy.textContent).toContain('s4.anilist.co');
-    expect(privacy.textContent).not.toMatch(/Google|Settings/);
+    // Google is named only as the trailer host (OTA-214), which loads nothing before a press.
+    const trailers =
+      privacy.querySelector('#trailers')?.parentElement?.parentElement;
+    expect(trailers?.textContent).toMatch(/until you press play/u);
+    expect(trailers?.textContent).toContain('Dailymotion');
+    const rest = privacy.cloneNode(true) as HTMLElement;
+    rest.querySelector('#trailers')?.parentElement?.parentElement?.remove();
+    expect(rest.textContent).not.toMatch(/Google|Settings/);
     cleanup();
 
     const { container: sources } = render(

@@ -1,5 +1,6 @@
 import type { AnimeDetails, PartialDate } from '@otakuleague/shared-types';
 import { type HeaderFacts, headerFacts } from './header-facts';
+import { type OverviewTrailer, trailerOf } from './trailer';
 
 /** Above this many characters (or with more than one paragraph) the synopsis collapses. */
 export const SYNOPSIS_CLAMP_CHARS = 350;
@@ -7,6 +8,9 @@ export const SYNOPSIS_CLAMP_CHARS = 350;
 const SYNOPSIS_MAX_CHARS = 20_000;
 const GENRES_MAX = 20;
 const STUDIOS_MAX = 10;
+const CREATORS_MAX = 10;
+/** A runtime over a day is a source error, never shown. */
+const DURATION_MAX_MINUTES = 24 * 60;
 
 export interface OverviewSynopsis {
   /** Plain text, never HTML; never empty. */
@@ -37,16 +41,30 @@ export type OverviewAired =
       readonly end: OverviewDate;
     };
 
-/** Everything the Overview's synopsis and Details card show; null when AniList lacks it. */
+/** Everything the Overview shows; null (or empty) when AniList lacks it. */
 export interface OverviewFacts {
+  /** The page title, for the trailer's iframe title. */
+  readonly title: string;
+  readonly trailer: OverviewTrailer | null;
   readonly synopsis: OverviewSynopsis | null;
   readonly format: string | null;
-  /** "28 × 24 min", or "1180 so far × 24 min" while airing without a total. */
+  /** "28", or "1180 so far" while airing without a total. */
   readonly episodes: string | null;
+  /** "24 min per ep", or the whole runtime of a movie or a single episode: "1 h 47 min". */
+  readonly duration: string | null;
+  readonly status: string | null;
   readonly aired: OverviewAired | null;
   readonly season: string | null;
   readonly studios: readonly string[];
+  readonly creators: readonly string[];
   readonly genres: readonly string[];
+}
+
+/** One row of the Information card; `datetime` makes the value a `<time>`. */
+export interface InformationRow {
+  readonly label: string;
+  readonly text: string;
+  readonly datetime?: string;
 }
 
 const MONTHS = [
@@ -128,30 +146,47 @@ function airedOf(anime: AnimeDetails): OverviewAired | null {
     : { kind: 'range', start, end };
 }
 
-function episodesOf(anime: AnimeDetails, header: HeaderFacts): string | null {
+function episodesOf(header: HeaderFacts, total: number | null): string | null {
+  if (total !== null) return `${total}`;
   // headerFacts only keeps a next episode while airing, with a valid date.
   const next = count(header.nextEpisode?.episode);
-  const total =
-    count(anime.episodes?.value) ??
-    (next !== null && next > 1 ? `${next - 1} so far` : null);
-  if (total === null) return null;
+  return next !== null && next > 1 ? `${next - 1} so far` : null;
+}
+
+function runtimeLabel(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
+/** Per episode for a series; the whole runtime for a movie or a single episode. */
+export function durationOf(anime: AnimeDetails): string | null {
   const minutes = count(anime.durationMinutes?.value);
-  return minutes === null ? `${total}` : `${total} × ${minutes} min`;
+  if (minutes === null || minutes > DURATION_MAX_MINUTES) return null;
+  const whole =
+    anime.format?.value === 'MOVIE' || count(anime.episodes?.value) === 1;
+  return whole ? runtimeLabel(minutes) : `${minutes} min per ep`;
 }
 
 export function overviewFacts(anime: AnimeDetails): OverviewFacts {
   const header = headerFacts(anime);
   return {
+    title: header.title,
+    trailer: trailerOf(anime),
     // Only AniList's synopsis is cleared for display; MyAnimeList text waits on OTA-127 (ADR 0006).
     synopsis:
       anime.synopsis?.source === 'anilist'
         ? synopsisOf(anime.synopsis.value)
         : null,
     format: header.format,
-    episodes: episodesOf(anime, header),
+    episodes: episodesOf(header, count(anime.episodes?.value)),
+    duration: durationOf(anime),
+    status: header.status?.label ?? null,
     aired: airedOf(anime),
     season: header.season?.label ?? null,
     studios: header.studios.slice(0, STUDIOS_MAX),
+    creators: header.creators.slice(0, CREATORS_MAX),
     genres: [
       ...new Set((anime.genres?.value ?? []).map((genre) => genre.trim())),
     ]
@@ -160,14 +195,66 @@ export function overviewFacts(anime: AnimeDetails): OverviewFacts {
   };
 }
 
-/** Whether the Details card has anything to show; otherwise it is not rendered. */
-export function hasDetails(facts: OverviewFacts): boolean {
-  return (
-    facts.format !== null ||
-    facts.episodes !== null ||
-    facts.aired !== null ||
-    facts.season !== null ||
-    facts.studios.length > 0 ||
-    facts.genres.length > 0
-  );
+function airedRows(aired: OverviewAired | null): readonly InformationRow[] {
+  if (aired === null) return [];
+  const start = {
+    label: 'Start date',
+    text: aired.start.label,
+    datetime: aired.start.datetime,
+  };
+  switch (aired.kind) {
+    case 'single':
+    case 'upcoming':
+      return [start];
+    case 'airing':
+      return [start, { label: 'End date', text: 'now' }];
+    case 'range':
+      return [
+        start,
+        {
+          label: 'End date',
+          text: aired.end.label,
+          datetime: aired.end.datetime,
+        },
+      ];
+    default: {
+      const unknown: never = aired;
+      return unknown;
+    }
+  }
+}
+
+function listRow(
+  one: string,
+  many: string,
+  values: readonly string[],
+): readonly InformationRow[] {
+  if (values.length === 0) return [];
+  return [{ label: values.length > 1 ? many : one, text: values.join(', ') }];
+}
+
+function textRow(
+  label: string,
+  text: string | null,
+): readonly InformationRow[] {
+  return text === null ? [] : [{ label, text }];
+}
+
+/** The Information card's rows in display order; a value AniList lacks has no row. */
+export function informationRows(
+  facts: OverviewFacts,
+): readonly InformationRow[] {
+  return [
+    ...textRow('Format', facts.format),
+    ...textRow('Episodes', facts.episodes),
+    ...textRow('Duration', facts.duration),
+    ...textRow('Status', facts.status),
+    ...airedRows(facts.aired),
+    ...textRow('Season', facts.season),
+    ...listRow('Studio', 'Studios', facts.studios),
+    ...textRow(
+      'Created by',
+      facts.creators.length > 0 ? facts.creators.join(', ') : null,
+    ),
+  ];
 }

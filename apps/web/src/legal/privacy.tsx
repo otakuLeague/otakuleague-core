@@ -201,6 +201,29 @@ export const PRIVACY_POLICY: LegalDocument = {
       ),
     },
     {
+      id: 'trailers',
+      title: 'Trailers',
+      body: (
+        <p>
+          An anime page can show a trailer hosted on YouTube (Google) or
+          Dailymotion. Nothing from them loads until you press play. When you
+          do, the player loads from their servers, so they receive your IP
+          address, your browser details and our site’s address, and may set
+          cookies or store data under their own policies: see the{' '}
+          <a href="https://policies.google.com/privacy">
+            Google privacy policy
+          </a>{' '}
+          and the{' '}
+          <a href="https://legal.dailymotion.com/en/privacy-policy/">
+            Dailymotion privacy policy
+          </a>
+          . YouTube trailers use its privacy-enhanced mode
+          (youtube-nocookie.com). The “Watch on” link opens the trailer on their
+          site instead.
+        </p>
+      ),
+    },
+    {
       id: 'keep',
       title: 'How long we keep it',
       body: (

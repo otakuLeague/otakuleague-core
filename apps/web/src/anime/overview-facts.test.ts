@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { animeFixture, sourced } from './fixtures';
-import { overviewFacts, synopsisOf } from './overview-facts';
+import {
+  durationOf,
+  informationRows,
+  overviewFacts,
+  synopsisOf,
+} from './overview-facts';
 
 describe('synopsisOf', () => {
   it('is null for a missing or blank synopsis', () => {
@@ -54,7 +59,12 @@ describe('overviewFacts', () => {
     expect(facts.season).toBe('Spring 2013');
     expect(facts.studios).toEqual(['Wit Studio']);
     expect(facts.genres).toEqual(['Action', 'Drama']);
-    expect(facts.episodes).toBe('25 × 24 min');
+    expect(facts.episodes).toBe('25');
+    expect(facts.duration).toBe('24 min per ep');
+    expect(facts.status).toBe('Finished');
+    expect(facts.creators).toEqual(['Hajime Isayama']);
+    expect(facts.title).toBe('Attack on Titan');
+    expect(facts.trailer).toBeNull();
   });
 
   it('shows a range, a single date, or year and year-month precision', () => {
@@ -94,7 +104,7 @@ describe('overviewFacts', () => {
         }),
       }),
     );
-    expect(facts.episodes).toBe('1180 so far × 24 min');
+    expect(facts.episodes).toBe('1180 so far');
     expect(facts.aired?.kind).toBe('airing');
     // Before the first episode airs there is nothing to count.
     const upcoming = animeFixture({
@@ -177,13 +187,105 @@ describe('overviewFacts', () => {
       }),
     );
     expect(facts).toEqual({
+      title: 'Attack on Titan',
+      trailer: null,
       synopsis: null,
       format: null,
       episodes: null,
+      duration: null,
+      status: 'Finished',
       aired: null,
       season: null,
       studios: [],
+      creators: ['Hajime Isayama'],
       genres: [],
     });
+  });
+});
+
+describe('durationOf', () => {
+  const duration = (minutes: number | null, overrides = {}) =>
+    durationOf(
+      animeFixture({
+        durationMinutes: minutes === null ? null : sourced(minutes),
+        ...overrides,
+      }),
+    );
+
+  it('reads per episode for a series', () => {
+    expect(duration(24)).toBe('24 min per ep');
+    expect(duration(3, { episodes: null })).toBe('3 min per ep');
+  });
+
+  it('reads the whole runtime of a movie or a single episode', () => {
+    const movie = { format: sourced('MOVIE' as const), episodes: sourced(1) };
+    expect(duration(107, movie)).toBe('1 h 47 min');
+    expect(duration(120, movie)).toBe('2 h');
+    expect(duration(45, movie)).toBe('45 min');
+    expect(duration(60, { episodes: sourced(1) })).toBe('1 h');
+  });
+
+  it('hides a missing, zero, fractional or absurd runtime', () => {
+    expect(duration(null)).toBeNull();
+    expect(duration(0)).toBeNull();
+    expect(duration(24.5)).toBeNull();
+    expect(duration(1440)).toBe('1440 min per ep');
+    expect(duration(1441)).toBeNull();
+  });
+});
+
+describe('informationRows', () => {
+  const rows = (overrides = {}) =>
+    informationRows(overviewFacts(animeFixture(overrides))).map((row) => [
+      row.label,
+      row.text,
+      row.datetime,
+    ]);
+
+  it('lists every fact in display order, dates as datetimes', () => {
+    expect(rows()).toEqual([
+      ['Format', 'TV', undefined],
+      ['Episodes', '25', undefined],
+      ['Duration', '24 min per ep', undefined],
+      ['Status', 'Finished', undefined],
+      ['Start date', '7 Apr 2013', '2013-04-07'],
+      ['End date', '29 Sep 2013', '2013-09-29'],
+      ['Season', 'Spring 2013', undefined],
+      ['Studio', 'Wit Studio', undefined],
+      ['Created by', 'Hajime Isayama', undefined],
+    ]);
+  });
+
+  it('ends on "now" while airing and has no end before release', () => {
+    const airing = rows({ status: sourced('RELEASING'), episodes: null });
+    expect(airing).toContainEqual(['End date', 'now', undefined]);
+    expect(airing.find(([label]) => label === 'Status')?.[1]).toBe('Airing');
+    const upcoming = rows({ status: sourced('NOT_YET_RELEASED') });
+    expect(upcoming.map(([label]) => label)).toContain('Start date');
+    expect(upcoming.map(([label]) => label)).not.toContain('End date');
+  });
+
+  it('pluralises studios, joins creators and drops empty rows', () => {
+    const many = rows({
+      studios: sourced([
+        { name: 'MAPPA', main: true },
+        { name: 'Wit Studio', main: true },
+      ]),
+      creators: sourced(['A', 'B']),
+    });
+    expect(many).toContainEqual(['Studios', 'MAPPA, Wit Studio', undefined]);
+    expect(many).toContainEqual(['Created by', 'A, B', undefined]);
+    expect(
+      rows({
+        format: null,
+        episodes: null,
+        durationMinutes: null,
+        status: null,
+        startDate: null,
+        season: null,
+        studios: null,
+        creators: null,
+      }),
+    ).toEqual([]);
   });
 });
