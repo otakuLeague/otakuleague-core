@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { OverviewTrailer } from '../../../src/anime/trailer';
 
-/** Stable, so React calls it once when the iframe mounts: the press moves focus to the player. */
+/** The press moves focus to the player. */
 function focusOnMount(frame: HTMLIFrameElement | null) {
   frame?.focus();
 }
@@ -29,13 +29,15 @@ export function TrailerPlayer({
 }) {
   const [state, setState] = useState<'poster' | 'playing'>('poster');
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  /** Stable, so React calls it once when the iframe mounts. */
   const attachFrame = useCallback((frame: HTMLIFrameElement | null) => {
     frameRef.current = frame;
     focusOnMount(frame);
   }, []);
   useEffect(() => {
+    if (state !== 'playing') return;
     const frame = frameRef.current;
-    if (state !== 'playing' || frame === null) return;
+    if (frame === null) return; // Never null while playing: narrows the type only.
     // Syncs with the iframe: cacheComponents keeps a left page's DOM in a hidden <Activity>, so stop it here.
     return () => {
       stopPlayer(frame);

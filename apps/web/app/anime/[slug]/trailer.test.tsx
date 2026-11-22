@@ -1,6 +1,6 @@
 import type { AnimeDetails, AnimeTrailer } from '@otakuleague/shared-types';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { Activity } from 'react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Activity, StrictMode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { animeFixture, sourced } from '../../../src/anime/fixtures';
@@ -16,18 +16,17 @@ function facts(trailer: AnimeTrailer, overrides: Partial<AnimeDetails> = {}) {
   );
 }
 
-/** Every URL the page could fetch: iframes, scripts, images, link hints. */
-/** jsdom does not navigate frames, so the player's window is a stub recording `replace` calls. */
-function stubPlayer(frame: HTMLIFrameElement | null) {
+/** jsdom does not navigate frames, so every player's window is a stub recording `replace` calls. */
+function stubPlayer() {
   const replace = vi.fn<(url: string) => void>();
-  if (frame !== null) {
-    Object.defineProperty(frame, 'contentWindow', {
-      value: { location: { replace } },
-    });
-  }
+  const player = { location: { replace } } as unknown as Window;
+  vi.spyOn(HTMLIFrameElement.prototype, 'contentWindow', 'get').mockReturnValue(
+    player,
+  );
   return replace;
 }
 
+/** Every URL the page could fetch: iframes, scripts, images, link hints. */
 function requestedUrls(root: ParentNode): string[] {
   return [
     ...root.querySelectorAll<HTMLElement>(
@@ -39,7 +38,10 @@ function requestedUrls(root: ParentNode): string[] {
 }
 
 describe('TrailerPlayer', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('loads nothing from the video host before a press', () => {
     const { container } = render(<Overview facts={facts(YOUTUBE)} />);
@@ -124,20 +126,41 @@ describe('TrailerPlayer', () => {
         <Overview facts={facts(trailer)} />
       </Activity>
     );
+    const replace = stubPlayer();
     const { container, rerender } = render(page('visible'));
     fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
-    const replace = stubPlayer(container.querySelector('iframe'));
+    expect(container.querySelector('iframe')).not.toBeNull();
 
-    act(() => rerender(page('hidden')));
+    rerender(page('hidden'));
     expect(replace).toHaveBeenCalledExactlyOnceWith('about:blank');
     expect(container.querySelector('iframe')).toBeNull();
 
-    act(() => rerender(page('visible')));
+    rerender(page('visible'));
     expect(container.querySelector('iframe')).toBeNull();
     expect(
       container.querySelector('.ov-trailer')?.getAttribute('data-state'),
     ).toBe('poster');
     expect(screen.getByRole('button', { name: /Play trailer/u })).toBeTruthy();
+  });
+
+  it('stops the player once when it unmounts while playing', () => {
+    const replace = stubPlayer();
+    const { unmount } = render(<Overview facts={facts(YOUTUBE)} />);
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    unmount();
+    expect(replace).toHaveBeenCalledExactlyOnceWith('about:blank');
+  });
+
+  it('keeps the player under StrictMode after a press', () => {
+    const replace = stubPlayer();
+    const { container } = render(
+      <StrictMode>
+        <Overview facts={facts(YOUTUBE)} />
+      </StrictMode>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    expect(container.querySelector('iframe')).not.toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('shows a plain panel without any image, and no section for a bad id', () => {
