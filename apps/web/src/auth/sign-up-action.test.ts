@@ -73,6 +73,17 @@ const apiError = (
     error: { error: { code, message: 'x' } },
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
   });
+const EMAIL_REFUSED = failedWith({
+  kind: 'api_error',
+  status: 400,
+  error: {
+    error: {
+      code: 'VALIDATION_FAILED',
+      message: 'x',
+      details: [{ field: 'email', message: 'email must be an email address' }],
+    },
+  },
+});
 const expectNothingWritten = () => {
   expect(mocks.setCookie).not.toHaveBeenCalled();
   expect(mocks.redirect).not.toHaveBeenCalled();
@@ -150,6 +161,8 @@ describe('signUpAction', () => {
   it.each([
     [apiError(409, 'USERNAME_TAKEN'), { kind: 'username_taken' }],
     [apiError(403, 'SIGN_UP_CLOSED'), { kind: 'sign_up_closed' }],
+    [EMAIL_REFUSED, { kind: 'invalid_fields', fields: ['email'] }],
+    [apiError(429, 'AUTH_BUSY', 1), { kind: 'busy' }],
     [
       apiError(429, 'TOO_MANY_REQUESTS', 3600),
       { kind: 'rate_limited', retryAfterSeconds: 3600 },
@@ -165,6 +178,7 @@ describe('signUpAction', () => {
       'invalid_response',
     ],
     [failedWith({ kind: 'network' }), UNAVAILABLE],
+    [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
     [CLIENT_IP_UNKNOWN, UNAVAILABLE],
   ])(
     'returns %o as %o, reporting fault %s, with no cookie and no redirect',
@@ -183,15 +197,18 @@ describe('signUpAction', () => {
     },
   );
 
-  it('is off on a preview before reading WEB_PUBLIC_URL, the Origin, the form or the API', async () => {
-    vi.stubEnv('VERCEL_ENV', 'preview');
-    vi.stubEnv('WEB_PUBLIC_URL', undefined);
-    expect(await signUpAction(IDLE, NOT_A_FORM)).toEqual({
-      kind: 'off_on_preview',
-    });
-    expect(mocks.credentialCall).not.toHaveBeenCalled();
-    expectNothingWritten();
-  });
+  it.each(['preview', 'development', ''])(
+    'is off with VERCEL_ENV=%o before reading WEB_PUBLIC_URL, the Origin, the form or the API',
+    async (vercelEnv) => {
+      vi.stubEnv('VERCEL_ENV', vercelEnv);
+      vi.stubEnv('WEB_PUBLIC_URL', undefined);
+      expect(await signUpAction(IDLE, NOT_A_FORM)).toEqual({
+        kind: 'off_on_preview',
+      });
+      expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expectNothingWritten();
+    },
+  );
 
   it.each([
     [{}],

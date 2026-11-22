@@ -27,10 +27,10 @@ export function isRefusalReportDue(
 
 /**
  * `client_ip_unknown` on a credential route: on Vercel the platform's `x-forwarded-for` was missing
- * or not one address, so sign-in is down for everyone until it is fixed (never `action_forwarded`,
- * which a visitor can cause at will). The event carries the
- * route only (never an IP, a header or a form field) and is flushed after the response, since a
- * serverless instance can freeze before Sentry's queue drains.
+ * or not one address, so every credential route is down for everyone until it is fixed (never
+ * `action_forwarded`, which a visitor can cause at will). The event carries the route only (never
+ * an IP, a header or a form field) and is flushed after the response, since a serverless instance
+ * can freeze before Sentry's queue drains.
  */
 export function reportClientIpUnknown(
   route: CredentialRoute,

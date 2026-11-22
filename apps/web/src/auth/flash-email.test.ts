@@ -40,13 +40,16 @@ const DOTTED_CAPITAL_I = String.fromCharCode(0x130);
 // The two functions together (Addendum 1f-v2 decision 3): an address the API accepts (its
 // `isEmailAddress(normaliseIdentifier(email))`) becomes a flash the page shows, unchanged.
 describe('flashEmailFrom', () => {
+  it('is tested with a longest mailable address of IDENTIFIER_MAX characters', () => {
+    expect(LONGEST_MAILABLE).toHaveLength(IDENTIFIER_MAX);
+  });
+
   it.each([
     [' Frieren@Example.COM ', ADDRESS],
     ["O'Brien+Tag@Mail.Example.co.uk", "o'brien+tag@mail.example.co.uk"],
     [`${KELVIN_SIGN}elvin@example.com`, 'kelvin@example.com'],
     [LONGEST_MAILABLE, LONGEST_MAILABLE],
   ])('turns %o into %o, which plausibleFlashEmail keeps', (typed, flash) => {
-    expect(LONGEST_MAILABLE).toHaveLength(IDENTIFIER_MAX);
     expect(flashEmailFrom(typed)).toBe(flash);
     expect(plausibleFlashEmail(flashEmailFrom(typed))).toBe(flash);
   });
