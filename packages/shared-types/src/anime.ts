@@ -27,6 +27,26 @@ export type AnimeStatus = (typeof ANIME_STATUSES)[number];
 export const ANIME_SEASONS = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
 export type AnimeSeason = (typeof ANIME_SEASONS)[number];
 
+/** AniList's MediaSource (version 3): what the anime adapts. */
+export const ANIME_SOURCE_MATERIALS = [
+  'ORIGINAL',
+  'MANGA',
+  'LIGHT_NOVEL',
+  'VISUAL_NOVEL',
+  'VIDEO_GAME',
+  'OTHER',
+  'NOVEL',
+  'DOUJINSHI',
+  'ANIME',
+  'WEB_NOVEL',
+  'LIVE_ACTION',
+  'GAME',
+  'COMIC',
+  'MULTIMEDIA_PROJECT',
+  'PICTURE_BOOK',
+] as const;
+export type AnimeSourceMaterial = (typeof ANIME_SOURCE_MATERIALS)[number];
+
 /** Sources often know only the year, or the year and month. */
 export interface PartialDate {
   readonly year: number;
@@ -136,6 +156,14 @@ export interface AnimeDetails {
   readonly rankPopular: Sourced<number> | null;
   /** Dominant colour of the cover, "#rrggbb": the page's accent. */
   readonly coverColor: Sourced<string> | null;
+  /** What the anime adapts. Named so because `source` already means the data source here. */
+  readonly sourceMaterial: Sourced<AnimeSourceMaterial> | null;
+  /** ISO 3166-1 alpha-2 shape: two upper-case letters. */
+  readonly countryOfOrigin: Sourced<string> | null;
+  /** Credited companies that are not animation studios, in the source's order. */
+  readonly producers: Sourced<readonly string[]> | null;
+  /** Official hashtags, each starting with "#", at most 5. */
+  readonly hashtags: Sourced<readonly string[]> | null;
   readonly scores: readonly AnimeScore[];
   readonly attributions: readonly AnimeAttribution[];
 }

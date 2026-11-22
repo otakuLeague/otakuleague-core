@@ -1,6 +1,7 @@
 import type {
   AnimeFormat,
   AnimeSeason,
+  AnimeSourceMaterial,
   AnimeStatus,
   AnimeTag,
   AnimeTrailer,
@@ -37,6 +38,22 @@ const SEASONS: Readonly<Record<string, AnimeSeason>> = {
   spring: 'SPRING',
   summer: 'SUMMER',
   fall: 'FALL',
+};
+
+// Only labels with the same notion in AniList's MediaSource; Game, Card game, Book, Radio,
+// Music and Unknown have none and stay null.
+const SOURCE_MATERIALS: Readonly<Record<string, AnimeSourceMaterial>> = {
+  Original: 'ORIGINAL',
+  Manga: 'MANGA',
+  '4-koma manga': 'MANGA',
+  'Web manga': 'MANGA',
+  'Light novel': 'LIGHT_NOVEL',
+  Novel: 'NOVEL',
+  'Web novel': 'WEB_NOVEL',
+  'Visual novel': 'VISUAL_NOVEL',
+  'Picture book': 'PICTURE_BOOK',
+  'Mixed media': 'MULTIMEDIA_PROJECT',
+  Other: 'OTHER',
 };
 
 function lookup<T>(
@@ -119,5 +136,9 @@ export function mapJikanAnime(value: unknown): AnimeSnapshot | null {
     rankRated: null,
     rankPopular: null,
     coverColor: null,
+    sourceMaterial: lookup(SOURCE_MATERIALS, anime.source),
+    countryOfOrigin: null,
+    producers: names(anime.producers),
+    hashtags: [],
   };
 }

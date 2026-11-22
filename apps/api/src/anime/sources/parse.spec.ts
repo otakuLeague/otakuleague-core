@@ -1,5 +1,86 @@
 import { describe, expect, it } from 'vitest';
-import { httpUrl, partialDate, stripTags, synopsisText } from './parse';
+import {
+  countryCode,
+  hashtags,
+  httpUrl,
+  partialDate,
+  stripTags,
+  synopsisText,
+} from './parse';
+
+describe('countryCode', () => {
+  it.each(['JP', 'KR', 'CN', 'ZZ'])('keeps %j', (input) => {
+    expect(countryCode(input)).toBe(input);
+  });
+
+  it.each([
+    'jp',
+    'Jp',
+    'JPN',
+    'J',
+    '',
+    ' JP',
+    'JP ',
+    'J1',
+    'Japan',
+    'ＪＰ',
+    81,
+    null,
+    undefined,
+  ])('returns null for %j', (input) => {
+    expect(countryCode(input)).toBeNull();
+  });
+});
+
+describe('hashtags', () => {
+  it('splits one string into every tag, in order', () => {
+    expect(hashtags('#フリーレン #frieren')).toEqual([
+      '#フリーレン',
+      '#frieren',
+    ]);
+  });
+
+  it('keeps a single tag and splits tags glued together', () => {
+    expect(hashtags('#frieren')).toEqual(['#frieren']);
+    expect(hashtags('#a#b')).toEqual(['#a', '#b']);
+  });
+
+  it('stores a full-width ＃ as #', () => {
+    expect(hashtags('＃葬送のフリーレン #frieren')).toEqual([
+      '#葬送のフリーレン',
+      '#frieren',
+    ]);
+  });
+
+  it('drops words without #, a lone #, and duplicates', () => {
+    expect(hashtags('anime #a lone # #a ＃a #b')).toEqual(['#a', '#b']);
+  });
+
+  it('drops tags over 100 characters and keeps one of exactly 100', () => {
+    const exactly = `#${'x'.repeat(99)}`;
+    expect(hashtags(`${exactly} #${'x'.repeat(100)} #ok`)).toEqual([
+      exactly,
+      '#ok',
+    ]);
+  });
+
+  it('keeps the first 5 only', () => {
+    expect(hashtags('#1 #2 #3 #4 #5 #6 #7')).toEqual([
+      '#1',
+      '#2',
+      '#3',
+      '#4',
+      '#5',
+    ]);
+  });
+
+  it.each([null, undefined, 42, '', '   ', 'no tags here', '#', '# #'])(
+    'returns an empty list for %j',
+    (input) => {
+      expect(hashtags(input)).toEqual([]);
+    },
+  );
+});
 
 describe('synopsisText', () => {
   it('turns AniList HTML into paragraphs of plain text', () => {

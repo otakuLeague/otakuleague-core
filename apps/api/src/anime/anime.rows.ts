@@ -1,11 +1,12 @@
-import type {
-  AnimeDataSource,
-  AnimeIdSource,
-  AnimeLink,
-  AnimeStudio,
-  AnimeTag,
-  AnimeTrailer,
-  PartialDate,
+import {
+  ANIME_SOURCE_MATERIALS,
+  type AnimeDataSource,
+  type AnimeIdSource,
+  type AnimeLink,
+  type AnimeStudio,
+  type AnimeTag,
+  type AnimeTrailer,
+  type PartialDate,
 } from '@otakuleague/shared-types';
 import type {
   AnimeDataSource as DbDataSource,
@@ -87,6 +88,10 @@ export function toSnapshotRow(snapshot: AnimeSnapshot, fetchedAt: Date) {
     rankRated: snapshot.rankRated,
     rankPopular: snapshot.rankPopular,
     coverColor: snapshot.coverColor,
+    sourceMaterial: snapshot.sourceMaterial,
+    countryOfOrigin: snapshot.countryOfOrigin,
+    producers: [...snapshot.producers],
+    hashtags: [...snapshot.hashtags],
   } satisfies Omit<
     Prisma.AnimeSourceSnapshotUncheckedCreateInput,
     'animeId' | 'source'
@@ -180,6 +185,11 @@ function fromSnapshotRow(row: SnapshotRow): StoredSnapshot {
       rankRated: row.rankRated,
       rankPopular: row.rankPopular,
       coverColor: row.coverColor,
+      // Text, not an enum: a value AniList adds later reads as null, never an error.
+      sourceMaterial: oneOf(row.sourceMaterial, ANIME_SOURCE_MATERIALS),
+      countryOfOrigin: row.countryOfOrigin,
+      producers: row.producers,
+      hashtags: row.hashtags,
     },
   };
 }

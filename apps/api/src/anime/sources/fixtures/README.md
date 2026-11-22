@@ -26,6 +26,8 @@ Real responses, unedited, used by the mapper tests and the fake sources in the i
 
 `anilist-minami-ke.json` has no English title, no cover colour and no all-time rankings. `anilist-frieren.json` credits "Original Story" (Kanehito Yamada) and "Original Character Design" (Tsukasa Abe), both creators (writer and artist), and three "Original Work Assistance" credits that are not; the others have one "Original Creator". The core files are pretty-printed (`JSON.stringify(response, null, 2)`, then Prettier); their content is unedited. `anilist-one-piece.json` is airing (`nextAiringEpisode` set). `anilist-attack-on-titan.json` has the trailer id with a trailing tab.
 
+**Hand-added keys (OTA-215)**: graphql.anilist.co was unreachable when `source(version: 3)`, `countryOfOrigin` and `hashtag` (on `Media`) and `isAnimationStudio` (on every `studios.edges[].node`) joined `ANILIST_ANIME_QUERY`, so these keys in `anilist-attack-on-titan`, `-frieren`, `-minami-ke` and `-one-piece` are plausible values added by hand, not recorded (the rest of each file is unchanged). Re-record the four files and drop this note (follow-up ticket); the query itself must be run once against the live API before merge.
+
 The PR screenshot job (OTA-163, ADR 0013) replays these files through `scripts/screenshots/fake-sources.mjs`: a new core, walk or Jikan fixture is served automatically, and a changed query needs both fakes updated.
 
 ## Catalog lists (`lists/anilist-*.json`, OTA-135, ADR 0016)

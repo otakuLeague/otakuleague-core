@@ -236,43 +236,50 @@
           {
             "isMain": true,
             "node": {
-              "name": "WIT STUDIO"
+              "name": "WIT STUDIO",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Pony Canyon"
+              "name": "Pony Canyon",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Kodansha"
+              "name": "Kodansha",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Production I.G"
+              "name": "Production I.G",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Dentsu"
+              "name": "Dentsu",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Pony Canyon Enterprise"
+              "name": "Pony Canyon Enterprise",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Mainichi Broadcasting System"
+              "name": "Mainichi Broadcasting System",
+              "isAnimationStudio": false
             }
           }
         ]
@@ -454,7 +461,10 @@
           "type": "SOCIAL"
         }
       ],
-      "nextAiringEpisode": null
+      "nextAiringEpisode": null,
+      "source": "MANGA",
+      "countryOfOrigin": "JP",
+      "hashtag": "#shingeki #attackonTitan"
     }
   }
 }

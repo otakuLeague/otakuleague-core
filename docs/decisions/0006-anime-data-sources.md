@@ -86,6 +86,8 @@ All terms pages were read on **2026-10-15**. Quotes are verbatim; anything outsi
 |---|---|---|
 | Header: titles, synonyms, format, episodes, duration, status, dates, season, source, studios, genres, tags | AniList | MAL API only with MAL's written authorization to combine (3(a)(vii)) |
 | Header extras (OTA-97): original creators, favourites, all-time ranks (per format), cover colour | AniList | AniList only, never filled from MAL: MAL's favourites and rank count a different user base and scope |
+| At a Glance facts (OTA-215): source material, producers | AniList, then Jikan | Facts about the work, not about a user base, so the usual fallback applies. See the 2026-11-22 update |
+| At a Glance facts (OTA-215): country of origin, official hashtags | AniList | Jikan's anime answer has neither |
 | Scores and rank | AniList `averageScore`, `rankings` | A "MAL score" next to it needs the same MAL authorization; never averaged |
 | Trailer | AniList `trailer` (YouTube id) | AniList's id came with a trailing tab: trim it. Embed the YouTube player, never re-host |
 | Where to watch | AniList `externalLinks`, type `STREAMING` | No per-country availability; TMDB/JustWatch needs a commercial agreement |
@@ -210,3 +212,43 @@ If AniList refuses us keeping even the id and two title-derived slugs:
 3. Run `DELETE FROM "anime_list_page";`, because stored pages hold AniList titles and covers (list slugs are joined from `anime_identity` when served, not stored in the page).
 
 Imported identities, their slugs and snapshots are part of the re-decision the Status line above requires.
+
+## Update 2026-11-22: At a Glance facts (OTA-215)
+
+Four facts the old site showed and we did not store: source material, country of origin, producers, official hashtags. API and shared types only; the web card is a later slice. No new ADR: this follows the OTA-97 precedent (nullable columns on `anime_source_snapshot`, a row in the coverage table).
+
+**Requirements.** Functional: (1) a visitor's anime answer says what the anime adapts, where it was made, who produced it and its official hashtags, each with its source and fetch time; (2) each fact is null when no enabled source has it; (3) an anime only Jikan knows still gets the facts Jikan has. Non-functional: (a) 0 extra source requests: still 1 AniList request per import or refresh, 0 more to Jikan; (b) 0 breaking changes: every mix of old or new web, old or new API and the migration applied works, and an API rollback needs no down migration; (c) the migration is metadata-only (`ADD COLUMN`, nullable or constant default), no table rewrite, on a table the 30-day purge keeps to a few thousand rows; (d) stored anime gain the facts within their existing lifetime after a view: 1 day while airing or announced, 7 days otherwise, with 0 bulk requests; (e) third-party text is bounded: at most 5 hashtags of at most 100 characters. **Availability over consistency**: a stale or missing fact harms nobody, so stored values are served at once and refreshed in the background, like every other field.
+
+**Entities.** `AnimeSourceSnapshot` (4 columns), `AnimeDetails` (4 `Sourced` fields), `AnimeSourceMaterial` (a union).
+
+**API.** No new route. `GET /anime/:idSource/:externalId` and `GET /anime/slugs/:slug` gain four keys, always present, null when unknown:
+
+| Field | Type | Rule |
+|---|---|---|
+| `sourceMaterial` | `Sourced<AnimeSourceMaterial> \| null` | AniList's `MediaSource` version 3 (15 values: `ORIGINAL`, `MANGA`, `LIGHT_NOVEL`, `VISUAL_NOVEL`, `VIDEO_GAME`, `OTHER`, `NOVEL`, `DOUJINSHI`, `ANIME`, `WEB_NOVEL`, `LIVE_ACTION`, `GAME`, `COMIC`, `MULTIMEDIA_PROJECT`, `PICTURE_BOOK`). Not `source`: that word already means the data source in `Sourced` |
+| `countryOfOrigin` | `Sourced<string> \| null` | ISO 3166-1 alpha-2, exactly two upper-case letters, else null. Shape only, not the ISO registry |
+| `producers` | `Sourced<readonly string[]> \| null` | Names, in the source's order, each once |
+| `hashtags` | `Sourced<readonly string[]> \| null` | AniList's `hashtag` is one string that can hold several tags (`#フリーレン #frieren`): split at the boundary, each tag starts with `#` |
+
+**Data flow.** `ANILIST_ANIME_QUERY` (adds `source(version: 3)`, `countryOfOrigin`, `hashtag`, and `isAnimationStudio` on the studio node) → `mapAniListMedia` → `AnimeSnapshot` → `toSnapshotRow` → `anime_source_snapshot` → `fromSnapshotRow` → `mergeAnime` (`pick`, AniList first) → `AnimeDetails`.
+
+**Design, simplest version.**
+
+1. Columns: `source_material TEXT`, `country_of_origin TEXT`, `producers TEXT[] DEFAULT '{}'`, `hashtags TEXT[] DEFAULT '{}'`, in one new migration shaped like `anime_header_fields`. `source_material` is text, not a Postgres enum: nothing filters on it, the mapper writes only union values and the row reader narrows with `oneOf` (as for `trailer_site`), so a value AniList adds later is a code change, not an `ALTER TYPE`.
+2. `studios` keeps its meaning: every company AniList credits, `main` = the edge's `isMain`. It already holds producers as `main: false`, and the web shows only `main`. Removing producers from it would change a field the deployed web reads, so they stay; a producer's name is in both fields.
+3. A producer is a credited company whose `isAnimationStudio` is exactly `false`. A missing or non-boolean flag is not a producer: the mapper never guesses. Consequence: a supporting animation studio (Production I.G on Attack on Titan: `isMain` false, animation studio) is in `studios` only, while AniList's own page and MyAnimeList list it under Producers. Accepted: it is not a producer, and nothing is lost (`studios` minus `main` minus `producers`).
+4. Hashtags: every match of `#` (or full-width `＃`, stored as `#`) followed by characters that are neither whitespace nor `#`; a word without `#` is dropped; duplicates once; over-long tags dropped; the first 5 kept.
+5. Jikan: `producers` from its `producers` list (not `licensors`); `sourceMaterial` from MAL's label only where AniList has the same notion (`Original`, `Manga`, `4-koma manga`, `Web manga`, `Light novel`, `Novel`, `Web novel`, `Visual novel`, `Picture book`, `Mixed media`, `Other`); `Game`, `Card game`, `Book`, `Radio`, `Music`, `Unknown` and anything else are null. `countryOfOrigin` null, `hashtags` empty.
+6. Merge: four `pick` lines. An empty list is "no value", so Jikan's producers fill in when AniList credits only animation studios, labelled `jikan`.
+
+**Deep dives (the requirements above only).**
+
+- _Deploy order (b)._ Old web, new API: four extra keys, and the web has no guard on the anime body, so they are ignored. New web, old API, or a body cached by Next.js before the API deploy: the keys are absent, so the web slice must read them with `?.value` (as `headerFacts` does for every field) and test a body without them. Old API, migrated database: Prisma names its columns, new ones are ignored on read and take their default on write.
+- _Stored snapshots (d)._ Rows stored before the migration answer null until their next refresh. For up to 7 days null means either "the source has none" or "not fetched since OTA-215". Accepted: nothing shows these facts yet, and the card hides a missing fact (decision 9).
+- _One request (a)._ All four ride the existing query. A field or argument AniList does not know fails GraphQL validation for the whole query, so every import and refresh would fail while tests on fixtures stay green. The query must be run once against graphql.anilist.co before merge.
+
+**Rejected.** (1) A backfill job over stored anime: a bulk fetch, against decision 1 and the rate limits, to save at most 7 days on facts no page shows yet. (2) A snapshot schema version that marks old rows stale: a column and a refresh rule for a one-off wait, and without it a truly null hashtag cannot be told from an old row anyway. (3) Deriving producers from `isMain` false with no new column: free for stored rows, but it calls supporting animation studios producers.
+
+**Too simple or too complicated?** Too simple in one place: fixtures cannot prove the query is valid (see _One request_), hence the live check before merge. Not too complicated: the only optional part is Jikan's source-material table (about 12 lines), kept because it is the only source of that fact when AniList is switched off.
+
+**Fixtures.** The session that planned this could not reach graphql.anilist.co. Preferred: re-record the four core files with the new query. Otherwise add `source`, `countryOfOrigin`, `hashtag` and each studio node's `isAnimationStudio` by hand, say so in the fixtures README (these keys are then not recorded), and re-record under a follow-up ticket. Jikan's files already hold `source` and `producers`: unchanged.

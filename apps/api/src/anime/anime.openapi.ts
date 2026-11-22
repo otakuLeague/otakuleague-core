@@ -2,6 +2,7 @@ import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger';
 import {
   ANIME_DATA_SOURCES,
   ANIME_FORMATS,
+  ANIME_SOURCE_MATERIALS,
   ANIME_ID_SOURCES,
   ANIME_LIST_KINDS,
   ANIME_SEASONS,
@@ -192,6 +193,28 @@ export class AnimeDetailsSchema implements AnimeDetails {
   readonly rankPopular!: Sourced<number> | null;
   @ApiProperty({ ...SOURCED_STRING, description: 'Cover colour, "#rrggbb"' })
   readonly coverColor!: Sourced<string> | null;
+  @ApiProperty(
+    sourced('SourceMaterial', {
+      enum: ANIME_SOURCE_MATERIALS,
+      description: 'What the anime adapts (AniList MediaSource)',
+    }),
+  )
+  readonly sourceMaterial!: AnimeDetails['sourceMaterial'];
+  @ApiProperty({
+    ...SOURCED_STRING,
+    description: 'ISO 3166-1 alpha-2 shape, two upper-case letters',
+  })
+  readonly countryOfOrigin!: Sourced<string> | null;
+  @ApiProperty({
+    ...SOURCED_STRINGS,
+    description: 'Credited companies that are not animation studios',
+  })
+  readonly producers!: AnimeDetails['producers'];
+  @ApiProperty({
+    ...SOURCED_STRINGS,
+    description: 'Official hashtags, each starting with "#", at most 5',
+  })
+  readonly hashtags!: AnimeDetails['hashtags'];
   @ApiProperty({ type: [AnimeScoreSchema] })
   readonly scores!: readonly AnimeScore[];
   @ApiProperty({ type: [AnimeAttributionSchema] })

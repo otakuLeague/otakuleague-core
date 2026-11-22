@@ -40,6 +40,10 @@ const ANIME_DETAILS_KEYS = {
   rankRated: true,
   rankPopular: true,
   coverColor: true,
+  sourceMaterial: true,
+  countryOfOrigin: true,
+  producers: true,
+  hashtags: true,
   scores: true,
   attributions: true,
 } satisfies Record<keyof AnimeDetails, true>;

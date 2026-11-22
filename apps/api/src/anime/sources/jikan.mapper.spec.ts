@@ -72,6 +72,58 @@ describe('mapJikanAnime', () => {
     });
   });
 
+  it('maps MAL producers (not licensors) and source material, with no country or hashtags', () => {
+    expect(mapJikanAnime(anime('jikan-attack-on-titan'))).toMatchObject({
+      sourceMaterial: 'MANGA',
+      countryOfOrigin: null,
+      hashtags: [],
+      producers: [
+        'Production I.G',
+        'Dentsu',
+        'Mainichi Broadcasting System',
+        'Pony Canyon',
+        'Kodansha',
+        'Pony Canyon Enterprises',
+      ],
+    });
+  });
+
+  it.each([
+    ['Original', 'ORIGINAL'],
+    ['Manga', 'MANGA'],
+    ['4-koma manga', 'MANGA'],
+    ['Web manga', 'MANGA'],
+    ['Light novel', 'LIGHT_NOVEL'],
+    ['Novel', 'NOVEL'],
+    ['Web novel', 'WEB_NOVEL'],
+    ['Visual novel', 'VISUAL_NOVEL'],
+    ['Picture book', 'PICTURE_BOOK'],
+    ['Mixed media', 'MULTIMEDIA_PROJECT'],
+    ['Other', 'OTHER'],
+    ['Game', null],
+    ['Card game', null],
+    ['Book', null],
+    ['Radio', null],
+    ['Music', null],
+    ['Unknown', null],
+    ['toString', null],
+    [7, null],
+    [undefined, null],
+  ])('source %j -> %j', (source, expected) => {
+    expect(
+      mapJikanAnime({ ...anime('jikan-frieren'), source })?.sourceMaterial,
+    ).toBe(expected);
+  });
+
+  it('has no producers when MAL lists none or the list changed type', () => {
+    const base = anime('jikan-frieren');
+
+    expect(mapJikanAnime({ ...base, producers: [] })?.producers).toEqual([]);
+    expect(mapJikanAnime({ ...base, producers: 'Aniplex' })?.producers).toEqual(
+      [],
+    );
+  });
+
   it('returns null without a mal_id', () => {
     expect(mapJikanAnime({ title: 'Nothing' })).toBeNull();
   });

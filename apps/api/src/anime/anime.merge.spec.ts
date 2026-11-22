@@ -157,6 +157,65 @@ describe('mergeAnime', () => {
     });
   });
 
+  it('takes source material, country, producers and hashtags from AniList first', () => {
+    const merged = mergeAnime(anime(jikan, anilist), allEnabled, NOW);
+
+    expect(merged.sourceMaterial).toEqual({
+      value: 'MANGA',
+      source: 'anilist',
+      fetchedAt: ANILIST_AT.toISOString(),
+    });
+    expect(merged.countryOfOrigin?.value).toBe('JP');
+    expect(merged.producers?.source).toBe('anilist');
+    expect(merged.hashtags?.value).toEqual(['#shingeki', '#attackonTitan']);
+  });
+
+  it('fills source material and producers from Jikan when AniList is off, leaving country and hashtags null', () => {
+    const merged = mergeAnime(
+      anime(anilist, jikan),
+      (source) => source !== 'anilist',
+      NOW,
+    );
+
+    expect(merged.sourceMaterial?.source).toBe('jikan');
+    expect(merged.producers?.source).toBe('jikan');
+    expect(merged.producers?.value).toContain('Production I.G');
+    expect(merged.countryOfOrigin).toBeNull();
+    expect(merged.hashtags).toBeNull();
+  });
+
+  it('counts an empty AniList producer list as no value: Jikan fills in, labelled jikan', () => {
+    const onlyAnimationStudios = stored('anilist', ANILIST_AT, {
+      ...aniListSnapshot(),
+      producers: [],
+      sourceMaterial: null,
+    });
+    const merged = mergeAnime(
+      anime(onlyAnimationStudios, jikan),
+      allEnabled,
+      NOW,
+    );
+
+    expect(merged.producers?.source).toBe('jikan');
+    expect(merged.sourceMaterial?.source).toBe('jikan');
+  });
+
+  it('answers null for every new fact when no source has one, and for empty lists', () => {
+    const bare = stored('jikan', JIKAN_AT, {
+      ...jikanSnapshot(),
+      sourceMaterial: null,
+      producers: [],
+    });
+    const merged = mergeAnime(anime(bare), allEnabled, NOW);
+
+    expect(merged).toMatchObject({
+      sourceMaterial: null,
+      countryOfOrigin: null,
+      producers: null,
+      hashtags: null,
+    });
+  });
+
   it('returns null fields and no scores when no enabled source has data', () => {
     const merged = mergeAnime(anime(anilist), () => false, NOW);
 

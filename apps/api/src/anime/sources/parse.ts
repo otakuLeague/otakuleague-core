@@ -43,6 +43,29 @@ export function oneOf<T extends string>(
   return allowed.find((candidate) => candidate === value) ?? null;
 }
 
+/** Two upper-case letters (ISO 3166-1 alpha-2 shape, not the registry), or null. */
+export function countryCode(value: unknown): string | null {
+  return typeof value === 'string' && /^[A-Z]{2}$/.test(value) ? value : null;
+}
+
+export const MAX_HASHTAGS = 5;
+const MAX_HASHTAG_CHARS = 100;
+
+/**
+ * AniList's `hashtag` is one string that can hold several tags ("#フリーレン #frieren"). Every
+ * "#" (or full-width "＃", stored as "#") followed by characters that are neither whitespace
+ * nor "#" is a tag; words without one are dropped, duplicates kept once, over-long tags
+ * dropped, the first 5 kept.
+ */
+export function hashtags(value: unknown): string[] {
+  const raw = text(value);
+  if (raw === null) return [];
+  const found = (raw.match(/[#＃][^\s#＃]+/gu) ?? [])
+    .map((tag) => `#${tag.slice(1)}`)
+    .filter((tag) => tag.length <= MAX_HASHTAG_CHARS);
+  return [...new Set(found)].slice(0, MAX_HASHTAGS);
+}
+
 /** An absolute http(s) URL, or null. */
 export function httpUrl(value: unknown): string | null {
   const candidate = text(value);
