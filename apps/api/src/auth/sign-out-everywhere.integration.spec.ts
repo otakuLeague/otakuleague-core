@@ -21,6 +21,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createTestApp, FixedClock } from '../testing/test-app';
 import { truncateAllTables } from '../testing/test-database';
 import { SESSION_REQUIRED_MESSAGE } from './session.guard';
+import { SessionService } from './session.service';
 import { hashSessionToken, SESSION_MAX_AGE_MS } from './session-rules';
 
 const NOW = new Date('2026-11-22T12:00:00.000Z');
@@ -39,6 +40,7 @@ const UNAUTHORIZED = {
   error: { code: 'UNAUTHORIZED', message: SESSION_REQUIRED_MESSAGE },
 };
 const INTERNAL_KEY_REQUIRED = 'INTERNAL_KEY_REQUIRED';
+type LogLevel = 'log' | 'warn' | 'error' | 'debug' | 'verbose' | 'fatal';
 
 interface SessionSeed {
   readonly id: string;
@@ -179,13 +181,19 @@ describe('POST /auth/sign-out-everywhere', () => {
     await app.close();
   });
 
-  it("ends every session of the Bearer session's member, whatever the request names; 204, no body, nothing logged", async () => {
+  it("ends every session of the Bearer session's member, whatever the request names; 204, no body, no warning, no secret in a log line", async () => {
     await seedBoth();
     const otherBefore = await accountOf(prisma, OTHER_MEMBER.id);
-    const logged = (['log', 'warn', 'error', 'debug', 'verbose'] as const).map(
-      (level) =>
-        vi.spyOn(Logger.prototype, level).mockImplementation(() => undefined),
-    );
+    const spyOn = (level: LogLevel) =>
+      vi.spyOn(Logger.prototype, level).mockImplementation(() => undefined);
+    const logged = {
+      log: spyOn('log'),
+      warn: spyOn('warn'),
+      error: spyOn('error'),
+      debug: spyOn('debug'),
+      verbose: spyOn('verbose'),
+      fatal: spyOn('fatal'),
+    };
 
     const response = await withToken(TOKEN)
       .query({ userId: OTHER_MEMBER.id })
@@ -199,13 +207,41 @@ describe('POST /auth/sign-out-everywhere', () => {
       sessions: [],
     });
     expect(await accountOf(prisma, OTHER_MEMBER.id)).toEqual(otherBefore);
-    const lines = JSON.stringify(logged.map((spy) => spy.mock.calls));
+    const lines = JSON.stringify(
+      Object.values(logged).map((spy) => spy.mock.calls),
+    );
     const digest = Buffer.from(hashSessionToken(TOKEN)).toString('hex');
     for (const secret of [TOKEN, digest]) {
       expect(lines).not.toContain(secret);
     }
-    expect(logged[1]).not.toHaveBeenCalled();
-    expect(logged[2]).not.toHaveBeenCalled();
+    expect(logged.warn).not.toHaveBeenCalled();
+    expect(logged.error).not.toHaveBeenCalled();
+    expect(logged.fatal).not.toHaveBeenCalled();
+  });
+
+  it('deletes the member’s expired and old-epoch rows too', async () => {
+    await seedBoth({
+      ...MEMBER,
+      sessions: [
+        ...MEMBER.sessions,
+        {
+          id: '10000000-0000-4000-8000-0000000000a5',
+          token: OLD_EPOCH_TOKEN,
+          sessionEpoch: MEMBER.sessionEpoch - 1,
+        },
+        {
+          id: '10000000-0000-4000-8000-0000000000a6',
+          token: UNKNOWN_TOKEN,
+          expiresAt: NOW,
+        },
+      ],
+    });
+
+    await withToken(TOKEN).expect(204);
+
+    const member = await accountOf(prisma, MEMBER.id);
+    expect(member.sessions).toEqual([]);
+    expect(member.sessionEpoch).toBe(MEMBER.sessionEpoch + 1);
   });
 
   it("refuses every token of the member on the very next request, and only the member's", async () => {
@@ -366,27 +402,109 @@ describe('POST /auth/sign-out-everywhere', () => {
     await me(TOKEN).expect(200);
   });
 
-  it('two parallel calls from two sessions of one member: each 204 or 401, at least one 204, no row left', async () => {
-    for (let round = 0; round < 5; round += 1) {
-      await truncateAllTables(prisma);
+  /** Until `count` other connections wait on a row lock: those requests are blocked at their UPDATE. */
+  async function waitForLockWaiters(count: number): Promise<void> {
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      const [row] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`;
+      if ((row?.waiting ?? 0) >= count) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('The calls never waited on the user row lock');
+  }
+
+  it.each<[string, readonly [string, string]]>([
+    ['two sessions of the member', [TOKEN, SECOND_TOKEN]],
+    ['the same token twice', [TOKEN, TOKEN]],
+  ])(
+    'two calls from %s that both passed the guard (forced by a held row lock): both 204, epoch +1 exactly, no row left',
+    async (_, tokens) => {
       await seedBoth();
       const otherBefore = await accountOf(prisma, OTHER_MEMBER.id);
+      const calls: Promise<request.Response>[] = [];
 
-      const responses = await Promise.all([
-        withToken(TOKEN),
-        withToken(SECOND_TOKEN),
-      ]);
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`
+            SELECT id FROM app_user WHERE id = ${MEMBER.id}::uuid FOR UPDATE`;
+          for (const token of tokens) {
+            calls.push(withToken(token).then((response) => response));
+          }
+          await waitForLockWaiters(tokens.length);
+        },
+        { timeout: 10_000 },
+      );
+      const responses = await Promise.all(calls);
 
-      const statuses = responses.map((response) => response.status);
-      for (const status of statuses) expect([204, 401]).toContain(status);
-      const revoked = statuses.filter((status) => status === 204).length;
-      expect(revoked).toBeGreaterThanOrEqual(1);
-      const member = await accountOf(prisma, MEMBER.id);
-      expect(member.sessions).toEqual([]);
-      // Each 204 ran the statement once: the epoch never moves without one, nor twice for one.
-      expect(member.sessionEpoch).toBe(MEMBER.sessionEpoch + revoked);
+      expect(responses.map((response) => response.status)).toEqual([204, 204]);
+      expect(await accountOf(prisma, MEMBER.id)).toEqual({
+        sessionEpoch: MEMBER.sessionEpoch + 1,
+        updatedAt: NOW,
+        sessions: [],
+      });
       expect(await accountOf(prisma, OTHER_MEMBER.id)).toEqual(otherBefore);
-    }
+    },
+  );
+});
+
+describe('SessionService.revokeAll inside the caller’s transaction', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
+  let sessions: SessionService;
+
+  const me = (token: string) =>
+    request(app.getHttpServer())
+      .get('/me')
+      .set({
+        'X-Internal-Api-Key': FAKE_KEY,
+        Authorization: `Bearer ${token}`,
+      });
+
+  beforeAll(async () => {
+    app = await appWith({ kind: 'enforced', acceptedKeys: [FAKE_KEY] });
+    prisma = app.get(PrismaService);
+    sessions = app.get(SessionService);
+  });
+
+  beforeEach(async () => {
+    await truncateAllTables(prisma);
+    await seed(prisma, MEMBER);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('changes nothing when the transaction rolls back: the member stays signed in', async () => {
+    const before = await accountOf(prisma, MEMBER.id);
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await sessions.revokeAll(MEMBER.id, tx);
+        throw new Error('fake: the caller’s next step failed');
+      }),
+    ).rejects.toThrow('fake: the caller’s next step failed');
+
+    expect(await accountOf(prisma, MEMBER.id)).toEqual(before);
+    await me(TOKEN).expect(200);
+  });
+
+  it('raises the epoch once and deletes every row when the transaction commits', async () => {
+    await prisma.$transaction(
+      async (tx) => {
+        await sessions.revokeAll(MEMBER.id, tx);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
+
+    expect(await accountOf(prisma, MEMBER.id)).toEqual({
+      sessionEpoch: MEMBER.sessionEpoch + 1,
+      updatedAt: NOW,
+      sessions: [],
+    });
+    await me(TOKEN).expect(401, UNAUTHORIZED);
+    await me(SECOND_TOKEN).expect(401, UNAUTHORIZED);
   });
 });
 

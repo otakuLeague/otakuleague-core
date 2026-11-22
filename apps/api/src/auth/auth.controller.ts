@@ -263,6 +263,9 @@ export class AuthController {
   async signOutEverywhere(
     @CurrentSession() session: SignedInSession,
   ): Promise<void> {
-    await this.sessions.revokeAll(session.userId);
+    await this.sessions.signOutEverywhere(
+      session.userId,
+      session.sessionEpoch,
+    );
   }
 }

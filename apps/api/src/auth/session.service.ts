@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Clock, Random } from '../common/clock-and-random.module';
-import type { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   hashSessionToken,
@@ -14,6 +14,8 @@ export interface SignedInSession {
   readonly sessionId: string;
   readonly userId: string;
   readonly username: string;
+  /** The user's epoch this session was resolved with: sign out everywhere raises only from it. */
+  readonly sessionEpoch: number;
 }
 
 export type SessionResolution =
@@ -82,24 +84,49 @@ export class SessionService {
   }
 
   /**
-   * Sign out everywhere (ADR 0015 Addendum OTA-205): one statement raises the user's epoch and
-   * deletes every session row of that user, the caller's included. The user row is locked first,
-   * then the sessions (the cleanup's order): the DELETE only sees users the UPDATE returned. A
-   * sign-in racing it either read the old epoch (its row is refused on first use) or the new one
-   * (valid). `db` is the caller's transaction client, so a password reset (OTA-140) runs it inside
-   * its own transaction and `session_epoch` keeps one writer. Database errors propagate (503).
-   * Logs nothing.
+   * Sign out everywhere from one session (ADR 0015 Addendum OTA-205): raises the epoch only from
+   * the value that session was resolved with, so a replay or a parallel call that resolved the
+   * same epoch changes nothing and still succeeds (every session of that epoch is already ended).
    */
-  async revokeAll(
+  async signOutEverywhere(
     userId: string,
-    db: Prisma.TransactionClient = this.prisma,
+    expectedEpoch: number,
+  ): Promise<void> {
+    await this.raiseEpochAndDeleteSessions(
+      this.prisma,
+      userId,
+      Prisma.sql`AND session_epoch = ${expectedEpoch}`,
+    );
+  }
+
+  /**
+   * Ends every session of a user inside the caller's transaction (OTA-140's password reset), so
+   * `session_epoch` keeps one writer. READ COMMITTED only: a stricter level turns a concurrent
+   * raise into a serialization failure instead of waiting on the row lock.
+   */
+  async revokeAll(userId: string, tx: Prisma.TransactionClient): Promise<void> {
+    await this.raiseEpochAndDeleteSessions(tx, userId, Prisma.empty);
+  }
+
+  /**
+   * One data-modifying CTE: raise the user's epoch (`updated_at` from Clock), then delete that
+   * user's sessions. The DELETE only sees a user the UPDATE returned, so the user row is locked
+   * first, then the sessions (the cleanup's order), and nothing is deleted when the UPDATE matched
+   * no row. A sign-in racing it either read the old epoch (its session is refused throughout and
+   * its row goes at its expiry) or the new one (valid). Database errors propagate (503). Logs
+   * nothing.
+   */
+  private async raiseEpochAndDeleteSessions(
+    db: Prisma.TransactionClient,
+    userId: string,
+    epochCondition: Prisma.Sql,
   ): Promise<void> {
     const now = this.clock.now().toISOString();
     await db.$executeRaw`
       WITH raised AS (
         UPDATE app_user SET session_epoch = session_epoch + 1,
           updated_at = ${now}::timestamptz
-        WHERE id = ${userId}::uuid
+        WHERE id = ${userId}::uuid ${epochCondition}
         RETURNING id
       )
       DELETE FROM auth_session WHERE user_id IN (SELECT id FROM raised)`;
@@ -144,6 +171,7 @@ export class SessionService {
         sessionId: row.id,
         userId: row.userId,
         username: row.username,
+        sessionEpoch: row.userSessionEpoch,
       },
     };
   }

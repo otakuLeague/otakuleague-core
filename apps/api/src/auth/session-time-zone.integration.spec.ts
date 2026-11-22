@@ -212,7 +212,12 @@ describe(`sessions on a database whose default zone is ${DATABASE_ZONE}`, () => 
 
     expect(await sessions.resolve(TOKEN)).toEqual({
       kind: 'signed_in',
-      session: { sessionId: SESSION_ID, userId: USER_ID, username: USERNAME },
+      session: {
+        sessionId: SESSION_ID,
+        userId: USER_ID,
+        username: USERNAME,
+        sessionEpoch: 0,
+      },
     });
     expect(await storedTimes(prisma)).toEqual(storedAs(at(SESSION_IDLE_MS)));
   });
