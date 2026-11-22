@@ -7,7 +7,15 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { Component, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 import type { signOutAction } from './sign-out-action';
 import { SignOutForm } from './sign-out-form';
 import type { SignOutFormState } from './sign-out-state';
@@ -44,11 +52,14 @@ class RouterBoundary extends Component<
 const button = () => screen.getByRole('button', { name: 'Sign out' });
 const submit = () => fireEvent.click(button());
 const alertText = async () => (await screen.findByRole('alert')).textContent;
+let consoleError: MockInstance<typeof console.error>;
+// React logs every error a boundary catches: expected only in the two boundary tests.
+const silenceBoundaryLogs = () =>
+  consoleError.mockImplementation(() => undefined);
 
 beforeEach(() => {
   mocks.signOutAction.mockReset();
-  // React logs every error a boundary catches; these are expected here.
-  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  consoleError = vi.spyOn(console, 'error');
 });
 
 afterEach(() => {
@@ -57,29 +68,35 @@ afterEach(() => {
 });
 
 describe('SignOutForm', () => {
-  it('shows one Sign out button, no field and no alert before a submit', () => {
+  it('shows one unfocused Sign out button, no field and no alert before a submit', () => {
     const { container } = render(<SignOutForm />);
 
     expect(button().getAttribute('type')).toBe('submit');
     expect(button().getAttribute('aria-disabled')).toBe('false');
+    expect(document.activeElement).toBe(document.body);
     expect(container.querySelectorAll('input, select, textarea')).toHaveLength(
       0,
     );
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it('says it could not sign out after a refusal and keeps the button', async () => {
+  it('says it could not sign out after a refusal, below the button it keeps', async () => {
     mocks.signOutAction.mockResolvedValue({ kind: 'refused' });
     render(<SignOutForm />);
 
     submit();
 
-    expect(await alertText()).toBe('Could not sign out');
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Could not sign out');
+    expect(button().nextElementSibling).toBe(alert);
     expect(mocks.signOutAction).toHaveBeenCalledTimes(1);
     expect(button().getAttribute('aria-disabled')).toBe('false');
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it('after a rejected action, shows the alert with a button that submits again', async () => {
+  it('after a rejected action, shows the alert with a focused button that submits again', async () => {
+    silenceBoundaryLogs();
     mocks.signOutAction.mockRejectedValue(new Error('Failed to fetch'));
     render(
       <RouterBoundary>
@@ -89,15 +106,18 @@ describe('SignOutForm', () => {
 
     submit();
     expect(await alertText()).toBe('Could not sign out');
+    expect(document.activeElement).toBe(button());
     submit();
 
     await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
     expect(await alertText()).toBe('Could not sign out');
+    expect(document.activeElement).toBe(button());
     expect(button().getAttribute('aria-disabled')).toBe('false');
     expect(screen.queryByText(/Router:/)).toBeNull();
   });
 
   it('passes a rejection with Next redirect digest on to the router boundary, with no alert', async () => {
+    silenceBoundaryLogs();
     mocks.signOutAction.mockRejectedValue(REDIRECT_HOME);
     render(
       <RouterBoundary>
@@ -135,5 +155,6 @@ describe('SignOutForm', () => {
 
     await screen.findByRole('alert');
     expect(mocks.signOutAction).toHaveBeenCalledTimes(2);
+    expect(consoleError).not.toHaveBeenCalled();
   });
 });

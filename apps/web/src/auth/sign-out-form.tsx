@@ -31,14 +31,21 @@ function SignOutFormView({
         }
       }}
     >
+      {/* Mounted again by the boundary after a throw: focus back on the button, not <body>. */}
+      <button
+        type="submit"
+        className="sh-menu__action"
+        aria-disabled={pending}
+        autoFocus={initialState.kind === 'failed'}
+      >
+        Sign out
+      </button>
+      {/* After the button, so an alert never moves it under the pointer. */}
       {showAlert && (
         <p className="sh-menu__alert" role="alert">
           Could not sign out
         </p>
       )}
-      <button type="submit" className="sh-menu__action" aria-disabled={pending}>
-        Sign out
-      </button>
     </form>
   );
 }

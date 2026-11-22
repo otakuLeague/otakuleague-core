@@ -343,7 +343,7 @@ details[open] > .sh-avatar {
   display: flex;
   align-items: center;
   inline-size: 100%;
-  min-height: 44px;
+  min-block-size: 44px;
   padding: var(--space-2) var(--space-3);
   border: 0;
   border-radius: var(--radius-md);
