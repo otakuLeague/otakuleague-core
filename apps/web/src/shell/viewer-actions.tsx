@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { loadViewer } from '../auth/load-viewer';
+import { SignOutForm } from '../auth/sign-out-form';
 import type { Viewer } from '../auth/viewer';
 import { Disclosure } from './disclosure';
 
@@ -70,6 +71,7 @@ function AccountMenu({ username }: { readonly username: string }) {
       summaryLabel="Account menu"
     >
       <p className="sh-menu__head">{username}</p>
+      <SignOutForm />
     </Disclosure>
   );
 }
