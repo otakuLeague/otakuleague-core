@@ -1,19 +1,17 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Activity } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SignUpFormState } from './sign-up-form-state';
 import { SignUpFormView } from './sign-up-form-view';
 
 const KEPT = { username: 'kaito_tanaka', email: 'kaito@example.com' };
+const HINT_ID = 'sign-up-password-hint';
 
-const view = (state: SignUpFormState, pending = false, kept = KEPT) => (
-  <SignUpFormView
-    state={state}
-    pending={pending}
-    kept={kept}
-    onFieldsSubmit={vi.fn()}
-    formAction={vi.fn()}
-  />
-);
+const view = (
+  state: SignUpFormState,
+  pending = false,
+  spies = { onFieldsSubmit: vi.fn(), formAction: vi.fn() },
+) => <SignUpFormView state={state} pending={pending} kept={KEPT} {...spies} />;
 
 const input = (label: string) => screen.getByLabelText<HTMLInputElement>(label);
 const fields = () => ['Username', 'Email', 'Password'].map(input);
@@ -21,52 +19,78 @@ const fields = () => ['Username', 'Email', 'Password'].map(input);
 describe('SignUpFormView', () => {
   afterEach(cleanup);
 
-  it('shows no alert before the first submit', () => {
+  it('shows no alert before the first submit, and the password hint', () => {
     render(view({ kind: 'idle' }));
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
-    expect(screen.getByText(/At least 8 characters/).id).toBe(
-      input('Password').getAttribute('aria-describedby'),
+    expect(document.getElementById(HINT_ID)?.textContent).toBe(
+      '8 to 128 characters, with a number or symbol.',
     );
+    expect(input('Password').getAttribute('aria-describedby')).toBe(HINT_ID);
   });
 
-  it.each<[SignUpFormState, RegExp]>([
+  it.each<[SignUpFormState, string, string]>([
     [
       { kind: 'invalid_fields', fields: ['username', 'email', 'password'] },
-      /another look.*3 to 20 letters.*valid email.*common ones are refused/,
+      'Some details need another look.',
+      'Usernames are 3 to 20 letters, numbers or underscores. Enter a valid email address. Passwords need 8 to 128 characters with a number or symbol, and common ones are refused.',
+    ],
+    [
+      { kind: 'invalid_fields', fields: ['password'] },
+      'Some details need another look.',
+      'Passwords need 8 to 128 characters with a number or symbol, and common ones are refused.',
     ],
     [
       { kind: 'username_taken' },
-      /username is taken.*email we sent still works/,
+      'That username is taken.',
+      'Pick another one. If you already signed up with it, the confirmation email we sent still works.',
     ],
-    [{ kind: 'sign_up_closed' }, /aren't open yet.*Sign in below/],
+    [
+      { kind: 'sign_up_closed' },
+      "New accounts aren't open yet.",
+      'Already have one? Sign in below.',
+    ],
     [
       { kind: 'rate_limited', retryAfterSeconds: 120 },
-      /Slow down.*Try again in 2 minutes\./,
+      'Slow down a little.',
+      'Too many sign-ups from this network. Try again in 2 minutes.',
     ],
-    [{ kind: 'busy' }, /Sign-up is busy.*Wait a moment/],
-    [{ kind: 'unavailable' }, /couldn't confirm.*its link still works/],
-    [{ kind: 'off_on_preview' }, /off on preview deployments.*live site/],
-  ])('announces %o with its own copy', (state, copy) => {
+    [
+      { kind: 'rate_limited', retryAfterSeconds: null },
+      'Slow down a little.',
+      'Too many sign-ups from this network. Try again in a few minutes.',
+    ],
+    [{ kind: 'busy' }, 'Sign-up is busy.', 'Wait a moment, then try again.'],
+    [
+      { kind: 'unavailable' },
+      "We couldn't confirm your sign-up.",
+      'Something went wrong on our side. If a confirmation email arrives, its link still works. Otherwise try again in a little while.',
+    ],
+    [
+      { kind: 'off_on_preview' },
+      'Sign-up is off on preview deployments',
+      'Use the live site to sign up.',
+    ],
+  ])('announces %o with its own copy', (state, title, detail) => {
     render(view(state));
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toMatch(copy);
+    expect(alert.querySelector('strong')?.textContent).toBe(title);
+    expect(alert.querySelector('span')?.textContent).toBe(detail);
     expect(alert.textContent).not.toMatch(/nothing was saved/i);
-    expect(alert.textContent).not.toContain(KEPT.username);
-    expect(alert.textContent).not.toContain(KEPT.email);
   });
 
-  it('marks only the named fields invalid, described by the alert', () => {
+  it('marks only the named fields invalid, described by the alert (and the hint)', () => {
     render(view({ kind: 'invalid_fields', fields: ['email', 'password'] }));
     const alertId = screen.getByRole('alert').id;
     const [username, email, password] = fields();
     expect(username?.hasAttribute('aria-invalid')).toBe(false);
     expect(username?.hasAttribute('aria-describedby')).toBe(false);
-    for (const field of [email, password]) {
-      expect(field?.getAttribute('aria-invalid')).toBe('true');
-      expect(field?.getAttribute('aria-describedby')).toContain(alertId);
-    }
-    expect(screen.getByRole('alert').textContent).not.toMatch(/3 to 20/);
+    expect(email?.getAttribute('aria-invalid')).toBe('true');
+    expect(email?.getAttribute('aria-describedby')).toBe(alertId);
+    expect(password?.getAttribute('aria-invalid')).toBe('true');
+    expect(password?.getAttribute('aria-describedby')).toBe(
+      `${alertId} ${HINT_ID}`,
+    );
   });
 
   it('marks only the username when it is taken, and nothing otherwise', () => {
@@ -82,9 +106,10 @@ describe('SignUpFormView', () => {
   });
 
   it('locks the form while pending, hides the alert and cancels a second submit', () => {
+    const spies = { onFieldsSubmit: vi.fn(), formAction: vi.fn() };
     const { rerender } = render(view({ kind: 'username_taken' }));
     const first = screen.getByRole('alert');
-    rerender(view({ kind: 'username_taken' }, true));
+    rerender(view({ kind: 'username_taken' }, true, spies));
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(input('Username').hasAttribute('aria-invalid')).toBe(false);
@@ -93,8 +118,11 @@ describe('SignUpFormView', () => {
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.hasAttribute('disabled')).toBe(false);
     expect(fields().every((field) => field.readOnly)).toBe(true);
-    const form = button.closest('form') as HTMLFormElement;
-    expect(fireEvent.submit(form)).toBe(false);
+    expect(fireEvent.submit(button.closest('form') as HTMLFormElement)).toBe(
+      false,
+    );
+    expect(spies.onFieldsSubmit).not.toHaveBeenCalled();
+    expect(spies.formAction).not.toHaveBeenCalled();
 
     rerender(view({ kind: 'username_taken' }));
     expect(screen.getByRole('alert')).not.toBe(first);
@@ -109,20 +137,18 @@ describe('SignUpFormView', () => {
       required: true,
       value: KEPT.username,
     });
-    expect(
-      ['autocapitalize', 'autocorrect', 'spellcheck'].map((name) =>
-        input('Username').getAttribute(name),
-      ),
-    ).toEqual(['none', 'off', 'false']);
     expect(input('Email')).toMatchObject({
       id: 'sign-up-email',
+      name: 'email',
       type: 'email',
+      autocomplete: 'email',
       maxLength: 254,
       required: true,
       value: KEPT.email,
     });
     expect(input('Password')).toMatchObject({
       id: 'sign-up-password',
+      name: 'password',
       type: 'password',
       autocomplete: 'new-password',
       maxLength: 1024,
@@ -130,12 +156,29 @@ describe('SignUpFormView', () => {
       value: '',
       defaultValue: '',
     });
+    for (const field of [input('Username'), input('Password')]) {
+      expect(
+        ['autocapitalize', 'autocorrect', 'spellcheck'].map((name) =>
+          field.getAttribute(name),
+        ),
+      ).toEqual(['none', 'off', 'false']);
+    }
   });
 
-  it('keeps a very long email in its field', () => {
-    const email = `${'a'.repeat(240)}@example.com`;
-    render(view({ kind: 'idle' }, false, { username: 'k', email }));
-    expect(input('Email').value).toBe(email);
+  it('empties a typed password when the form is hidden in an Activity', () => {
+    const inActivity = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>{view({ kind: 'idle' })}</Activity>
+    );
+    const { rerender } = render(inActivity('visible'));
+    const password = input('Password');
+    fireEvent.change(password, { target: { value: 'secret-pass-1' } });
+    fireEvent.change(input('Email'), { target: { value: 'kept@example.com' } });
+
+    rerender(inActivity('hidden'));
+    expect(password.value).toBe('');
+    expect(
+      document.querySelector<HTMLInputElement>('#sign-up-email')?.value,
+    ).toBe('kept@example.com');
   });
 
   it('reports the submitted username and email, never the password', () => {
