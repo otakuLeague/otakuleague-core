@@ -20,6 +20,8 @@ export type ActionThrottleDecision =
 export interface ActionThrottle {
   /** Counts one POST for the key, or refuses it (a refused POST is not counted). */
   take(key: ActionThrottleKey): ActionThrottleDecision;
+  /** What `take` would answer now, counting and dropping nothing: a second tier refuses first with it. */
+  peek(key: ActionThrottleKey): ActionThrottleDecision;
   /** Drops every ended window; the proxy calls it on each pass so no hash outlives its window long. */
   forgetEnded(): void;
   /** How many keys are held; never which. */
@@ -94,35 +96,61 @@ export function createActionThrottle(
     }
   }
 
+  /**
+   * The key's window if it is live at `at`. Checked per key, not only by the sweep: after a clock
+   * step back, a live entry in front can stop the sweep before an ended one behind it.
+   */
+  function liveWindowOf(
+    key: ActionThrottleKey,
+    at: number,
+  ): WindowCount | undefined {
+    const current = windows.get(key);
+    return current !== undefined &&
+      current.windowStart <= at &&
+      at < current.windowStart + windowMs
+      ? current
+      : undefined;
+  }
+
+  function decisionFor(
+    current: WindowCount | undefined,
+    at: number,
+  ): ActionThrottleDecision {
+    if (current === undefined || current.posts < limit) {
+      return { kind: 'allowed' };
+    }
+    const remainingMs = current.windowStart + windowMs - at;
+    return {
+      kind: 'limited',
+      retryAfterSeconds: Math.min(
+        maxRetryAfterSeconds,
+        Math.max(1, Math.ceil(remainingMs / 1000)),
+      ),
+    };
+  }
+
   return {
     take(key) {
       const at = nowMs();
       dropEndedWindows(at);
-      let current = windows.get(key);
-      if (current !== undefined && at < current.windowStart) {
-        windows.delete(key);
-        current = undefined;
+      const current = liveWindowOf(key, at);
+      const decision = decisionFor(current, at);
+      if (decision.kind === 'limited') return decision;
+      if (current !== undefined) {
+        windows.set(key, { ...current, posts: current.posts + 1 });
+        return decision;
       }
-      if (current === undefined) {
-        if (windows.size >= maxEntries) {
-          const oldest = windows.keys().next();
-          if (oldest.done !== true) windows.delete(oldest.value);
-        }
-        windows.set(key, { windowStart: at, posts: 1 });
-        return { kind: 'allowed' };
+      windows.delete(key);
+      if (windows.size >= maxEntries) {
+        const oldest = windows.keys().next();
+        if (oldest.done !== true) windows.delete(oldest.value);
       }
-      if (current.posts >= limit) {
-        const remainingMs = current.windowStart + windowMs - at;
-        return {
-          kind: 'limited',
-          retryAfterSeconds: Math.min(
-            maxRetryAfterSeconds,
-            Math.max(1, Math.ceil(remainingMs / 1000)),
-          ),
-        };
-      }
-      windows.set(key, { ...current, posts: current.posts + 1 });
-      return { kind: 'allowed' };
+      windows.set(key, { windowStart: at, posts: 1 });
+      return decision;
+    },
+    peek(key) {
+      const at = nowMs();
+      return decisionFor(liveWindowOf(key, at), at);
     },
     forgetEnded: () => dropEndedWindows(nowMs()),
     size: () => windows.size,

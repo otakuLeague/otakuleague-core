@@ -44,6 +44,9 @@ describe('proxy matcher (N26)', () => {
       true,
     ],
     ['a plain GET elsewhere', '/season', {}, false],
+    // Benign gap: with no content-type an empty id is not form data, and Next finds no action
+    // for it (`getActionModIdOrError` throws "Missing 'next-action' header"), so nothing runs.
+    ['an empty action id alone', '/', { 'next-action': '' }, false],
   ])('%s: invoked %o', (_label, url, headers, invoked) => {
     expect(unstable_doesMiddlewareMatch({ config, url, headers })).toBe(
       invoked,

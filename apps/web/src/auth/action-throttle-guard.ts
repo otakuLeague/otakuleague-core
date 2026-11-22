@@ -113,8 +113,8 @@ export interface ActionThrottleGuardOptions {
 /**
  * The proxy's Server Action throttle (ADR 0015 Addendum OTA-207). Each pass drops ended windows.
  * A possible action POST from another site gets 403, uncounted; one without a known client passes
- * uncounted and is reported; else its /64 (or IPv4), then, only if allowed, its IPv6 /48 is counted,
- * and over either cap it gets 429 with `Retry-After`, so Next never dispatches the action. No I/O,
+ * uncounted and is reported; else it counts on its /64 (or IPv4) and its IPv6 /48 together, or on
+ * neither, and over either cap it gets 429 with `Retry-After`, so Next never dispatches the action. No I/O,
  * no log, no try/catch: a bug surfaces as a 500, not as a throttle that quietly stopped.
  */
 export function createActionThrottleGuard({
@@ -126,13 +126,18 @@ export function createActionThrottleGuard({
 }: ActionThrottleGuardOptions): (
   request: Pick<Request, 'method' | 'headers'>,
 ) => ActionGuardVerdict {
+  // A full /48 refuses before its /64 counts, and a refused /64 never counts on its /48: a POST
+  // either counts on both tiers or on neither (decision 4), so rotating /64s spend nothing.
   function take(
     network: ClientNetwork,
     site: ClientNetwork | undefined,
   ): ActionThrottleDecision {
+    const siteKey = site === undefined ? undefined : keyOf(site);
+    const siteFull = siteKey === undefined ? undefined : perSite.peek(siteKey);
+    if (siteFull?.kind === 'limited') return siteFull;
     const decision = perNetwork.take(keyOf(network));
-    return decision.kind === 'allowed' && site !== undefined
-      ? perSite.take(keyOf(site))
+    return decision.kind === 'allowed' && siteKey !== undefined
+      ? perSite.take(siteKey)
       : decision;
   }
 

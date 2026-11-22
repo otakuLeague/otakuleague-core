@@ -70,6 +70,20 @@ describe('reportClientIpUnknown', () => {
     report('sign-in', 5_000 + 600_000);
     expect(mocks.captureMessage.mock.calls).toEqual([REPORT, REPORT]);
   });
+
+  it('never throws when Sentry or after() does, so the proxy pass stays a pass', async () => {
+    const report = await freshReporter();
+    mocks.captureMessage.mockImplementationOnce(() => {
+      throw new Error('sentry down');
+    });
+    expect(() => report('action-throttle', 5_000)).not.toThrow();
+
+    mocks.after.mockImplementationOnce(() => {
+      throw new Error('after() outside a request');
+    });
+    expect(() => report('action-throttle', 5_000 + 600_000)).not.toThrow();
+    expect(mocks.captureMessage).toHaveBeenCalledTimes(2);
+  });
 });
 
 type Code = Exclude<ApiErrorCode, 'VALIDATION_FAILED'>;

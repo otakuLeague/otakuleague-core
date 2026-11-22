@@ -47,6 +47,8 @@ export async function proxy(request: NextRequest) {
 
 // Literals only: Next reads them at build. The two `/:path*` entries invoke the proxy for every
 // possible Server Action POST on any path, so a new action is covered with no line of its own.
+// The proxy now buffers the body of every request with a content-type (up to
+// `proxyClientMaxBodySize`, 10 MB by default): decide that limit before an upload route ships.
 export const config = {
   matcher: [
     '/anime/:path*',

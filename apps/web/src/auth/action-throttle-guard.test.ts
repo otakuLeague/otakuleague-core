@@ -141,10 +141,20 @@ describe('the same-site check (decision 11)', () => {
 });
 
 describe('what is never counted', () => {
-  it('lets a GET, the Sentry tunnel and a JSON POST through uncounted', () => {
+  it('lets GETs, the Sentry tunnel and a JSON POST through uncounted, cross-site ones too', () => {
     const { guard, post, postMany, perNetwork } = setup();
     const visitor = { 'x-forwarded-for': VISITOR, ...SAME_ORIGIN };
+    const foreign = {
+      ...visitor,
+      origin: 'https://evil.example',
+      'sec-fetch-site': 'cross-site',
+    };
     const others = [
+      new NextRequest(PAGE_URL, { headers: foreign }),
+      new NextRequest(`${PAGE_URL}hikari`, {
+        method: 'POST',
+        headers: { ...foreign, 'content-type': 'text/plain' },
+      }),
       new NextRequest(PAGE_URL, {
         headers: { ...visitor, 'next-action': 'a1' },
       }),
@@ -159,11 +169,9 @@ describe('what is never counted', () => {
     ];
 
     for (let round = 0; round < 100; round += 1) {
-      expect(others.map((request) => statusOf(guard(request)))).toEqual([
-        'pass',
-        'pass',
-        'pass',
-      ]);
+      expect(others.map((request) => statusOf(guard(request)))).toEqual(
+        new Array(others.length).fill('pass'),
+      );
     }
     expect(perNetwork.size()).toBe(0);
     expect(passCount(postMany(60))).toBe(60);
@@ -241,6 +249,20 @@ describe('the IPv6 /48 tier (decision 12)', () => {
     );
     expect(statusOf(post({}, '2001:db8:2:1::1'))).toBe('pass');
     expect(statusOf(post({}, VISITOR))).toBe('pass');
+  });
+
+  it('refuses on a full /48 before counting the /64, with the /48 Retry-After', () => {
+    const { clock, post, postMany, perNetwork } = setup();
+    const inSite = (subnet: number) => `2001:db8:1:${subnet}::1`;
+    for (const subnet of [1, 2, 3, 4, 5]) postMany(60, {}, inSite(subnet));
+    expect(perNetwork.size()).toBe(5);
+
+    clock.at += 10_000;
+    for (let subnet = 6; subnet < 40; subnet += 1) {
+      const refused = responseOf(post({}, inSite(subnet)));
+      expect(refused.headers.get('retry-after')).toBe('50');
+    }
+    expect(perNetwork.size()).toBe(5);
   });
 });
 

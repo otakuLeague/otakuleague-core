@@ -148,6 +148,38 @@ describe('createActionThrottle', () => {
     expect(retryAfterOf(throttle, KEY)).toBe(60);
   });
 
+  it('ends a capped key at its window end even when a later-started entry stands in front', () => {
+    const { clock, throttle } = setup();
+    throttle.take(keyOf('front'));
+    clock.at -= 100_000;
+    take(throttle, KEY, 60);
+
+    clock.at += 59_999;
+    expect(retryAfterOf(throttle, KEY)).toBe(1);
+    clock.at += 1;
+    expect(throttle.take(KEY)).toEqual({ kind: 'allowed' });
+    expect(throttle.peek(KEY)).toEqual({ kind: 'allowed' });
+  });
+
+  it('peeks the answer take would give without counting or adding an entry', () => {
+    const { clock, throttle } = setup();
+    expect(throttle.peek(KEY)).toEqual({ kind: 'allowed' });
+    expect(throttle.size()).toBe(0);
+
+    take(throttle, KEY, 59);
+    for (let peek = 0; peek < 5; peek += 1) {
+      expect(throttle.peek(KEY)).toEqual({ kind: 'allowed' });
+    }
+    expect(throttle.take(KEY)).toEqual({ kind: 'allowed' });
+    clock.at += 30_000;
+    expect(throttle.peek(KEY)).toEqual({
+      kind: 'limited',
+      retryAfterSeconds: 30,
+    });
+    clock.at += 30_000;
+    expect(throttle.peek(KEY)).toEqual({ kind: 'allowed' });
+  });
+
   it('drops the oldest entry first when maxEntries is reached', () => {
     const { clock, throttle } = setup({
       limit: 1,
@@ -299,6 +331,7 @@ describe('privacy', () => {
     ]);
     expect(Object.keys(setup().throttle).sort()).toEqual([
       'forgetEnded',
+      'peek',
       'size',
       'take',
     ]);
