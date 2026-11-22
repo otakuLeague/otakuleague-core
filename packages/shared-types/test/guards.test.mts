@@ -10,6 +10,7 @@ import {
   isMeResponse,
   isSessionToken,
   isSignInResponse,
+  isSignUpResponse,
   PASSWORD_RAW_MAX,
 } from '@otakuleague/shared-types';
 
@@ -224,6 +225,35 @@ void describe('isSignInResponse', () => {
     ]) {
       assert.equal(
         isSignInResponse(candidate),
+        false,
+        JSON.stringify(candidate),
+      );
+    }
+  });
+});
+
+void describe('isSignUpResponse', () => {
+  const BINDING = `${'aZ09_-'.repeat(7)}x`;
+
+  void it('accepts exactly one bindingToken of 43 base64url characters', () => {
+    assert.equal(isSignUpResponse({ bindingToken: BINDING }), true);
+  });
+
+  void it('rejects another length or symbol, a non-string, a missing or an extra key and non-objects', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      {},
+      { bindingToken: 'A'.repeat(42) },
+      { bindingToken: 'A'.repeat(44) },
+      { bindingToken: `${'A'.repeat(42)}=` },
+      { bindingToken: `${'A'.repeat(41)}\r\n` },
+      { bindingToken: 43 },
+      { bindingToken: [BINDING] },
+      { bindingtoken: BINDING },
+      { bindingToken: BINDING, email: 'a@b.co' },
+    ]) {
+      assert.equal(
+        isSignUpResponse(candidate),
         false,
         JSON.stringify(candidate),
       );

@@ -351,6 +351,52 @@ Added 2026-11-22 (OTA-139 slice 1f-iv-c2), written before the code. It builds de
 - **OTA-206** (Low): Sign-out form: say "reload the page" after a stale Server Action id.
 - **OTA-207** (Medium): Throttle Server Action POSTs (sign-out has no rate limit). This is the "planned general throttle"; no ticket existed for it before.
 
+## Addendum (1f-v)
+Added 2026-11-22 (OTA-139 slice 1f-v), written before the code. Web sign-up and "Check your email" come to about 1,100 lines with tests (the sign-in pair was 1,030), so they ship as three: **v** the pure core (response guard, the two cookies, form state and its mapping; about 320 lines, nothing reachable), **v2** `signUpAction` and the `/auth/check-email` page (about 350), **v3** the form in `/auth` (about 450, to size again). This addendum specifies v and fixes the contract v2 builds on. Web only: no API change, no new variable, dependency or error code.
+
+| # | Requirement |
+|---|---|
+| F10 | A visitor submits a username, an email and a password; an accepted submit lands on "Check your email", identical for a new, a pending and a registered address. |
+| F11 | A refused submit says which one it was: fields outside the rules (named, never echoed), username taken, sign-up not open yet, too many attempts, busy, unavailable, off on preview. |
+| F12 | Only the browser that signed up confirms in one click: it alone holds the binding (ADR 0020). |
+| N15 | At most 1 `POST /auth/sign-up` per submit (5,000 ms, never retried); 0 calls on a preview, for a missing or foreign `Origin`, or for a field outside the local bounds. |
+| N16 | `ol_signup` and `ol_flash` are written on 100 % of 202 answers whose body passes the guard and on 0 % of anything else; a refused submit reads, changes and clears 0 cookies. |
+| N17 | On https both names carry `__Host-`, with `HttpOnly; Secure; SameSite=Lax; Path=/`, no `Domain`, `Max-Age` 86,400 s and 600 s; on loopback http the plain names without `Secure`. |
+| N18 | 0 typed values in a form state, a log, a Sentry event or a URL; the address travels only in `ol_flash` (at most 254 characters). |
+
+**Consistency vs availability.** Consistency: a binding cookie and "Check your email" exist only for an answer the API gave, never optimistically, and nothing is retried (each attempt counts against 5 per IP per hour). An outage is the `unavailable` state. **Entities:** `SignUpFormState`, `SignUpField`, `SignUpOutcome`. **API:** none new: `POST /auth/sign-up` answers 202 `{ bindingToken }`, 400 `VALIDATION_FAILED` (with `details`), 403 `SIGN_UP_CLOSED` or `INTERNAL_KEY_REQUIRED`, 409 `USERNAME_TAKEN`, 429 `TOO_MANY_REQUESTS` or `AUTH_BUSY`.
+
+**Data flow (v2 runs it).** Submit → preview? `off_on_preview` → `isSameOrigin`, else `unavailable` → `readSignUpFields`, else `invalid_fields` → one `credentialCall` → reports (`client_ip_unknown`, a fault) → `signUpOutcomeFrom` → failed: the state, 0 cookies → accepted: set `ol_signup`, set `ol_flash`, `redirectToCheckEmail()`.
+
+**Decisions.**
+1. **One naming rule for every auth cookie.** `signUpCookie(webPublicUrl)` and `flashCookie(webPublicUrl)` in `auth-cookies.ts` share a private builder with `sessionCookie`: `__Host-` and `Secure` when `WEB_PUBLIC_URL` is https, the plain name on loopback http. `SIGN_UP_COOKIE_MAX_AGE_SECONDS` is 24 h, kept equal to the API's `PENDING_SIGN_UP_TTL_MS`; the flash is 600 s. No cleared variants yet: 1f-vi adds the one for `ol_signup` with the code that consumes the binding.
+2. **`SignUpFormState`** (`sign-up-form-state.ts`, pure): `idle`, `invalid_fields { fields }` (a non-empty list of `'username' | 'email' | 'password'` in that order), `username_taken`, `sign_up_closed`, `rate_limited { retryAfterSeconds }`, `busy`, `unavailable`, `off_on_preview`. It never holds what was typed. `SignUpOutcome` is `accepted { bindingToken }` or `failed { formState }`.
+3. **`readSignUpFields(formData)`** checks a `FormData` and three strings, sent as typed: username against `USERNAME_PATTERN`, email 1 to `IDENTIFIER_MAX`, password 1 to `PASSWORD_RAW_MAX`. Anything else is `invalid_fields` naming the fields, with no call. The password rule and the email shape stay the API's: its 400 comes from the validation pipe, before any counter or hash, and the common-password list exists only there.
+4. **`signUpOutcomeFrom(callResult)`** maps by error code only. `VALIDATION_FAILED` → `invalid_fields` from `details[].field` kept to the three names, never a message; none of the three → `unavailable`. `USERNAME_TAKEN` → `username_taken`; `SIGN_UP_CLOSED` → `sign_up_closed`, its own state and never reported (it is production's normal answer today); `TOO_MANY_REQUESTS` keeps its Retry-After; `AUTH_BUSY` drops it; a `preview_deployment` refusal → `off_on_preview`; everything else (`INTERNAL_KEY_REQUIRED`, `BAD_REQUEST`, network, timeout, a body off contract, the other refusals) → `unavailable`. One password copy covers both refusals (too weak, too common), so the message constant stays in the API (ADR 0020 Addendum 1e-iii).
+5. **`isSignUpResponse`** (shared types, the guard ADR 0020 left to 1f): a record whose `bindingToken` is 43 base64url characters. A 202 with any other body is `invalid_response`: `unavailable`, a reported fault, no cookie.
+6. **v2, fixed here.** `signUpAction(previousState, formData)` mirrors `signInAction` (previous state ignored, no try/catch) and never reads the session cookie or `next`. `ol_signup` holds the `bindingToken` and has no other writer; `ol_flash` holds the email trimmed and lower-cased, for display only (the API's normalisation decides what is mailed). `redirectToCheckEmail()` is a third helper in `redirect-to.ts`: the constant `/auth/check-email`, replacing the history entry. `'sign-up'` joins `CredentialRoute` and `AuthCallRoute`. The page reads the flash in its one `Suspense` hole and, without a plausible one, shows the same screen with no address.
+
+**Rejected.**
+- **The binding in a hidden field or a query, the address in `?email=`.** ADR 0020 forbids the first (a link or a script could plant a binding: sign-up CSRF into an attacker's account); the second puts an address in logs and history.
+- **A plain `ol_flash` beside a `__Host-` `ol_signup`.** A second naming rule that saves nothing, and a sibling host could then choose the address the screen shows and 1f-vii resends to.
+- **The password rule checked in the action.** It means moving `meetsSignUpPasswordRule` and `PASSWORD_MIN` to shared types for a check the API repeats for free; v3 moves them if its live checklist needs them.
+- **One PR, or the action in this one.** Core plus action is about 535 lines of code and tests.
+
+**Too simple?**
+- An answer lost after the API accepted (timeout, network) leaves a pending account, the username held 24 h and a mail on its way, with no binding here: a retry answers `username_taken` for the visitor's own name, and the mailed link asks for the sign-up password (ADR 0020 Addendum 1e-ii). So v3's copy for `unavailable` and `username_taken` must not say "nothing was saved" (the mockup's 5xx text does) and must say an email that arrives still works.
+- A second accepted sign-up in the same browser overwrites `ol_signup`: the first address's link falls back to the password path.
+- Only review keeps a second writer of `ol_signup` out. An import gate like the session cookie's waits for 1f-vi, where the second legitimate importer (the reader) appears.
+- While production is closed, a valid submit sends a password across to learn `sign_up_closed`, and the API validates before it says so. v3 decides whether the form renders at all while closed; no web variable knows it today.
+- `next` is lost on the sign-up path, and a signed-in member can sign up again (the session is untouched).
+- A 400 costs the API no counter, so the action is one free API call per POST until the general throttle (OTA-207).
+- `ol_flash` shows the address to whoever opens `/auth/check-email` on that browser within 10 minutes.
+
+**Too complicated?** The field list is the one optional part: about 15 lines, and the form needs it to mark the right field (`aria-invalid`, design README). Left out: cleared-cookie helpers, the import gate, a resend countdown, React `cache()`.
+
+**Not verified by running:** that Next percent-encodes a cookie value on write and decodes it on read (the "@" of the flash); that 5,000 ms covers a full hash queue on Railway's CPU (8 waiting, 2 at a time).
+
+**For 1f-v2 and v3.** v2 lands the page before v3 wires the form, or an accepted sign-up meets a 404. v3 renames the two rows of the privacy cookie table to the `__Host-` names (Farouk confirms the wording). **For 1f-vi.** Read `ol_signup` under the configured name only and post it in the body; clear it with `Max-Age=0` and `Secure` (never `cookies().delete()`) once the token is consumed; decide what a verifying transition does to a session the browser already holds (sign-in deletes the old one); add the import gate.
+
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
 - Each signed-in page costs one extra API call (`GET /me`), and viewer-dependent UI must sit outside the static shell (ADR 0014). `apiClient()` calls that carry a session are always `no-store`, which closes the open point of ADR 0003.

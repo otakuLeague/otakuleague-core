@@ -11,6 +11,7 @@ import {
   type EmailVerificationConfirmResponse,
   type MeResponse,
   type SignInResponse,
+  type SignUpResponse,
 } from './auth';
 
 export const APP_NAME = 'OtakuLeague';
@@ -137,6 +138,19 @@ export function isSignInResponse(value: unknown): value is SignInResponse {
     isSessionToken(value.sessionToken) &&
     typeof value.expiresAt === 'string' &&
     isIsoInstant(value.expiresAt)
+  );
+}
+
+/**
+ * True when `value` is a POST /auth/sign-up 202 body (ADR 0015 Addendum 1f-v): exactly one key, a
+ * `bindingToken` shaped like a session token (43 base64url characters, safe in a cookie). Another
+ * key is refused too: the 202 is the same for every address, so nothing else may ride along.
+ */
+export function isSignUpResponse(value: unknown): value is SignUpResponse {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === 1 &&
+    isSessionToken(value.bindingToken)
   );
 }
 
