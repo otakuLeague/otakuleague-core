@@ -1,11 +1,13 @@
 import type {
   AnimeFormat,
   AnimeSeason,
+  AnimeSourceMaterial,
   AnimeStatus,
   AnimeTag,
   AnimeTrailer,
 } from '@otakuleague/shared-types';
 import {
+  boundedNames,
   finite,
   httpUrl,
   integer,
@@ -39,6 +41,22 @@ const SEASONS: Readonly<Record<string, AnimeSeason>> = {
   fall: 'FALL',
 };
 
+// Only labels with the same notion in AniList's MediaSource; Game, Card game, Book, Radio,
+// Music and Unknown have none and stay null.
+const SOURCE_MATERIALS: Readonly<Record<string, AnimeSourceMaterial>> = {
+  Original: 'ORIGINAL',
+  Manga: 'MANGA',
+  '4-koma manga': 'MANGA',
+  'Web manga': 'MANGA',
+  'Light novel': 'LIGHT_NOVEL',
+  Novel: 'NOVEL',
+  'Web novel': 'WEB_NOVEL',
+  'Visual novel': 'VISUAL_NOVEL',
+  'Picture book': 'PICTURE_BOOK',
+  'Mixed media': 'MULTIMEDIA_PROJECT',
+  Other: 'OTHER',
+};
+
 function lookup<T>(
   table: Readonly<Record<string, T>>,
   value: unknown,
@@ -52,6 +70,12 @@ function names(value: unknown): string[] {
   return Array.isArray(value)
     ? texts(value.map((item) => record(item).name))
     : [];
+}
+
+function producers(value: unknown): string[] {
+  return boundedNames(
+    Array.isArray(value) ? value.map((item) => record(item).name) : [],
+  );
 }
 
 function youtubeTrailer(value: unknown): AnimeTrailer | null {
@@ -119,5 +143,9 @@ export function mapJikanAnime(value: unknown): AnimeSnapshot | null {
     rankRated: null,
     rankPopular: null,
     coverColor: null,
+    sourceMaterial: lookup(SOURCE_MATERIALS, anime.source),
+    countryOfOrigin: null,
+    producers: producers(anime.producers),
+    hashtags: [],
   };
 }

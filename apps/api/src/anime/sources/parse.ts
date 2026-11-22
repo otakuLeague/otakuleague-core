@@ -43,6 +43,55 @@ export function oneOf<T extends string>(
   return allowed.find((candidate) => candidate === value) ?? null;
 }
 
+/** Two upper-case letters (ISO 3166-1 alpha-2 shape, not the registry), or null. */
+export function countryCode(value: unknown): string | null {
+  return typeof value === 'string' && /^[A-Z]{2}$/.test(value) ? value : null;
+}
+
+export const MAX_PRODUCERS = 50;
+const MAX_HASHTAGS = 5;
+const MAX_HASHTAG_CHARS = 100;
+const MAX_HASHTAG_SOURCE_CHARS = 1_000;
+
+/**
+ * AniList's `hashtag` is one string that can hold several tags ("#フリーレン #frieren"). The
+ * text is cut to 1,000 characters first (linear work on hostile input) and format characters
+ * (zero-width, bidi, soft hyphen) are removed. Every "#" (or full-width "＃", stored as "#")
+ * followed by letters, marks, digits, "_" or a middle dot is a tag, so URL and markup
+ * characters end it ("#a、#b" gives two tags). Words without "#", a bare "#", case-insensitive
+ * duplicates (first spelling kept) and over-long tags are dropped; the first 5 are kept.
+ */
+export function hashtags(value: unknown): string[] {
+  const raw = text(value);
+  if (raw === null) return [];
+  const found = (
+    raw
+      .slice(0, MAX_HASHTAG_SOURCE_CHARS)
+      .replace(/\p{Cf}/gu, '')
+      .match(/[#＃][\p{L}\p{M}\p{N}_·・･]+/gu) ?? []
+  )
+    .map((tag) => `#${tag.slice(1)}`)
+    .filter((tag) => tag.length <= MAX_HASHTAG_CHARS);
+  const seen = new Set<string>();
+  const unique = found.filter((tag) => {
+    const key = tag.toLowerCase();
+    return seen.has(key) ? false : (seen.add(key), true);
+  });
+  return unique.slice(0, MAX_HASHTAGS);
+}
+
+/** Company names bounded before they are stored: each once, at most 300 characters, first 50. */
+export function boundedNames(values: readonly unknown[]): string[] {
+  const names = values
+    .map((value) =>
+      typeof value === 'string'
+        ? boundedText(value.replace(/[\p{Cc}\p{Cf}]/gu, ''))
+        : null,
+    )
+    .filter((name) => name !== null);
+  return [...new Set(names)].slice(0, MAX_PRODUCERS);
+}
+
 /** An absolute http(s) URL, or null. */
 export function httpUrl(value: unknown): string | null {
   const candidate = text(value);

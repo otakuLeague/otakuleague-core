@@ -51,6 +51,10 @@ export function animeFixture(
     rankRated: sourced(69),
     rankPopular: sourced(1),
     coverColor: sourced('#e4a15d'),
+    sourceMaterial: null,
+    countryOfOrigin: null,
+    producers: null,
+    hashtags: null,
     scores: [
       {
         source: 'anilist',

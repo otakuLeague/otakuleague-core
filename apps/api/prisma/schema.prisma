@@ -135,6 +135,12 @@ model AnimeSourceSnapshot {
   rankPopular         Int?            @map("rank_popular")
   // "#rrggbb".
   coverColor          String?         @map("cover_color")
+  // OTA-215. AniList MediaSource as text (read with oneOf, not an enum), "NL"-style code,
+  // credited non-animation companies, official hashtags ("#" first, at most 5).
+  sourceMaterial      String?         @map("source_material")
+  countryOfOrigin     String?         @map("country_of_origin")
+  producers           String[]        @default([])
+  hashtags            String[]        @default([])
 
   @@id([animeId, source])
   @@map("anime_source_snapshot")
