@@ -351,6 +351,56 @@ Added 2026-11-22 (OTA-139 slice 1f-iv-c2), written before the code. It builds de
 - **OTA-206** (Low): Sign-out form: say "reload the page" after a stale Server Action id.
 - **OTA-207** (Medium): Throttle Server Action POSTs (sign-out has no rate limit). This is the "planned general throttle"; no ticket existed for it before.
 
+## Addendum (OTA-205)
+Added 2026-11-22 (OTA-205), written before the code. It closes the gap accepted in [Addendum (1f-iv-c2)](#addendum-1f-iv-c2): a sign-out the API did not confirm leaves a session nobody can end. It picks **option 3 of the ticket, both**: a bounded retry after the response, and "Sign out everywhere" through `User.sessionEpoch`. It amends "never retried" in N3 and N6 of [Addendum (1f-iv-b)](#addendum-1f-iv-b) and the moment of the report in decision 2 of [Addendum (1f-iv-b2)](#addendum-1f-iv-b2); nothing else is reversed. No migration (both `session_epoch` columns exist since `auth_sessions`), no new variable, dependency, cookie or error code. Evidence: 0 `revocation_unconfirmed` events in Sentry over 90 days (searched 2026-11-22), with sign-up still closed in production, so the numbers below are chosen, not measured.
+
+| # | Requirement |
+|---|---|
+| F14 | A sign-out the API did not confirm is tried again after the response, for both callers of `deleteSession` (sign-out, and the old-session delete after sign-in), without the member waiting. |
+| F15 | A signed-in member can end every session of the account, the asking one included, with "Sign out everywhere" in the account menu. This is how a session left by an unconfirmed sign-out is ended once the API is back: sign in on any device, press it. |
+| F16 | A revocation still unconfirmed after the last attempt reaches Sentry as `revocation_unconfirmed` (route and kind tags only); one that a retry confirmed sends nothing. |
+| N23 | Immediate: after a 204 from either route, the very next request with a revoked token gets 401 (0 s of stale acceptance, requirement 2 of the Context). |
+| N24 | At most 3 `POST /auth/sign-out` per delete: 1 before the response (2,000 ms, as today) and 2 after it (2,000 ms each), after waits of 1,000 and 3,000 ms. 0 ms added to the response; at most 8 s of work after it, 10 s with `Retry-After`. The cookie is still cleared on 100 % of same-origin submits (N3). |
+| N25 | A 429 waits max(the step's wait, `Retry-After`); a wait over 3,000 ms means 0 further attempts. Never an attempt without a wait before it. |
+| N26 | The raw token is at rest in 0 places (no cookie, column, log line, URL or Sentry event): the retry holds it in the invocation's memory for at most 10 s. |
+| N27 | "Sign out everywhere" makes 1 call (2,000 ms, never retried by the server) and one SQL statement; without a 204 or a 401 it makes 0 cookie writes and says so. |
+
+**Consistency vs availability.** Sign-out keeps availability: the cookie always goes, and the row follows within 10 s when the API answers in that window, else it stays until someone ends it. "Sign out everywhere" chooses consistency: a false "you are signed out everywhere" is the one stale answer that would be catastrophic, so without the API's confirmation nothing changes in this browser.
+
+**Entities:** `RevocationRetryStep` (`retry` with `waitMs`, or `stop`), `SignOutEverywhereFormState` (`idle`, `refused`, `unconfirmed`). **API:** `POST /auth/sign-out-everywhere` (`SessionGuard`, no body): 204; 401 `UNAUTHORIZED` when the session is already gone; 403 `INTERNAL_KEY_REQUIRED`; 503. `POST /auth/sign-out` is unchanged.
+
+**Data flow.** `deleteSession`: the first call as today → 204 or 401 → done; a fault or a throw → reported at once, no retry; timeout, network, 5xx or 429 → in `after()`: wait, call, at most twice; 204 or 401 → done, silent; still unconfirmed → one report. The action waits for none of it: cookie cleared, redirect. Sign out everywhere: preview or foreign `Origin` → `refused`; no well-formed cookie → clear, home; one call; 204 or 401 → clear the cookie, `redirectToSignedOut()`; anything else → `unconfirmed`, cookie kept, one report.
+
+**Decisions.**
+1. **The durable remedy is the control, not a queue.** `SessionService.revokeAll(userId, db)` is one statement (a data-modifying CTE): raise `app_user.session_epoch` by 1, with `updated_at` from `Clock`, and delete that user's `auth_session` rows; user row first, then sessions, the cleanup's order. It takes the caller's transaction client, so OTA-140's password reset calls it inside its own transaction and `session_epoch` keeps one writer. A sign-in racing it either read the old epoch (its session is refused on first use, and the cleanup removes the row) or the new one (a sign-in after the fact, valid).
+2. **It ends the asking session too, and issues nothing.** "Everywhere" means what it says, sign-in stays the only route that returns a token, and the control works from a shared computer: sign in there again, press it, and that computer is signed out as well. Cost: one more sign-in on the device the member keeps.
+3. **No rate limit of its own, no confirmation dialog.** Each call ends the session that made it, so every further call costs a sign-in, which is limited; and the action is undone by signing in.
+4. **Web control (slice c).** `signOutEverywhereAction(): Promise<SignOutEverywhereFormState>`, with the two refusals of `signOutAction`. The call lives in `src/auth/revoke-all-sessions.ts` (one `sessionCall`, total, answers `revoked` or `unconfirmed`), never in a `'use server'` file. A second form in the account menu under "Sign out", same boundary and classes; `unconfirmed` shows "Could not sign out everywhere. You are still signed in here." The member is the retry (bounded retries with a human fallback): they are present and see the answer. The report's route tag is `sign-out-everywhere`.
+5. **The retry (slice b) lives in `deleteSession`**, so both callers get it and neither action changes. The first call stays awaited (the response waits 2,000 ms at most, as today). Only timeout, network, 5xx and 429 are retried. A fault (key refused, body off contract), a throw and any other 4xx are not: a second try cannot fix them, and they are reported at once as today. The step rule is pure, `revocationRetryStep(failure, attempt)` in `src/auth/revocation-retry.ts`, and the wait is injected so tests use no timer.
+6. **A 401 on a retry is success**: another tab, a second submit or a sign out everywhere got there first. Two tabs signing out at once give one 204 and one 401, and 0 reports.
+7. **One report, after the last attempt**, with the same kind, tags, fingerprint and throttle. `reportAuthCallFault` then flushes from an `after()` inside the retry's `after()`, which Next allows.
+8. **Previews** make no call and schedule nothing: `sessionCall` refuses before any request, and the new action answers `refused` first, as in 1f-iv-b.
+9. **Slices.** **205-a**: this addendum and the API route (additive, no caller yet, no migration). **205-b**: the retry (web). **205-c**: the action and the menu button (web; the button alone as c2 if over 400 lines). The API goes first because it is inert until c and is the part OTA-140 reuses; b changes live sign-in and sign-out and gets its own review. b and c do not depend on each other.
+
+**Rejected.**
+- **A durable retry queue** (the strong form of option 1). The web has no store: a row or a key-value entry means a new service (stack rule), and an outbox on the API cannot hold a request that never arrived. The one store at hand is a cookie holding the token's SHA-256 plus a "revoke by digest" route, retried on the next action from that browser: a new cookie, a route that accepts a value derived from a credential, and it never fires if the browser does not come back. Decide again if Sentry shows more than 5 `revocation_unconfirmed` a month after launch.
+- **The control alone (option 2).** Every API restart or 2 s stall would leave a row that only the member can remove, and the member is not told (below).
+- **The retry alone (option 1).** After an outage longer than 10 s the member still has no way to end the session, which is the ticket.
+- **Keeping the cookie after an unconfirmed sign-out.** Rejected in 1f-iv and still: the next person on a shared computer stays signed in.
+- **Sign out everywhere that keeps the asking session** by issuing a new token: a second token issuer, a token in the body of a route that is not sign-in, and the shared-computer path stops working.
+
+**Too simple?**
+- The API down longer than the retry window: the row stays valid for 30 days unused, or up to the 180-day hard stop for someone who holds the token and keeps using it, until the member signs in and uses the control (or resets the password, OTA-140). Sign-in needs the API too, so nothing can be done during the outage itself.
+- The member is never told that a sign-out stayed unconfirmed: the outcome is known after the response. They see a normal sign-out and Sentry tells Farouk. The control is in the menu for anyone who doubts a session, but nothing prompts them.
+- If the platform ends the invocation before the retries finish (a deploy, the function's max duration), they stop with no report: the one silent path.
+- No jitter on the waits, against the charter's default: sign-outs are separate human actions with at most 2 retries each, so there is no herd to spread. Add it with the first retry a machine can trigger in bulk.
+- A response lost after the statement committed shows `unconfirmed` although every session is gone; the next render shows the guest header (401 on `/me`).
+- No list of sessions and no "everywhere else": both wait for a Settings page. Until c ships the route has no caller, and an unconfirmed sign-out has the retry only.
+
+**Too complicated?** The retry is the optional half: about 60 lines for a failure not yet observed. It stays because the API and the web deploy separately, several times a day, and a sign-out during an API restart is the likely case. Left out: jitter, a circuit breaker, a server-side retry of sign out everywhere, a flash message, a session list, a per-route limit.
+
+**Not verified by running:** that `after()` on Vercel keeps a Server Action's invocation alive 10 s past a redirect (read in Next 16's docs: it runs after a `redirect`, for the route's max duration; the project's function max duration was not read, check it on beta in 205-b).
+
 ## Addendum (1f-v)
 Added 2026-11-22 (OTA-139 slice 1f-v), written before the code. Web sign-up and "Check your email" come to about 1,100 lines with tests (the sign-in pair was 1,030), so they ship as three: **v** the pure core (response guard, the two cookies, form state and its mapping; about 320 lines, nothing reachable), **v2** `signUpAction` and the `/auth/check-email` page (about 350), **v3** the form in `/auth` (about 450, to size again). This addendum specifies v and fixes the contract v2 builds on. Web only: no API change, no new variable, dependency or error code.
 
