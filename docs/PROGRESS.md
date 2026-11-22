@@ -1,18 +1,18 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-22 (1f-iv-c2)
+Updated: 2026-11-22 (1f-iv-c3)
 ## Current milestone
-W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b merged as #124, 1f-iii-c merged as #125, 1f-iv-a merged as #126, 1f-iv-b merged as #127, 1f-iv-b2 merged as #128, 1f-iv-c merged as #129, 1f-iv-c2 in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
+W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-ii (1f-ii merged as #122), 1f-iii-a merged as #123, 1f-iii-b merged as #124, 1f-iii-c merged as #125, 1f-iv-a merged as #126, 1f-iv-b merged as #127, 1f-iv-b2 merged as #128, 1f-iv-c merged as #129, 1f-iv-c2 merged as #130, 1f-iv-c3 in PR; OTA-197, 199–204, plus earlier W3/W7 slices.
 ## Last session
-OTA-139 slice 1f-iv-c2: sign-out form in the header account menu (`SignOutForm`, client error boundary + `useActionState`; `signOutAction` returns `SignOutFormState`), site-wide frame-deny headers, site-wide referrer guard test. Code review and security review: no Critical. Details: `docs/progress/OTA-139.md`, ADR 0015 Addendum (1f-iv-c2).
+OTA-139 slice 1f-iv-c3: ESLint import gate, `hasSessionCookie` only in `load-viewer.ts`, `SESSION_COOKIE_NAMES` only in `session-call.ts` (type imports and re-exports refused; rename pin test). Code review and security review: no Critical. Details: `docs/progress/OTA-139.md`, `.claude/rules/web.md`.
 ## In progress
-- OTA-139 1f-iv-c2: PR from `feat/OTA-139-header-sign-out`, awaiting merge. Browser run and served frame headers on beta not verified yet.
+- OTA-139 1f-iv-c3: PR from `feat/OTA-139-session-cookie-import-gate`. 1f-iv-c2 sign-out and frame headers on beta still not browser-verified.
 - OTA-205 (High): unconfirmed sign-out revocation. Also OTA-206 (stale action id), OTA-207 (Server Action throttle).
 - OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4; OTA-147 `/contact` (needs email provider). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
 - Email on Resend free plan only (decided 2026-11-15): 80 sign-up + 20 reset/day, Sentry alert at 75; ADR 0015 addendum in the email slice.
 ## Next 3 tasks
-1. OTA-139 1f-iv-c3 import gate for `hasSessionCookie`/`SESSION_COOKIE_NAMES` (ESLint `no-restricted-imports`); then 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
+1. OTA-139 1f-v sign-up + check-email (`__Host-` for `ol_signup`); 1f-vi verification link, assertSameOrigin walker, confirm page; 1f-vii resend + debounced availability.
 2. OTA-205 unconfirmed sign-out revocation (High).
 3. OTA-186 Mailpit + seed accounts, or OTA-184 slice 2 (Farouk decides).
 Later: OTA-198 `claimsSlugs` gate decision; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 follow-up (shared `currentSeason`).

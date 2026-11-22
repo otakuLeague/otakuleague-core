@@ -19,6 +19,40 @@ const NETWORK_IMPORTS = [
   'undici',
 ].map((name) => ({ name, message: NETWORK_RULE_MESSAGE }));
 
+// createApiClient takes any base URL; pages use apiClient(), built from API_BASE_URL.
+const CREATE_API_CLIENT_IMPORT = {
+  group: ['**/api/client', '**/api/client.*'],
+  importNames: ['createApiClient'],
+  message: 'Use apiClient(); only src/api builds its own client.',
+};
+
+const AUTH_API_CLIENT_IMPORT = {
+  group: ['**/api/client', '**/api/client.*'],
+  importNames: ['apiClient', 'createApiClient'],
+  message:
+    'Auth code calls the API through credentialCall() or sessionCall() (src/auth/credential-call.ts, src/auth/session-call.ts).',
+};
+
+// Presence-only session cookie checks, one importer each (ADR 0015 Addendum 1f-iv-c2, decision 7).
+const HAS_SESSION_COOKIE_IMPORT = {
+  group: ['**/session-call', '**/session-call.*'],
+  importNames: ['hasSessionCookie'],
+  message:
+    'hasSessionCookie() is imported only by src/auth/load-viewer.ts (ADR 0015 Addendum 1f-iv-c2, decision 7).',
+};
+
+const SESSION_COOKIE_NAMES_IMPORT = {
+  group: ['**/auth-cookies', '**/auth-cookies.*'],
+  importNames: ['SESSION_COOKIE_NAMES'],
+  message:
+    'SESSION_COOKIE_NAMES is imported only by src/auth/session-call.ts (ADR 0015 Addendum 1f-iv-c2, decision 7).',
+};
+
+const SESSION_COOKIE_GATE = [
+  HAS_SESSION_COOKIE_IMPORT,
+  SESSION_COOKIE_NAMES_IMPORT,
+];
+
 // esquery ends a selector regex at its first "/", so a slash inside one is written as the escape \u002F.
 // next has no exports map: 'next/navigation.js' and next/dist load the same redirect().
 const NEXT_NAVIGATION = '/(^|\\u002F)next\\u002Fnavigation(\\.js)?$/';
@@ -104,14 +138,7 @@ export default defineConfig([
         'error',
         {
           paths: NETWORK_IMPORTS,
-          // createApiClient takes any base URL; pages use apiClient(), built from API_BASE_URL.
-          patterns: [
-            {
-              group: ['**/api/client', '**/api/client.*'],
-              importNames: ['createApiClient'],
-              message: 'Use apiClient(); only src/api builds its own client.',
-            },
-          ],
+          patterns: [CREATE_API_CLIENT_IMPORT, ...SESSION_COOKIE_GATE],
         },
       ],
     },
@@ -133,7 +160,10 @@ export default defineConfig([
     files: ['src/api/**'],
     ignores: ['src/api/client.ts'],
     rules: {
-      'no-restricted-imports': ['error', { paths: NETWORK_IMPORTS }],
+      'no-restricted-imports': [
+        'error',
+        { paths: NETWORK_IMPORTS, patterns: SESSION_COOKIE_GATE },
+      ],
     },
   },
   {
@@ -148,16 +178,41 @@ export default defineConfig([
         'error',
         {
           paths: NETWORK_IMPORTS,
-          patterns: [
-            {
-              group: ['**/api/client', '**/api/client.*'],
-              importNames: ['apiClient', 'createApiClient'],
-              message:
-                'Auth code calls the API through credentialCall() or sessionCall() (src/auth/credential-call.ts, src/auth/session-call.ts).',
-            },
-          ],
+          patterns: [AUTH_API_CLIENT_IMPORT, ...SESSION_COOKIE_GATE],
         },
       ],
+    },
+  },
+  // The session cookie gate: two exceptions free one name each, restating every other option.
+  {
+    files: ['src/auth/session-call.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: NETWORK_IMPORTS,
+          patterns: [CREATE_API_CLIENT_IMPORT, HAS_SESSION_COOKIE_IMPORT],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/auth/load-viewer.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: NETWORK_IMPORTS,
+          patterns: [AUTH_API_CLIENT_IMPORT, SESSION_COOKIE_NAMES_IMPORT],
+        },
+      ],
+    },
+  },
+  {
+    // Ignored by the network blocks above (it is the network entry); it still gets this gate.
+    files: ['src/api/client.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: SESSION_COOKIE_GATE }],
     },
   },
   {
