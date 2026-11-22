@@ -48,7 +48,7 @@ const STALE_ACTION_ID = Object.assign(new Error(
 // What Next's client throws when the proxy throttle answers the action POST 429 `text/plain`.
 const THROTTLED = new Error(ACTION_THROTTLED_TEXT);
 const WAIT_TEXT =
-  'Too many requests from your network. Wait a minute, then try again.';
+  'Could not sign out: too many requests from your network. Wait a minute, then try again.';
 
 type RouterBoundaryState = { readonly caught: string | null };
 
@@ -211,7 +211,10 @@ describe('SignOutForm', () => {
     expect(await alertText()).toBe('Could not sign out');
   });
 
-  it('reports nothing from the browser after a rejection', async () => {
+  it.each([
+    ['failed', STALE_ACTION_ID, RELOAD_TEXT],
+    ['throttled', THROTTLED, WAIT_TEXT],
+  ])('reports nothing from the browser after a rejection (%s)', async (_kind, thrown, text) => {
     silenceBoundaryLogs();
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const sendBeacon = vi.fn<Navigator['sendBeacon']>(() => true);
@@ -223,12 +226,12 @@ describe('SignOutForm', () => {
     onTestFinished(() => {
       Reflect.deleteProperty(navigator, 'sendBeacon');
     });
-    mocks.signOutAction.mockRejectedValue(STALE_ACTION_ID);
+    mocks.signOutAction.mockRejectedValue(thrown);
     render(<SignOutForm />);
 
     submit();
 
-    expect(await alertText()).toBe(RELOAD_TEXT);
+    expect(await alertText()).toBe(text);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(sendBeacon).not.toHaveBeenCalled();
     expect(Sentry.captureException).not.toHaveBeenCalled();

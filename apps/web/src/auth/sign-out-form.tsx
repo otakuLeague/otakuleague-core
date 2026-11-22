@@ -3,9 +3,16 @@
 import { unstable_rethrow } from 'next/navigation';
 import { Component, type FormEvent, useActionState } from 'react';
 import { signOutAction } from './sign-out-action';
-import { type SignOutFormState, signOutStateFromThrow } from './sign-out-state';
+import {
+  type SignOutFormState,
+  type SignOutThrownState,
+  signOutStateFromThrow,
+} from './sign-out-state';
 
-const IDLE: SignOutFormState = { kind: 'idle' };
+// What the boundary mounts the form in: never `refused`, which only the action returns.
+type SignOutInitialState = { readonly kind: 'idle' } | SignOutThrownState;
+
+const IDLE: SignOutInitialState = { kind: 'idle' };
 
 // `failed` asks for a reload: a page loaded before a deploy posts a stale action id until reloaded.
 // `throttled` says "your network" (true behind a shared NAT) and "a minute" (both throttle windows
@@ -13,13 +20,13 @@ const IDLE: SignOutFormState = { kind: 'idle' };
 const ALERT_TEXT: Record<Exclude<SignOutFormState['kind'], 'idle'>, string> = {
   refused: 'Could not sign out',
   failed: 'Could not sign out. Reload the page and try again.',
-  throttled: 'Too many requests from your network. Wait a minute, then try again.',
+  throttled: 'Could not sign out: too many requests from your network. Wait a minute, then try again.',
 };
 
 function SignOutFormView({
   initialState,
 }: {
-  readonly initialState: SignOutFormState;
+  readonly initialState: SignOutInitialState;
 }) {
   const [state, formAction, pending] = useActionState(
     signOutAction,
@@ -58,7 +65,7 @@ function SignOutFormView({
   );
 }
 
-type SignOutBoundaryState = { readonly initialState: SignOutFormState };
+type SignOutBoundaryState = { readonly initialState: SignOutInitialState };
 
 /**
  * The account menu's sign-out form, inside its own error boundary (ADR 0015 Addendum 1f-iv-c2). A
