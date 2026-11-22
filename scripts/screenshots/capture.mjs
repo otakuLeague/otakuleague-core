@@ -19,6 +19,7 @@ const OUT = resolve(process.env.SCREENSHOT_DIR ?? 'screenshots-out');
 const TOTAL_MS = 90_000;
 const SEED_MS = 25_000;
 const IMAGES_MS = 5_000;
+const HOLES_MS = 2_000;
 const VIEWPORTS = [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
@@ -120,7 +121,17 @@ async function seed(seedMalIds) {
   }
 }
 
-async function settle(page) {
+async function settle(page, routeName) {
+  // Streamed Suspense holes (`template#B:n`) must reveal first, or a shot can catch the shell alone.
+  await page
+    .waitForSelector('template[id^="B:"]', {
+      state: 'detached',
+      timeout: HOLES_MS,
+    })
+    .catch(() => {
+      const warning = `${routeName}: Suspense holes still pending`;
+      if (!manifest.warnings.includes(warning)) manifest.warnings.push(warning);
+    });
   await page.evaluate(
     `Promise.race([Promise.all(Array.from(document.images, (img) => img.complete ? null : new Promise((done) => { img.onload = done; img.onerror = done; }))), new Promise((done) => setTimeout(done, ${IMAGES_MS}))])`,
   );
@@ -155,7 +166,7 @@ async function capture() {
               waitUntil: 'load',
               timeout: 20_000,
             });
-            await settle(page);
+            await settle(page, route.name);
             await page.screenshot({
               path: join(OUT, file),
               fullPage: true,

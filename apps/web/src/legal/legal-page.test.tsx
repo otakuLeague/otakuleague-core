@@ -143,8 +143,8 @@ describe('privacy facts', () => {
     }
     for (const cookie of [
       '__Host-ol_session',
-      'ol_flash',
-      'ol_signup',
+      '__Host-ol_flash',
+      '__Host-ol_signup',
       'ol_verify',
       'ol_reset',
       'ol-theme',

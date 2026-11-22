@@ -5,7 +5,6 @@ import {
   PreviewOffNotice,
   retryWaitCopy,
   SignInFormView,
-  SignUpClosedNote,
 } from './sign-in-form-view';
 
 function renderForm(state: SignInFormState, pending = false) {
@@ -156,20 +155,10 @@ describe('SignInFormView', () => {
 describe('static notes', () => {
   afterEach(cleanup);
 
-  it('renders the preview notice and the sign-up note without an alert role', () => {
-    render(
-      <>
-        <PreviewOffNotice />
-        <SignUpClosedNote />
-      </>,
-    );
+  it('renders the preview notice without an alert role', () => {
+    render(<PreviewOffNotice />);
     expect(
       screen.getByText('Sign-in is off on preview deployments'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "New accounts aren't open yet. Already have one? Sign in with it here.",
-      ),
     ).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });

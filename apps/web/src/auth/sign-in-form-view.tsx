@@ -167,11 +167,3 @@ export function PreviewOffNotice() {
     </div>
   );
 }
-
-export function SignUpClosedNote() {
-  return (
-    <p className="au-sub">
-      New accounts aren&apos;t open yet. Already have one? Sign in with it here.
-    </p>
-  );
-}
