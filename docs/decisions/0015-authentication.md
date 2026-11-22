@@ -336,15 +336,20 @@ Added 2026-11-22 (OTA-139 slice 1f-iv-c2), written before the code. It builds de
 - The alert does not say what to do next, and after a refusal the only way out is still to clear the site's cookies.
 - A submit before hydration is a full-page POST: after a refusal the document comes back with the menu closed, so the alert is unseen until the menu is opened.
 - The alert stays through soft navigations until the next submit or a reload. Another tab, or the back button, can show the account menu after a sign-out; its Sign out still clears the cookie and goes home.
-- A cookie a visitor sets under a session name with a well-formed value costs 1 `GET /me` (401) per document render, like a stale cookie (1f-iv); the planned general throttle covers it.
+- A cookie a visitor sets under a session name with a well-formed value costs 1 `GET /me` (401) per document render, like a stale cookie (1f-iv); the planned general throttle (OTA-207) covers it.
 - Responses the platform serves before Next (a Vercel error page) carry no frame header.
-- An unconfirmed revocation (timeout, 5xx or 429 from `deleteSession`) still clears this browser's cookie and redirects home like a success (accepted in 1f-iv-b, reported to Sentry as `revocation_unconfirmed`): the token stays valid on the API until it idles out (up to 30 days). So the alert of F8 covers only refused and thrown actions, never an unconfirmed revocation.
-- A page loaded before a deploy posts a stale action id: the action throws and the form lands in `failed` until a reload. Accepted; follow-up ticket.
-- The action has no rate limit of its own beyond the planned general throttle.
+- An unconfirmed revocation (timeout, 5xx or 429 from `deleteSession`) still clears this browser's cookie and redirects home like a success (accepted in 1f-iv-b, reported to Sentry as `revocation_unconfirmed`): the token stays valid on the API: 30 days unused; renewable by whoever holds it until the 180-day hard stop, and the member cannot revoke it afterwards (a later sign-in only deletes the session its own cookie names). So the alert of F8 covers only refused and thrown actions, never an unconfirmed revocation. Accepted for this slice, Farouk confirms in the PR; OTA-205.
+- A page loaded before a deploy posts a stale action id: the action never runs, Next answers "not found" and the client throws, so the form lands in `failed` on every retry until a reload (and it may not be reported server-side). Accepted for this slice, Farouk confirms in the PR; OTA-206.
+- The action has no rate limit of its own beyond the planned general throttle: a non-browser client with the right `Origin` and a well-formed cookie costs one internal-key `POST /auth/sign-out` and one render of `/` per POST. Accepted for this slice, Farouk confirms in the PR; OTA-207.
 
 **Too complicated?** The remount in `failed` is the one non-obvious part: three lines for a retry without a reload. `X-Frame-Options` repeats `frame-ancestors` for browsers that no longer need it: one line, asked for by the review. Left out: a toast, a report from the browser, a reset of the alert when the menu closes.
 
 **Not verified by running:** sign-out in a browser (the header after it, the redirect passing the boundary, the alert after a refusal), with the API up and stopped; `Cache-Control` on `/faq` now that the layout has a request-time hole (review minor); that no tool we use frames the site (the screenshot job loads pages directly).
+
+**Follow-up tickets.** The three gaps are accepted for this slice, Farouk confirms in the PR.
+- **OTA-205** (High): Sign-out: revoke the session when the API revocation was unconfirmed (retry or queue the revocation, or "sign out everywhere" through a `sessionEpoch` raise).
+- **OTA-206** (Low): Sign-out form: say "reload the page" after a stale Server Action id.
+- **OTA-207** (Medium): Throttle Server Action POSTs (sign-out has no rate limit). This is the "planned general throttle"; no ticket existed for it before.
 
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
