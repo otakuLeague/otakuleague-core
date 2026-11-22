@@ -1,5 +1,6 @@
 import {
   ANIME_FORMATS,
+  ANIME_SOURCE_MATERIALS,
   ANIME_STATUSES,
   type AnimeFormat,
   AnimeLink,
@@ -13,9 +14,12 @@ import { LIST_PAGE_SIZE } from './anilist.query';
 import {
   anilistId,
   anilistImageUrl,
+  boundedNames,
   boundedText,
   boundedTexts,
+  countryCode,
   finite,
+  hashtags,
   hexColor,
   httpUrl,
   integer,
@@ -93,6 +97,18 @@ function studios(value: unknown): AnimeStudio[] {
     const name = text(record(edge.node).name);
     return name === null ? [] : [{ name, main: edge.isMain === true }];
   });
+}
+
+/** Credited companies AniList says are not animation studios; a missing flag is no producer. */
+function producers(value: unknown): string[] {
+  const edges = record(value).edges;
+  if (!Array.isArray(edges)) return [];
+  return boundedNames(
+    edges.flatMap((item) => {
+      const node = record(record(item).node);
+      return node.isAnimationStudio === false ? [node.name] : [];
+    }),
+  );
 }
 
 function links(value: unknown): AnimeLink[] {
@@ -217,6 +233,10 @@ export function mapAniListMedia(value: unknown): AnimeSnapshot | null {
     rankRated: allTimeRank(media.rankings, 'RATED', media.format),
     rankPopular: allTimeRank(media.rankings, 'POPULAR', media.format),
     coverColor: hexColor(cover.color),
+    sourceMaterial: oneOf(media.source, ANIME_SOURCE_MATERIALS),
+    countryOfOrigin: countryCode(media.countryOfOrigin),
+    producers: producers(media.studios),
+    hashtags: hashtags(media.hashtag),
   };
 }
 

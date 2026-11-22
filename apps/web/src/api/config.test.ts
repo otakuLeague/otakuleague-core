@@ -113,6 +113,9 @@ describe('isSecureApiBaseUrl', () => {
     'https://api.otakuleague.example/v1',
     'http://127.0.0.1:3001',
     'http://[::1]:3001',
+    // Numeric spellings the URL parser turns into 127.0.0.1.
+    'http://127.1:3001',
+    'http://0x7f.0.0.1:3001',
   ])('allows %j', (baseUrl) => {
     expect(isSecureApiBaseUrl(baseUrl)).toBe(true);
   });
@@ -125,6 +128,9 @@ describe('isSecureApiBaseUrl', () => {
     'http://evil.example/127.0.0.1',
     'http://10.0.0.5:3001',
     'http://[::2]:3001',
+    'http://[::ffff:127.0.0.1]:3001',
+    'http://0.0.0.0:3001',
+    'http://127.0.0.1@evil.example',
     'ftp://127.0.0.1',
     'not a url',
   ])('refuses %j', (baseUrl) => {
@@ -216,4 +222,20 @@ describe('the internal key in browser code', () => {
     expect(envBlock).not.toContain('INTERNAL_API_KEY');
     expect(nextConfig).toContain('checkInternalApiKeyConfig(process.env);');
   });
+});
+
+// Read as text: importing next.config.ts loads the real root .env and runs git.
+it('next.config.ts keeps Server Action arguments out of the dev log, serves the legacy auth redirects and the frame headers', () => {
+  const nextConfig = readFileSync(
+    path.resolve(__dirname, '../../next.config.ts'),
+    'utf8',
+  );
+
+  expect(nextConfig).toContain('logging: { serverFunctions: false },');
+  expect(nextConfig).toContain(
+    'redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),',
+  );
+  expect(nextConfig).toContain(
+    'Promise.resolve([...robotsHeaders(SEARCH_INDEXING), FRAME_DENY_RULE]),',
+  );
 });

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   type ApiCaller,
   callerOf,
+  ipv6SiteKeyOf,
   OPEN_CALLER,
   PREVIEW_CALLER,
   PREVIEW_VISITOR_KEY,
   recordCaller,
   sharedVisitorBucket,
   UNKNOWN_VISITOR_KEY,
+  type VisitorKey,
   visitorKeyFromClientIp,
   visitorKeyOf,
 } from './api-caller';
@@ -46,6 +48,25 @@ describe('visitorKeyFromClientIp', () => {
     ['the unspecified IPv6', '::', '0:0:0:0::/64'],
     ['an IPv4-compatible IPv6 (not mapped)', '::1.2.3.4', '0:0:0:0::/64'],
   ])('keys %s (%s) as %s', (_, header, key) => {
+    expect(visitorKeyFromClientIp(header)).toBe(key);
+  });
+
+  // The same table runs in apps/web/src/api/client-ip.test.ts against clientNetworkOf.
+  it.each<[string, string]>([
+    ['203.0.113.7', '203.0.113.7'],
+    ['::ffff:203.0.113.7', '203.0.113.7'],
+    ['::FFFF:cb00:7107', '203.0.113.7'],
+    ['0:0:0:0:0:ffff:cb00:7107', '203.0.113.7'],
+    ['2001:db8:1:2::9', '2001:db8:1:2::/64'],
+    ['2001:DB8:1:2:3:4:5:6', '2001:db8:1:2::/64'],
+    ['2001:0db8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
+    ['2001:db8:1:2:3:4:1.2.3.4', '2001:db8:1:2::/64'],
+    ['2001:db8::1', '2001:db8:0:0::/64'],
+    ['1:2:3:4:5:6:7::', '1:2:3:4::/64'],
+    ['::1', '0:0:0:0::/64'],
+    ['::', '0:0:0:0::/64'],
+    ['::1.2.3.4', '0:0:0:0::/64'],
+  ])('cuts %s to %s like the web copy', (header, key) => {
     expect(visitorKeyFromClientIp(header)).toBe(key);
   });
 
@@ -96,6 +117,42 @@ describe('visitorKeyFromClientIp', () => {
     expect(visitorKeyFromClientIp('198.51.100.21')).not.toBe(
       visitorKeyFromClientIp('198.51.100.20'),
     );
+  });
+});
+
+describe('ipv6SiteKeyOf', () => {
+  const siteOf = (header: string) =>
+    ipv6SiteKeyOf(visitorKeyFromClientIp(header));
+
+  it('gives two /64s of one /48 the same site, and another /48 another', () => {
+    const site = siteOf('2001:db8:aa:1::9');
+
+    expect(site).toBe('2001:db8:aa::/48');
+    expect(siteOf('2001:db8:aa:ffff:1:2:3:4')).toBe(site);
+    expect(siteOf('2001:db8:ab:1::9')).not.toBe(site);
+  });
+
+  it('keeps zero groups in the /48, like the /64 key it comes from', () => {
+    const visitorKey = visitorKeyFromClientIp('2001:db8:0:5::1');
+
+    expect(visitorKey).toBe('2001:db8:0:5::/64');
+    expect(ipv6SiteKeyOf(visitorKey)).toBe('2001:db8:0::/48');
+    expect(siteOf('::1')).toBe('0:0:0::/48');
+  });
+
+  it('reads the raw header through visitorKeyFromClientIp: padding and case give one site', () => {
+    expect(siteOf('2001:0DB8:00AA:0001:FFFF:FFFF:FFFF:FFFF')).toBe(
+      '2001:db8:aa::/48',
+    );
+  });
+
+  it.each<[string, VisitorKey]>([
+    ['an IPv4', visitorKeyFromClientIp('203.0.113.7')],
+    ['a mapped IPv4', visitorKeyFromClientIp('::ffff:203.0.113.7')],
+    ['the shared `unknown`', visitorKeyFromClientIp('not-an-ip')],
+    ['the shared `preview`', PREVIEW_VISITOR_KEY],
+  ])('has no site for %s', (_, visitorKey) => {
+    expect(ipv6SiteKeyOf(visitorKey)).toBeNull();
   });
 });
 

@@ -44,6 +44,14 @@ describe('Disclosure', () => {
     expect(details.querySelector('.sh-pop.sh-menu')).not.toBeNull();
   });
 
+  it('names its summary only when given a label', () => {
+    expect(renderMenu().summary.hasAttribute('aria-label')).toBe(false);
+    cleanup();
+
+    const { summary } = renderMenu({ summaryLabel: 'Account menu' });
+    expect(summary.getAttribute('aria-label')).toBe('Account menu');
+  });
+
   it('marks the active section', () => {
     const { summary } = renderMenu({ active: true });
 

@@ -61,6 +61,22 @@ export function captureStartupError(message: string): void {
   Sentry.captureMessage(message, 'error');
 }
 
+/**
+ * A failed step of a background job, as a warning-level message (a no-op without a DSN). Only
+ * the job and step names and a safe error kind (a Prisma code or an error class name) go out,
+ * never the error itself: its text can quote the query and its parameters.
+ */
+export function captureBackgroundStepFailure(
+  job: string,
+  step: string,
+  errorKind: string,
+): void {
+  Sentry.captureMessage(`${job} step failed: ${step}`, {
+    level: 'warning',
+    tags: { job, step, error_kind: errorKind },
+  });
+}
+
 /** Queues the error for Sentry and returns at once: the request never waits for Sentry. */
 export function captureServerError(exception: unknown, request: Request): void {
   Sentry.captureException(exception, {

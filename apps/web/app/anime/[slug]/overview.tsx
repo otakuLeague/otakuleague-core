@@ -1,12 +1,22 @@
-import { Fragment } from 'react';
+import Link from 'next/link';
+import { type CSSProperties, Fragment, type ReactNode } from 'react';
 import { loadAnime } from '../../../src/anime/data';
 import {
-  type OverviewAired,
+  type InformationRow,
   type OverviewFacts,
-  hasDetails,
+  informationRows,
   overviewFacts,
 } from '../../../src/anime/overview-facts';
+import type { OfficialLink } from '../../../src/anime/link-sites';
+import type {
+  AltTitleGroup,
+  OverviewThemes,
+} from '../../../src/anime/overview-themes';
+import type { OverviewTrailer } from '../../../src/anime/trailer';
+import { SpoilerTags } from './spoiler-tags';
 import { CollapsibleSynopsis } from './synopsis';
+import { TagChip } from './tag-chip';
+import { TrailerPlayer } from './trailer';
 import './overview.css';
 
 const SYNOPSIS_ID = 'anime-synopsis';
@@ -56,85 +66,245 @@ function Synopsis({
   );
 }
 
-function Aired({ aired }: { readonly aired: OverviewAired }) {
-  const start = (
-    <time dateTime={aired.start.datetime}>{aired.start.label}</time>
-  );
-  if (aired.kind === 'single' || aired.kind === 'upcoming') return start;
+function Trailer({
+  trailer,
+  title,
+}: {
+  readonly trailer: OverviewTrailer;
+  readonly title: string;
+}) {
   return (
-    <>
-      {start} –{' '}
-      {aired.kind === 'airing' ? (
-        'now'
-      ) : (
-        <time dateTime={aired.end.datetime}>{aired.end.label}</time>
-      )}
-    </>
+    <section className="ov-sec ov-sec--trailer" aria-labelledby="ov-trailer-h">
+      <div className="ov-sec__head">
+        <h2 id="ov-trailer-h">Trailer</h2>
+      </div>
+      <TrailerPlayer trailer={trailer} title={title} />
+      <div className="ov-trailer__meta">
+        {/* Named before the press: playing loads the host's player (privacy#trailers). */}
+        <p>
+          Plays from {trailer.siteLabel} ·{' '}
+          <Link href="/privacy#trailers">Privacy</Link>
+        </p>
+        {/* Plain link: works without JS, and when the host refuses the embed. */}
+        <a
+          className="ov-trailer__watch"
+          href={trailer.watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Watch on {trailer.siteLabel}
+          <span className="anime-sr-only"> (opens in a new tab)</span>
+        </a>
+      </div>
+    </section>
   );
 }
 
-function DetailsCard({ facts }: { readonly facts: OverviewFacts }) {
-  const rows = [
-    ['Format', facts.format],
-    ['Episodes', facts.episodes],
-    [
-      facts.aired?.kind === 'upcoming' ? 'Premieres' : 'Aired',
-      facts.aired && <Aired aired={facts.aired} />,
-    ],
-    ['Season', facts.season],
-    [
-      facts.studios.length > 1 ? 'Studios' : 'Studio',
-      facts.studios.length > 0 ? facts.studios.join(', ') : null,
-    ],
-  ] as const;
-  const shown = rows.filter(([, value]) => value !== null);
+const SPOILERS_ID = 'ov-spoiler-tags';
+/** Without JS the spoiler toggle can't work: hide it (and a Themes group with nothing else). */
+const NO_JS_SPOILERS =
+  '.ov-spoiler-toggle,.ov-group--spoilers-only{display:none!important}';
+
+function ChipList({ children }: { readonly children: ReactNode }) {
+  return <ul className="ov-chips">{children}</ul>;
+}
+
+/** Genres, then tags; plain chips until browse routes exist. */
+function GenresAndThemes({ themes }: { readonly themes: OverviewThemes }) {
+  const { genres, open, spoilers } = themes;
   return (
-    <section className="ov-card ov-sec" aria-labelledby="ov-details-h">
+    <section className="ov-sec ov-sec--themes" aria-labelledby="ov-themes-h">
       <div className="ov-sec__head">
-        <h2 id="ov-details-h">Details</h2>
+        <h2 id="ov-themes-h">Genres &amp; themes</h2>
       </div>
-      {shown.length > 0 && (
-        <dl className="ov-facts">
-          {shown.map(([label, value]) => (
-            <Fragment key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-      )}
-      {facts.genres.length > 0 && (
-        <>
-          <h3 className="ol-label ov-genres-h">Genres</h3>
-          <ul className="ov-chips">
-            {facts.genres.map((genre) => (
+      {genres.length > 0 && (
+        <div className="ov-group">
+          <h3 className="ov-sub">Genres</h3>
+          <ChipList>
+            {genres.map((genre) => (
               <li key={genre}>
-                <span className="ol-chip">{genre}</span>
+                <span className="ol-chip">
+                  <bdi>{genre}</bdi>
+                </span>
               </li>
             ))}
-          </ul>
-        </>
+          </ChipList>
+        </div>
+      )}
+      {open.length + spoilers.length > 0 && (
+        <div
+          className={
+            open.length > 0 ? 'ov-group' : 'ov-group ov-group--spoilers-only'
+          }
+        >
+          <h3 className="ov-sub">Themes</h3>
+          {open.length > 0 && (
+            <ChipList>
+              {open.map((tag) => (
+                <li key={tag.name}>
+                  <TagChip tag={tag} />
+                </li>
+              ))}
+            </ChipList>
+          )}
+          {spoilers.length > 0 && (
+            <>
+              <SpoilerTags id={SPOILERS_ID} tags={spoilers} />
+              <noscript>
+                <style>{NO_JS_SPOILERS}</style>
+              </noscript>
+            </>
+          )}
+        </div>
       )}
     </section>
   );
 }
 
-/** The Overview tab's content for a loaded anime: synopsis, then the facts column. */
-export function Overview({ facts }: { readonly facts: OverviewFacts }) {
-  const details = hasDetails(facts);
+/** Every value in `<bdi>`: source text in any script never reorders its neighbours. */
+function AlternativeTitles({
+  groups,
+}: {
+  readonly groups: readonly AltTitleGroup[];
+}) {
   return (
-    <div className={details ? 'ov-grid' : 'ov-grid ov-grid--single'}>
+    <section className="ov-sec ov-sec--alt" aria-labelledby="ov-alt-h">
+      <div className="ov-sec__head">
+        <h2 id="ov-alt-h">Alternative titles</h2>
+      </div>
+      <dl className="ov-facts ov-alt">
+        {groups.map((group) => (
+          <Fragment key={group.kind}>
+            <dt>{group.label}</dt>
+            {group.texts.map((text) => (
+              <dd key={text}>
+                <bdi>{text}</bdi>
+              </dd>
+            ))}
+          </Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function OfficialLinks({ links }: { readonly links: readonly OfficialLink[] }) {
+  return (
+    <section
+      className="ov-card ov-sec ov-sec--links"
+      aria-labelledby="ov-links-h"
+    >
+      <div className="ov-sec__head">
+        <h2 id="ov-links-h">Official links</h2>
+      </div>
+      <ul className="ov-links">
+        {links.map((link) => (
+          <li key={link.url}>
+            {/* nofollow: the links come from a third-party source. */}
+            <a
+              className="ov-link"
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              <span
+                className="ov-link__badge"
+                aria-hidden="true"
+                style={
+                  link.badge.kind === 'brand'
+                    ? ({
+                        '--ov-badge': link.badge.color,
+                        '--ov-badge-ink': link.badge.ink,
+                      } as CSSProperties)
+                    : undefined
+                }
+              >
+                {link.badge.initial}
+              </span>
+              <span className="ov-link__name">
+                <bdi>{link.label}</bdi>
+              </span>{' '}
+              <span className="anime-sr-only">(opens in a new tab)</span>
+              <span className="ov-link__arrow" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      {links.some((link) => link.kind === 'streaming') && (
+        <p className="ov-note">
+          Streaming availability depends on your country.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Text only, never a link or control: on phones its wrapper is `display: contents` and reordered. */
+function InformationCard({
+  rows,
+}: {
+  readonly rows: readonly InformationRow[];
+}) {
+  return (
+    <section className="ov-card ov-sec ov-sec--info">
+      <div className="ov-sec__head">
+        <h2 id="ov-info-h">Information</h2>
+      </div>
+      <dl className="ov-facts">
+        {rows.map((row) => (
+          <Fragment key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>
+              {row.datetime === undefined ? (
+                row.text
+              ) : (
+                <time dateTime={row.datetime}>{row.text}</time>
+              )}
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/**
+ * The Overview tab for a loaded anime. Main column: trailer, synopsis, genres & themes,
+ * alternative titles; side: Information, official links. On phones both wrappers dissolve and
+ * CSS orders trailer, synopsis, information, genres & themes, alternative titles, links.
+ */
+export function Overview({ facts }: { readonly facts: OverviewFacts }) {
+  const rows = informationRows(facts);
+  const hasSide = rows.length > 0 || facts.links.length > 0;
+  const { themes } = facts;
+  return (
+    <div className={hasSide ? 'ov-grid' : 'ov-grid ov-grid--single'}>
       <div className="ov-main">
-        <section className="ov-sec" aria-labelledby="ov-synopsis-h">
+        {facts.trailer !== null && (
+          <Trailer trailer={facts.trailer} title={facts.title} />
+        )}
+        <section
+          className="ov-sec ov-sec--synopsis"
+          aria-labelledby="ov-synopsis-h"
+        >
           <div className="ov-sec__head">
             <h2 id="ov-synopsis-h">Synopsis</h2>
           </div>
           <Synopsis synopsis={facts.synopsis} />
         </section>
+        {(themes.genres.length > 0 ||
+          themes.open.length > 0 ||
+          themes.spoilers.length > 0) && <GenresAndThemes themes={themes} />}
+        {facts.altTitles.length > 0 && (
+          <AlternativeTitles groups={facts.altTitles} />
+        )}
       </div>
-      {details && (
-        <aside className="ov-side" aria-label="Key facts">
-          <DetailsCard facts={facts} />
+      {hasSide && (
+        <aside className="ov-side" aria-label="Details">
+          {rows.length > 0 && <InformationCard rows={rows} />}
+          {facts.links.length > 0 && <OfficialLinks links={facts.links} />}
         </aside>
       )}
     </div>

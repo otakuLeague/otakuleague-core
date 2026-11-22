@@ -505,67 +505,78 @@
           {
             "isMain": true,
             "node": {
-              "name": "Toei Animation"
+              "name": "Toei Animation",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Funimation"
+              "name": "Funimation",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Fuji TV"
+              "name": "Fuji TV",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "4Kids Entertainment"
+              "name": "4Kids Entertainment",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "TAP"
+              "name": "TAP",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Asatsu DK"
+              "name": "Asatsu DK",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Magic Bus"
+              "name": "Magic Bus",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Mushi Production"
+              "name": "Mushi Production",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Studio Guts"
+              "name": "Studio Guts",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Asahi Production"
+              "name": "Asahi Production",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Avex Pictures"
+              "name": "Avex Pictures",
+              "isAnimationStudio": false
             }
           }
         ]
@@ -758,7 +769,10 @@
       "nextAiringEpisode": {
         "episode": 1181,
         "airingAt": 1798985760
-      }
+      },
+      "source": "MANGA",
+      "countryOfOrigin": "JP",
+      "hashtag": "#ONEPIECE #ワンピース"
     }
   }
 }

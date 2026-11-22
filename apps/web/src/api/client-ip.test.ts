@@ -1,14 +1,31 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clientIpFromHeaders, readClientIp } from './client-ip';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import {
+  clientIpFromHeaders,
+  clientNetworkOf,
+  readClientIp,
+  readCredentialClientIp,
+  type ClientIp,
+} from './client-ip';
 
-const incoming = vi.hoisted(() => ({ headers: new Headers() }));
+const incoming = vi.hoisted(() => ({ headers: new Headers(), reads: 0 }));
 vi.mock('next/headers', () => ({
-  headers: () => Promise.resolve(incoming.headers),
+  headers: () => {
+    incoming.reads += 1;
+    return Promise.resolve(incoming.headers);
+  },
 }));
 
 const forwardedFor = (value: string) =>
   clientIpFromHeaders(new Headers({ 'x-forwarded-for': value }));
+
+function validIp(value: string): ClientIp {
+  const clientIp = forwardedFor(value);
+  if (clientIp === undefined) throw new Error(`not a client IP: ${value}`);
+  return clientIp;
+}
 
 describe('clientIpFromHeaders', () => {
   it.each([
@@ -76,4 +93,89 @@ describe('readClientIp', () => {
       expect(await readClientIp()).toBeUndefined();
     },
   );
+});
+
+describe('readCredentialClientIp', () => {
+  const VISITOR = { 'x-forwarded-for': '203.0.113.7' };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const UNKNOWN = { kind: 'refused', reason: 'client_ip_unknown' };
+
+  it.each([
+    ['one address', VISITOR, { kind: 'known', clientIp: '203.0.113.7' }],
+    ['no header', {}, UNKNOWN],
+    ['a list', { 'x-forwarded-for': '203.0.113.7, 198.51.100.1' }, UNKNOWN],
+    // Next re-sends a Server Action between workers; that hop carries Vercel's egress address.
+    // A visitor can send the header too, so it is its own reason, never reported.
+    [
+      'a forwarded action hop',
+      { ...VISITOR, 'x-action-forwarded': '1' },
+      { kind: 'refused', reason: 'action_forwarded' },
+    ],
+  ])('on Vercel, %s', async (_label, headers, expected) => {
+    vi.stubEnv('VERCEL', '1');
+    incoming.headers = new Headers(headers);
+
+    expect(await readCredentialClientIp({ isHttps: true })).toEqual(expected);
+  });
+
+  it.each([undefined, '', '0'])(
+    'off Vercel (VERCEL=%j) sends loopback and never reads a forged header',
+    async (vercel) => {
+      vi.stubEnv('VERCEL', vercel);
+      incoming.headers = new Headers(VISITOR);
+      incoming.reads = 0;
+
+      expect(await readCredentialClientIp({ isHttps: false })).toEqual({
+        kind: 'known',
+        clientIp: '127.0.0.1',
+      });
+      expect(incoming.reads).toBe(0);
+    },
+  );
+
+  it('still matches the header name Next sets on a forwarded action', () => {
+    const require = createRequire(import.meta.url);
+    const actionHandler = readFileSync(
+      require.resolve('next/dist/server/app-render/action-handler.js'),
+      'utf8',
+    );
+
+    expect(actionHandler).toContain("'x-action-forwarded'");
+  });
+});
+
+describe('clientNetworkOf', () => {
+  // The same table runs in apps/api/src/common/api-caller.spec.ts against visitorKeyFromClientIp.
+  it.each<[string, string]>([
+    ['203.0.113.7', '203.0.113.7'],
+    ['::ffff:203.0.113.7', '203.0.113.7'],
+    ['::FFFF:cb00:7107', '203.0.113.7'],
+    ['0:0:0:0:0:ffff:cb00:7107', '203.0.113.7'],
+    ['2001:db8:1:2::9', '2001:db8:1:2::/64'],
+    ['2001:DB8:1:2:3:4:5:6', '2001:db8:1:2::/64'],
+    ['2001:0db8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
+    ['2001:db8:1:2:3:4:1.2.3.4', '2001:db8:1:2::/64'],
+    ['2001:db8::1', '2001:db8:0:0::/64'],
+    ['1:2:3:4:5:6:7::', '1:2:3:4::/64'],
+    ['::1', '0:0:0:0::/64'],
+    ['::', '0:0:0:0::/64'],
+    ['::1.2.3.4', '0:0:0:0::/64'],
+  ])('cuts %s to %s', (address, network) => {
+    expect(clientNetworkOf(validIp(address))).toBe(network);
+  });
+
+  it('gives two addresses of one /64 the same network and the next /64 another', () => {
+    const network = (address: string) => clientNetworkOf(validIp(address));
+
+    expect(network('2001:db8:aa:bb:ffff::1')).toBe(
+      network('2001:db8:aa:bb:1:2:3:4'),
+    );
+    expect(network('2001:db8:aa:bc:1:2:3:4')).not.toBe(
+      network('2001:db8:aa:bb:1:2:3:4'),
+    );
+  });
 });

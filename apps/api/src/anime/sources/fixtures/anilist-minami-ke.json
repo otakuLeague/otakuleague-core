@@ -124,31 +124,36 @@
           {
             "isMain": true,
             "node": {
-              "name": "Daume"
+              "name": "Daume",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Starchild Records"
+              "name": "Starchild Records",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Magic Capsule"
+              "name": "Magic Capsule",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Eye Move"
+              "name": "Eye Move",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Sunny Side Up"
+              "name": "Sunny Side Up",
+              "isAnimationStudio": false
             }
           }
         ]
@@ -273,7 +278,10 @@
           "type": "INFO"
         }
       ],
-      "nextAiringEpisode": null
+      "nextAiringEpisode": null,
+      "source": "MANGA",
+      "countryOfOrigin": "JP",
+      "hashtag": null
     }
   }
 }

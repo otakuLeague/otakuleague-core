@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  IDENTIFIER_MAX,
   isAnimeFranchise,
   isAnimeListPage,
   isApiError,
+  isEmailVerificationConfirmResponse,
   isHealthResponse,
+  isMeResponse,
+  isSessionToken,
+  isSignInResponse,
+  isSignUpResponse,
+  PASSWORD_RAW_MAX,
 } from '@otakuleague/shared-types';
 
 // Shapes that no guard may accept, whatever it checks.
@@ -25,12 +32,16 @@ void describe('isApiError', () => {
     );
   });
 
-  void it('accepts every auth error code a sign-in can answer (ADR 0015)', () => {
+  void it('accepts every auth error code a sign-in, a sign-up or a confirm can answer (ADR 0015, 0020)', () => {
     for (const code of [
       'UNAUTHORIZED',
       'AUTH_BUSY',
       'INVALID_CREDENTIALS',
+      'USERNAME_TAKEN',
+      'SIGN_UP_CLOSED',
+      'AUTH_TOKEN_INVALID',
       'TOO_MANY_REQUESTS',
+      'SERVICE_UNAVAILABLE',
     ]) {
       assert.equal(isApiError({ error: { code, message: 'x' } }), true, code);
     }
@@ -153,6 +164,225 @@ void describe('isHealthResponse', () => {
     assert.equal(
       isHealthResponse({
         error: { code: 'SERVICE_UNAVAILABLE', message: 'x' },
+      }),
+      false,
+    );
+  });
+});
+
+void describe('isSessionToken', () => {
+  void it('accepts 43 base64url characters', () => {
+    for (const token of ['A'.repeat(43), `${'aZ09_-'.repeat(7)}x`]) {
+      assert.equal(isSessionToken(token), true, token);
+    }
+  });
+
+  void it('rejects another length, base64 padding or symbols, whitespace and non-strings', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      '',
+      'A'.repeat(42),
+      'A'.repeat(44),
+      `${'A'.repeat(42)}+`,
+      `${'A'.repeat(42)}/`,
+      `${'A'.repeat(42)}=`,
+      `${'A'.repeat(42)} `,
+      ` ${'A'.repeat(42)}`,
+      `${'A'.repeat(41)}\r\n`,
+      `${'A'.repeat(42)};`,
+      { length: 43 },
+    ]) {
+      assert.equal(isSessionToken(candidate), false, JSON.stringify(candidate));
+    }
+  });
+});
+
+void describe('credential bounds (ADR 0015)', () => {
+  void it('pins the raw identifier and password limits both apps check', () => {
+    assert.deepEqual([IDENTIFIER_MAX, PASSWORD_RAW_MAX], [254, 1024]);
+  });
+});
+
+void describe('isSignInResponse', () => {
+  const SESSION = {
+    sessionToken: `${'aZ09_-'.repeat(7)}x`,
+    expiresAt: new Date(Date.UTC(2026, 11, 19, 12)).toISOString(),
+  };
+
+  void it('accepts 43 base64url characters and an expiry written by toISOString()', () => {
+    assert.equal(isSignInResponse(SESSION), true);
+  });
+
+  void it('rejects a token that could not go into a cookie, a bare date, a missing field and non-objects', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      { ...SESSION, sessionToken: 'A'.repeat(42) },
+      { ...SESSION, sessionToken: `${'A'.repeat(42)};` },
+      { ...SESSION, sessionToken: `${'A'.repeat(41)}\r\n` },
+      { ...SESSION, expiresAt: '2026-12-19' },
+      { sessionToken: SESSION.sessionToken },
+      { expiresAt: SESSION.expiresAt },
+    ]) {
+      assert.equal(
+        isSignInResponse(candidate),
+        false,
+        JSON.stringify(candidate),
+      );
+    }
+  });
+});
+
+void describe('isSignUpResponse', () => {
+  const BINDING = `${'aZ09_-'.repeat(7)}x`;
+
+  void it('accepts an own bindingToken of 43 base64url characters, other keys ignored', () => {
+    for (const body of [
+      { bindingToken: BINDING },
+      { bindingToken: BINDING, extra: 1 },
+    ]) {
+      assert.equal(isSignUpResponse(body), true, JSON.stringify(body));
+    }
+  });
+
+  void it('rejects another length or symbol, a non-string, a missing or inherited key and non-objects', () => {
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      {},
+      { bindingToken: 'A'.repeat(42) },
+      { bindingToken: 'A'.repeat(44) },
+      { bindingToken: `${'A'.repeat(42)}=` },
+      { bindingToken: `${'A'.repeat(41)}\r\n` },
+      { bindingToken: 43 },
+      { bindingToken: [BINDING] },
+      { bindingtoken: BINDING },
+      Object.create({ bindingToken: BINDING }) as unknown,
+    ]) {
+      assert.equal(
+        isSignUpResponse(candidate),
+        false,
+        JSON.stringify(candidate),
+      );
+    }
+  });
+});
+
+void describe('isMeResponse', () => {
+  const ME = { id: 'u1', username: 'Frieren_99' };
+  const named = (username: unknown) => ({ ...ME, username });
+
+  void it('accepts a non-empty id and a username of 3 to 20 letters, digits or "_"', () => {
+    for (const username of ['abc', 'Frieren_99', 'x'.repeat(20)]) {
+      assert.equal(isMeResponse(named(username)), true, username);
+    }
+  });
+
+  void it('rejects an empty or missing id, a username sign-up would refuse, and non-objects', () => {
+    const refusedNames = [
+      'ab',
+      'x'.repeat(21),
+      'a b',
+      'a@b.c',
+      '<b>',
+      'é_é',
+      'abc\n',
+      7,
+    ];
+    for (const candidate of [
+      ...NOT_OBJECTS,
+      { ...ME, id: '' },
+      { ...ME, id: 42 },
+      { username: ME.username },
+      { id: ME.id },
+      ...refusedNames.map(named),
+    ]) {
+      assert.equal(isMeResponse(candidate), false, JSON.stringify(candidate));
+    }
+  });
+});
+
+void describe('isEmailVerificationConfirmResponse', () => {
+  const SESSION = {
+    sessionToken: 'A'.repeat(43),
+    expiresAt: '2026-12-19T12:00:00.000Z',
+  };
+
+  void it('accepts the three outcomes, a session only on verified', () => {
+    for (const body of [
+      { outcome: 'verified', session: SESSION },
+      { outcome: 'verified', session: null },
+      { outcome: 'already_verified' },
+      { outcome: 'confirmation_required' },
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(body),
+        true,
+        JSON.stringify(body),
+      );
+    }
+  });
+
+  void it('rejects non-objects, an unknown outcome and a missing session on verified', () => {
+    for (const candidate of NOT_OBJECTS) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(candidate),
+        false,
+        String(candidate),
+      );
+    }
+    for (const body of [
+      {},
+      { outcome: 'signed_in', session: SESSION },
+      { outcome: 'VERIFIED', session: null },
+      { outcome: 'verified' },
+      { outcome: 'verified', session: undefined },
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse(body),
+        false,
+        JSON.stringify(body),
+      );
+    }
+  });
+
+  void it('rejects a session on already_verified or confirmation_required, even null', () => {
+    for (const outcome of ['already_verified', 'confirmation_required']) {
+      for (const session of [SESSION, null]) {
+        assert.equal(
+          isEmailVerificationConfirmResponse({ outcome, session }),
+          false,
+          `${outcome} ${JSON.stringify(session)}`,
+        );
+      }
+    }
+  });
+
+  void it('rejects a session token that could not go into a cookie, or a bad expiry', () => {
+    for (const session of [
+      { ...SESSION, sessionToken: 'A'.repeat(42) },
+      { ...SESSION, sessionToken: `${'A'.repeat(42)};` },
+      { ...SESSION, sessionToken: `${'A'.repeat(41)}\r\n` },
+      { ...SESSION, sessionToken: 43 },
+      { ...SESSION, expiresAt: 'tomorrow' },
+      { ...SESSION, expiresAt: '2026' },
+      { ...SESSION, expiresAt: '2026-12-19' },
+      { ...SESSION, expiresAt: '2026-12-19T12:00:00Z' },
+      { ...SESSION, expiresAt: '2026-12-19T13:00:00.000+01:00' },
+      { ...SESSION, expiresAt: 1 },
+      { sessionToken: SESSION.sessionToken },
+      [],
+    ]) {
+      assert.equal(
+        isEmailVerificationConfirmResponse({ outcome: 'verified', session }),
+        false,
+        JSON.stringify(session),
+      );
+    }
+  });
+
+  void it('rejects an error envelope', () => {
+    assert.equal(
+      isEmailVerificationConfirmResponse({
+        error: { code: 'AUTH_TOKEN_INVALID', message: 'x' },
       }),
       false,
     );

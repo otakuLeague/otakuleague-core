@@ -8,6 +8,7 @@ import {
   type FetchFunction,
 } from './client';
 import { clientIpFromHeaders, type ClientIp } from './client-ip';
+import { sessionTokenFrom, type SessionToken } from './session-token';
 
 const BASE_URL = 'http://127.0.0.1:3001';
 
@@ -16,15 +17,15 @@ interface RecordedRequest {
   readonly init: RequestInit | undefined;
 }
 
-/** A fetch that answers every request with `status` and `bodyText`, and records what it was asked. */
-function fakeFetch(status: number, bodyText: string) {
+/** A fetch that answers every request with `status`, `bodyText` and `headers`, and records what it was asked. */
+function fakeFetch(status: number, bodyText: string, headers?: HeadersInit) {
   const requests: RecordedRequest[] = [];
   const fetchFunction: FetchFunction = (input, init) => {
     requests.push({
       url: input instanceof Request ? input.url : input.toString(),
       init,
     });
-    return Promise.resolve(new Response(bodyText, { status }));
+    return Promise.resolve(new Response(bodyText, { status, headers }));
   };
   return { fetchFunction, requests };
 }
@@ -618,6 +619,318 @@ describe('internal key and client IP (ADR 0019)', () => {
     // Everything a result could show in a log, a page or a Sentry event.
     expect(JSON.stringify(results)).not.toContain(FAKE_KEY);
     expect(JSON.stringify(results)).not.toContain(VISITOR_IP);
+  });
+});
+
+// Obviously fake: 43 base64url characters, never a real session.
+const FAKE_SESSION = 'fake-session-token-for-tests-only_012345678';
+
+function session(value: string): SessionToken {
+  const token = sessionTokenFrom(value);
+  if (token === undefined) {
+    throw new Error('test setup: not a session token');
+  }
+  return token;
+}
+
+/** Runs `call` and gives the message it threw, or fails the test if it did not throw. */
+async function thrownMessage(call: () => Promise<unknown>): Promise<string> {
+  try {
+    await call();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error('expected the call to throw');
+}
+
+const RATE_LIMITED = json({
+  error: { code: 'TOO_MANY_REQUESTS', message: 'Too many attempts' },
+});
+
+describe('session, key-required calls and Retry-After (ADR 0003 OTA-139 addendum)', () => {
+  function keyedClient(fetchFunction: FetchFunction) {
+    return createApiClient({
+      baseUrl: BASE_URL,
+      fetch: fetchFunction,
+      internalApiKey: FAKE_KEY,
+    });
+  }
+
+  it('sends the session as a Bearer next to the key, never cached', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+    const client = keyedClient(fetchFunction);
+
+    await client.call('/me', { session: session(FAKE_SESSION) });
+    await client.call('/me', {
+      cache: 'no-store',
+      session: session(FAKE_SESSION),
+    });
+
+    for (const request of requests) {
+      expect(sentHeaders(request)).toEqual({
+        accept: 'application/json',
+        'x-internal-api-key': FAKE_KEY,
+        authorization: `Bearer ${FAKE_SESSION}`,
+      });
+      expect(request.init?.cache).toBe('no-store');
+      expect(request.init?.redirect).toBe('error');
+    }
+  });
+
+  it('sends a credential call with the key and no Bearer', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+
+    await keyedClient(fetchFunction).call('/auth/sign-in', {
+      method: 'POST',
+      body: { login: 'frieren', password: 'not-a-real-password' },
+      requiresInternalKey: true,
+      clientIp: visitorIp(VISITOR_IP),
+    });
+
+    expect(sentHeaders(requests[0])).toEqual({
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-internal-api-key': FAKE_KEY,
+      'x-client-ip': VISITOR_IP,
+    });
+    expect(requests[0]?.init?.cache).toBe('no-store');
+  });
+
+  it('sends exactly the five headers on a session call with a client IP and a body', async () => {
+    const { fetchFunction, requests } = fakeFetch(200, json({}));
+
+    await keyedClient(fetchFunction).call('/me/watchlist', {
+      method: 'POST',
+      body: { anilistId: 154587 },
+      session: session(FAKE_SESSION),
+      clientIp: visitorIp(VISITOR_IP),
+    });
+
+    expect(sentHeaders(requests[0])).toEqual({
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-internal-api-key': FAKE_KEY,
+      'x-client-ip': VISITOR_IP,
+      authorization: `Bearer ${FAKE_SESSION}`,
+    });
+  });
+
+  it.each([
+    ['next.revalidate 60', { next: { revalidate: 60 } }],
+    ['cache force-cache', { cache: 'force-cache' }],
+  ] satisfies [string, CallOptions<unknown>][])(
+    'refuses a credential call on a cached call (%s)',
+    async (_label, cacheOptions) => {
+      const { fetchFunction, requests } = fakeFetch(200, json({}));
+
+      const message = await thrownMessage(() =>
+        keyedClient(fetchFunction).call('/auth/sign-in', {
+          ...cacheOptions,
+          method: 'POST',
+          requiresInternalKey: true,
+        }),
+      );
+
+      expect(message).toBe(
+        'requiresInternalKey is only allowed on an uncached (no-store) call',
+      );
+      expect(requests).toHaveLength(0);
+    },
+  );
+
+  it.each([
+    ['next.revalidate', { next: { revalidate: 60 } }],
+    ['next.revalidate 0', { next: { revalidate: 0 } }],
+    ['cache force-cache', { cache: 'force-cache' }],
+    ['cache default', { cache: 'default' }],
+  ] satisfies [string, CallOptions<unknown>][])(
+    'refuses a session on a cached call (%s), with or without a key',
+    async (_label, cacheOptions) => {
+      for (const internalApiKey of [FAKE_KEY, undefined]) {
+        const { fetchFunction, requests } = fakeFetch(200, json({}));
+        const client = createApiClient({
+          baseUrl: BASE_URL,
+          fetch: fetchFunction,
+          internalApiKey,
+        });
+
+        const message = await thrownMessage(() =>
+          client.call('/me', {
+            ...cacheOptions,
+            session: session(FAKE_SESSION),
+          }),
+        );
+
+        expect(message).toBe(
+          'session is only allowed on an uncached (no-store) call',
+        );
+        expect(requests).toHaveLength(0);
+      }
+    },
+  );
+
+  it.each([
+    ['a session', { session: session(FAKE_SESSION) }],
+    ['a credential', { method: 'POST', requiresInternalKey: true }],
+  ] satisfies [string, CallOptions<unknown>][])(
+    'refuses %s without the key, naming INTERNAL_API_KEY, before any request',
+    async (_label, options) => {
+      for (const baseUrl of [BASE_URL, 'http://api.test:4000']) {
+        const { fetchFunction, requests } = fakeFetch(200, json({}));
+        const client = createApiClient({ baseUrl, fetch: fetchFunction });
+
+        const message = await thrownMessage(() =>
+          client.call('/auth/sign-in', {
+            ...options,
+            body: { password: 'not-a-real-password' },
+          }),
+        );
+
+        expect(message).toMatch(
+          /^Invalid web configuration: INTERNAL_API_KEY is not set/,
+        );
+        expect(message).not.toContain(FAKE_SESSION);
+        expect(message).not.toContain('not-a-real-password');
+        expect(requests).toHaveLength(0);
+      }
+    },
+  );
+
+  it('keeps the session and the key out of every failure it returns', async () => {
+    const echoingFetch: FetchFunction = (_input, init) =>
+      Promise.reject(
+        new TypeError(`fetch failed: ${JSON.stringify(init?.headers)}`),
+      );
+    const echoed = { key: FAKE_KEY, session: FAKE_SESSION };
+    const clients = [
+      keyedClient(echoingFetch),
+      createApiClient({
+        baseUrl: BASE_URL,
+        fetch: hangingFetch,
+        internalApiKey: FAKE_KEY,
+        defaultTimeoutMs: 1,
+      }),
+      keyedClient(
+        fakeFetch(
+          401,
+          json({
+            error: { code: 'UNAUTHORIZED', message: 'Session expired' },
+            echoed,
+          }),
+        ).fetchFunction,
+      ),
+      keyedClient(fakeFetch(500, json(echoed)).fetchFunction),
+      keyedClient(
+        fakeFetch(
+          429,
+          json({
+            error: { code: 'TOO_MANY_REQUESTS', message: 'Too many attempts' },
+          }),
+          { 'retry-after': FAKE_SESSION },
+        ).fetchFunction,
+      ),
+    ];
+
+    const results = await Promise.all(
+      clients.map((client) =>
+        client.call('/me', {
+          session: session(FAKE_SESSION),
+          isExpectedBody: (body): body is never => body === null,
+        }),
+      ),
+    );
+
+    expect(results.map((result) => !result.ok && result.failure.kind)).toEqual([
+      'network',
+      'timeout',
+      'api_error',
+      'invalid_response',
+      'api_error',
+    ]);
+    expect(!results[4]?.ok && results[4]?.failure).not.toHaveProperty(
+      'retryAfterSeconds',
+    );
+    expect(JSON.stringify(results)).not.toContain(FAKE_KEY);
+    expect(JSON.stringify(results)).not.toContain(FAKE_SESSION);
+  });
+
+  it.each(['1', '30', '86400'])(
+    'reads Retry-After %s on a 429 envelope as whole seconds',
+    async (retryAfter) => {
+      const { fetchFunction } = fakeFetch(429, RATE_LIMITED, {
+        'retry-after': retryAfter,
+      });
+
+      const result = await keyedClient(fetchFunction).call('/auth/sign-in', {
+        method: 'POST',
+        requiresInternalKey: true,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        failure: {
+          kind: 'api_error',
+          status: 429,
+          error: {
+            error: { code: 'TOO_MANY_REQUESTS', message: 'Too many attempts' },
+          },
+          retryAfterSeconds: Number(retryAfter),
+        },
+      });
+    },
+  );
+
+  it.each([
+    ['absent', undefined],
+    ['empty', ''],
+    ['0', '0'],
+    ['negative', '-30'],
+    ['signed', '+30'],
+    ['decimal', '1.5'],
+    ['leading zero', '030'],
+    ['text', '30s'],
+    ['an HTTP date', 'Fri, 20 Nov 2026 12:00:00 GMT'],
+    ['more than 24 h', '86401'],
+    ['far too large', '999999999999'],
+  ])(
+    'gives no retryAfterSeconds for a Retry-After %s',
+    async (_label, value) => {
+      const { fetchFunction } = fakeFetch(
+        429,
+        RATE_LIMITED,
+        value === undefined ? undefined : { 'retry-after': value },
+      );
+
+      const result = await keyedClient(fetchFunction).call('/auth/sign-in');
+
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.failure.kind).toBe('api_error');
+      expect(!result.ok && result.failure).not.toHaveProperty(
+        'retryAfterSeconds',
+      );
+    },
+  );
+
+  it('ignores Retry-After on another status or on a 429 without an envelope', async () => {
+    const unavailable = await keyedClient(
+      fakeFetch(
+        503,
+        json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'Down' } }),
+        { 'retry-after': '30' },
+      ).fetchFunction,
+    ).call('/health');
+    const proxied = await keyedClient(
+      fakeFetch(429, 'Too Many Requests', { 'retry-after': '30' })
+        .fetchFunction,
+    ).call('/health');
+
+    expect(!unavailable.ok && unavailable.failure).not.toHaveProperty(
+      'retryAfterSeconds',
+    );
+    expect(proxied).toEqual({
+      ok: false,
+      failure: { kind: 'invalid_response', status: 429 },
+    });
   });
 });
 

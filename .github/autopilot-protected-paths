@@ -2,46 +2,13 @@
 # One bash pattern per line, matched against the whole repo-relative path (`*` also matches `/`).
 # The workflow reads this file from main, so a PR cannot loosen the rules it is checked against.
 # docs/AUTOPILOT.md describes the same list in words.
+#
+# Farouk, 2026-11-16 (OTA-202): everything else (migrations, dependencies, .claude/, ...) merges on its own once CI is green and the Fable
+# reviews have no Critical (migrations: db-migration-checker; workflows, dependencies, .claude/,
+# CLAUDE.md, scripts, configs, deploy files: security-reviewer). Only the merge gate stays here:
+# this list, and every workflow and action, because any workflow on main can get a write token
+# (merge PRs, push to main) or read main-only secrets such as the production database URL.
 
-# CI, git hooks, and what steers Claude (only .claude/rules/* stays mergeable: build PRs update it).
-.github/*
-.githooks/*
-.claude/settings*
-.claude/hooks/*
-.claude/skills/*
-.claude/agents/*
-.claude/commands/*
-*.mcp.json
-CLAUDE.md
-docs/AUTOPILOT.md
-
-# Code that runs at install, clean or build time, and the configs that make CI strict.
-scripts/*
-*.pnpmfile.cjs
-*eslint.config*
-*vitest.config*
-*tsconfig*.json
-*.prettierrc*
-*.prettierignore
-
-# Dependencies (CLAUDE.md: a new dependency needs a reason Farouk accepts).
-*package.json
-*pnpm-lock.yaml
-*pnpm-workspace.yaml
-*.npmrc
-*.nvmrc
-
-# Database schema changes (production data from the launch on).
-*/migrations/*
-
-# Deploy and infrastructure config.
-*vercel.json
-*railway.json
-*railway.toml
-*Dockerfile*
-*.dockerignore
-*docker/*
-*docker-compose*
-
-# Secrets templates.
-*.env*
+.github/autopilot-protected-paths
+.github/workflows/*
+.github/actions/*

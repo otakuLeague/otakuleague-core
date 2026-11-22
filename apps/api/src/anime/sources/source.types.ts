@@ -5,6 +5,7 @@ import type {
   AnimeIdSource,
   AnimeLink,
   AnimeSeason,
+  AnimeSourceMaterial,
   AnimeStatus,
   AnimeStudio,
   AnimeTag,
@@ -56,6 +57,14 @@ export interface AnimeSnapshot {
   readonly rankPopular: number | null;
   /** Dominant colour of the cover, "#rrggbb". */
   readonly coverColor: string | null;
+  /** What the anime adapts (OTA-215). */
+  readonly sourceMaterial: AnimeSourceMaterial | null;
+  /** Two upper-case letters. */
+  readonly countryOfOrigin: string | null;
+  /** Credited companies that are not animation studios. */
+  readonly producers: readonly string[];
+  /** Official hashtags, "#" first, at most 5. */
+  readonly hashtags: readonly string[];
 }
 
 /** AniList MediaRelation, relationType version 2 (ADR 0008). */

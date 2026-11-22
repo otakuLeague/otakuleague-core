@@ -215,6 +215,124 @@ describe('mapAniListMedia', () => {
     });
   });
 
+  it('maps source material, country, producers and hashtags from the fixtures', () => {
+    expect(mapAniListMedia(media('anilist-attack-on-titan'))).toMatchObject({
+      sourceMaterial: 'MANGA',
+      countryOfOrigin: 'JP',
+      // Production I.G is an animation studio: in studios, not a producer.
+      producers: [
+        'Pony Canyon',
+        'Kodansha',
+        'Dentsu',
+        'Pony Canyon Enterprise',
+        'Mainichi Broadcasting System',
+      ],
+      hashtags: ['#shingeki', '#attackonTitan'],
+    });
+    expect(mapAniListMedia(media('anilist-frieren'))).toMatchObject({
+      producers: [
+        'Toho',
+        'Shogakukan',
+        'Nippon Television Network',
+        'Shogakukan-Shueisha Productions',
+        'Aniplex',
+        'Dentsu',
+      ],
+      hashtags: ['#フリーレン', '#frieren'],
+    });
+    expect(mapAniListMedia(media('anilist-minami-ke'))).toMatchObject({
+      hashtags: [],
+      producers: [
+        'Starchild Records',
+        'Magic Capsule',
+        'Eye Move',
+        'Sunny Side Up',
+      ],
+    });
+    expect(mapAniListMedia(media('anilist-one-piece'))?.producers).toEqual([
+      'Funimation',
+      'Fuji TV',
+      '4Kids Entertainment',
+      'Asatsu DK',
+      'Magic Bus',
+      'Avex Pictures',
+    ]);
+  });
+
+  it('turns a field that changed type into null or empty, keeping the rest', () => {
+    const aot = media('anilist-attack-on-titan');
+    const studio = (name: unknown, flag: unknown) => ({
+      isMain: false,
+      node: { name, isAnimationStudio: flag },
+    });
+    const unchanged = {
+      sourceMaterial: 'MANGA',
+      countryOfOrigin: 'JP',
+      hashtags: ['#shingeki', '#attackonTitan'],
+    };
+    const cases: [Record<string, unknown>, Record<string, unknown>][] = [
+      [{ source: 'FANFIC' }, { sourceMaterial: null }],
+      [{ source: 3 }, { sourceMaterial: null }],
+      [{ countryOfOrigin: 'Japan' }, { countryOfOrigin: null }],
+      [{ countryOfOrigin: 'jp' }, { countryOfOrigin: null }],
+      [{ hashtag: 42 }, { hashtags: [] }],
+    ];
+
+    for (const [change, expected] of cases) {
+      expect(mapAniListMedia({ ...aot, ...change })).toMatchObject({
+        ...unchanged,
+        ...expected,
+        titleRomaji: 'Shingeki no Kyojin',
+      });
+    }
+    const flags = mapAniListMedia({
+      ...aot,
+      studios: {
+        edges: [
+          studio('Missing', undefined),
+          studio('String', 'false'),
+          studio('Null', null),
+          studio('Real', false),
+          studio('Real', false),
+          studio(7, false),
+        ],
+      },
+    });
+    expect(flags?.producers).toEqual(['Real']);
+    expect(flags?.studios).toHaveLength(5);
+  });
+
+  it('lists every credited company as a producer when none is an animation studio, and none when studios is missing', () => {
+    const aot = media('anilist-attack-on-titan');
+    const node = (name: string) => ({
+      isMain: false,
+      node: { name, isAnimationStudio: false },
+    });
+
+    expect(
+      mapAniListMedia({ ...aot, studios: { edges: [node('A'), node('B')] } })
+        ?.producers,
+    ).toEqual(['A', 'B']);
+    expect(mapAniListMedia({ ...aot, studios: null })?.producers).toEqual([]);
+    expect(
+      mapAniListMedia({ ...aot, studios: { edges: [] } })?.producers,
+    ).toEqual([]);
+  });
+
+  it('bounds the producers: each once, at most 50', () => {
+    const edges = Array.from({ length: 60 }, (_, index) => ({
+      isMain: false,
+      node: { name: `Company ${index % 55}`, isAnimationStudio: false },
+    }));
+    const snapshot = mapAniListMedia({
+      ...media('anilist-attack-on-titan'),
+      studios: { edges },
+    });
+
+    expect(snapshot?.producers).toHaveLength(50);
+    expect(new Set(snapshot?.producers).size).toBe(50);
+  });
+
   it('flags adult entries', () => {
     expect(
       mapAniListMedia({ ...media('anilist-frieren'), isAdult: true })?.adult,

@@ -1,5 +1,10 @@
 import { createHmac, type KeyObject } from 'node:crypto';
-import { sharedVisitorBucket, type VisitorKey } from '../common/api-caller';
+import {
+  type Ipv6SiteKey,
+  ipv6SiteKeyOf,
+  sharedVisitorBucket,
+  type VisitorKey,
+} from '../common/api-caller';
 import type { NormalisedIdentifier } from './credential-rules';
 
 const MINUTE_MS = 60_000;
@@ -14,6 +19,13 @@ export interface RateLimitRule {
   readonly windowMs: number;
 }
 
+/**
+ * The auth cleanup deletes a counter once its window started this long ago, so no rule's
+ * windowMs may exceed it (AuthRateLimiter refuses such a rule). Keyed hashes of IPs and identifiers thus
+ * live at most this plus one cleanup interval, about 48 h (ADR 0015 privacy note).
+ */
+export const RATE_LIMIT_LONGEST_WINDOW_MS = 24 * HOUR_MS;
+
 /** Sign-in limits, ADR 0015 "Rate limits" (requirement 3); a test pins these numbers. */
 export const SIGN_IN_LIMITS = {
   ip: { limit: 30, windowMs: 15 * MINUTE_MS },
@@ -21,9 +33,42 @@ export const SIGN_IN_LIMITS = {
   identifier: { limit: 30, windowMs: HOUR_MS },
 } as const satisfies Record<string, RateLimitRule>;
 
-export type AuthRateLimitRoute = 'sign-in';
+/** Routes counted per IP alone, ADR 0015 "Rate limits"; a test pins these numbers. */
+export const PER_IP_LIMITS = {
+  'sign-up': { limit: 5, windowMs: HOUR_MS },
+  'email-verification-confirm': { limit: 10, windowMs: 15 * MINUTE_MS },
+  'email-verification-resend': { limit: 10, windowMs: HOUR_MS },
+  /** ADR 0020 Addendum (1e-iii) A2: about 86,400 names per IP per day. */
+  'username-availability': { limit: 60, windowMs: MINUTE_MS },
+} as const satisfies Record<string, RateLimitRule>;
 
-export type RateLimitScope = keyof typeof SIGN_IN_LIMITS;
+/**
+ * A second counter per IPv6 /48 ("site"), counted after the route's per-IP key, for the routes
+ * listed here only (ADR 0020 Addendum 1f gate G1); a test pins these numbers.
+ */
+export const PER_IPV6_SITE_LIMITS = {
+  /** G1: 120 per /48 per minute, where 65,536 /64s at 60 each gave 3,932,160. */
+  'username-availability': { limit: 120, windowMs: MINUTE_MS },
+} as const satisfies Partial<Record<PerIpRoute, RateLimitRule>>;
+
+/** The same table, read by any per-IP route: a route without a site rule gets undefined. */
+const SITE_RULES: Partial<Record<PerIpRoute, RateLimitRule>> =
+  PER_IPV6_SITE_LIMITS;
+
+/**
+ * Password checks per pending account on the confirm route, from any number of IPs (ADR 0020
+ * Addendum C4: at most 240 guesses in the account's 24 h); a test pins it.
+ */
+export const CONFIRM_PASSWORD_LIMIT = {
+  limit: 10,
+  windowMs: HOUR_MS,
+} as const satisfies RateLimitRule;
+
+export type PerIpRoute = keyof typeof PER_IP_LIMITS;
+
+export type AuthRateLimitRoute = 'sign-in' | PerIpRoute;
+
+export type RateLimitScope = keyof ScopeParts;
 
 declare const clientIpBrand: unique symbol;
 
@@ -45,6 +90,7 @@ interface ScopeParts {
   readonly ip: readonly [ClientIpKey];
   readonly identifierIp: readonly [NormalisedIdentifier, ClientIpKey];
   readonly identifier: readonly [NormalisedIdentifier];
+  readonly ipv6Site: readonly [Ipv6SiteKey];
 }
 
 declare const rateLimitKeyBrand: unique symbol;
@@ -116,6 +162,61 @@ export function signInHits(
     },
   ];
   return hits as SignInHits;
+}
+
+/**
+ * A route's keys counted per IP: the IP (an IPv6 cut to its /64) under PER_IP_LIMITS, then, for a
+ * route in PER_IPV6_SITE_LIMITS and an IPv6 caller only, its /48 under that rule. The /64 goes
+ * first, so a /64 refused at its own limit never spends its site's budget (G2). The route is in
+ * every key, so no two routes share a counter.
+ */
+export function perIpHits(
+  hmacKey: KeyObject,
+  route: PerIpRoute,
+  ip: ClientIpKey,
+): RateLimitHits {
+  const ipHit: RateLimitHit = {
+    key: rateLimitKey(hmacKey, route, 'ip', [ip]),
+    rule: PER_IP_LIMITS[route],
+  };
+  const siteRule = SITE_RULES[route];
+  const site = siteRule === undefined ? null : ipv6SiteKeyOf(ip);
+  // Only an IPv6 key has a colon: one without a site means the key spelling changed, and a quiet
+  // single hit would drop the /48 bound. Fail the request (500), never count it short.
+  if (siteRule !== undefined && site === null && ip.includes(':')) {
+    throw new Error('An IPv6 client IP key has no /48: its spelling changed');
+  }
+  const hits: readonly [RateLimitHit, ...RateLimitHit[]] =
+    siteRule === undefined || site === null
+      ? [ipHit]
+      : [
+          ipHit,
+          {
+            key: rateLimitKey(hmacKey, route, 'ipv6Site', [site]),
+            rule: siteRule,
+          },
+        ];
+  return hits as RateLimitHits;
+}
+
+/**
+ * The account's password counter on the confirm route, keyed by its stored email. Counted only
+ * right before a password verification, so only the holder of a live token can use it up. Its
+ * route differs from sign-in's, so the two never share a counter.
+ */
+export function confirmPasswordHits(
+  hmacKey: KeyObject,
+  email: NormalisedIdentifier,
+): RateLimitHits {
+  const hits: readonly [RateLimitHit] = [
+    {
+      key: rateLimitKey(hmacKey, 'email-verification-confirm', 'identifier', [
+        email,
+      ]),
+      rule: CONFIRM_PASSWORD_LIMIT,
+    },
+  ];
+  return hits as RateLimitHits;
 }
 
 export type RateLimitDecision =

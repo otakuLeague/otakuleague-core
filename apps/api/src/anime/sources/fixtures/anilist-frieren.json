@@ -230,43 +230,50 @@
           {
             "isMain": false,
             "node": {
-              "name": "Toho"
+              "name": "Toho",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": true,
             "node": {
-              "name": "MADHOUSE"
+              "name": "MADHOUSE",
+              "isAnimationStudio": true
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Shogakukan"
+              "name": "Shogakukan",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Nippon Television Network"
+              "name": "Nippon Television Network",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Shogakukan-Shueisha Productions"
+              "name": "Shogakukan-Shueisha Productions",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Aniplex"
+              "name": "Aniplex",
+              "isAnimationStudio": false
             }
           },
           {
             "isMain": false,
             "node": {
-              "name": "Dentsu"
+              "name": "Dentsu",
+              "isAnimationStudio": false
             }
           }
         ]
@@ -443,7 +450,10 @@
           "type": "STREAMING"
         }
       ],
-      "nextAiringEpisode": null
+      "nextAiringEpisode": null,
+      "source": "MANGA",
+      "countryOfOrigin": "JP",
+      "hashtag": "#フリーレン #frieren"
     }
   }
 }

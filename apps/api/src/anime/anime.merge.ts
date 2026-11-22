@@ -137,6 +137,10 @@ export function mergeAnime(
     rankRated: pick(snapshots, (s) => s.rankRated),
     rankPopular: pick(snapshots, (s) => s.rankPopular),
     coverColor: pick(snapshots, (s) => s.coverColor),
+    sourceMaterial: pick(snapshots, (s) => s.sourceMaterial),
+    countryOfOrigin: pick(snapshots, (s) => s.countryOfOrigin),
+    producers: pick(snapshots, (s) => s.producers),
+    hashtags: pick(snapshots, (s) => s.hashtags),
   };
   return {
     id: anime.id,

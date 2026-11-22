@@ -586,18 +586,29 @@
                         min-height: 44px;
                         padding: 0 16px;
                         border-radius: var(--radius-md);
-                        background: color-mix(
-                          in oklab,
-                          var(--good) 10%,
-                          var(--surface)
-                        );
-                        border: 1px solid
-                          color-mix(in oklab, var(--good) 40%, transparent);
+                        background: var(--surface);
+                        border: 1px solid var(--border);
                       "
                     >
                       <span
                         class="ol-label"
-                        style="color: var(--good); font-size: 11px"
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 8px;
+                          color: var(--good);
+                          font-size: 11px;
+                        "
+                        ><span
+                          aria-hidden="true"
+                          style="
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 50%;
+                            background: var(--good);
+                            box-shadow: 0 0 8px var(--good);
+                          "
+                        ></span
                         >Next episode</span
                       >
                       <span

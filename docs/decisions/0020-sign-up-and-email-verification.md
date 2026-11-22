@@ -1,0 +1,423 @@
+# 0020: Sign-up and email verification (OTA-139 slice 1e)
+
+Status: proposed (2026-11-19, OTA-139 slice 1e). Details the sign-up, verification and email rows of [ADR 0015](0015-authentication.md); changes none of its routes or numbers. No schema migration until the [Addendum (1e-ii-b)](#addendum-1e-ii-b). Built in three PRs: 1e-i sign-up, 1e-ii confirm and resend, 1e-iii availability and the common-password list. The [Addendum (1e-ii)](#addendum-1e-ii) (2026-11-19) replaces the Confirm table and the Resend statement and adds the password gate; 1e-ii is split into 1e-ii-a (confirm, built) and 1e-ii-b (resend). The [Addendum (1e-ii-b)](#addendum-1e-ii-b) (2026-11-20) adds the one migration of this ADR, UNIQUE(`user_id`, `purpose`) on `auth_token`, and turns the token write of sign-up and resend into an upsert. The [Addendum (1e-iii)](#addendum-1e-iii) (2026-11-20) fixes the availability route and the common-password list.
+
+## Context
+
+ADR 0015 fixed the routes and the rules. Slice 1d added `auth_token`, `auth_username_hold` and `app_user.pending_expires_at`, and a daily cleanup that deletes an unverified user once `pending_expires_at <= now`. This slice writes those rows for the first time, so it decides the statements, their order and what happens when two requests meet.
+
+Constraints: API only. No real mail provider yet (Resend adapter, templates and the email budget are a later slice), and the beta deploys before Farouk sets any variable, so a new required variable would stop the deploy. PRs stay near 400 changed lines. The cloud run cannot execute API tests (CI only).
+
+## Requirements
+
+**Functional.** (1) A visitor submits a username, an email and a password and gets 202 `{ bindingToken }`, or 409 when the username is taken or held. (2) The owner of the address confirms it with the emailed token; only the browser that signed up gets a session. (3) A pending member can ask for the email again and always gets 202.
+
+**Non-functional.**
+
+| # | Requirement |
+|---|---|
+| N1 | No enumeration: a new, a pending and a registered email get the same status and body shape and cost exactly 1 argon2 hash; the 409 is decided before the email is read; mail leaves after the response. |
+| N2 | No duplicate under concurrency: N submits of one username at once give exactly 1 answer 202 and N − 1 answers 409; N submits of one email leave exactly 1 `app_user` row; 0 answers 500. |
+| N3 | Abuse bound: 5 submits per IP per hour, so at most 5 hashes, 5 pending users and 5 holds per IP per hour; a refused submit costs 1 upsert and 0 hashes; every pending user and hold is gone within 48 h (24 h TTL plus the daily cleanup). |
+| N4 | Lock time: argon2 (tens to hundreds of ms, queue of 8) never runs inside a transaction; the sign-up transaction is at most 5 statements, each on a primary key or unique index. |
+| N5 | Production creates 0 pending accounts it cannot email, and never uses the console sender. |
+
+**Consistency over availability.** A stale read here means two members with one username or two accounts for one email, which cannot be repaired afterwards. Database down means 503; nothing is kept in memory.
+
+## Core entities
+
+`User` (pending, stale or permanent), `UsernameHold`, `AuthToken` (purpose `EMAIL_VERIFICATION`, with the binding hash), `AuthRateLimit`, `AuthEmail` (a message, never stored).
+
+- **Stale** user: `email_verified_at IS NULL AND pending_expires_at <= now`. This is exactly the row the cleanup deletes.
+- **Pending** user: unverified with `pending_expires_at > now`.
+- **Permanent** user: verified, or unverified with no deadline (created before this slice; the cleanup never deletes it, so no route here changes or deletes it either).
+- A username is **taken** when a hold with `expires_at > now` exists, or a user row with that `username_key` exists and is not stale. One function, shared by the 409 and by availability.
+
+## API
+
+All three need `X-Internal-Api-Key` and `X-Client-Ip` (`CredentialGuard`) and answer `Cache-Control: no-store`.
+
+| Route | PR | Limit per IP | Answer |
+|---|---|---|---|
+| `POST /auth/sign-up` `{ username, email, password }` | 1e-i | 5 per hour | 202 `{ bindingToken }`; 409 `USERNAME_TAKEN`; 400 `VALIDATION_FAILED`; 429 `TOO_MANY_REQUESTS` or `AUTH_BUSY`; 403 `SIGN_UP_CLOSED` when no sender exists |
+| `POST /auth/email-verification/confirm` `{ token, bindingToken? }` | 1e-ii | 10 per 15 min | 200 `{ outcome }`; 400 `AUTH_TOKEN_INVALID` |
+| `POST /auth/email-verification/resend` `{ email }` | 1e-ii | 10 per hour | 202 always (403 `SIGN_UP_CLOSED` when no sender exists) |
+| `GET /users/availability?username=` | 1e-iii | 60 per minute | 200 `{ available }` |
+
+Input rules: username 3 to 20 of `[A-Za-z0-9_]` (parity; so never "@"), stored as typed, `usernameKey` = `normaliseIdentifier(username)`. Email at most 254 raw UTF-16 units, checked for shape after `normaliseIdentifier`, and that output is what `email` stores and what mail is sent to. Password 8 to 128 code points after NFC with at least one digit or symbol.
+
+## Data flow (sign-up)
+
+```mermaid
+sequenceDiagram
+  participant W as Web server
+  participant A as SignUpService
+  participant D as Postgres
+  participant E as EmailSender
+  W->>A: POST /auth/sign-up (key, client IP)
+  A->>D: count the attempt (5 per IP per hour)
+  A->>D: is the username taken? (read)
+  Note over A: 409 here costs no hash
+  A->>A: one argon2 hash, token and bindingToken drawn
+  A->>D: BEGIN, claim hold, delete stale row of this username, upsert user by email, replace token, COMMIT
+  A-->>W: 202 { bindingToken }
+  A-)E: send (not awaited): verification, or a notice to a registered owner
+```
+
+## Options
+
+- **A. The pending user row is the reservation; no hold.** One table fewer to write. Rejected: a submit with a registered email creates no pending row, so the username stays free and a second request shows the email is registered (breaks N1).
+- **B. Hold row as the per-username lock, one upsert per table (chosen).**
+- **C. Serializable transactions with a retry loop, or advisory locks on the username and the email.** Correct, but adds retry code and a second locking scheme next to row locks. Rejected: the hold upsert already locks the one row every sign-up of that username must touch.
+
+Also rejected: hashing inside the transaction (row locks held for the whole argon2 queue, breaks N4); releasing the old hold when a pending email re-submits with another username (the release would depend on the email's state, breaks N1); an outbox or queue for mail (ADR 0015: a send is not idempotent, the member has "Resend").
+
+## Decision
+
+**Simplest version first.** One transaction that checks the username, inserts the user and the token, then prints the mail. It fails N1 (a known email hits the unique index and answers differently) and N2 (two submits both pass the check). The design below adds only what those two need.
+
+**Sign-up (1e-i), in order.**
+1. No sender (`EmailSender.canSend()` false): 403 `SIGN_UP_CLOSED` before any counter, hash or write.
+2. Count the attempt: one per-IP key, 5 per hour. Refused: 429 with `Retry-After`.
+3. Read "is the username taken?". Yes: 409, no hash.
+4. One argon2 hash, outside any transaction. Draw the token and the `bindingToken` (32 bytes each, base64url) in every branch.
+5. One transaction (READ COMMITTED), locks taken in the order hold, `app_user`, `auth_token`:
+   - **Claim the hold:** `INSERT … ON CONFLICT (username_key) DO UPDATE SET expires_at = now + TTL WHERE hold.expires_at <= now RETURNING`. No row back means a live hold: 409. The locked hold row serialises every sign-up of that username until commit.
+   - **Replace a stale row:** `DELETE FROM app_user WHERE username_key = … AND email_verified_at IS NULL AND pending_expires_at <= now` (the cleanup's own predicate, run early for one username; its tokens go by cascade). If a row with that key is still there, it is permanent or pending: 409.
+   - **Upsert the user by email:** `INSERT … ON CONFLICT (email) DO UPDATE SET username, username_key, password_hash, pending_expires_at = now + TTL, updated_at WHERE email_verified_at IS NULL AND pending_expires_at IS NOT NULL RETURNING id`. New email inserts; a pending or stale one is re-armed in this one UPDATE; a permanent one returns no row and is left byte for byte as it was.
+   - **Token:** when a row came back, delete that user's `EMAIL_VERIFICATION` tokens and insert the new one (SHA-256 of the token and of the `bindingToken`, `expires_at = now + TTL`). A 409 inside the transaction rolls it back.
+6. Answer 202 `{ bindingToken }`. Then, not awaited: `email_verification` (address, username, token), or `sign_up_notice` to the owner of a permanent account. A rejected send is caught and logged without the address; no retry.
+
+`now` is one `Clock.now()` per request, so the hold, the deadline and the token expire at the same instant. Timestamps go into raw SQL as `toISOString()::timestamptz` and no timestamp is read back from raw SQL (the pg adapter drops the offset, OTA-200).
+
+**What the 409 reads.** A username is taken when a verified user has it, an unverified row the cleanup would not delete has it (pending, or no deadline), or a live hold has it. This supersedes the PROGRESS.md carry-over ("verified users and live holds only"): a pending row counts too, because resend re-arms it without touching the hold. Constraint on 1e-ii: resend must not move `pending_expires_at` past the username hold's `expires_at` (the hold and the row end together; resend extends both, or neither). Otherwise a name whose hold has ended but whose row lives on answers 409 to a probe while a free-looking name answers 202, and the taken/free probe tells whether an email is registered.
+
+**Confirm (1e-ii).** Read the token row by its hash to learn the user. Then one transaction: `SELECT … FROM app_user WHERE id = … FOR UPDATE` first (the cleanup's order, user then token, so a racing re-submit or cleanup cannot deadlock it), consume with `UPDATE auth_token SET used_at = now WHERE token_hash = … AND used_at IS NULL AND expires_at > now RETURNING`, then `UPDATE app_user SET email_verified_at = now, pending_expires_at = NULL`. The session is created after commit, only when the binding matched.
+
+| Token | `bindingToken` | Outcome |
+|---|---|---|
+| live, unused | matches | `verified` with `sessionToken`, `expiresAt` |
+| live, unused | absent | `verified`, no session (the explicit "Confirm my email" click) |
+| live, unused | present, wrong | `confirmation_required`, nothing consumed |
+| found (used or not), user already verified | any | `already_verified`, never a session; checked before the rows above |
+| not found (unknown, cancelled, cleaned up), malformed, or used or expired with an unverified user | any | 400 `AUTH_TOKEN_INVALID` |
+
+This table is replaced by the one in the Addendum (1e-ii): the second row (binding absent, `verified`) was the pre-hijack hole.
+
+**Resend (1e-ii).** `UPDATE app_user SET pending_expires_at = now + TTL WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now RETURNING id, username`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise replace the token and copy the old row's `binding_hash`, so the browser that signed up keeps its one-click path. Resend does not touch the hold: the "taken" rule reads the pending row itself, which is why that rule is wider than "verified users and live holds". The UPDATE of `pending_expires_at` is dropped by the Addendum (1e-ii): it breaks the constraint in "What the 409 reads".
+
+**Email (1e-i).** `EmailSender` is an abstract class with `canSend()` and `send(email: AuthEmail)`; `AuthEmail` is a union of `email_verification` and `sign_up_notice`. The module provides `ConsoleEmailSender` when `NODE_ENV` is not `production` and `ClosedEmailSender` (`canSend()` false) in production, so production cannot get the console sender and sign-up stays closed there until a real adapter exists. The console sender writes one line straight to stdout (kind, address, token), not through the Logger, whose redaction would mask the token: a recorded exception to "no secret in a log", local only. `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, the link and the templates arrive with the first real adapter. The provider is Resend on its free plan (Farouk, 2026-11-15, PROGRESS.md), not Brevo as ADR 0015 says; the email slice writes the ADR 0015 addendum. Closed sign-up answers 403 `SIGN_UP_CLOSED`, not a 5xx: the filter logs every 5xx with a stack, and this answer is expected.
+
+**Deep dives.**
+- **N1.** Steps 2 to 4 never read the email. The three email branches differ by at most two indexed statements (about 1 ms) inside one request limited to 5 per IP per hour: accepted. Every submit that passes the username check leaves a hold, including one with a registered email.
+- **N2.** Same username: the hold upsert locks the hold row even when its WHERE fails, so the second submit waits for the first commit and then gets no row. Same email: the second `ON CONFLICT (email)` waits on the first insert and then updates that row, and the first token is deleted by the second. Cleanup racing a re-arm: both lock the same user row and Postgres re-checks the deadline after the wait, so the re-armed account stays.
+- **N3.** Storage: 5 pending users, 5 holds and 5 tokens per IP per hour, each under 1 KB and deleted within 48 h. No new index: every lookup is a primary key or an existing unique index.
+- **N4.** The pre-check (step 3) and the claim (step 5) look redundant. The first saves the hash on the common 409; only the second is safe against a race.
+- **N5.** Tests assert the production factory yields the closed sender and that a closed sender leaves no counter row, no hash and no user.
+
+**Split.**
+
+| PR | Scope | Estimate |
+|---|---|---|
+| 1e-i (this) | `POST /auth/sign-up`, `EmailSender` (console, closed), username and password rules, per-IP limit, `USERNAME_TAKEN`, `SIGN_UP_CLOSED`, shared types | about 400 lines of code, 300 of tests |
+| 1e-ii | confirm and resend, `AUTH_TOKEN_INVALID`, their limits and shared types | about 340 lines of code |
+| 1e-iii | `GET /users/availability`, the 10,000 common-password list (licence check first) | small code, one data file |
+| Email slice | Resend adapter, templates, `EMAIL_PROVIDER`, `WEB_PUBLIC_URL`, email budget, ADR 0015 addendum | opens sign-up in production |
+| Later migration | CHECK `expires_at > created_at` on `auth_token` | deferred as planned; UNIQUE(`user_id`, `purpose`) moved to the Gate (with 1e-ii-b) |
+
+## Addendum (1e-ii)
+
+Added 2026-11-19 with the 1e-ii plan. It closes the pre-hijack gate, replaces the Confirm table and the Resend statement above, and changes two points of ADR 0015: the confirm body gains an optional `password`, and resend no longer re-arms the account. No schema migration.
+
+**Requirements.** Functional: (1) the browser that signed up confirms with one click and gets a session; (2) any other browser confirms by typing the sign-up password; (3) a pending member gets the mail again, 202 whatever the address. Consistency over availability, as above.
+
+| # | Requirement |
+|---|---|
+| C1 | Gate: a pending password becomes usable only in a transaction whose request held the live token and either the binding stored on that token or a password matching that hash. 0 activations otherwise, also while a re-submit races the confirm. |
+| C2 | N confirms of one token at once: exactly 1 `verified`, at most 1 session, N − 1 `already_verified`, 0 answers 500. |
+| C3 | Resend: one status and an empty body for an unknown, a pending, a stale and a registered email; it moves 0 deadlines (account or hold), so a username stays taken for the same 24 h whatever the email was. |
+| C4 | Abuse bound: confirm 10 per IP per 15 min, at most 1 argon2 verification per request, and at most 10 password checks per pending account per hour from any number of IPs (at most 240 guesses in its 24 h). Resend 10 per IP per hour, 0 hashes. A refused request costs 1 upsert. |
+| C5 | Lock time: argon2 never runs inside a transaction; confirm is at most 3 statements and resend 2, each on a primary key or unique index, locks in the order `app_user`, `auth_token` (the cleanup's order). |
+
+**Gate decision: the path without a matching binding asks for the password** (the first of the two options in the Gate). The pending hash is activated only by a request that proves both the mailbox (the token) and the submit that wrote that hash (its binding, or its password), so the owner's click can activate neither a stranger's pre-registration nor a re-submit made while the account was pending, and a member who confirms on another device can sign in at once. Voiding the hash instead needs the reset flow (OTA-140, not built) before that member can sign in, and the owner's click would still make an account under the attacker's username permanent.
+
+- **The binding path needs no password.** Sign-up writes the hash and the token with its binding in one transaction and deletes the older tokens; resend copies the binding and never writes the hash. So a token's binding always belongs to the submit that wrote the current hash: the browser holding it typed that password.
+- **Attacker pre-registers the victim's address (H1).** The attacker holds the binding and the password, never the token. The victim holds the token only: `confirmation_required`, then 401 for any password the victim tries. Nothing is verified and the cleanup deletes the row after 24 h.
+- **Attacker re-submits while the victim is pending (M2).** The victim's token is deleted (400). The new token carries the attacker's binding and the row the attacker's hash, so the victim's `ol_signup` gives `confirmation_required` and the victim's password 401. The victim signs up again; the attacker never holds a token.
+- **Wrong password:** 401 `INVALID_CREDENTIALS`, nothing consumed, the member can try again. It tells nothing new: only the holder of a live token reaches it, and `confirmation_required` already says the token is live.
+
+**Confirm.** Body `{ token, bindingToken?, password? }`. Count the IP, then read the token row with its user by the token's SHA-256 (liveness and "verified" computed in SQL, no timestamp read back). The first matching row answers:
+
+| Token | User | `bindingToken` | `password` | Answer |
+|---|---|---|---|---|
+| not found (unknown, malformed, cancelled, cleaned up) | | any | any | 400 `AUTH_TOKEN_INVALID` |
+| found, used or not | verified | any | any | 200 `already_verified`, never a session |
+| used or expired | unverified | any | any | 400 `AUTH_TOKEN_INVALID` |
+| live | pending | matches | ignored, no hash | 200 `verified` with `session` (`sessionToken`, `expiresAt`) |
+| live | pending | absent or wrong | absent | 200 `confirmation_required`, nothing consumed |
+| live | pending | absent or wrong | matches the pending hash | 200 `verified`, `session: null` (ADR 0015: only the binding gives a session) |
+| live | pending | absent or wrong | wrong | 401 `INVALID_CREDENTIALS`, nothing consumed |
+
+The password is verified once, outside any transaction, and only in the last two rows; before it the account's password counter is counted (429 over 10 an hour). No dummy hash on the other rows: the status already tells a found token from an unknown one, so there is no timing to hide. Then one transaction (READ COMMITTED):
+1. `SELECT email_verified_at IS NOT NULL AS verified FROM app_user WHERE id = … FOR UPDATE`. No row (cleaned up): 400. Verified (a confirm that lost the race): `already_verified`.
+2. `UPDATE auth_token SET used_at = now WHERE token_hash = … AND used_at IS NULL AND expires_at > now RETURNING` (with `AND binding_hash = …` on the binding path). No row: roll back, 400.
+3. `UPDATE app_user SET email_verified_at = now, pending_expires_at = NULL, updated_at = now WHERE id = … AND email_verified_at IS NULL RETURNING session_epoch` (with `AND password_hash = <the hash that was verified>` on the password path). No row: roll back, 400.
+
+A re-submit that lands between the read and the transaction deletes the token, so step 2 finds nothing; the predicate in step 3 states C1 in the statement itself and does not depend on that. The session is created after commit, on the binding path only. If that insert fails the member is verified without a session: the retry answers `already_verified` and they sign in.
+
+**Resend: neither deadline moves.** One transaction: `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row (unknown, permanent or stale): 202, nothing sent. Otherwise one statement deletes that user's `EMAIL_VERIFICATION` tokens and inserts the new one with the deleted row's `binding_hash` (NULL when there was none: password path only) and `expires_at` = the account's `pending_expires_at`, copied inside SQL. The hash, the account's deadline and the hold are not written. So "Resend" works for 24 h after the last submit; after that it answers 202 and sends nothing (what ADR 0015's sign-up row already says), and the member submits the form again. The "deletes and inserts" statement is replaced by an upsert in the [Addendum (1e-ii-b)](#addendum-1e-ii-b); the rest of this paragraph stands.
+
+Rejected: resend extends the account and its hold together. A submit with a registered email leaves a hold but no pending row, and resend cannot find that hold from the email. After 24 h the name would be free when the email was registered and still taken when it was new: the probe "What the 409 reads" forbids. It becomes possible with the keyed email hash on the hold (a migration, already in the Gate).
+
+**Limits.** Per-IP keys for the routes `email-verification-confirm` (10 per 15 min) and `email-verification-resend` (10 per hour). The password counter is the key (`email-verification-confirm`, `identifier`, the account's email), 10 per hour, counted only when a password is about to be verified, so only the holder of the live token can use it up. Resend answers 403 `SIGN_UP_CLOSED` before any counter when no sender exists, as sign-up does.
+
+**Split.** The two routes do not fit one PR of about 400 lines (about 480 lines of code, 700 of tests): 1e-ii-a is confirm with `AUTH_TOKEN_INVALID` and the gate (about 350 of code), 1e-ii-b is resend (about 130).
+
+**Too simple?**
+- Anyone who knows a pending address can re-submit it and force its owner to sign up again, as often as the sign-up limit allows (5 per IP per hour). No takeover; the per-address email budget (Gate) bounds the mail.
+- A member who confirms on another device types the password, and gets no session there.
+- Resend can mail a pending address 10 times per IP per hour until the email budget exists (Gate; production is closed).
+
+**Too complicated?** The password counter is the one part an attack has not yet asked for: without it the per-IP limit still gives 960 guesses per IP per day against a stranger's pending password (a typo in the address is enough to send the token to someone else). It is one more key in the existing limiter; drop it if the PR must shrink. Left out on purpose: a session on the password path, a dummy hash, a new outcome for a wrong password, extending the hold.
+
+## Addendum (1e-ii-b)
+
+Added 2026-11-20 with the 1e-ii-b plan (resend and the UNIQUE migration). It keeps every rule of the Addendum (1e-ii) and replaces one thing: the token is no longer deleted and inserted, by resend or by sign-up; it is one row per account and purpose, replaced by an upsert. One schema migration.
+
+**Requirements.** Functional: (1) a pending member asks again and gets a mail whose new token works until the account's own deadline; (2) the browser that signed up still confirms in one click after a resend, any other browser still types the password; (3) any other address (unknown, verified, stale, unverified with no deadline) gets the same answer and nothing is sent or changed. Consistency over availability, as above: database down is 503.
+
+| # | Requirement |
+|---|---|
+| R1 | No enumeration: the five kinds of address get the same status (202), body (`{}`) and headers, cost 0 hashes and differ by 1 indexed statement (about 1 ms); no counter is keyed by the email, so no 429 depends on it; mail leaves after the response. A pending address takes a row lock, so parallel resends of one pending address run one after the other: a timing signal that an unverified sign-up of that address exists from the last 24 h. Accepted; revisit with `SKIP LOCKED` if needed. |
+| R2 | One token: at most 1 `auth_token` row per (`user_id`, `purpose`), as a database rule. N resends of one address at once: N answers 202, exactly 1 row, 0 answers 500. A re-submit of a pending email: 0 answers 500. |
+| R3 | Nothing moves: resend writes 0 columns of `app_user` and of `auth_username_hold`; the token's `expires_at` equals the account's `pending_expires_at` to the millisecond; its `binding_hash` is the one the last submit wrote, byte for byte. |
+| R4 | Abuse bound: 10 per IP per hour (a burst across a window boundary can reach 19); a refused request costs 1 upsert; so at most 10 mails per IP per hour until the email budget exists (Gate; production is closed). |
+| R5 | Lock time: 1 transaction of 2 statements, each on a unique index, locks in the order `app_user`, `auth_token`. The migration is 3 statements in 1 transaction and cannot fail on existing rows. |
+
+**Core entities.** `User` (pending), `AuthToken` (now one per user and purpose), `AuthRateLimit`, `AuthEmail` (`email_verification`). No new entity.
+
+**API.** `POST /auth/email-verification/resend`, `CredentialGuard`, `Cache-Control: no-store`, body `{ email }` under sign-up's email rule (at most 254 raw units, then the shape after `normaliseIdentifier`).
+
+| Answer | When |
+|---|---|
+| 202 `{}` | always, once the request is counted. The body is an empty JSON object, not zero bytes: `apiClient()` accepts a zero-length body only on 204 and 205 (ADR 0003). This is what C3's "empty body" means. |
+| 400 `VALIDATION_FAILED` | a missing, null, over-long or malformed email, or an unknown field; decided from the input alone, no counter spent |
+| 400 `BAD_REQUEST`, 403 `INTERNAL_KEY_REQUIRED` | the guard, as on confirm |
+| 403 `SIGN_UP_CLOSED` | no sender, before any counter or read |
+| 429 `TOO_MANY_REQUESTS` with `Retry-After` | the 11th request of one IP in an hour |
+
+**Data flow.**
+
+```mermaid
+sequenceDiagram
+  participant W as Web server
+  participant A as SignUpService.resendVerification
+  participant D as Postgres
+  participant E as EmailSender
+  W->>A: POST /auth/email-verification/resend (key, client IP)
+  A->>D: count the attempt (10 per IP per hour)
+  A->>A: draw the token (every branch)
+  A->>D: BEGIN, lock the pending user by email
+  A->>D: upsert its token (pending only), COMMIT
+  A-->>W: 202 {}
+  A-)E: send email_verification (pending only, not awaited)
+```
+
+**Simplest version first.** Read the pending user, delete its tokens, insert a new one with the deleted row's binding, send. Two things break it. Without a lock on the user, a confirm that commits in between leaves a verified member with a fresh live token and a mail (reproduced on Postgres 16). And with UNIQUE(`user_id`, `purpose`) the statement sign-up uses today, `WITH cancelled AS (DELETE …) INSERT …`, fails with 23505 on every re-submit of a pending email: Postgres runs a data-modifying CTE the main query does not read after that query, so the insert meets the old row (reproduced on Postgres 16). The design adds the lock and turns both writers into an upsert.
+
+**Decision.**
+
+1. **Migration `20261120120000_auth_token_one_per_purpose`** (hand-written, Prisma's names; `schema.prisma` swaps `@@index([userId])` for `@@unique([userId, purpose])`):
+
+   ```sql
+   -- Sign-up never left two rows, so this deletes nothing; it is here so the index cannot fail.
+   -- Keeps the newest row per account and purpose, the token hash breaking a tie.
+   DELETE FROM "auth_token" AS "older" USING "auth_token" AS "newer"
+   WHERE "older"."user_id" = "newer"."user_id" AND "older"."purpose" = "newer"."purpose"
+     AND ("older"."created_at", "older"."token_hash") < ("newer"."created_at", "newer"."token_hash");
+   DROP INDEX "auth_token_user_id_idx";
+   CREATE UNIQUE INDEX "auth_token_user_id_purpose_key" ON "auth_token"("user_id", "purpose");
+   ```
+
+   The old index goes because the new one starts with `user_id` and serves the cascade the same way. No timestamp literal (OTA-200). The table is empty in production (sign-up is closed there), so the lock is instant and the deploy order does not matter.
+
+2. **Sign-up's token statement becomes an upsert** (same PR, or re-submit answers 500): `INSERT … VALUES (…) ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash, binding_hash = EXCLUDED.binding_hash, created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at, used_at = NULL`. The old token stops existing because its hash is overwritten: "a new token cancels the older ones" is now one row changing its key.
+
+3. **Resend**, in this order: no sender is 403; count the IP (`email-verification-resend`, 10 per hour); one `Clock.now()`; normalise the email; draw the token; then one transaction (READ COMMITTED):
+   - `SELECT id, username FROM app_user WHERE email = … AND email_verified_at IS NULL AND pending_expires_at > now FOR UPDATE`. No row: commit, 202, nothing sent.
+   - `INSERT INTO auth_token (token_hash, purpose, user_id, created_at, expires_at) SELECT <hash>, 'EMAIL_VERIFICATION', id, now, pending_expires_at FROM app_user WHERE id = … ON CONFLICT (user_id, purpose) DO UPDATE SET token_hash = EXCLUDED.token_hash, created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at, used_at = NULL`.
+
+   The update does not name `binding_hash`, so the binding stays; that is the whole "copy". With no previous row the insert leaves it NULL (password path only). The deadline is copied inside SQL and never read back. Then 202 `{}`, then the mail (address and username as stored, the new token), through sign-up's `dispatch`.
+
+4. **Where it lives.** `SignUpService.resendVerification`, called by `EmailVerificationController`. Sign-up already owns the sender, the token draw, the closed check and the after-response dispatch, and the two writers of verification tokens then sit in one file, where the rule "the binding belongs to the submit that wrote the current hash" can be read in one place. Its outcome is `accepted`, `rate_limited` or `closed`: the controller cannot tell whether a mail left.
+
+**Deep dives.**
+- **R1.** The four silent cases stop at the locked read; the pending case adds one upsert. Same size of difference as sign-up's N1, accepted. A wait on the user lock happens only while a confirm or a re-submit of that same account is in flight.
+- **R2 and the races.** Every writer locks the user row before the token (sign-up: hold, user, token), so no pair can deadlock.
+  - Confirm commits first: the locked read re-checks `email_verified_at IS NULL` after the wait and finds nothing. No token, no mail.
+  - Resend commits first: the confirm holds the old hash, its consuming UPDATE finds no row, 400 `AUTH_TOKEN_INVALID`, nothing verified. The new mail works, with the same binding.
+  - Re-submit commits first: the locked read returns the re-armed row (new username), and the upsert replaces the re-submit's token but keeps its binding and takes its deadline. Both mails leave; the later one works.
+  - Resend commits first, then a re-submit: sign-up overwrites hash, binding and token together, as before.
+  - Cleanup deletes the account first: no row, nothing sent, no foreign-key error. Resend first: the cleanup waits, then deletes the account and its token by cascade if it is stale.
+  - Two resends: the second waits, then replaces the first's token. One row.
+- **R3.** Resend has no statement that writes `app_user` or the hold. A used token on an unverified account cannot be produced by confirm (one transaction); if seeded, the upsert makes it a live one.
+- **R4.** One more entry in `PER_IP_LIMITS`, pinned by the existing test. No email budget exists in code yet; it is not built here (Gate).
+- **R5.** The migration was run on Postgres 16 against rows seeded with duplicates (three tokens of one purpose, two sharing `created_at`): one row left per pair, index created.
+
+**Rejected.**
+- **Keep delete then insert.** As one statement it fails under the constraint (above). As two it works, but resend must carry the binding through `DELETE … RETURNING`; the upsert keeps it by not writing it.
+- **One guarded upsert, no transaction** (`INSERT … SELECT … FROM app_user WHERE` pending). One statement fewer. Rejected: it waits on the token row behind a confirm, then revives the token of a member who has just been verified, and mails it.
+- Also rejected: a partial unique index on unused tokens only (two rows per account again, and nothing reads a used one); a separate dispatcher class or resend service now (do it when password reset, OTA-140, becomes the third sender).
+
+**Too simple?**
+- Anyone who knows a pending address can have it mailed 10 times per IP per hour, and each resend kills the previous link. The newest mail always works and the binding is kept, so no takeover; the per-address budget (Gate) bounds it.
+- Two resends at once send two mails and only the later token works. A member who clicks the other one gets 400 and uses the newer mail.
+- The duplicate cleanup in the migration has no automated test (the suite migrates an empty database); it was checked by hand, and production holds no row.
+- An API rolled back to a build from before the upsert would answer 500 to a re-submit. Only where sign-up is open, so nowhere in production.
+- One token per purpose also binds the reset slice (OTA-140): a new reset request replaces the last one, which is ADR 0015's rule.
+
+**Too complicated?** The duplicate cleanup guards against rows that should not exist: four lines against a failed migration that blocks every later deploy (P3009). Dropping the old index is optional and one line. The transaction is needed (second rejected option). Left out on purpose: the email budget, a per-email resend counter (it would answer 429 by address), a response guard in shared types (the web reads the status only), moving the deadline.
+
+**Size.** About 200 lines of code and 300 of tests in one PR. If it must be cut, the migration with sign-up's upsert goes first as its own PR and the route second; never the route first, because its `ON CONFLICT` needs the index.
+
+## Addendum (1e-iii)
+
+Added 2026-11-20 with the 1e-iii plan (username availability and the common-password list). It changes no rule above and no route of ADR 0015. No schema migration, no new variable, no new dependency.
+
+**Requirements.** Functional: (1) the sign-up form asks whether a username is free and gets 200 `{ available }`; (2) sign-up refuses a password that is on the common-password list, with a message on the `password` field; (3) `available` is `false` exactly when a sign-up of that name at the same instant would answer 409 on its pre-check.
+
+| # | Requirement |
+|---|---|
+| A1 | One rule: availability runs the statement the 409 pre-check runs (`isUsernameTaken`): 1 read on 2 unique indexes, no lock. In each of the 7 states (free, verified, pending, stale, unverified with no deadline, live hold, ended hold) the two routes agree. |
+| A2 | Abuse bound: 60 per IP per minute (a burst across a window boundary can reach 119), so about 86,400 names per IP per day. A refused request costs 1 upsert and 0 reads; a malformed one costs 0 statements. |
+| A3 | Cost: 2 statements per answered call (the counter upsert, the read), each on a primary key or unique index, 0 hashes. Never cached: `no-store`. |
+| P1 | A common password costs 0 statements and 0 hashes: 400 from validation, before the closed check and any counter. One `Set` lookup; the set is built once at import from 10,001 entries (73 KB of text; under 1 MB of heap, estimated, not measured), with no file read and no network call. |
+| P2 | The list is the upstream file, entry for entry: a test rebuilds its bytes and pins their SHA-256. |
+
+**Consistency over availability**, as above, here by default rather than by need. `available: true` is a hint: a name can be taken between the check and the submit, and the claim in sign-up's transaction stays the authority. Nothing is cached, because the read is one indexed statement and a cache would be a second answer to "taken". Database down is 503: the counter cannot count, and an uncounted pass is never given. The list is static data inside the process, so it has no such choice.
+
+**Core entities.** `UsernameHold`, `User`, `AuthRateLimit` (one more route), `CommonPasswordList` (in memory, never stored). No new table.
+
+**API.** `GET /users/availability?username=`, `CredentialGuard`, `Cache-Control: no-store`.
+
+| Answer | When |
+|---|---|
+| 200 `{ available: true }` or `{ available: false }` | once the request is counted; `false` for a taken and for a held name alike, never says which |
+| 400 `VALIDATION_FAILED` | `username` missing, repeated, or not 3 to 20 of `[A-Za-z0-9_]`, or an unknown query parameter; sign-up's pattern and message; no counter spent |
+| 400 `BAD_REQUEST`, 403 `INTERNAL_KEY_REQUIRED` | the guard, as on sign-up (the preview key is refused although this is a GET) |
+| 429 `TOO_MANY_REQUESTS` with `Retry-After` | the 61st request of one IP in a minute, for a free and a taken name alike |
+
+`POST /auth/sign-up` gains one refusal: 400 `VALIDATION_FAILED` with the detail `{ field: 'password', message: 'password is too common' }`. No new error code; the message never echoes the value.
+
+**Data flow.**
+
+```mermaid
+sequenceDiagram
+  participant W as Web server
+  participant A as SignUpService.usernameAvailability
+  participant D as Postgres
+  W->>A: GET /users/availability?username= (key, client IP)
+  Note over W,A: guard, then the username pattern: 400 costs nothing
+  A->>D: count the attempt (60 per IP per minute)
+  A->>D: is the username taken? (the 409's own read)
+  A-->>W: 200 { available }
+```
+
+**Simplest version first.** Availability as its own query on `app_user` by `username_key` fails A1: it misses the holds and counts stale rows, so it would say "free" where sign-up answers 409 and "taken" where sign-up answers 202. So it calls the function sign-up calls and adds nothing else. The password list as an exact match on the file's lines lets `Password1` through while refusing `password1`; one `toLowerCase()` closes that. Nothing more is added.
+
+**Decision.**
+
+1. **Where availability lives.** `SignUpService.usernameAvailability({ username, ip })`, called by a new `UsernameAvailabilityController` (`@Controller('users')`, in the auth module). Order, never reordered: count (`username-availability`, 60 per minute, one more entry in `PER_IP_LIMITS`), one `Clock.now()`, `normaliseIdentifier`, `isUsernameTaken`. Outcome `available`, `taken` or `rate_limited`. `isUsernameTaken` stays private: both callers are in the class, so no second copy can appear. No `canSend()` check: the route creates nothing (N5 is not at stake), so it answers while sign-up is closed.
+2. **A malformed username is 400 `VALIDATION_FAILED`**, not `{ available: false }`. The query DTO uses `USERNAME_PATTERN` and sign-up's message (one shared constant). `false` would make the form say "taken" for `ab`, and a `reason` field would change the body ADR 0015 fixed.
+3. **Reserved words.** No deny list exists in the code (it is a Gate item), so `admin` is `available: true` today, as sign-up accepts it. When the list is built, it is one check that both `signUp` and `usernameAvailability` call, and the A1 test gains a row for it.
+4. **The list.** SecLists, `Passwords/Common-Credentials/10k-most-common.txt`, MIT, Copyright (c) 2018 Daniel Miessler. Fetched 2026-11-20; SHA-256 `68782d6a4a19a4768d5f15dd66bd534e7a33055cc755411e33f16d18c50fdcce`, equal to upstream `master` that day. It holds 10,001 entries, not 10,000 (ADR 0015 rounds), all lower-case ASCII, no duplicate. MIT allows use and change if the copyright and permission notice stay with the copy (ADR 0006: checked before use). It lives in `apps/api/src/auth/common-passwords/`: `common-passwords.data.ts` (one `readonly string[]`, entries and order unchanged, written by a one-off command, never by hand), `LICENSE` (the MIT text, verbatim) and `README.md` (source path, date, hash, "converted to a TypeScript array, entries unchanged").
+5. **The comparison.** `isCommonPassword(password)` in `apps/api/src/auth/common-passwords.ts`: `normalisePassword` (NFC), then `toLowerCase()`, then a whole-string lookup in a module-level `Set`. No trim (a space is part of a password), no substring or leet matching.
+6. **Where it applies.** `SignUpDto.password`, as a class-validator constraint beside `SignUpPassword`. It judges only a string within `PASSWORD_RAW_MAX` (the cap before any NFC) and does not depend on the length or digit rule, so `password` gets both messages. Next: `newPassword` of `POST /auth/password-reset/confirm` (OTA-140) and any later change-password route. Never: sign-in, the `password` of confirm (an existing password; refusing it would lock a member out), or the OTA-149 import (hashes only).
+7. **Not filtered.** Only 401 of the 10,001 entries meet today's rule (8 characters with a digit or symbol), and the whole file is kept.
+
+**Deep dives.**
+- **A1.** One integration test seeds the 7 states and, for each, compares `available` with "sign-up did not answer 409". A change to one route that forgets the other fails it.
+- **A2 and A3.** The counter is per route: 60 availability checks never spend sign-up's 5, and the reverse. Each IP has one counter row, updated in place and deleted by the daily cleanup. Load, assuming ADR 0015's 1,000 sign-ups a day and about 10 debounced checks each: 10,000 upserts and 10,000 reads a day, about 0.1 per second. Usernames are public on profiles, so 86,400 probes a day per IP reveal nothing a crawler could not read; a hold only shows that someone submitted that name in the last 24 h, which the 409 already shows.
+- **P1.** The check depends on the input alone, so it cannot tell a new email from a registered one (N1 holds). It runs in the validation pipe, like the length rule, so a refused password leaves no counter row, no hash and no user.
+- **P2.** `sha256(entries.join('\n') + '\n')` equals the hash above. The test also pins 10,001 entries, no duplicate, and every entry equal to its own NFC lower-case form (so the `Set` needs no mapping).
+
+**Rejected.**
+- **A text file read at boot** (`readFileSync`, plus an `assets` entry in `nest-cli.json`). The bytes on disk would be upstream's. Rejected: `tsc` does not copy it, so production would depend on a build step that vitest, which reads `src`, never runs; a missing file would be found when Railway boots `dist`. A TypeScript module is compiled like any other file, and P2 gives the same proof of origin.
+- **A file cut down to the 401 entries that meet the rule.** Smaller. Rejected: it ties the data to today's rule; if the digit rule is dropped later, `password` would pass with no test failing. 73 KB costs nothing.
+- Also rejected: `{ available: false }` for a malformed name (decision 2); a separate availability service (the function would have to become public or be copied); the Have I Been Pwned range API or a strength estimator (a network call or a dependency on the sign-up path; ADR 0015 chose a static list); case-sensitive matching.
+
+**Too simple?**
+- `available: true` reserves nothing. The form must still handle 409 on submit.
+- The list stops 401 passwords, in any letter case. `Password123!`, the member's own username and anything leaked but not in the top 10,001 pass. Accepted with ADR 0015; revisit with real sign-in abuse data.
+- Every answered check is one write (the counter). At 0.1 per second this is nothing; if it ever shows in Postgres metrics, lengthen the web debounce before touching the limiter.
+- Passwords that exist already (imported members) are never checked.
+
+**Too complicated?** No. Lower-casing is one call and the hash test is three lines. Left out on purpose: a closed check on availability, a filtered file, injection of the list through Nest, name suggestions, a response guard in shared types (1f adds it with the code that reads the body).
+
+**Web contract for 1f.** Call only for a name that already matches the pattern, debounced. Treat 429 and 5xx as "unknown": show nothing and never block the submit. Show the API's field message for a refused password; if the form must tell the two password refusals apart, the message constant moves to shared types then.
+
+**Size.** About 150 lines of code and 250 of tests in one PR, the data file apart.
+
+**Gate / follow-ups (1e-iii review).**
+- (a) Enumeration bound: before 1f exposes the route, add a second availability counter keyed by the IPv6 /48 or a route-wide cap (60 per /64 lets one /48 probe 65,536 times faster). 1f derives `X-Client-Ip` only from the platform's header, never from a client-supplied one (local calls send 127.0.0.1: ADR 0003, 1f-ii note). Done: the /48 counter, Addendum (1f gate).
+- (b) `availability` goes on the reserved-username list: a future `/users/:username` must never collide with this route. Done: Addendum (1f gate).
+- (c) The typed username travels in a query string, so it reaches the platform's access logs. Accepted: usernames are public.
+- (d) Guard refusals (400 `BAD_REQUEST`, 403) carry no `no-store`: Nest sets `@Header` after the guards run. Existing behaviour on every guarded route; low, since neither status is cached by default.
+- The licence notice is emitted as a `/*! */` header of `common-passwords.data.ts`, which `removeComments` keeps, so it ships in `dist` with the list.
+
+## Addendum (1f gate)
+
+Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f exposes the availability route. No schema migration, no new variable, no new dependency, no new error code.
+
+| # | Requirement |
+|---|---|
+| G1 | Enumeration bound per /48: 120 availability checks per IPv6 /48 per minute, so 172,800 a day per /48, where its 65,536 /64s at 60 each allowed 3,932,160 a minute. A /48 may be one customer's site or a carrier pool that gives each subscriber a /64, so unrelated visitors can share the 120 ("Too simple?"). |
+| G2 | The /64 counts first: a check its /64 refuses never spends the /48, so one busy /64 uses at most 60 of its /48's 120. |
+| G3 | Cost: an answered IPv6 check is 3 statements (2 counter upserts, the read); refused by its /64, 1 upsert; refused by its /48, 2 upserts; 0 reads and 0 hashes either way. A check refused by its /48 still writes its /64's counter row (a new row for a new /64), kept until the cleanup (24 h). IPv4 and mapped IPv4 are unchanged (1 counter). |
+| G4 | Reserved usernames are taken: whole-key match on `normaliseIdentifier` output, before any read. Availability answers `false` with 0 reads; sign-up answers 409 `USERNAME_TAKEN` with 0 reads and 0 hashes. The 50 entries, each matching `USERNAME_PATTERN`: `availability`, `search`, `new`, `top`, `random`, `all`, `settings`, `leaderboard`, `edit`, `login`, `signup`, `sign_up`, `profile`, `account`, `api`, `user`, `users`, `admin`, `admins`, `administrator`, `moderator`, `moderators`, `mod`, `mods`, `staff`, `support`, `help`, `system`, `official`, `security`, `root`, `owner`, `team`, `bot`, `otakuleague`, `otaku_league`, `otaku`, `null`, `undefined`, `anonymous`, `deleted`, `everyone`, `guest`, `unknown`, `nobody`, `none`, `self`, `__proto__`, `constructor`, `prototype`. |
+
+**Decisions.**
+1. **A site limit table.** `PER_IPV6_SITE_LIMITS` (`auth-rate-limit-rules.ts`) holds `username-availability` only; `perIpHits` returns the /64 hit, then the /48 hit (scope `ipv6Site`, branded `Ipv6SiteKey`) for a route in that table and an IPv6 caller. `AuthRateLimiter.check` already counts in order and stops at the first refusal, which gives G2 with no limiter change. An IPv6 key (it has a colon) that yields no /48 on such a route throws (500), so a later change of the key spelling fails loudly instead of dropping the /48 bound.
+2. **A pure /48 function** beside `visitorKeyFromClientIp`, which owns the key format: `ipv6SiteKeyOf` maps `2001:db8:0:5::/64` to `2001:db8:0::/48` and gives null for IPv4, mapped IPv4, `unknown` and `preview`. The key is HMAC'd like every other part: no prefix is stored.
+3. **Reserved means taken.** `isUsernameTaken` returns true for a reserved key before its read, so both routes keep one rule (A1) and the web needs no new state. `register` refuses a reserved key too, before any statement (defence in depth, one `Set` lookup). Any later writer of `username_key` (a rename, the OTA-149 import, an OAuth sign-up) must call `isReservedUsername` itself.
+4. **The list is API-local** (`reserved-usernames.ts`, like `RESERVED_SLUGS`), with a structural test: it reads the Nest path metadata of every controller declared with `@Controller(` in `apps/api/src` (spec files apart) and fails when the first segment after `/users/` (case ignored, the braces of an optional group dropped) could be a username and is not reserved. Its limits: it does not see a prefix added by `RouterModule` or a global prefix, nor the web's Next `app/` routes; a web `/users/<name>` route in 1f needs its own check.
+
+**Rejected.**
+- **A route-wide cap.** One busy visitor would deny every other visitor the hint; the /48 bounds the cheap address space and leaves other /48s alone.
+- **Reserved as 400 from a list in shared types.** It adds a web state and ships the list to the browser for no gain; taken already covers it.
+- **The /48 counter on every per-IP route in this slice.** Confirm and resend are bounded per hour or per account. Sign-up and sign-in are the accepted risk below, closed by a Gate item.
+
+**Too simple?**
+- A carrier pool /48 shares 120 checks a minute among unrelated subscribers, and two busy /64s can use them all for the rest of the pool for up to a minute. Accepted: the hint is optional, and 1f treats 429 as unknown and never blocks the submit.
+- A reserved name answers without the read, so timing can tell reserved from taken. Accepted: the list is public in the repository.
+- **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens.
+
+**For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one; credential calls use `readCredentialClientIp()`, which sends 127.0.0.1 locally (ADR 0003, 1f-ii note). Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
+
+## Consequences
+
+- Until 1e-ii merges, an account created by sign-up cannot be confirmed (local and CI only; production is closed).
+- **Gate:** the email slice must not open sign-up in production before all of these are merged:
+  - the per-address email budget, checked before the transaction, and the common-password list (the list: done in 1e-iii, Addendum (1e-iii));
+  - pre-hijack (security review H1/M2): closed by 1e-ii, once its confirm PR is merged (Addendum (1e-ii)). A confirm without a matching binding asks for the sign-up password, checks it against the pending hash and consumes nothing on a mismatch, so neither someone who submits a victim's address nor someone who re-submits it while it is pending owns the account when the victim clicks "Confirm my email";
+  - a keyed hash of the email on the hold (a migration), so the same email can re-submit its own username without a leak;
+  - a reserved-username deny list (done in the 1f gate, Addendum (1f gate));
+  - UNIQUE(`user_id`, `purpose`) on `auth_token` (a migration), moved here from "Later migration" and due with 1e-ii-b: resend is the next writer of verification tokens, and the constraint makes "one live token per account" a database rule rather than a habit of each writer. Done in 1e-ii-b (migration `20261120120000_auth_token_one_per_purpose`);
+  - a per-email cap on password guesses over 24 h on the confirm path without a binding (for example 30 per 24 h), so the hourly counter's 240-a-day ceiling becomes a hard 30;
+  - the email budget (5 per address per 24 h, 20 per IP per 24 h, a global cap) enforced in `dispatch` before any real `EmailSender` adapter lands, with a test that fails if `canSend()` can be true in production without it;
+  - no API rollback below the 1e-ii-b build once sign-up is open: an older build's delete-then-insert meets the UNIQUE index and answers 500 (23505) to a re-submit of a pending email;
+  - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link;
+  - a /48 tier for sign-up and sign-in (or a measured hash budget), so one IPv6 /48 cannot drive argon2 hashes from its 65,536 /64s (the accepted risk of Addendum (1f gate)).
+- Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
+
+**Too simple?**
+- Submitting the same form twice within 24 h answers 409 for the member's own username, and a typo in the email locks the chosen name for 24 h. Letting the same email through without leaking needs a keyed hash of the email on the hold (a column, so a migration). Follow-up ticket to open; not built here.
+- Two submits whose stale rows hold each other's username can deadlock; Postgres aborts one, which answers 5xx once. No data is damaged. Not worth an ordering scheme.
+- A permanent unverified row (no deadline) is stuck: it counts as taken and no route re-arms it. None exists in production; the OTA-149 import decides what such members get.
+- No CAPTCHA, no retry of a failed send (ADR 0015 accepts both; the reserved-username list came with Addendum (1f gate)).
+
+**Too complicated?** The hold table and the two-step username check are both needed (Option A and N4). Left out on purpose: advisory locks, serializable retries, an outbox, extending the hold on resend, a provider variable before a provider exists.
+
+## Learnings
+
+(Filled in after 1e-i to 1e-iii.)

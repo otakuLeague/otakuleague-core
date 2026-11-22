@@ -96,7 +96,9 @@ describe('seasonRedirect (the season selector link to a season not imported yet)
 
   it('reports the import cap (429) as an expected state, not the error page', async () => {
     call.mockResolvedValueOnce(apiError(429));
-    expect(await seasonRedirect('20958', ['cast'])).toBe('import_limit_reached');
+    expect(await seasonRedirect('20958', ['cast'])).toBe(
+      'import_limit_reached',
+    );
   });
 
   it('fails (the error page) when the sources are down or the import is too slow', async () => {

@@ -21,7 +21,7 @@ export const ANILIST_ANIME_QUERY = `query AnimeCore($id: Int, $idMal: Int) {
     trailer { id site }
     genres
     tags { name rank isGeneralSpoiler isMediaSpoiler }
-    studios { edges { isMain node { name } } }
+    studios { edges { isMain node { name isAnimationStudio } } }
     averageScore
     popularity
     favourites
@@ -29,6 +29,9 @@ export const ANILIST_ANIME_QUERY = `query AnimeCore($id: Int, $idMal: Int) {
     staff(sort: [RELEVANCE, ROLE], perPage: 10) { edges { role node { name { full } } } }
     externalLinks { site url type }
     nextAiringEpisode { episode airingAt }
+    source(version: 3)
+    countryOfOrigin
+    hashtag
   }
 }`;
 

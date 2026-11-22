@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
 import { ESLint } from 'eslint';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -10,6 +11,16 @@ const OUTSIDE_CLIENT = 'src/api/network-lint-rule.test.ts';
 const OUTSIDE_API_FOLDER = 'app/page.tsx';
 const CLIENT = 'src/api/client.ts';
 const SENTRY_TUNNEL = 'src/observability/sentry-tunnel.ts';
+const AUTH_FILE = 'src/auth/web-public-url.ts';
+const AUTH_PAGE = 'app/auth/page.tsx';
+const SESSION_CALL = 'src/auth/session-call.ts';
+const LOAD_VIEWER = 'src/auth/load-viewer.ts';
+const REDIRECT_TO = 'src/auth/redirect-to.ts';
+const REDIRECT_ALLOWLIST = [
+  REDIRECT_TO,
+  'src/anime/resolve-tab.ts',
+  'src/anime/season-redirect.ts',
+];
 
 const RAW_FETCH_CALLS = [
   "await fetch('http://127.0.0.1:3001/health');",
@@ -42,6 +53,9 @@ async function ruleIdsFor(code: string, filePath: string): Promise<string[]> {
   expect(messages.filter((message) => message.fatal === true)).toEqual([]);
   return messages.map((message) => message.ruleId ?? 'unknown');
 }
+
+const everywhere = (files: readonly string[], codes: readonly string[]) =>
+  files.flatMap((file) => codes.map((code) => [file, code] as const));
 
 describe('network lint rule', () => {
   // The first lint builds the TypeScript program (over 5 s on a CI runner); pay it once here so
@@ -98,6 +112,262 @@ describe('network lint rule', () => {
         expect.arrayContaining([expect.stringMatching(NETWORK_RULE)]),
       );
     }
+  });
+
+  describe('auth gate: API calls only through credentialCall() or sessionCall()', () => {
+    it.each([
+      "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
+      "import { createApiClient } from '../api/client.ts';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\nexport const send = request;\n",
+    ])('forbids in auth code:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, AUTH_FILE)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      BUILD_OWN_CLIENT,
+      "import { createApiClient } from '../api/client.js';\nexport const build = createApiClient;\n",
+      "import { request } from 'node:http';\n",
+    ])('still forbids in sessionCall():\n%s', async (code) => {
+      expect(await ruleIdsFor(code, SESSION_CALL)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it('forbids apiClient in the auth pages too', async () => {
+      const code = `import { apiClient } from '../../src/api/client';\nexport const build = apiClient;\n`;
+
+      expect(await ruleIdsFor(code, AUTH_PAGE)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      ['src/auth/credential-call.ts', 'import { apiClient }', 'apiClient'],
+      [SESSION_CALL, 'import { apiClient }', 'apiClient'],
+      [AUTH_FILE, 'import type { ApiResult }', '{} as ApiResult<string>'],
+    ])('allows in %s: %s', async (filePath, imported, exported) => {
+      const code = `${imported} from '../api/client';\nexport const build = ${exported};\n`;
+
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-imports',
+      );
+    });
+  });
+
+  describe('session cookie gate: hasSessionCookie and SESSION_COOKIE_NAMES have one importer each', () => {
+    // Written from src/auth; `from()` moves the './' specifiers to another folder.
+    const HAS =
+      "import { hasSessionCookie } from './session-call';\nexport const has = hasSessionCookie;\n";
+    const NAMES =
+      "import { SESSION_COOKIE_NAMES } from './auth-cookies';\nexport const names = SESSION_COOKIE_NAMES;\n";
+    const OTHERS =
+      "import { readSessionToken } from './session-call';\nimport { sessionCookie } from './auth-cookies';\n" +
+      'export const used = [readSessionToken, sessionCookie];\n';
+    const from = (folder: string, code: string) =>
+      code.replace(/'\.\//g, `'${folder}`);
+    const PAGE = '../src/auth/';
+    const SIBLING = '../auth/';
+    const ELSEWHERE = ['src/shell/viewer-actions.tsx', OUTSIDE_CLIENT, CLIENT];
+
+    it.each([
+      ...everywhere(
+        [OUTSIDE_API_FOLDER],
+        [
+          from(PAGE, HAS),
+          from(PAGE, NAMES),
+          from('@/src/auth/', HAS),
+          from(PAGE, NAMES).replace("cookies'", "cookies.ts'"),
+          from(
+            PAGE,
+            "import { hasSessionCookie as has } from './session-call';\nexport const check = has;\n",
+          ),
+          from(
+            PAGE,
+            "import * as cookies from './auth-cookies';\nexport const names = cookies.SESSION_COOKIE_NAMES;\n",
+          ),
+          from(
+            PAGE,
+            "export { SESSION_COOKIE_NAMES } from './auth-cookies';\n",
+          ),
+          from(PAGE, "export * from './session-call';\n"),
+        ],
+      ),
+      ...everywhere([AUTH_FILE, 'src/auth/credential-call.ts'], [HAS, NAMES]),
+      ...everywhere(
+        [AUTH_FILE],
+        [
+          // The groups have no folder part, so a path variant still ends in the gated name.
+          HAS.replace("'./", "'./session-call/../"),
+          HAS.replace("call'", "call.ts'"),
+          // The core rule does not tell type-only imports apart: refused too.
+          "import type { hasSessionCookie } from './session-call';\nexport type Has = typeof hasSessionCookie;\n",
+          "import { type SESSION_COOKIE_NAMES } from './auth-cookies';\nexport type Names = typeof SESSION_COOKIE_NAMES;\n",
+        ],
+      ),
+      ...everywhere(ELSEWHERE, [from(SIBLING, HAS), from(SIBLING, NAMES)]),
+      // Each exception frees one name only.
+      ...everywhere([LOAD_VIEWER], [NAMES]),
+      ...everywhere([SESSION_CALL], [HAS]),
+    ])('fires in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      ...everywhere([LOAD_VIEWER], [HAS, OTHERS]),
+      ...everywhere([SESSION_CALL], [NAMES]),
+      ...everywhere([AUTH_FILE], [OTHERS]),
+      ...everywhere([OUTSIDE_API_FOLDER], [from(PAGE, OTHERS)]),
+      ...everywhere(ELSEWHERE, [from(SIBLING, OTHERS)]),
+    ])('allows in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
+      "import { request } from 'node:http';\nexport const send = request;\n",
+    ])('still forbids in load-viewer.ts:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, LOAD_VIEWER)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it('pins both names to the modules the gate finds them in by file name', () => {
+      const source = (name: string) =>
+        readFileSync(new URL(`../auth/${name}`, import.meta.url), 'utf8');
+
+      expect(source('session-call.ts')).toMatch(
+        /^export async function hasSessionCookie\(/m,
+      );
+      expect(source('auth-cookies.ts')).toMatch(
+        /^export const SESSION_COOKIE_NAMES\b/m,
+      );
+    });
+  });
+
+  describe('redirect gate: redirect() only in the three allowlisted files', () => {
+    const REDIRECT_IMPORTS = [
+      "import { redirect } from 'next/navigation';\nexport const leave = redirect;\n",
+      "import { permanentRedirect as leave } from 'next/navigation';\nexport const go = leave;\n",
+      "import * as navigation from 'next/navigation';\nexport const leave = navigation.redirect;\n",
+      "export { redirect } from 'next/navigation';\n",
+      "export * from 'next/navigation';\n",
+      "import { redirect } from 'next/dist/client/components/navigation';\nexport const leave = redirect;\n",
+      // next is CommonJS with no exports map: its default is the whole module, '.js' loads it too.
+      "import navigation from 'next/navigation.js';\nexport const leave = navigation.redirect;\n",
+      "import { default as navigation } from 'next/navigation';\nexport const leave = navigation.redirect;\n",
+      "import { 'redirect' as leave } from 'next/navigation';\nexport const go = leave;\n",
+      "import { redirect } from '../../node_modules/next/navigation';\nexport const leave = redirect;\n",
+    ];
+    // Banned in the allowlisted files too: only a named redirect import is freed there.
+    const NEVER_ALLOWED = REDIRECT_IMPORTS.slice(2, 8);
+
+    it.each(
+      everywhere([OUTSIDE_API_FOLDER, AUTH_FILE, AUTH_PAGE], REDIRECT_IMPORTS),
+    )('fires in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-syntax',
+      );
+    });
+
+    it.each([OUTSIDE_API_FOLDER, CLIENT])(
+      'allows the other next/navigation exports in %s',
+      async (filePath) => {
+        const code =
+          "import { notFound, RedirectType, unstable_rethrow, usePathname } from 'next/navigation';\n" +
+          'export const used = [notFound, RedirectType, unstable_rethrow, usePathname];\n';
+
+        expect(await ruleIdsFor(code, filePath)).not.toContain(
+          'no-restricted-syntax',
+        );
+      },
+    );
+
+    it.each(everywhere(REDIRECT_ALLOWLIST, NEVER_ALLOWED))(
+      'fires in the allowlisted %s:\n%s',
+      async (filePath, code) => {
+        expect(await ruleIdsFor(code, filePath)).toContain(
+          'no-restricted-syntax',
+        );
+      },
+    );
+
+    it.each([
+      ...everywhere(
+        [OUTSIDE_API_FOLDER, AUTH_FILE],
+        [
+          "import type { RedirectType } from 'next/navigation';\nexport type Kind = RedirectType;\n",
+          "import { type redirect } from 'next/navigation';\nexport type Leave = typeof redirect;\n",
+          "export type * from 'next/navigation';\n",
+        ],
+      ),
+      ...everywhere(REDIRECT_ALLOWLIST, REDIRECT_IMPORTS.slice(0, 2)),
+    ])('allows in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-syntax',
+      );
+    });
+  });
+
+  describe('dynamic import gate: a literal import() of a gated module is refused', () => {
+    const importing = (source: string, before = '') =>
+      `${before}export async function load(): Promise<unknown> {\n  return await import(${source});\n}\n`;
+    const NAME = "const name = 'next/navigation';\n";
+
+    it.each([
+      [OUTSIDE_API_FOLDER, importing("'next/navigation'")],
+      [REDIRECT_TO, importing("'next/navigation'")],
+      [AUTH_FILE, importing("'../api/client'")],
+      [AUTH_FILE, importing("'../api/client.ts'")],
+      [AUTH_FILE, importing("'@/src/api/client'")],
+      [AUTH_PAGE, importing("'../../src/api/client'")],
+      ['src/anime/resolve-tab.ts', importing("'../api/client'")],
+      ['src/anime/season-redirect.ts', importing('name', NAME)],
+      [OUTSIDE_API_FOLDER, importing("'node:https'")],
+      [AUTH_FILE, importing("'undici'")],
+      [OUTSIDE_CLIENT, importing("'http'")],
+      [OUTSIDE_API_FOLDER, importing('name', NAME)],
+      [OUTSIDE_API_FOLDER, importing('`next/${name}`', NAME)],
+    ])('fires in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-syntax',
+      );
+    });
+
+    it.each([
+      // Inside src/api, './client' is the client's own folder (its tests reset modules so).
+      [OUTSIDE_CLIENT, importing("'./client'")],
+      [AUTH_FILE, importing("'./credential-call'")],
+    ])('allows in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-syntax',
+      );
+    });
+
+    it.each([
+      "const navigation: unknown = require('next/navigation');\nexport const leave = navigation;\n",
+      "import navigation = require('next/navigation');\nexport const leave = navigation;\n",
+    ])('leaves require() to no-require-imports:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, OUTSIDE_API_FOLDER)).toContain(
+        '@typescript-eslint/no-require-imports',
+      );
+    });
+  });
+
+  it('ignores eslint-disable comments outside tests', async () => {
+    const code =
+      "// eslint-disable-next-line no-restricted-syntax\nimport { redirect } from 'next/navigation';\n" +
+      'export const leave = redirect;\n';
+
+    expect(await ruleIdsFor(code, AUTH_FILE)).toContain('no-restricted-syntax');
+    expect(await ruleIdsFor(code, OUTSIDE_CLIENT)).not.toContain(
+      'no-restricted-syntax',
+    );
   });
 
   it('allows createApiClient inside src/api, where the tests live', async () => {

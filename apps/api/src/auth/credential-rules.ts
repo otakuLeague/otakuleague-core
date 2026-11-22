@@ -2,12 +2,6 @@
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
 
-/**
- * Longest identifier as typed, in UTF-16 code units (what `@MaxLength` counts), checked on the
- * raw input before normaliseIdentifier. 254 is the longest email address (RFC 5321 path limit).
- */
-export const IDENTIFIER_MAX = 254;
-
 declare const identifierBrand: unique symbol;
 
 /** An identifier after normaliseIdentifier: the only form a lookup or a rate-limit key sees. */
@@ -33,6 +27,7 @@ export function passwordLength(password: string): number {
 /**
  * Trimmed and lower-cased, then NFC last so the result is NFC even where lower-casing
  * decomposes (U+0130 becomes "i" plus a combining dot). Applying it twice changes nothing.
+ * Keep in sync with the web's copy, `flashEmailFrom` in apps/web/src/auth/flash-email.ts.
  */
 export function normaliseIdentifier(identifier: string): NormalisedIdentifier {
   return identifier

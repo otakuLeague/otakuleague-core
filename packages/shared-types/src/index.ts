@@ -6,6 +6,13 @@ import {
   type AnimeFranchiseView,
   type AnimeListCardPage,
 } from './anime';
+import {
+  USERNAME_PATTERN,
+  type EmailVerificationConfirmResponse,
+  type MeResponse,
+  type SignInResponse,
+  type SignUpResponse,
+} from './auth';
 
 export const APP_NAME = 'OtakuLeague';
 
@@ -21,6 +28,9 @@ export const API_ERROR_CODES = [
   'UNAUTHORIZED',
   'AUTH_BUSY',
   'INVALID_CREDENTIALS',
+  'USERNAME_TAKEN',
+  'SIGN_UP_CLOSED',
+  'AUTH_TOKEN_INVALID',
   'TOO_MANY_REQUESTS',
   'CLIENT_ERROR',
   'SERVICE_UNAVAILABLE',
@@ -108,6 +118,79 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
     (value.status === 'ok' && database === 'up') ||
     (value.status === 'error' && database === 'down')
   );
+}
+
+/** What the web writes into the session cookie: 43 base64url characters, nothing a header could split on. */
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+/**
+ * True when `value` could be a session token: the web checks a cookie with it before sending it as
+ * a Bearer. A boolean, not a type guard: a refused string is still a string.
+ */
+export function isSessionToken(value: unknown): boolean {
+  return typeof value === 'string' && SESSION_TOKEN_PATTERN.test(value);
+}
+
+/** True when `value` is a POST /auth/sign-in body: a token that fits a cookie, an exact ISO expiry. */
+export function isSignInResponse(value: unknown): value is SignInResponse {
+  return (
+    isRecord(value) &&
+    isSessionToken(value.sessionToken) &&
+    typeof value.expiresAt === 'string' &&
+    isIsoInstant(value.expiresAt)
+  );
+}
+
+/**
+ * True when `value` is a POST /auth/sign-up 202 body (ADR 0015 Addendum 1f-v): an own `bindingToken`
+ * shaped like a session token (43 base64url characters, safe in a cookie). Other keys are ignored,
+ * as `isSignInResponse` does, so an additive API change never breaks sign-up.
+ */
+export function isSignUpResponse(value: unknown): value is SignUpResponse {
+  return (
+    isRecord(value) &&
+    Object.hasOwn(value, 'bindingToken') &&
+    isSessionToken(value.bindingToken)
+  );
+}
+
+/**
+ * True when `value` is a GET /me body: a non-empty id and a username sign-up could have accepted,
+ * so the header never renders a name the API should not hold.
+ */
+export function isMeResponse(value: unknown): value is MeResponse {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    value.id !== '' &&
+    typeof value.username === 'string' &&
+    USERNAME_PATTERN.test(value.username)
+  );
+}
+
+/** Exactly what `Date.toISOString()` writes, as the API sends it; '2026' or a bare date is not one. */
+function isIsoInstant(value: string): boolean {
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+/**
+ * True when `value` is a POST /auth/email-verification/confirm body (ADR 0020). A `session` key is
+ * accepted on `verified` only, so the web never sets a cookie from any other outcome.
+ */
+export function isEmailVerificationConfirmResponse(
+  value: unknown,
+): value is EmailVerificationConfirmResponse {
+  if (!isRecord(value)) return false;
+  switch (value.outcome) {
+    case 'verified':
+      return value.session === null || isSignInResponse(value.session);
+    case 'already_verified':
+    case 'confirmation_required':
+      return !('session' in value);
+    default:
+      return false;
+  }
 }
 
 const FRANCHISE_STATES: readonly unknown[] = [
@@ -207,4 +290,16 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
-export type { MeResponse, SignInRequest, SignInResponse } from './auth';
+export { IDENTIFIER_MAX, PASSWORD_RAW_MAX, USERNAME_PATTERN } from './auth';
+export type {
+  EmailVerificationConfirmRequest,
+  EmailVerificationConfirmResponse,
+  EmailVerificationResendRequest,
+  EmailVerificationResendResponse,
+  MeResponse,
+  SignInRequest,
+  SignInResponse,
+  SignUpRequest,
+  SignUpResponse,
+  UsernameAvailabilityResponse,
+} from './auth';

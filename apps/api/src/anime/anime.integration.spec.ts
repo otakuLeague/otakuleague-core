@@ -302,7 +302,12 @@ describe('GET /anime/:idSource/:externalId', () => {
       rankRated: { value: 69, source: 'anilist' },
       rankPopular: { value: 1, source: 'anilist' },
       coverColor: { value: '#f1a143', source: 'anilist' },
+      sourceMaterial: { value: 'MANGA', source: 'anilist' },
+      countryOfOrigin: { value: 'JP', source: 'anilist' },
+      hashtags: { value: ['#shingeki', '#attackonTitan'], source: 'anilist' },
     });
+    expect(body.producers?.value).toContain('Kodansha');
+    expect(body.producers?.value).not.toContain('WIT STUDIO');
     expect(body.synopsis?.value).not.toMatch(/[<>]/);
     expect(body.externalIds).toEqual([
       { source: 'anilist', id: '16498' },
@@ -552,6 +557,43 @@ describe('GET /anime/:idSource/:externalId', () => {
       error: { code: 'ANIME_NOT_FOUND' },
     });
     expect(anilist.calls).toBe(callsBefore);
+  });
+
+  it('stores the new facts and reads them back; an old row or an unknown value reads as no value, so Jikan fills in', async () => {
+    await get('/anime/myanimelist/16498').expect(200);
+    await importer.settle();
+    const row = await prisma.animeSourceSnapshot.findFirstOrThrow({
+      where: { source: 'ANILIST' },
+    });
+
+    expect(row).toMatchObject({
+      sourceMaterial: 'MANGA',
+      countryOfOrigin: 'JP',
+      hashtags: ['#shingeki', '#attackonTitan'],
+    });
+    expect(row.producers).toContain('Kodansha');
+
+    // A row stored before the migration (columns unset) and one with a value
+    // AniList may add later: both answer null, never a 500.
+    await prisma.animeSourceSnapshot.update({
+      where: { animeId_source: { animeId: row.animeId, source: 'ANILIST' } },
+      data: {
+        sourceMaterial: 'FANFIC',
+        countryOfOrigin: null,
+        producers: [],
+        hashtags: [],
+      },
+    });
+    // Jikan stays on and holds its own 16498 snapshot: it fills what it has.
+    const unknown = (await get('/anime/anilist/16498').expect(200))
+      .body as AnimeDetails;
+
+    expect(unknown).toMatchObject({
+      sourceMaterial: { value: 'MANGA', source: 'jikan' },
+      countryOfOrigin: null,
+      hashtags: null,
+    });
+    expect(unknown.producers?.source).toBe('jikan');
   });
 
   it('answers 404 for an id no source knows', async () => {

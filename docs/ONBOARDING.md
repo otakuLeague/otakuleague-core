@@ -42,7 +42,7 @@ Linear ticket (OTA-123)
 
    A separate workflow, Screenshots ([screenshots.yml](../.github/workflows/screenshots.yml)), runs only when `apps/web`, `apps/api`, `packages/shared-types` or `scripts/screenshots` change. It posts real pages as images in one PR comment ([ADR 0013](decisions/0013-pr-screenshots.md)).
 5. **Review.** One review pass before merge (the `/ship` skill runs it). The reviewer is never the model that wrote the code.
-6. **Merge.** Farouk merges, or the `Autopilot merge` workflow squash-merges a PR labelled `automerge`, or a ready-for-review `autopilot` PR whose checklist is fully ticked (OTA-176), once checks are green. It never merges a PR that touches a protected path. See [AUTOPILOT.md](AUTOPILOT.md).
+6. **Merge.** Farouk merges, or the `Autopilot merge` workflow squash-merges a PR labelled `automerge`, or a ready-for-review `autopilot` PR whose checklist is fully ticked (OTA-176), once checks are green. It never merges a PR that touches the merge gate (`.github/autopilot-protected-paths`, any workflow or action under `.github/`); migrations, dependencies and `.claude/` changes merge once the Fable reviews pass (OTA-202). See [AUTOPILOT.md](AUTOPILOT.md).
 7. **Beta.** A merge to `main` deploys the web to Vercel and the API to Railway, to https://beta.otakuleague.com. If a watched path changed, Railway builds the API after green checks, runs `prisma migrate deploy`, and the new container must answer `/health` before it takes traffic. Details: [deploy.md](deploy.md) and [deploy-vercel.md](deploy-vercel.md).
 8. **Production.** The DNS cutover of otakuleague.com is OTA-149 (no fixed date: Farouk decides, [ROADMAP.md](ROADMAP.md)). The beta is `noindex` until then.
 

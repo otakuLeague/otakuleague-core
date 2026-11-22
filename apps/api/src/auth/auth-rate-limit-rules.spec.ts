@@ -1,13 +1,21 @@
 import { createSecretKey } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  type Ipv6SiteKey,
+  ipv6SiteKeyOf,
   PREVIEW_VISITOR_KEY,
   visitorKeyFromClientIp,
 } from '../common/api-caller';
 import {
   type ClientIpKey,
+  CONFIRM_PASSWORD_LIMIT,
   clientIpKey,
+  confirmPasswordHits,
   decide,
+  PER_IP_LIMITS,
+  PER_IPV6_SITE_LIMITS,
+  perIpHits,
+  RATE_LIMIT_LONGEST_WINDOW_MS,
   rateLimitKey,
   type RateLimitRule,
   SIGN_IN_LIMITS,
@@ -31,6 +39,12 @@ function ipKey(header: string): ClientIpKey {
   return key;
 }
 
+function siteKey(ip: ClientIpKey): Ipv6SiteKey {
+  const key = ipv6SiteKeyOf(ip);
+  if (key === null) throw new Error(`${ip} has no IPv6 /48`);
+  return key;
+}
+
 const IP = ipKey('203.0.113.7');
 const OTHER_IP = ipKey('203.0.113.8');
 const FRIEREN = normaliseIdentifier('frieren@example.com');
@@ -45,6 +59,201 @@ describe('SIGN_IN_LIMITS', () => {
       identifierIp: { limit: 5, windowMs: 15 * 60_000 },
       identifier: { limit: 30, windowMs: 60 * 60_000 },
     });
+  });
+});
+
+describe('PER_IP_LIMITS', () => {
+  it('pins the ADR 0015 numbers: sign-up 5 per IP per hour, confirm 10 per IP per 15 min, resend 10 per IP per hour, availability 60 per IP per minute', () => {
+    expect(PER_IP_LIMITS).toEqual({
+      'sign-up': { limit: 5, windowMs: 60 * 60_000 },
+      'email-verification-confirm': { limit: 10, windowMs: 15 * 60_000 },
+      'email-verification-resend': { limit: 10, windowMs: 60 * 60_000 },
+      'username-availability': { limit: 60, windowMs: 60_000 },
+    });
+  });
+
+  it('keeps every window within the cleanup horizon', () => {
+    for (const rule of [
+      ...Object.values(PER_IP_LIMITS),
+      ...Object.values(PER_IPV6_SITE_LIMITS),
+      CONFIRM_PASSWORD_LIMIT,
+    ]) {
+      expect(rule.windowMs).toBeLessThanOrEqual(RATE_LIMIT_LONGEST_WINDOW_MS);
+    }
+  });
+});
+
+describe('PER_IPV6_SITE_LIMITS', () => {
+  it('pins the ADR 0020 (1f gate) number: availability 120 per IPv6 /48 per minute', () => {
+    expect(PER_IPV6_SITE_LIMITS).toEqual({
+      'username-availability': { limit: 120, windowMs: 60_000 },
+    });
+  });
+
+  it('leaves room for two busy /64s of one site: at least twice the /64 limit, same window', () => {
+    const site = PER_IPV6_SITE_LIMITS['username-availability'];
+    const perIp = PER_IP_LIMITS['username-availability'];
+
+    expect(site.limit).toBeGreaterThanOrEqual(2 * perIp.limit);
+    expect(site.windowMs).toBe(perIp.windowMs);
+  });
+});
+
+describe('confirmPasswordHits', () => {
+  it('pins the ADR 0020 number: 10 password checks per account per hour', () => {
+    expect(CONFIRM_PASSWORD_LIMIT).toEqual({
+      limit: 10,
+      windowMs: 60 * 60_000,
+    });
+  });
+
+  it('counts the account email alone, under that rule', () => {
+    expect(confirmPasswordHits(HMAC_KEY, FRIEREN)).toEqual([
+      {
+        key: rateLimitKey(
+          HMAC_KEY,
+          'email-verification-confirm',
+          'identifier',
+          [FRIEREN],
+        ),
+        rule: CONFIRM_PASSWORD_LIMIT,
+      },
+    ]);
+  });
+
+  it("never shares a counter with sign-in's identifier key or the confirm per-IP key", () => {
+    const [password] = confirmPasswordHits(HMAC_KEY, FRIEREN);
+    const signIn = signInHits(HMAC_KEY, IP, FRIEREN).map(({ key }) => hex(key));
+    const [perIp] = perIpHits(HMAC_KEY, 'email-verification-confirm', IP);
+
+    expect(signIn).not.toContain(hex(password.key));
+    expect(hex(password.key)).not.toBe(hex(perIp.key));
+  });
+
+  it('differs by account and HMAC key, never by IP (it has none)', () => {
+    const key = (hmacKey: typeof HMAC_KEY, email: NormalisedIdentifier) =>
+      hex(confirmPasswordHits(hmacKey, email)[0].key);
+
+    expect(key(HMAC_KEY, FRIEREN)).not.toBe(
+      key(HMAC_KEY, normaliseIdentifier('himmel@example.com')),
+    );
+    expect(key(HMAC_KEY, FRIEREN)).not.toBe(key(OTHER_HMAC_KEY, FRIEREN));
+    expect(key(HMAC_KEY, FRIEREN)).toBe(
+      key(HMAC_KEY, normaliseIdentifier(' FRIEREN@example.com ')),
+    );
+  });
+});
+
+describe('perIpHits', () => {
+  it('counts the IP alone, under the route rule', () => {
+    expect(perIpHits(HMAC_KEY, 'sign-up', IP)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'sign-up', 'ip', [IP]),
+        rule: PER_IP_LIMITS['sign-up'],
+      },
+    ]);
+  });
+
+  it('never shares a counter with sign-in or another route for the same IP', () => {
+    const [signUp] = perIpHits(HMAC_KEY, 'sign-up', IP);
+    const [confirm] = perIpHits(HMAC_KEY, 'email-verification-confirm', IP);
+    const [resend] = perIpHits(HMAC_KEY, 'email-verification-resend', IP);
+    const [signIn] = signInHits(HMAC_KEY, IP, FRIEREN);
+
+    expect(hex(signUp.key)).not.toBe(hex(signIn.key));
+    expect(hex(confirm.key)).not.toBe(hex(signIn.key));
+    expect(hex(confirm.key)).not.toBe(hex(signUp.key));
+    expect(hex(resend.key)).not.toBe(hex(signIn.key));
+    expect(hex(resend.key)).not.toBe(hex(signUp.key));
+    expect(hex(resend.key)).not.toBe(hex(confirm.key));
+  });
+
+  it('counts an IPv6 availability check per /64, then per /48, in that order', () => {
+    const ip = ipKey('2001:db8:aa:1::9');
+
+    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
+        rule: PER_IP_LIMITS['username-availability'],
+      },
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ipv6Site', [
+          siteKey(ip),
+        ]),
+        rule: PER_IPV6_SITE_LIMITS['username-availability'],
+      },
+    ]);
+  });
+
+  it.each([
+    ['an IPv4', '203.0.113.7'],
+    ['a mapped IPv4', '::ffff:203.0.113.7'],
+  ])('counts %s availability check once: no /48 exists', (_, header) => {
+    const ip = ipKey(header);
+
+    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
+        rule: PER_IP_LIMITS['username-availability'],
+      },
+    ]);
+  });
+
+  it.each([
+    'sign-up',
+    'email-verification-confirm',
+    'email-verification-resend',
+  ] as const)('counts an IPv6 %s once: no site rule', (route) => {
+    const ip = ipKey('2001:db8:aa:1::9');
+
+    expect(perIpHits(HMAC_KEY, route, ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, route, 'ip', [ip]),
+        rule: PER_IP_LIMITS[route],
+      },
+    ]);
+  });
+
+  it('throws, never counts the /64 alone, when an IPv6 key yields no /48 on a route with a site rule', () => {
+    // Brand bypassed on purpose: a spelling visitorKeyFromClientIp does not make (a future change).
+    const respelt = '2001:db8:aa:1:0:0:0:0/64' as ClientIpKey;
+
+    expect(() => perIpHits(HMAC_KEY, 'username-availability', respelt)).toThrow(
+      'An IPv6 client IP key has no /48',
+    );
+    expect(perIpHits(HMAC_KEY, 'sign-up', respelt)).toHaveLength(1);
+  });
+
+  it("gives the /48 its own counter: not the /64's, not another site's, shared by the site's /64s", () => {
+    const keys = (header: string): string[] =>
+      perIpHits(HMAC_KEY, 'username-availability', ipKey(header)).map(
+        ({ key }) => hex(key),
+      );
+    const [home, site] = keys('2001:db8:aa:1::9');
+    const [neighbour, neighbourSite] = keys('2001:db8:aa:2::9');
+    const [, otherSite] = keys('2001:db8:ab:1::9');
+
+    expect(site).not.toBe(home);
+    expect(neighbour).not.toBe(home);
+    expect(neighbourSite).toBe(site);
+    expect(otherSite).not.toBe(site);
+  });
+
+  it('differs by IP and HMAC key, and counts a whole IPv6 /64 as one visitor', () => {
+    const key = (hmacKey: typeof HMAC_KEY, ip: ClientIpKey): string =>
+      hex(perIpHits(hmacKey, 'sign-up', ip)[0].key);
+
+    expect(key(HMAC_KEY, IP)).not.toBe(key(HMAC_KEY, OTHER_IP));
+    expect(key(HMAC_KEY, IP)).not.toBe(key(OTHER_HMAC_KEY, IP));
+    expect(key(HMAC_KEY, ipKey('2001:db8:1:2::1'))).toBe(
+      key(HMAC_KEY, ipKey('2001:db8:1:2:ffff::9')),
+    );
+  });
+});
+
+describe('RATE_LIMIT_LONGEST_WINDOW_MS', () => {
+  it('keeps keyed hashes of IPs and identifiers at most a day past their window start', () => {
+    expect(RATE_LIMIT_LONGEST_WINDOW_MS).toBe(24 * 60 * 60_000);
   });
 });
 
@@ -81,6 +290,16 @@ describe('rateLimitKey', () => {
     expect(key).toHaveLength(32);
     expect(key.toString('latin1')).not.toContain('203.0.113.7');
     expect(key.toString('latin1')).not.toContain('frieren');
+  });
+
+  it('holds no IPv6 prefix text in a /48 key', () => {
+    const key = rateLimitKey(HMAC_KEY, 'username-availability', 'ipv6Site', [
+      siteKey(ipKey('2001:db8:aa:1::9')),
+    ]);
+
+    expect(key).toHaveLength(32);
+    expect(key.toString('latin1')).not.toContain('2001');
+    expect(key.toString('latin1')).not.toContain('/48');
   });
 
   it('is stable for the same inputs', () => {

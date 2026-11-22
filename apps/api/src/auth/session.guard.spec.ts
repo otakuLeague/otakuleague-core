@@ -20,7 +20,12 @@ const WEB: ApiCaller = {
   kind: 'web',
   visitorKey: visitorKeyFromClientIp('203.0.113.7'),
 };
-const SESSION = { sessionId: 's-1', userId: 'u-1', username: 'Frieren' };
+const SESSION = {
+  sessionId: 's-1',
+  userId: 'u-1',
+  username: 'Frieren',
+  sessionEpoch: 0,
+};
 const SIGNED_IN: SessionResolution = { kind: 'signed_in', session: SESSION };
 
 function setup(resolve: () => Promise<SessionResolution>) {

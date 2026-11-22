@@ -5,6 +5,8 @@ import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import { checkInternalApiKeyConfig } from './src/api/config';
+import { FRAME_DENY_RULE } from './src/auth/frame-headers';
+import { LEGACY_AUTH_REDIRECTS } from './src/auth/legacy-auth-redirects';
 import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
 // Next reads .env files from apps/web only; the repo keeps a single .env at its root (ADR 0003).
@@ -13,12 +15,15 @@ import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 // never picks up a stray .env from a parent folder. Only the web app's own variables are copied,
 // so the database credentials in the same file stay out of this process. Variables already set win.
 // INTERNAL_API_KEY is read at request time only: never add it to `env` below (inlined in bundles).
+// WEB_PUBLIC_URL is read by the auth code on first use, never here, so a deploy without it still
+// serves public pages (ADR 0003, OTA-139 addendum).
 const WEB_ENV_VARIABLES = [
   'API_BASE_URL',
   'INTERNAL_API_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
   'SENTRY_ENVIRONMENT',
   'SENTRY_RELEASE',
+  'WEB_PUBLIC_URL',
 ] as const;
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -61,7 +66,11 @@ const nextConfig: NextConfig = {
   // resized or stored by this server (OTA-97): no third-party image cache, and the optimizer
   // endpoint (GHSA-2464-fhr4-w9xw, OTA-131) stays unused. Also skips next/image's host check.
   images: { unoptimized: true },
-  headers: () => Promise.resolve(robotsHeaders(SEARCH_INDEXING)),
+  headers: () =>
+    Promise.resolve([...robotsHeaders(SEARCH_INDEXING), FRAME_DENY_RULE]),
+  redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),
+  // Keeps Server Action arguments (could include credentials) out of the dev log (OTA-139).
+  logging: { serverFunctions: false },
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {
     SENTRY_ENVIRONMENT:

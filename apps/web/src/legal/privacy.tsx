@@ -12,10 +12,10 @@ export const PRIVACY_POLICY: LegalDocument = {
   title: 'Privacy policy',
   description:
     'What OtakuLeague collects, why, who processes it, which cookies we set and how to use your rights.',
-  lastUpdated: '2026-11-15',
+  lastUpdated: '2026-11-22',
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
-    'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
+    'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of, except a trailer you choose to play, which comes from YouTube or Dailymotion under their own rules.',
     'Your data stays in the EU: the website’s functions run in Paris, our server and database in Amsterdam, error reports in Germany, and account emails go through Brevo in the EU.',
     'Write to us at any time and we delete your account and its data.',
   ],
@@ -148,7 +148,9 @@ export const PRIVACY_POLICY: LegalDocument = {
           <p>
             We only set cookies the site needs to work or that you ask for, so
             there is no consent banner. None of them track you, here or on other
-            sites.
+            sites. The one exception is a trailer you choose to play: its player
+            comes from YouTube or Dailymotion, which may set their own cookies
+            (see <a href="#trailers">Trailers</a>).
           </p>
           <LegalTable
             caption="Cookies we set"
@@ -191,12 +193,35 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: 'Images from our data sources',
       body: (
         <p>
-          Anime cover images load straight from AniList’s servers (
-          <code>s4.anilist.co</code>), or from MyAnimeList’s (
+          Anime cover and banner images load straight from AniList’s servers (
+          <code>s4.anilist.co</code>), or cover images from MyAnimeList’s (
           <code>cdn.myanimelist.net</code>) when AniList has none, so your
           browser sends them your IP address and browser details when it shows
           them, as with any image on the web. Each handles them under its own
           privacy policy.
+        </p>
+      ),
+    },
+    {
+      id: 'trailers',
+      title: 'Trailers',
+      body: (
+        <p>
+          An anime page can show a trailer hosted on YouTube (Google) or
+          Dailymotion. Nothing from them loads until you press play. When you
+          do, the player loads from their servers, so they receive your IP
+          address, your browser details and our site’s address, and may set
+          cookies or store data under their own policies: see the{' '}
+          <a href="https://policies.google.com/privacy">
+            Google privacy policy
+          </a>{' '}
+          and the{' '}
+          <a href="https://legal.dailymotion.com/en/privacy-policy/">
+            Dailymotion privacy policy
+          </a>
+          . YouTube trailers use its privacy-enhanced mode
+          (youtube-nocookie.com). The “Watch on” link opens the trailer on their
+          site instead.
         </p>
       ),
     },
