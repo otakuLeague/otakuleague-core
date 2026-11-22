@@ -1,5 +1,6 @@
 import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import type { FormEvent, ReactNode } from 'react';
+import { clearOnHide } from './clear-on-hide';
 import type { SignInFailureState, SignInFormState } from './sign-in-form-state';
 
 type SignInFormViewProps = {
@@ -146,6 +147,7 @@ export function SignInFormView({
             maxLength={PASSWORD_RAW_MAX}
             required
             readOnly={pending}
+            ref={clearOnHide}
             {...fieldError}
           />
         </div>
