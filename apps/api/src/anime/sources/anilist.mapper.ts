@@ -14,6 +14,7 @@ import { LIST_PAGE_SIZE } from './anilist.query';
 import {
   anilistId,
   anilistImageUrl,
+  boundedNames,
   boundedText,
   boundedTexts,
   countryCode,
@@ -102,12 +103,12 @@ function studios(value: unknown): AnimeStudio[] {
 function producers(value: unknown): string[] {
   const edges = record(value).edges;
   if (!Array.isArray(edges)) return [];
-  const names = edges.flatMap((item) => {
-    const node = record(record(item).node);
-    const name = text(node.name);
-    return name !== null && node.isAnimationStudio === false ? [name] : [];
-  });
-  return [...new Set(names)];
+  return boundedNames(
+    edges.flatMap((item) => {
+      const node = record(record(item).node);
+      return node.isAnimationStudio === false ? [node.name] : [];
+    }),
+  );
 }
 
 function links(value: unknown): AnimeLink[] {

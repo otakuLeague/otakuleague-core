@@ -319,6 +319,20 @@ describe('mapAniListMedia', () => {
     ).toEqual([]);
   });
 
+  it('bounds the producers: each once, at most 50', () => {
+    const edges = Array.from({ length: 60 }, (_, index) => ({
+      isMain: false,
+      node: { name: `Company ${index % 55}`, isAnimationStudio: false },
+    }));
+    const snapshot = mapAniListMedia({
+      ...media('anilist-attack-on-titan'),
+      studios: { edges },
+    });
+
+    expect(snapshot?.producers).toHaveLength(50);
+    expect(new Set(snapshot?.producers).size).toBe(50);
+  });
+
   it('flags adult entries', () => {
     expect(
       mapAniListMedia({ ...media('anilist-frieren'), isAdult: true })?.adult,

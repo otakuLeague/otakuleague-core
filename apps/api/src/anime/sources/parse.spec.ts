@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  boundedNames,
   countryCode,
   hashtags,
   httpUrl,
@@ -62,6 +63,22 @@ describe('hashtags', () => {
       exactly,
       '#ok',
     ]);
+  });
+
+  it('trims trailing punctuation, so tags split by 、 stay two', () => {
+    expect(hashtags('#a、#b')).toEqual(['#a', '#b']);
+    expect(hashtags('#frieren! #x。 #、')).toEqual(['#frieren', '#x']);
+  });
+
+  it('removes zero-width characters and dedupes case-insensitively, keeping the first spelling', () => {
+    expect(hashtags('#fri\u200Beren #Frieren #FRIEREN #other')).toEqual([
+      '#frieren',
+      '#other',
+    ]);
+  });
+
+  it('pins the current behaviour for a URL: its fragment counts as a tag', () => {
+    expect(hashtags('https://example.com/p#frag')).toEqual(['#frag']);
   });
 
   it('keeps the first 5 only', () => {
@@ -216,5 +233,16 @@ describe('stripTags', () => {
     stripTags(html);
 
     expect(performance.now() - started).toBeLessThan(1_000);
+  });
+});
+
+describe('boundedNames', () => {
+  it('keeps each name once, cuts long ones and keeps the first 50', () => {
+    const many = Array.from({ length: 60 }, (_, index) => `Studio ${index}`);
+
+    expect(boundedNames(['A', 'A', ' B ', null, 7, ''])).toEqual(['A', 'B']);
+    expect(boundedNames(['x'.repeat(400)])[0]).toHaveLength(300);
+    expect(boundedNames(many)).toEqual(many.slice(0, 50));
+    expect(boundedNames([])).toEqual([]);
   });
 });

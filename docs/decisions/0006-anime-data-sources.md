@@ -82,32 +82,32 @@ All terms pages were read on **2026-10-15**. Quotes are verbatim; anything outsi
 
 ## Coverage of the anime page
 
-| Feature | Source (primary, then fallback) | Notes |
-|---|---|---|
-| Header: titles, synonyms, format, episodes, duration, status, dates, season, source, studios, genres, tags | AniList | MAL API only with MAL's written authorization to combine (3(a)(vii)) |
-| Header extras (OTA-97): original creators, favourites, all-time ranks (per format), cover colour | AniList | AniList only, never filled from MAL: MAL's favourites and rank count a different user base and scope |
-| At a Glance facts (OTA-215): source material, producers | AniList, then Jikan | Facts about the work, not about a user base, so the usual fallback applies. See the 2026-11-22 update |
-| At a Glance facts (OTA-215): country of origin, official hashtags | AniList | Jikan's anime answer has neither |
-| Scores and rank | AniList `averageScore`, `rankings` | A "MAL score" next to it needs the same MAL authorization; never averaged |
-| Trailer | AniList `trailer` (YouTube id) | AniList's id came with a trailing tab: trim it. Embed the YouTube player, never re-host |
-| Where to watch | AniList `externalLinks`, type `STREAMING` | No per-country availability; TMDB/JustWatch needs a commercial agreement |
-| Episode list (number, title, air date) | **No clean source** | AniList `streamingEpisodes` covers Crunchyroll titles only; Kitsu has it but its terms are unread |
-| Per-episode scores | **No source** we may use | See below |
-| Characters (role, image, favourites) | AniList | |
-| Voice actors by language | AniList, one query per language | Aliased `voiceActors(language: …)` fields in one query all returned the French actors; one query per language is correct |
-| Character and staff favourites | AniList | |
-| Staff | AniList | |
-| Openings, endings (titles, artists) | AnimeThemes, only with written approval | AniList has none |
-| Theme videos | AnimeThemes, only with approval | Hotlinking not covered by their terms |
-| OSTs (full soundtracks) | **No source** | AnimeThemes excludes full tracks |
-| Relations (sequels, prequels...) | AniList | |
-| Pictures | AniList cover and banner, hotlinked | No gallery; MAL's pictures are "the exclusive property of Company and its licensors" |
-| Other videos (PVs, previews) | **No source** we may use | Jikan has them, scraped from MAL |
-| Stats (score and status distribution) | AniList `stats` | |
-| User recommendations | AniList `recommendations` (titles and vote counts only) | Not MAL's |
-| Airing schedule | AniList `nextAiringEpisode`, `airingSchedule` | Verified on One Piece and Kusuriya no Hitorigoto 3rd season |
-| Filler info | **No source** | None of the sources has a filler flag |
-| Reviews | **Never copied** | See "What we must not copy" |
+| Feature                                                                                                    | Source (primary, then fallback)                         | Notes                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Header: titles, synonyms, format, episodes, duration, status, dates, season, source, studios, genres, tags | AniList                                                 | MAL API only with MAL's written authorization to combine (3(a)(vii))                                                     |
+| Header extras (OTA-97): original creators, favourites, all-time ranks (per format), cover colour           | AniList                                                 | AniList only, never filled from MAL: MAL's favourites and rank count a different user base and scope                     |
+| At a Glance facts (OTA-215): source material, producers                                                    | AniList, then Jikan                                     | Facts about the work, not about a user base, so the usual fallback applies. See the 2026-11-22 update                    |
+| At a Glance facts (OTA-215): country of origin, official hashtags                                          | AniList                                                 | Jikan's anime answer has neither                                                                                         |
+| Scores and rank                                                                                            | AniList `averageScore`, `rankings`                      | A "MAL score" next to it needs the same MAL authorization; never averaged                                                |
+| Trailer                                                                                                    | AniList `trailer` (YouTube id)                          | AniList's id came with a trailing tab: trim it. Embed the YouTube player, never re-host                                  |
+| Where to watch                                                                                             | AniList `externalLinks`, type `STREAMING`               | No per-country availability; TMDB/JustWatch needs a commercial agreement                                                 |
+| Episode list (number, title, air date)                                                                     | **No clean source**                                     | AniList `streamingEpisodes` covers Crunchyroll titles only; Kitsu has it but its terms are unread                        |
+| Per-episode scores                                                                                         | **No source** we may use                                | See below                                                                                                                |
+| Characters (role, image, favourites)                                                                       | AniList                                                 |                                                                                                                          |
+| Voice actors by language                                                                                   | AniList, one query per language                         | Aliased `voiceActors(language: …)` fields in one query all returned the French actors; one query per language is correct |
+| Character and staff favourites                                                                             | AniList                                                 |                                                                                                                          |
+| Staff                                                                                                      | AniList                                                 |                                                                                                                          |
+| Openings, endings (titles, artists)                                                                        | AnimeThemes, only with written approval                 | AniList has none                                                                                                         |
+| Theme videos                                                                                               | AnimeThemes, only with approval                         | Hotlinking not covered by their terms                                                                                    |
+| OSTs (full soundtracks)                                                                                    | **No source**                                           | AnimeThemes excludes full tracks                                                                                         |
+| Relations (sequels, prequels...)                                                                           | AniList                                                 |                                                                                                                          |
+| Pictures                                                                                                   | AniList cover and banner, hotlinked                     | No gallery; MAL's pictures are "the exclusive property of Company and its licensors"                                     |
+| Other videos (PVs, previews)                                                                               | **No source** we may use                                | Jikan has them, scraped from MAL                                                                                         |
+| Stats (score and status distribution)                                                                      | AniList `stats`                                         |                                                                                                                          |
+| User recommendations                                                                                       | AniList `recommendations` (titles and vote counts only) | Not MAL's                                                                                                                |
+| Airing schedule                                                                                            | AniList `nextAiringEpisode`, `airingSchedule`           | Verified on One Piece and Kusuriya no Hitorigoto 3rd season                                                              |
+| Filler info                                                                                                | **No source**                                           | None of the sources has a filler flag                                                                                    |
+| Reviews                                                                                                    | **Never copied**                                        | See "What we must not copy"                                                                                              |
 
 ## Episode ratings
 
@@ -223,12 +223,12 @@ Four facts the old site showed and we did not store: source material, country of
 
 **API.** No new route. `GET /anime/:idSource/:externalId` and `GET /anime/slugs/:slug` gain four keys, always present, null when unknown:
 
-| Field | Type | Rule |
-|---|---|---|
-| `sourceMaterial` | `Sourced<AnimeSourceMaterial> \| null` | AniList's `MediaSource` version 3 (15 values: `ORIGINAL`, `MANGA`, `LIGHT_NOVEL`, `VISUAL_NOVEL`, `VIDEO_GAME`, `OTHER`, `NOVEL`, `DOUJINSHI`, `ANIME`, `WEB_NOVEL`, `LIVE_ACTION`, `GAME`, `COMIC`, `MULTIMEDIA_PROJECT`, `PICTURE_BOOK`). Not `source`: that word already means the data source in `Sourced` |
-| `countryOfOrigin` | `Sourced<string> \| null` | ISO 3166-1 alpha-2, exactly two upper-case letters, else null. Shape only, not the ISO registry |
-| `producers` | `Sourced<readonly string[]> \| null` | Names, in the source's order, each once |
-| `hashtags` | `Sourced<readonly string[]> \| null` | AniList's `hashtag` is one string that can hold several tags (`#フリーレン #frieren`): split at the boundary, each tag starts with `#` |
+| Field             | Type                                   | Rule                                                                                                                                                                                                                                                                                                           |
+| ----------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sourceMaterial`  | `Sourced<AnimeSourceMaterial> \| null` | AniList's `MediaSource` version 3 (15 values: `ORIGINAL`, `MANGA`, `LIGHT_NOVEL`, `VISUAL_NOVEL`, `VIDEO_GAME`, `OTHER`, `NOVEL`, `DOUJINSHI`, `ANIME`, `WEB_NOVEL`, `LIVE_ACTION`, `GAME`, `COMIC`, `MULTIMEDIA_PROJECT`, `PICTURE_BOOK`). Not `source`: that word already means the data source in `Sourced` |
+| `countryOfOrigin` | `Sourced<string> \| null`              | ISO 3166-1 alpha-2, exactly two upper-case letters, else null. Shape only, not the ISO registry                                                                                                                                                                                                                |
+| `producers`       | `Sourced<readonly string[]> \| null`   | Names, in the source's order, each once                                                                                                                                                                                                                                                                        |
+| `hashtags`        | `Sourced<readonly string[]> \| null`   | AniList's `hashtag` is one string that can hold several tags (`#フリーレン #frieren`): split at the boundary, each tag starts with `#`                                                                                                                                                                         |
 
 **Data flow.** `ANILIST_ANIME_QUERY` (adds `source(version: 3)`, `countryOfOrigin`, `hashtag`, and `isAnimationStudio` on the studio node) → `mapAniListMedia` → `AnimeSnapshot` → `toSnapshotRow` → `anime_source_snapshot` → `fromSnapshotRow` → `mergeAnime` (`pick`, AniList first) → `AnimeDetails`.
 
@@ -237,7 +237,7 @@ Four facts the old site showed and we did not store: source material, country of
 1. Columns: `source_material TEXT`, `country_of_origin TEXT`, `producers TEXT[] DEFAULT '{}'`, `hashtags TEXT[] DEFAULT '{}'`, in one new migration shaped like `anime_header_fields`. `source_material` is text, not a Postgres enum: nothing filters on it, the mapper writes only union values and the row reader narrows with `oneOf` (as for `trailer_site`), so a value AniList adds later is a code change, not an `ALTER TYPE`.
 2. `studios` keeps its meaning: every company AniList credits, `main` = the edge's `isMain`. It already holds producers as `main: false`, and the web shows only `main`. Removing producers from it would change a field the deployed web reads, so they stay; a producer's name is in both fields.
 3. A producer is a credited company whose `isAnimationStudio` is exactly `false`. A missing or non-boolean flag is not a producer: the mapper never guesses. Consequence: a supporting animation studio (Production I.G on Attack on Titan: `isMain` false, animation studio) is in `studios` only, while AniList's own page and MyAnimeList list it under Producers. Accepted: it is not a producer, and nothing is lost (`studios` minus `main` minus `producers`).
-4. Hashtags: every match of `#` (or full-width `＃`, stored as `#`) followed by characters that are neither whitespace nor `#`; a word without `#` is dropped; duplicates once; over-long tags dropped; the first 5 kept.
+4. Hashtags: every match of `#` (or full-width `＃`, stored as `#`) followed by characters that are neither whitespace nor `#`, after zero-width characters are removed; trailing punctuation is trimmed (`#a、#b` is two tags); a word without `#` or a bare `#` is dropped; duplicates once, compared case-insensitively, first spelling kept; over-long tags dropped; the first 5 kept. Producers: names of at most 300 characters, each once, the first 50.
 5. Jikan: `producers` from its `producers` list (not `licensors`); `sourceMaterial` from MAL's label only where AniList has the same notion (`Original`, `Manga`, `4-koma manga`, `Web manga`, `Light novel`, `Novel`, `Web novel`, `Visual novel`, `Picture book`, `Mixed media`, `Other`); `Game`, `Card game`, `Book`, `Radio`, `Music`, `Unknown` and anything else are null. `countryOfOrigin` null, `hashtags` empty.
 6. Merge: four `pick` lines. An empty list is "no value", so Jikan's producers fill in when AniList credits only animation studios, labelled `jikan`.
 

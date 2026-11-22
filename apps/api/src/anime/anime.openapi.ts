@@ -193,12 +193,10 @@ export class AnimeDetailsSchema implements AnimeDetails {
   readonly rankPopular!: Sourced<number> | null;
   @ApiProperty({ ...SOURCED_STRING, description: 'Cover colour, "#rrggbb"' })
   readonly coverColor!: Sourced<string> | null;
-  @ApiProperty(
-    sourced('SourceMaterial', {
-      enum: ANIME_SOURCE_MATERIALS,
-      description: 'What the anime adapts (AniList MediaSource)',
-    }),
-  )
+  @ApiProperty({
+    ...sourced('SourceMaterial', { enum: ANIME_SOURCE_MATERIALS }),
+    description: 'What the anime adapts (AniList MediaSource)',
+  })
   readonly sourceMaterial!: AnimeDetails['sourceMaterial'];
   @ApiProperty({
     ...SOURCED_STRING,

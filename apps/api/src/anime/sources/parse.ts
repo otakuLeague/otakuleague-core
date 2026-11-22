@@ -48,22 +48,39 @@ export function countryCode(value: unknown): string | null {
   return typeof value === 'string' && /^[A-Z]{2}$/.test(value) ? value : null;
 }
 
-export const MAX_HASHTAGS = 5;
+export const MAX_PRODUCERS = 50;
+const MAX_HASHTAGS = 5;
 const MAX_HASHTAG_CHARS = 100;
 
 /**
  * AniList's `hashtag` is one string that can hold several tags ("#フリーレン #frieren"). Every
  * "#" (or full-width "＃", stored as "#") followed by characters that are neither whitespace
- * nor "#" is a tag; words without one are dropped, duplicates kept once, over-long tags
- * dropped, the first 5 kept.
+ * nor "#" is a tag. Zero-width characters are removed and trailing punctuation trimmed
+ * ("#a、#b" gives two tags); words without "#", a bare "#", case-insensitive duplicates (first
+ * spelling kept) and over-long tags are dropped; the first 5 are kept.
  */
 export function hashtags(value: unknown): string[] {
   const raw = text(value);
   if (raw === null) return [];
-  const found = (raw.match(/[#＃][^\s#＃]+/gu) ?? [])
-    .map((tag) => `#${tag.slice(1)}`)
-    .filter((tag) => tag.length <= MAX_HASHTAG_CHARS);
-  return [...new Set(found)].slice(0, MAX_HASHTAGS);
+  const found = (
+    raw
+      .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
+      .match(/[#＃][^\s#＃]+/gu) ?? []
+  )
+    .map((tag) => `#${tag.slice(1).replace(/\p{P}+$/u, '')}`)
+    .filter((tag) => tag.length > 1 && tag.length <= MAX_HASHTAG_CHARS);
+  const seen = new Set<string>();
+  const unique = found.filter((tag) => {
+    const key = tag.toLowerCase();
+    return seen.has(key) ? false : (seen.add(key), true);
+  });
+  return unique.slice(0, MAX_HASHTAGS);
+}
+
+/** Company names bounded before they are stored: each once, at most 300 characters, first 50. */
+export function boundedNames(values: readonly unknown[]): string[] {
+  const names = values.map(boundedText).filter((name) => name !== null);
+  return [...new Set(names)].slice(0, MAX_PRODUCERS);
 }
 
 /** An absolute http(s) URL, or null. */

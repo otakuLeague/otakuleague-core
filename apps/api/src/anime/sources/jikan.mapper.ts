@@ -7,6 +7,7 @@ import type {
   AnimeTrailer,
 } from '@otakuleague/shared-types';
 import {
+  boundedNames,
   finite,
   httpUrl,
   integer,
@@ -69,6 +70,12 @@ function names(value: unknown): string[] {
   return Array.isArray(value)
     ? texts(value.map((item) => record(item).name))
     : [];
+}
+
+function producers(value: unknown): string[] {
+  return boundedNames(
+    Array.isArray(value) ? value.map((item) => record(item).name) : [],
+  );
 }
 
 function youtubeTrailer(value: unknown): AnimeTrailer | null {
@@ -138,7 +145,7 @@ export function mapJikanAnime(value: unknown): AnimeSnapshot | null {
     coverColor: null,
     sourceMaterial: lookup(SOURCE_MATERIALS, anime.source),
     countryOfOrigin: null,
-    producers: names(anime.producers),
+    producers: producers(anime.producers),
     hashtags: [],
   };
 }

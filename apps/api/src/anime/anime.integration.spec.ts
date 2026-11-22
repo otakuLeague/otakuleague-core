@@ -559,7 +559,7 @@ describe('GET /anime/:idSource/:externalId', () => {
     expect(anilist.calls).toBe(callsBefore);
   });
 
-  it('stores the new facts and reads them back, and reads old or unknown values as null', async () => {
+  it('stores the new facts and reads them back; an old row or an unknown value reads as no value, so Jikan fills in', async () => {
     await get('/anime/myanimelist/16498').expect(200);
     await importer.settle();
     const row = await prisma.animeSourceSnapshot.findFirstOrThrow({
@@ -584,20 +584,16 @@ describe('GET /anime/:idSource/:externalId', () => {
         hashtags: [],
       },
     });
+    // Jikan stays on and holds its own 16498 snapshot: it fills what it has.
     const unknown = (await get('/anime/anilist/16498').expect(200))
       .body as AnimeDetails;
 
     expect(unknown).toMatchObject({
-      sourceMaterial: null,
+      sourceMaterial: { value: 'MANGA', source: 'jikan' },
       countryOfOrigin: null,
-      producers: null,
       hashtags: null,
     });
-    await prisma.animeSourceSnapshot.update({
-      where: { animeId_source: { animeId: row.animeId, source: 'ANILIST' } },
-      data: { sourceMaterial: null },
-    });
-    await get('/anime/anilist/16498').expect(200);
+    expect(unknown.producers?.source).toBe('jikan');
   });
 
   it('answers 404 for an id no source knows', async () => {

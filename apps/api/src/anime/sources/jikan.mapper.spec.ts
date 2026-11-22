@@ -124,6 +124,19 @@ describe('mapJikanAnime', () => {
     );
   });
 
+  it('bounds MAL producers: each once, at most 50', () => {
+    const list = Array.from({ length: 60 }, (_, index) => ({
+      name: `Company ${index % 55}`,
+    }));
+    const producers = mapJikanAnime({
+      ...anime('jikan-frieren'),
+      producers: [{ name: 'Aniplex' }, { name: 'Aniplex' }, ...list],
+    })?.producers;
+
+    expect(producers).toHaveLength(50);
+    expect(producers?.filter((name) => name === 'Aniplex')).toHaveLength(1);
+  });
+
   it('returns null without a mal_id', () => {
     expect(mapJikanAnime({ title: 'Nothing' })).toBeNull();
   });
