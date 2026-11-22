@@ -8,7 +8,7 @@ OTA-207 slice 207-a (PR open): `clientNetworkOf` in `api/client-ip.ts`; `createA
 ## In progress
 - OTA-139 (Todo): 1f-v3 sign-up form, 1f-vi verification link, 1f-vii resend and debounced availability. 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
 - OTA-207 PR: 207-b and 207-c open.
-- OTA-205 (High) unconfirmed sign-out revocation; OTA-206 stale action id.
+- OTA-205 (High) unconfirmed sign-out revocation (205-a shipped, #137); OTA-206 stale action id shipped (#139: `failed` alert asks for a reload).
 - OTA-197 leftovers: per-/48 IPv6 bucket + Vercel firewall rule; forged `X-Forwarded-For` spoof check on a preview.
 - OTA-136 slices 2–4; OTA-147 `/contact` (needs email provider). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107. Email on Resend free plan (decided 2026-11-15): 80 sign-up + 20 reset/day, Sentry alert at 75.
 ## Next 3 tasks
