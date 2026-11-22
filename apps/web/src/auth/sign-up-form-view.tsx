@@ -1,9 +1,11 @@
 import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
 import type { FormEvent } from 'react';
 import { retryWaitCopy } from './sign-in-form-view';
-import type { SignUpField, SignUpFormState } from './sign-up-form-state';
-
-type SignUpFailureState = Exclude<SignUpFormState, { readonly kind: 'idle' }>;
+import type {
+  SignUpFailureState,
+  SignUpField,
+  SignUpFormState,
+} from './sign-up-form-state';
 
 /** The last submitted username and email: the fields' defaults, so React's reset keeps them. */
 export type SignUpKeptFields = {
@@ -33,7 +35,7 @@ const FIELD_COPY: Readonly<Record<SignUpField, string>> = {
   username: 'Usernames are 3 to 20 letters, numbers or underscores.',
   email: 'Enter a valid email address.',
   password:
-    'Passwords need at least 8 characters with a number or symbol, and common ones are refused.',
+    'Passwords need 8 to 128 characters with a number or symbol, and common ones are refused.',
 };
 
 type FixedKind = Exclude<
@@ -93,6 +95,14 @@ function alertCopy(state: SignUpFailureState): AlertCopy {
   }
 }
 
+/**
+ * Empties the password when the input leaves the screen: `cacheComponents` keeps a left route in a
+ * hidden `<Activity>`, which detaches refs but keeps the DOM, so a typed password would stay there.
+ */
+const clearOnHide = (input: HTMLInputElement) => () => {
+  input.value = '';
+};
+
 function keptFrom(form: HTMLFormElement): SignUpKeptFields {
   const formData = new FormData(form);
   const read = (name: string) => {
@@ -112,12 +122,14 @@ export function SignUpFormView({
 }: SignUpFormViewProps) {
   // Hidden while pending, so a repeated refusal inserts a new alert node and is announced again.
   const copy = state.kind === 'idle' || pending ? null : alertCopy(state);
-  const fieldProps = (field: SignUpField) =>
-    copy?.invalid?.includes(field)
-      ? ({ 'aria-invalid': true, 'aria-describedby': ALERT_ID } as const)
+  const isInvalid = (field: SignUpField) =>
+    copy?.invalid?.includes(field) === true;
+  const fieldProps = (field: SignUpField, describedBy = ALERT_ID) =>
+    isInvalid(field)
+      ? ({ 'aria-invalid': true, 'aria-describedby': describedBy } as const)
       : {};
   const inputState = (field: SignUpField) =>
-    copy?.invalid?.includes(field) ? 'error' : undefined;
+    isInvalid(field) ? 'error' : undefined;
   return (
     <form
       className="au-card"
@@ -183,19 +195,19 @@ export function SignUpFormView({
             name="password"
             type="password"
             autoComplete="new-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             maxLength={PASSWORD_RAW_MAX}
             required
             readOnly={pending}
-            {...fieldProps('password')}
-            aria-describedby={
-              copy?.invalid?.includes('password')
-                ? `${ALERT_ID} ${HINT_ID}`
-                : HINT_ID
-            }
+            ref={clearOnHide}
+            aria-describedby={HINT_ID}
+            {...fieldProps('password', `${ALERT_ID} ${HINT_ID}`)}
           />
         </div>
         <p className="au-field-hint" id={HINT_ID}>
-          At least 8 characters, with a number or symbol.
+          8 to 128 characters, with a number or symbol.
         </p>
       </div>
       <button className="ol-btn ol-btn--primary au-btn" aria-disabled={pending}>
