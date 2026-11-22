@@ -98,6 +98,9 @@ function alertCopy(state: SignUpFailureState): AlertCopy {
 /**
  * Empties the password when the input leaves the screen: `cacheComponents` keeps a left route in a
  * hidden `<Activity>`, which detaches refs but keeps the DOM, so a typed password would stay there.
+ * It also fires when a `Suspense` boundary above shows its fallback again (the form is hidden then
+ * too). Under dev StrictMode the ref is detached and attached once more after mount, so a password
+ * typed or autofilled before hydration is emptied in development only; production keeps it.
  */
 const clearOnHide = (input: HTMLInputElement) => () => {
   input.value = '';

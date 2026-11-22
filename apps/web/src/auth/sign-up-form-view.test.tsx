@@ -165,6 +165,16 @@ describe('SignUpFormView', () => {
     }
   });
 
+  it('keeps a typed password across a pending rerender (only hiding empties it)', () => {
+    const { rerender } = render(view({ kind: 'idle' }));
+    const password = input('Password');
+    fireEvent.change(password, { target: { value: 'secret-pass-1' } });
+
+    rerender(view({ kind: 'idle' }, true));
+    expect(password.value).toBe('secret-pass-1');
+    expect(input('Password')).toBe(password);
+  });
+
   it('empties a typed password when the form is hidden in an Activity', () => {
     const inActivity = (mode: 'visible' | 'hidden') => (
       <Activity mode={mode}>{view({ kind: 'idle' })}</Activity>
