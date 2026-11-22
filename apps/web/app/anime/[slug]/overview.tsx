@@ -1,12 +1,15 @@
+import Link from 'next/link';
 import { Fragment } from 'react';
 import { loadAnime } from '../../../src/anime/data';
 import {
-  type OverviewAired,
+  type InformationRow,
   type OverviewFacts,
-  hasDetails,
+  informationRows,
   overviewFacts,
 } from '../../../src/anime/overview-facts';
+import type { OverviewTrailer } from '../../../src/anime/trailer';
 import { CollapsibleSynopsis } from './synopsis';
+import { TrailerPlayer } from './trailer';
 import './overview.css';
 
 const SYNOPSIS_ID = 'anime-synopsis';
@@ -56,85 +59,112 @@ function Synopsis({
   );
 }
 
-function Aired({ aired }: { readonly aired: OverviewAired }) {
-  const start = (
-    <time dateTime={aired.start.datetime}>{aired.start.label}</time>
-  );
-  if (aired.kind === 'single' || aired.kind === 'upcoming') return start;
+function Trailer({
+  trailer,
+  title,
+}: {
+  readonly trailer: OverviewTrailer;
+  readonly title: string;
+}) {
   return (
-    <>
-      {start} –{' '}
-      {aired.kind === 'airing' ? (
-        'now'
-      ) : (
-        <time dateTime={aired.end.datetime}>{aired.end.label}</time>
-      )}
-    </>
-  );
-}
-
-function DetailsCard({ facts }: { readonly facts: OverviewFacts }) {
-  const rows = [
-    ['Format', facts.format],
-    ['Episodes', facts.episodes],
-    [
-      facts.aired?.kind === 'upcoming' ? 'Premieres' : 'Aired',
-      facts.aired && <Aired aired={facts.aired} />,
-    ],
-    ['Season', facts.season],
-    [
-      facts.studios.length > 1 ? 'Studios' : 'Studio',
-      facts.studios.length > 0 ? facts.studios.join(', ') : null,
-    ],
-  ] as const;
-  const shown = rows.filter(([, value]) => value !== null);
-  return (
-    <section className="ov-card ov-sec" aria-labelledby="ov-details-h">
+    <section className="ov-sec ov-sec--trailer" aria-labelledby="ov-trailer-h">
       <div className="ov-sec__head">
-        <h2 id="ov-details-h">Details</h2>
+        <h2 id="ov-trailer-h">Trailer</h2>
       </div>
-      {shown.length > 0 && (
-        <dl className="ov-facts">
-          {shown.map(([label, value]) => (
-            <Fragment key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-      )}
-      {facts.genres.length > 0 && (
-        <>
-          <h3 className="ol-label ov-genres-h">Genres</h3>
-          <ul className="ov-chips">
-            {facts.genres.map((genre) => (
-              <li key={genre}>
-                <span className="ol-chip">{genre}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <TrailerPlayer trailer={trailer} title={title} />
+      <div className="ov-trailer__meta">
+        {/* Named before the press: playing loads the host's player (privacy#trailers). */}
+        <p>
+          Plays from {trailer.siteLabel} ·{' '}
+          <Link href="/privacy#trailers">Privacy</Link>
+        </p>
+        {/* Plain link: works without JS, and when the host refuses the embed. */}
+        <a
+          className="ov-trailer__watch"
+          href={trailer.watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Watch on {trailer.siteLabel}
+          <span className="anime-sr-only"> (opens in a new tab)</span>
+        </a>
+      </div>
     </section>
   );
 }
 
-/** The Overview tab's content for a loaded anime: synopsis, then the facts column. */
-export function Overview({ facts }: { readonly facts: OverviewFacts }) {
-  const details = hasDetails(facts);
+function Genres({ genres }: { readonly genres: readonly string[] }) {
   return (
-    <div className={details ? 'ov-grid' : 'ov-grid ov-grid--single'}>
+    <section className="ov-sec ov-sec--genres" aria-labelledby="ov-genres-h">
+      <div className="ov-sec__head">
+        <h2 id="ov-genres-h">Genres</h2>
+      </div>
+      <ul className="ov-chips">
+        {genres.map((genre) => (
+          <li key={genre}>
+            <span className="ol-chip">{genre}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Text only, never a link or control: on phones its wrapper is `display: contents` and reordered. */
+function InformationCard({
+  rows,
+}: {
+  readonly rows: readonly InformationRow[];
+}) {
+  return (
+    <section className="ov-card ov-sec ov-sec--info">
+      <div className="ov-sec__head">
+        <h2 id="ov-info-h">Information</h2>
+      </div>
+      <dl className="ov-facts">
+        {rows.map((row) => (
+          <Fragment key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>
+              {row.datetime === undefined ? (
+                row.text
+              ) : (
+                <time dateTime={row.datetime}>{row.text}</time>
+              )}
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/**
+ * The Overview tab for a loaded anime. Main column: trailer, synopsis, genres; side: Information.
+ * On phones both wrappers dissolve and CSS orders trailer, synopsis, information, genres.
+ */
+export function Overview({ facts }: { readonly facts: OverviewFacts }) {
+  const rows = informationRows(facts);
+  return (
+    <div className={rows.length > 0 ? 'ov-grid' : 'ov-grid ov-grid--single'}>
       <div className="ov-main">
-        <section className="ov-sec" aria-labelledby="ov-synopsis-h">
+        {facts.trailer !== null && (
+          <Trailer trailer={facts.trailer} title={facts.title} />
+        )}
+        <section
+          className="ov-sec ov-sec--synopsis"
+          aria-labelledby="ov-synopsis-h"
+        >
           <div className="ov-sec__head">
             <h2 id="ov-synopsis-h">Synopsis</h2>
           </div>
           <Synopsis synopsis={facts.synopsis} />
         </section>
+        {facts.genres.length > 0 && <Genres genres={facts.genres} />}
       </div>
-      {details && (
-        <aside className="ov-side" aria-label="Key facts">
-          <DetailsCard facts={facts} />
+      {rows.length > 0 && (
+        <aside className="ov-side" aria-labelledby="ov-info-h">
+          <InformationCard rows={rows} />
         </aside>
       )}
     </div>
