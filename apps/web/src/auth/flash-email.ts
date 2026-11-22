@@ -25,6 +25,15 @@ export function plausibleFlashEmail(value: unknown): string | undefined {
 }
 
 /**
+ * The flash the sign-up action writes: the typed address trimmed, lower-cased and NFC, as the API's
+ * `normaliseIdentifier` does, so after a 202 it is the address the API mails (ADR 0015 Addendum
+ * 1f-v2 decision 3) and passes `plausibleFlashEmail`. Anything the API refuses never gets a 202.
+ */
+export function flashEmailFrom(typed: string): string {
+  return typed.trim().toLowerCase().normalize('NFC');
+}
+
+/**
  * The address "Check your email" shows, never thrown (only Next's signals pass, from `cookies()`,
  * where a prerender stops). Read under the configured name only (`__Host-ol_flash` on https: a
  * sibling host cannot choose it). Never sets or clears the cookie; its 600 s end it.

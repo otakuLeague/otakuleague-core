@@ -6,7 +6,7 @@ import type { ApiFailure } from '../api/client';
 // browser bundle loads.
 
 /** The credential routes that can report a refusal; each later action adds its own. */
-export type CredentialRoute = 'sign-in';
+export type CredentialRoute = 'sign-in' | 'sign-up';
 
 /** One report per server instance every 10 minutes: a broken header refuses every visitor at once. */
 export const REFUSAL_REPORT_INTERVAL_MS = 600_000;
@@ -50,7 +50,7 @@ export function reportClientIpUnknown(
 }
 
 /** The auth routes that can see an `AuthCallFault` (ADR 0015 Addendum 1f-iv). */
-export type AuthCallRoute = 'sign-in' | 'sign-out' | 'me';
+export type AuthCallRoute = 'sign-in' | 'sign-up' | 'sign-out' | 'me';
 
 /** A misconfiguration a visitor cannot cause: the key refused, a body off contract, a throw. */
 export type AuthCallFault =

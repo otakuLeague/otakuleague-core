@@ -2,7 +2,11 @@
 import { IDENTIFIER_MAX } from '@otakuleague/shared-types';
 import { notFound } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { plausibleFlashEmail, readFlashEmail } from './flash-email';
+import {
+  flashEmailFrom,
+  plausibleFlashEmail,
+  readFlashEmail,
+} from './flash-email';
 
 const mocks = vi.hoisted(() => ({
   jar: new Map<string, string>(),
@@ -28,6 +32,31 @@ const NEXT_SIGNAL: unknown = (() => {
     return signal;
   }
 })();
+/** Mailable: a 64-character local part and labels the API's pattern accepts, 254 in all. */
+const LONGEST_MAILABLE = `${'f'.repeat(64)}@${'e'.repeat(63)}.${'e'.repeat(63)}.${'c'.repeat(61)}`;
+const KELVIN_SIGN = String.fromCharCode(0x212a);
+const DOTTED_CAPITAL_I = String.fromCharCode(0x130);
+
+// The two functions together (Addendum 1f-v2 decision 3): an address the API accepts (its
+// `isEmailAddress(normaliseIdentifier(email))`) becomes a flash the page shows, unchanged.
+describe('flashEmailFrom', () => {
+  it.each([
+    [' Frieren@Example.COM ', ADDRESS],
+    ["O'Brien+Tag@Mail.Example.co.uk", "o'brien+tag@mail.example.co.uk"],
+    [`${KELVIN_SIGN}elvin@example.com`, 'kelvin@example.com'],
+    [LONGEST_MAILABLE, LONGEST_MAILABLE],
+  ])('turns %o into %o, which plausibleFlashEmail keeps', (typed, flash) => {
+    expect(LONGEST_MAILABLE).toHaveLength(IDENTIFIER_MAX);
+    expect(flashEmailFrom(typed)).toBe(flash);
+    expect(plausibleFlashEmail(flashEmailFrom(typed))).toBe(flash);
+  });
+
+  it('gives an address the API refuses a flash the page never shows', () => {
+    const flash = flashEmailFrom(`${DOTTED_CAPITAL_I}rem@example.com`);
+    expect(flash).not.toMatch(/^[\x21-\x7e]+$/);
+    expect(plausibleFlashEmail(flash)).toBeUndefined();
+  });
+});
 
 describe('plausibleFlashEmail', () => {
   it.each([

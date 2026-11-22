@@ -15,3 +15,8 @@ export function redirectTo(path: SafeNextPath): never {
 export function redirectToSignedOut(): never {
   redirect('/', RedirectType.replace);
 }
+
+/** After an accepted sign-up: "Check your email", a constant, replacing the history entry too. */
+export function redirectToCheckEmail(): never {
+  redirect('/auth/check-email', RedirectType.replace);
+}
