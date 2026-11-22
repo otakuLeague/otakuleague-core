@@ -147,7 +147,9 @@ describe('AnimeHeader', () => {
     expect(band?.classList.contains('anime-hero__band--banner')).toBe(true);
     const banner = band?.querySelector('img');
     expect(banner?.getAttribute('alt')).toBe('');
-    expect(banner?.getAttribute('src')).toContain('banner%2F16498.jpg');
+    expect(decodeURIComponent(banner?.getAttribute('src') ?? '')).toContain(
+      '/media/anime/banner/16498.jpg',
+    );
     expect(banner?.getAttribute('fetchpriority')).toBeNull();
     expect(banner?.getAttribute('loading')).toBe('eager');
   });

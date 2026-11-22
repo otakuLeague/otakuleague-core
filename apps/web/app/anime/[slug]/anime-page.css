@@ -51,6 +51,7 @@ html:has(.anime-sticky--shown) {
 .anime-hero {
   --hero-line: 196px;
   --hero-pad-top: 36px;
+  --hero-neon: 2px;
   position: relative;
   background: linear-gradient(
     180deg,
@@ -69,16 +70,15 @@ html:has(.anime-sticky--shown) {
   background-size: 16px 16px;
   opacity: 0.6;
 }
-/* AniList's banner instead of the dot grid, faded into the page so the neon line and the
-   cover's glow stay on top. Fixed band height: nothing shifts while it loads. */
+/* AniList's banner over the dot grid (the grid stays as the fallback if it fails to load),
+   faded into the page so the neon line and the cover's glow stay on top. Fixed band height:
+   nothing shifts while it loads. */
 .anime-hero__band--banner {
   overflow: hidden;
   opacity: 1;
-  background-image: none;
 }
 .anime-hero__banner {
   object-fit: cover;
-  object-position: center;
 }
 .anime-hero__band--banner::after {
   content: '';
@@ -95,7 +95,7 @@ html:has(.anime-sticky--shown) {
 .anime-hero__neon {
   position: absolute;
   inset: var(--hero-line) 0 auto;
-  height: 2px;
+  height: var(--hero-neon);
   background: var(--accent);
   box-shadow:
     0 0 12px var(--accent),
@@ -125,7 +125,9 @@ html:has(.anime-sticky--shown) {
   flex-direction: column;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: calc(var(--hero-line) + 2px + 18px - var(--hero-pad-top));
+  padding-block-start: calc(
+    var(--hero-line) + var(--hero-neon) + 18px - var(--hero-pad-top)
+  );
   padding-bottom: 6px;
 }
 .anime-hero__title {
@@ -141,6 +143,7 @@ html:has(.anime-sticky--shown) {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 .anime-hero__bar {
   display: block;
@@ -154,6 +157,7 @@ html:has(.anime-sticky--shown) {
   margin: 2px 0 0;
   font-size: 15px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .anime-hero__credits a {
   font-weight: 600;
@@ -594,7 +598,6 @@ html:has(.anime-sticky--shown) {
   }
   .anime-hero__band--banner {
     position: relative;
-    background-image: none;
   }
   .anime-hero__neon {
     display: none;
@@ -653,7 +656,7 @@ html:has(.anime-sticky--shown) {
     order: 2;
     flex-basis: 100%;
     gap: 6px;
-    padding-top: 0;
+    padding-block-start: 0;
   }
   .anime-hero__title {
     font-size: 34px;
