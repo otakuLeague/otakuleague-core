@@ -121,6 +121,12 @@ async function seed(seedMalIds) {
 }
 
 async function settle(page) {
+  // Streamed Suspense holes (`template#B:n`) must reveal first, or a shot can catch the shell alone.
+  await page
+    .waitForFunction(`!document.querySelector('template[id^="B:"]')`, null, {
+      timeout: IMAGES_MS,
+    })
+    .catch(() => null);
   await page.evaluate(
     `Promise.race([Promise.all(Array.from(document.images, (img) => img.complete ? null : new Promise((done) => { img.onload = done; img.onerror = done; }))), new Promise((done) => setTimeout(done, ${IMAGES_MS}))])`,
   );

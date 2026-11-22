@@ -43,7 +43,7 @@ describe('Auth page', () => {
     expect(
       page.querySelector('form input[name="query-fields"]'),
     ).not.toBeNull();
-    const signIn = page.querySelector('[data-auth-panel="sign-in"]');
+    const signIn = page.querySelector('.au-panel[data-auth-panel="sign-in"]');
     expect(signIn?.contains(page.querySelector('form'))).toBe(true);
     // The sign-up hole comes first, so the stylesheet's sibling rule can hide sign-in.
     expect(signIn?.previousElementSibling?.getAttribute('data-testid')).toBe(
@@ -106,15 +106,13 @@ describe('AuthQueryFields', () => {
 });
 
 describe('SignUpPanel', () => {
-  afterEach(cleanup);
-
   it.each(['sign-up', 'signup'])(
     'renders the sign-up form for mode=%s, with a way back to sign-in',
     async (mode) => {
       const panel = await renderSignUpPanel({ mode });
 
       expect(
-        panel.querySelector('[data-auth-panel="sign-up"] form'),
+        panel.querySelector('.au-panel[data-auth-panel="sign-up"] form'),
       ).not.toBeNull();
       expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
         'Create your account',
