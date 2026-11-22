@@ -1,12 +1,18 @@
 import type { AnimeDetails, PartialDate } from '@otakuleague/shared-types';
 import { type HeaderFacts, headerFacts } from './header-facts';
+import { type OfficialLink, officialLinksOf } from './link-sites';
+import {
+  type AltTitleGroup,
+  type OverviewThemes,
+  altTitlesOf,
+  themesOf,
+} from './overview-themes';
 import { type OverviewTrailer, trailerOf } from './trailer';
 
 /** Above this many characters (or with more than one paragraph) the synopsis collapses. */
 export const SYNOPSIS_CLAMP_CHARS = 350;
 /** Third-party data is bounded before it reaches the page. */
 const SYNOPSIS_MAX_CHARS = 20_000;
-const GENRES_MAX = 20;
 const STUDIOS_MAX = 10;
 const CREATORS_MAX = 10;
 /** Longer runtimes are source errors, never shown: a whole work over a day, an episode over 5 h. */
@@ -57,7 +63,9 @@ export interface OverviewFacts {
   readonly season: string | null;
   readonly studios: readonly string[];
   readonly creators: readonly string[];
-  readonly genres: readonly string[];
+  readonly themes: OverviewThemes;
+  readonly altTitles: readonly AltTitleGroup[];
+  readonly links: readonly OfficialLink[];
 }
 
 /** One row of the Information card; `datetime` makes the value a `<time>`. */
@@ -187,11 +195,9 @@ export function overviewFacts(anime: AnimeDetails): OverviewFacts {
     season: header.season?.label ?? null,
     studios: header.studios.slice(0, STUDIOS_MAX),
     creators: header.creators.slice(0, CREATORS_MAX),
-    genres: [
-      ...new Set((anime.genres?.value ?? []).map((genre) => genre.trim())),
-    ]
-      .filter((genre) => genre !== '')
-      .slice(0, GENRES_MAX),
+    themes: themesOf(anime),
+    altTitles: altTitlesOf(anime),
+    links: officialLinksOf(anime),
   };
 }
 

@@ -1,6 +1,6 @@
-/* Overview tab (OTA-100, OTA-214 slice A; layout from docs/design/anime-page/mockup-Overview.html).
-   Motion: Read more and the trailer swap are instant; only the play badge scales on hover,
-   which reduced motion turns off. */
+/* Overview tab (OTA-100, OTA-214 slices A-B; layout from docs/design/anime-page/mockup-Overview.html).
+   Motion: Read more, spoiler tags and the trailer swap are instant; only the play badge scales
+   on hover, which reduced motion turns off. */
 
 .ov-grid {
   display: grid;
@@ -114,6 +114,95 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Genres & themes: a small heading per group; the tag's relevance is a quiet percentage. */
+.ov-group + .ov-group {
+  margin-block-start: var(--space-4);
+}
+.ov-sub {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font: 600 11px / 16px var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ov-tag__rank {
+  color: var(--muted);
+  font: 500 11px / 1 var(--font-mono);
+}
+.ov-tag--spoiler {
+  border-color: color-mix(in oklab, var(--bad) 40%, transparent);
+}
+.ov-spoilers .ov-chips {
+  margin-block-start: var(--space-1);
+}
+
+/* Alternative titles: the Information card's label/value grid; synonyms stack under one label. */
+.ov-alt {
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--space-6);
+}
+.ov-alt dt {
+  grid-column: 1;
+}
+.ov-alt dd {
+  grid-column: 2;
+}
+
+/* Official links: the brand colour fills only the badge (`--ov-badge`, with its own readable ink);
+   the name keeps the page's text colour, so every row reads the same in both themes. */
+.ov-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov-sec .ov-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 46px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 14px / 1.3 var(--font-sans);
+  text-decoration: none;
+  transition: border-color var(--dur-press) var(--ease-enter);
+}
+.ov-sec .ov-link:hover {
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.ov-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ov-link__badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--ov-badge, var(--surface));
+  color: var(--ov-badge-ink, var(--muted));
+  box-shadow: inset 0 0 0 1px var(--border);
+  font: 800 12px / 1 var(--font-display);
+}
+.ov-link__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.ov-link__arrow {
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+.ov-sec--links .ov-note {
+  font-size: 12px;
 }
 
 .ov-empty {
@@ -242,7 +331,8 @@
   border-radius: var(--radius-sm);
 }
 @media (prefers-reduced-motion: reduce) {
-  .ov-trailer__badge {
+  .ov-trailer__badge,
+  .ov-sec .ov-link {
     transition: none;
   }
   .ov-trailer__poster:hover .ov-trailer__badge,
@@ -252,7 +342,8 @@
 }
 
 /* Phones: one column. The wrappers dissolve and `order` reads trailer, synopsis, information,
-   genres. Information holds no focusable element, so focus order still matches what is seen. */
+   genres & themes, alternative titles, links. Information holds no focusable element and the
+   links come last in both orders, so focus order still matches what is seen. */
 @media (max-width: 900px) {
   .ov-grid {
     display: flex;
@@ -272,8 +363,14 @@
   .ov-sec--info {
     order: 3;
   }
-  .ov-sec--genres {
+  .ov-sec--themes {
     order: 4;
+  }
+  .ov-sec--alt {
+    order: 5;
+  }
+  .ov-sec--links {
+    order: 6;
   }
   .ov-card {
     padding: var(--space-3) var(--space-4) var(--space-4);

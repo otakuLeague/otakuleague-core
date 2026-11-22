@@ -79,10 +79,11 @@ export function readableOn(
 }
 
 /**
- * The design's dark text, else white, else pure black: a mid-tone accent (luminance about
- * 0.18-0.20) is under 4.5:1 with both of the first two, never with black or white.
+ * Text on a solid `fill` (a "#rrggbb"): the design's dark text, else white, else pure black: a
+ * mid-tone (luminance about 0.18-0.20) is under 4.5:1 with both of the first two, never with
+ * black or white.
  */
-function textOn(fill: string): string {
+export function textOn(fill: string): string {
   return (
     [DARK_TEXT, LIGHT_TEXT].find(
       (text) => contrastRatio(text, fill) >= MIN_TEXT_CONTRAST,

@@ -58,7 +58,7 @@ describe('overviewFacts', () => {
     expect(facts.format).toBe('TV');
     expect(facts.season).toBe('Spring 2013');
     expect(facts.studios).toEqual(['Wit Studio']);
-    expect(facts.genres).toEqual(['Action', 'Drama']);
+    expect(facts.themes.genres).toEqual(['Action', 'Drama']);
     expect(facts.episodes).toBe('25');
     expect(facts.duration).toBe('24 min per ep');
     expect(facts.status).toBe('Finished');
@@ -159,8 +159,8 @@ describe('overviewFacts', () => {
         ),
       }),
     );
-    expect(facts.genres).toHaveLength(20);
-    expect(facts.genres.slice(0, 2)).toEqual(['Action', 'G0']);
+    expect(facts.themes.genres).toHaveLength(20);
+    expect(facts.themes.genres.slice(0, 2)).toEqual(['Action', 'G0']);
     expect(facts.studios).toHaveLength(10);
   });
 
@@ -196,7 +196,12 @@ describe('overviewFacts', () => {
       season: null,
       studios: [],
       creators: ['Hajime Isayama'],
-      genres: [],
+      themes: { genres: [], open: [], spoilers: [] },
+      altTitles: [
+        { kind: 'romaji', label: 'Romaji', texts: ['Shingeki no Kyojin'] },
+        { kind: 'native', label: 'Native', texts: ['進撃の巨人'] },
+      ],
+      links: [],
     });
   });
 });
