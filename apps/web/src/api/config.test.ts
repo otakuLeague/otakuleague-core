@@ -225,7 +225,7 @@ describe('the internal key in browser code', () => {
 });
 
 // Read as text: importing next.config.ts loads the real root .env and runs git.
-it('next.config.ts keeps Server Action arguments out of the dev log and serves the legacy auth redirects', () => {
+it('next.config.ts keeps Server Action arguments out of the dev log, serves the legacy auth redirects and the frame headers', () => {
   const nextConfig = readFileSync(
     path.resolve(__dirname, '../../next.config.ts'),
     'utf8',
@@ -234,5 +234,8 @@ it('next.config.ts keeps Server Action arguments out of the dev log and serves t
   expect(nextConfig).toContain('logging: { serverFunctions: false },');
   expect(nextConfig).toContain(
     'redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),',
+  );
+  expect(nextConfig).toContain(
+    'Promise.resolve([...robotsHeaders(SEARCH_INDEXING), FRAME_DENY_RULE]),',
   );
 });

@@ -5,6 +5,7 @@ import { parseEnv } from 'node:util';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import { checkInternalApiKeyConfig } from './src/api/config';
+import { FRAME_DENY_RULE } from './src/auth/frame-headers';
 import { LEGACY_AUTH_REDIRECTS } from './src/auth/legacy-auth-redirects';
 import { robotsHeaders, SEARCH_INDEXING } from './src/seo/indexing';
 
@@ -65,7 +66,8 @@ const nextConfig: NextConfig = {
   // resized or stored by this server (OTA-97): no third-party image cache, and the optimizer
   // endpoint (GHSA-2464-fhr4-w9xw, OTA-131) stays unused. Also skips next/image's host check.
   images: { unoptimized: true },
-  headers: () => Promise.resolve(robotsHeaders(SEARCH_INDEXING)),
+  headers: () =>
+    Promise.resolve([...robotsHeaders(SEARCH_INDEXING), FRAME_DENY_RULE]),
   redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),
   // Keeps Server Action arguments (could include credentials) out of the dev log (OTA-139).
   logging: { serverFunctions: false },
