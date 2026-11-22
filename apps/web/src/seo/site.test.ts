@@ -68,6 +68,7 @@ describe('page metadata', () => {
   // Pages without their own canonical: a redirect-only route, an error page and dev-only pages.
   const NO_CANONICAL = [
     'anime-not-found/',
+    'auth/check-email/',
     'debug/',
     path.join('anime', 'anilist') + path.sep,
   ];
