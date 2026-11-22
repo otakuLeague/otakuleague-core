@@ -6,9 +6,21 @@ import type { WebPublicUrl } from './web-public-url';
  */
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
+const HTTPS_SESSION_COOKIE_NAME = '__Host-ol_session';
+const HTTP_SESSION_COOKIE_NAME = 'ol_session';
+
+/**
+ * Both names the session cookie can have, for a presence check only (`hasSessionCookie`, ADR 0015
+ * Addendum 1f-iv-c decision 5). The token is read under `sessionCookie(webPublicUrl).name` only.
+ */
+export const SESSION_COOKIE_NAMES = [
+  HTTPS_SESSION_COOKIE_NAME,
+  HTTP_SESSION_COOKIE_NAME,
+] as const;
+
 /** The session cookie's name and attributes, ready for `cookies().set(name, value, options)`. */
 export interface SessionCookie {
-  readonly name: '__Host-ol_session' | 'ol_session';
+  readonly name: (typeof SESSION_COOKIE_NAMES)[number];
   readonly options: {
     readonly httpOnly: true;
     readonly secure: boolean;
@@ -25,7 +37,7 @@ export interface SessionCookie {
  */
 export function sessionCookie({ isHttps }: WebPublicUrl): SessionCookie {
   return {
-    name: isHttps ? '__Host-ol_session' : 'ol_session',
+    name: isHttps ? HTTPS_SESSION_COOKIE_NAME : HTTP_SESSION_COOKIE_NAME,
     options: {
       httpOnly: true,
       secure: isHttps,
