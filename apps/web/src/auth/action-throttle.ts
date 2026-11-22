@@ -1,12 +1,14 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, createSecretKey } from 'node:crypto';
+import type { ClientNetwork } from '../api/client-ip';
 
 export const ACTION_THROTTLE_LIMIT = 60;
 export const ACTION_THROTTLE_WINDOW_MS = 60_000;
 export const ACTION_THROTTLE_MAX_ENTRIES = 10_000;
+export const ACTION_THROTTLE_MIN_SECRET_BYTES = 32;
 
 declare const actionThrottleKeyBrand: unique symbol;
 
-/** A keyed hash of a client network: never the address itself. Only `actionThrottleKey` makes one. */
+/** A keyed hash of a client network: never the address itself. Only the keyer makes one. */
 export type ActionThrottleKey = string & {
   readonly [actionThrottleKeyBrand]: true;
 };
@@ -17,7 +19,9 @@ export type ActionThrottleDecision =
 
 export interface ActionThrottle {
   /** Counts one POST for the key, or refuses it (a refused POST is not counted). */
-  count(key: ActionThrottleKey): ActionThrottleDecision;
+  take(key: ActionThrottleKey): ActionThrottleDecision;
+  /** Drops every ended window; the proxy calls it on each pass so no hash outlives its window long. */
+  forgetEnded(): void;
   /** How many keys are held; never which. */
   size(): number;
 }
@@ -35,17 +39,24 @@ export const DEFAULT_ACTION_THROTTLE_CONFIG: ActionThrottleConfig = {
 };
 
 /**
- * The counter's key: HMAC-SHA256 (base64url) of the client network (`clientNetworkOf`) under a
- * secret drawn once per instance, so a logged key or map gives no address (ADR 0015 Addendum
- * OTA-207, decision 3). Pure.
+ * The counter's keyer: HMAC-SHA256 (base64url) of a client network under a secret of at least 32
+ * bytes drawn once per instance, so a logged key or map gives no address (ADR 0015 Addendum
+ * OTA-207, decision 3). The secret is copied into a `KeyObject`; the caller's bytes can be
+ * dropped. Throws on a short secret: a config error, never a visitor's doing.
  */
-export function actionThrottleKey(
+export function createActionThrottleKeyer(
   instanceSecret: Uint8Array,
-  network: string,
-): ActionThrottleKey {
-  return createHmac('sha256', instanceSecret)
-    .update(network)
-    .digest('base64url') as ActionThrottleKey;
+): (network: ClientNetwork) => ActionThrottleKey {
+  if (instanceSecret.byteLength < ACTION_THROTTLE_MIN_SECRET_BYTES) {
+    throw new Error(
+      `Invalid action throttle secret: at least ${ACTION_THROTTLE_MIN_SECRET_BYTES} bytes`,
+    );
+  }
+  const secret = createSecretKey(instanceSecret);
+  return (network) =>
+    createHmac('sha256', secret)
+      .update(network)
+      .digest('base64url') as ActionThrottleKey;
 }
 
 interface WindowCount {
@@ -53,17 +64,28 @@ interface WindowCount {
   readonly posts: number;
 }
 
+function assertPositiveSafeInteger(name: string, value: number): void {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`Invalid action throttle ${name}: ${String(value)}`);
+  }
+}
+
 /**
  * Fixed-window counter in this instance's memory (ADR 0015 Addendum OTA-207, decision 4). The
  * window starts at a key's first POST. Entries stay in window-start order: ended windows are
- * dropped from the front on each call, and at `maxEntries` the oldest goes first. No I/O, and
- * nothing lists the keys.
+ * dropped from the front on each call, and at `maxEntries` the oldest goes first. A clock that
+ * steps back ends the window of an entry that now lies in its future. No I/O, nothing lists the
+ * keys. Throws on a config that is not three positive safe integers.
  */
 export function createActionThrottle(
   { limit, windowMs, maxEntries }: ActionThrottleConfig,
-  now: () => number,
+  nowMs: () => number,
 ): ActionThrottle {
+  assertPositiveSafeInteger('limit', limit);
+  assertPositiveSafeInteger('windowMs', windowMs);
+  assertPositiveSafeInteger('maxEntries', maxEntries);
   const windows = new Map<ActionThrottleKey, WindowCount>();
+  const maxRetryAfterSeconds = Math.ceil(windowMs / 1000);
 
   function dropEndedWindows(at: number): void {
     for (const [key, { windowStart }] of windows) {
@@ -73,10 +95,14 @@ export function createActionThrottle(
   }
 
   return {
-    count(key) {
-      const at = now();
+    take(key) {
+      const at = nowMs();
       dropEndedWindows(at);
-      const current = windows.get(key);
+      let current = windows.get(key);
+      if (current !== undefined && at < current.windowStart) {
+        windows.delete(key);
+        current = undefined;
+      }
       if (current === undefined) {
         if (windows.size >= maxEntries) {
           const oldest = windows.keys().next();
@@ -89,12 +115,16 @@ export function createActionThrottle(
         const remainingMs = current.windowStart + windowMs - at;
         return {
           kind: 'limited',
-          retryAfterSeconds: Math.ceil(remainingMs / 1000),
+          retryAfterSeconds: Math.min(
+            maxRetryAfterSeconds,
+            Math.max(1, Math.ceil(remainingMs / 1000)),
+          ),
         };
       }
       windows.set(key, { ...current, posts: current.posts + 1 });
       return { kind: 'allowed' };
     },
+    forgetEnded: () => dropEndedWindows(nowMs()),
     size: () => windows.size,
   };
 }

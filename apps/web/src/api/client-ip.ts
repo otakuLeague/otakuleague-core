@@ -42,6 +42,11 @@ export async function readClientIp(): Promise<ClientIp | undefined> {
     : undefined;
 }
 
+declare const clientNetworkBrand: unique symbol;
+
+/** What a client address stands for in a counter. Only `clientNetworkOf` and the loopback constant make one. */
+export type ClientNetwork = string & { readonly [clientNetworkBrand]: true };
+
 const IPV6_GROUPS = 8;
 const IPV6_MAPPED_MARKER = 0xffff;
 
@@ -76,20 +81,28 @@ function ipv6Groups(ip: string): readonly number[] {
  * `visitorKeyFromClientIp` (apps/api/src/common/api-caller.ts, ADR 0019 item 7), copied on
  * purpose: both specs run the same table of addresses, so change them together. Pure.
  */
-export function clientNetworkOf(clientIp: ClientIp): string {
-  if (isIP(clientIp) === 4) return clientIp;
+export function clientNetworkOf(clientIp: ClientIp): ClientNetwork {
+  if (isIP(clientIp) === 4) return clientIp as string as ClientNetwork;
   const groups = ipv6Groups(clientIp);
   const isMapped =
     groups.slice(0, 5).every((group) => group === 0) &&
     groups[5] === IPV6_MAPPED_MARKER;
   if (isMapped) {
     const [high = 0, low = 0] = groups.slice(6);
-    return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+    return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(
+      '.',
+    ) as ClientNetwork;
   }
-  return `${groups.slice(0, 4).map((group) => group.toString(16)).join(':')}::/64`;
+  return `${groups
+    .slice(0, 4)
+    .map((group) => group.toString(16))
+    .join(':')}::/64` as ClientNetwork;
 }
 
 const LOOPBACK_CLIENT_IP = '127.0.0.1' as ClientIp;
+
+/** The one network of a single-machine web (development): the loopback constant, as a network. */
+export const LOOPBACK_CLIENT_NETWORK = '127.0.0.1' as ClientNetwork;
 
 /** The IP a credential call sends, or why it must not be sent (the caller refuses the call). */
 export type CredentialClientIp =
