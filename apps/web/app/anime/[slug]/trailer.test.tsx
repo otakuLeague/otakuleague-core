@@ -1,7 +1,8 @@
 import type { AnimeDetails, AnimeTrailer } from '@otakuleague/shared-types';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Activity, StrictMode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { animeFixture, sourced } from '../../../src/anime/fixtures';
 import { overviewFacts } from '../../../src/anime/overview-facts';
 import { Overview } from './overview';
@@ -13,6 +14,16 @@ function facts(trailer: AnimeTrailer, overrides: Partial<AnimeDetails> = {}) {
   return overviewFacts(
     animeFixture({ trailer: sourced(trailer), ...overrides }),
   );
+}
+
+/** jsdom does not navigate frames, so every player's window is a stub recording `replace` calls. */
+function stubPlayer() {
+  const replace = vi.fn<(url: string) => void>();
+  const player = { location: { replace } } as unknown as Window;
+  vi.spyOn(HTMLIFrameElement.prototype, 'contentWindow', 'get').mockReturnValue(
+    player,
+  );
+  return replace;
 }
 
 /** Every URL the page could fetch: iframes, scripts, images, link hints. */
@@ -27,7 +38,10 @@ function requestedUrls(root: ParentNode): string[] {
 }
 
 describe('TrailerPlayer', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it('loads nothing from the video host before a press', () => {
     const { container } = render(<Overview facts={facts(YOUTUBE)} />);
@@ -100,6 +114,53 @@ describe('TrailerPlayer', () => {
     expect(container.querySelector('iframe')?.getAttribute('src')).toBe(
       'https://www.dailymotion.com/embed/video/x7tgad0?autoplay=1',
     );
+  });
+
+  // cacheComponents keeps a left page mounted in a hidden <Activity> (OTA-217).
+  it.each([
+    ['YouTube', YOUTUBE],
+    ['Dailymotion', { site: 'dailymotion', id: 'x7tgad0' } as const],
+  ])('stops the %s player when the page is hidden, and shows the poster on return', (_, trailer) => {
+    const page = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <Overview facts={facts(trailer)} />
+      </Activity>
+    );
+    const replace = stubPlayer();
+    const { container, rerender } = render(page('visible'));
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    expect(container.querySelector('iframe')).not.toBeNull();
+
+    rerender(page('hidden'));
+    expect(replace).toHaveBeenCalledExactlyOnceWith('about:blank');
+    expect(container.querySelector('iframe')).toBeNull();
+
+    rerender(page('visible'));
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(
+      container.querySelector('.ov-trailer')?.getAttribute('data-state'),
+    ).toBe('poster');
+    expect(screen.getByRole('button', { name: /Play trailer/u })).toBeTruthy();
+  });
+
+  it('stops the player once when it unmounts while playing', () => {
+    const replace = stubPlayer();
+    const { unmount } = render(<Overview facts={facts(YOUTUBE)} />);
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    unmount();
+    expect(replace).toHaveBeenCalledExactlyOnceWith('about:blank');
+  });
+
+  it('keeps the player under StrictMode after a press', () => {
+    const replace = stubPlayer();
+    const { container } = render(
+      <StrictMode>
+        <Overview facts={facts(YOUTUBE)} />
+      </StrictMode>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    expect(container.querySelector('iframe')).not.toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('shows a plain panel without any image, and no section for a bad id', () => {
