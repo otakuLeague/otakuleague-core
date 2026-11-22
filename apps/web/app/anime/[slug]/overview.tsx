@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { type CSSProperties, Fragment, type ReactNode } from 'react';
 import { loadAnime } from '../../../src/anime/data';
 import {
   type InformationRow,
@@ -7,8 +7,15 @@ import {
   informationRows,
   overviewFacts,
 } from '../../../src/anime/overview-facts';
+import type { OfficialLink } from '../../../src/anime/link-sites';
+import type {
+  AltTitle,
+  OverviewThemes,
+} from '../../../src/anime/overview-themes';
 import type { OverviewTrailer } from '../../../src/anime/trailer';
+import { SpoilerTags } from './spoiler-tags';
 import { CollapsibleSynopsis } from './synopsis';
+import { TagChip } from './tag-chip';
 import { TrailerPlayer } from './trailer';
 import './overview.css';
 
@@ -93,19 +100,144 @@ function Trailer({
   );
 }
 
-function Genres({ genres }: { readonly genres: readonly string[] }) {
+const SPOILERS_ID = 'ov-spoiler-tags';
+/** Without JS the spoiler toggle can't work: hide it, and the spoiler tags stay hidden. */
+const NO_JS_SPOILERS = '.ov-spoiler-toggle{display:none!important}';
+
+function ChipList({ children }: { readonly children: ReactNode }) {
+  return <ul className="ov-chips">{children}</ul>;
+}
+
+/** Genres, then tags; plain chips until browse routes exist. */
+function GenresAndThemes({ themes }: { readonly themes: OverviewThemes }) {
+  const open = themes.tags.filter((tag) => tag.visibility === 'open');
+  const spoilers = themes.tags.filter((tag) => tag.visibility === 'spoiler');
   return (
-    <section className="ov-sec ov-sec--genres" aria-labelledby="ov-genres-h">
+    <section className="ov-sec ov-sec--themes" aria-labelledby="ov-themes-h">
       <div className="ov-sec__head">
-        <h2 id="ov-genres-h">Genres</h2>
+        <h2 id="ov-themes-h">Genres &amp; themes</h2>
       </div>
-      <ul className="ov-chips">
-        {genres.map((genre) => (
-          <li key={genre}>
-            <span className="ol-chip">{genre}</span>
+      {themes.genres.length > 0 && (
+        <div className="ov-group">
+          <h3 className="ov-sub">Genres</h3>
+          <ChipList>
+            {themes.genres.map((genre) => (
+              <li key={genre}>
+                <span className="ol-chip">{genre}</span>
+              </li>
+            ))}
+          </ChipList>
+        </div>
+      )}
+      {themes.tags.length > 0 && (
+        <div className="ov-group">
+          <h3 className="ov-sub">Themes</h3>
+          {open.length > 0 && (
+            <ChipList>
+              {open.map((tag) => (
+                <li key={tag.name}>
+                  <TagChip tag={tag} />
+                </li>
+              ))}
+            </ChipList>
+          )}
+          {spoilers.length > 0 && (
+            <>
+              <SpoilerTags id={SPOILERS_ID} tags={spoilers} />
+              <noscript>
+                <style>{NO_JS_SPOILERS}</style>
+              </noscript>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+const ALT_TITLE_LABELS: Readonly<Record<AltTitle['kind'], string>> = {
+  romaji: 'Romaji',
+  english: 'English',
+  native: 'Native',
+  synonym: 'Also known as',
+};
+
+/** One label per kind; every synonym is its own value under "Also known as". */
+function AlternativeTitles({
+  titles,
+}: {
+  readonly titles: readonly AltTitle[];
+}) {
+  const kinds = [...new Set(titles.map((title) => title.kind))];
+  return (
+    <section className="ov-sec ov-sec--alt" aria-labelledby="ov-alt-h">
+      <div className="ov-sec__head">
+        <h2 id="ov-alt-h">Alternative titles</h2>
+      </div>
+      <dl className="ov-facts ov-alt">
+        {kinds.map((kind) => (
+          <Fragment key={kind}>
+            <dt>{ALT_TITLE_LABELS[kind]}</dt>
+            {titles
+              .filter((title) => title.kind === kind)
+              .map((title) => (
+                <dd key={title.text}>
+                  {kind === 'native' ? <bdi>{title.text}</bdi> : title.text}
+                </dd>
+              ))}
+          </Fragment>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function OfficialLinks({ links }: { readonly links: readonly OfficialLink[] }) {
+  return (
+    <section
+      className="ov-card ov-sec ov-sec--links"
+      aria-labelledby="ov-links-h"
+    >
+      <div className="ov-sec__head">
+        <h2 id="ov-links-h">Official links</h2>
+      </div>
+      <ul className="ov-links">
+        {links.map((link) => (
+          <li key={link.url}>
+            <a
+              className="ov-link"
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span
+                className="ov-link__badge"
+                aria-hidden="true"
+                style={
+                  link.badge.kind === 'brand'
+                    ? ({
+                        '--ov-badge': link.badge.color,
+                        '--ov-badge-ink': link.badge.ink,
+                      } as CSSProperties)
+                    : undefined
+                }
+              >
+                {link.badge.initial}
+              </span>
+              <span className="ov-link__name">{link.label}</span>
+              <span className="anime-sr-only"> (opens in a new tab)</span>
+              <span className="ov-link__arrow" aria-hidden="true">
+                ↗
+              </span>
+            </a>
           </li>
         ))}
       </ul>
+      {links.some((link) => link.kind === 'streaming') && (
+        <p className="ov-note">
+          Streaming availability depends on your country.
+        </p>
+      )}
     </section>
   );
 }
@@ -140,13 +272,16 @@ function InformationCard({
 }
 
 /**
- * The Overview tab for a loaded anime. Main column: trailer, synopsis, genres; side: Information.
- * On phones both wrappers dissolve and CSS orders trailer, synopsis, information, genres.
+ * The Overview tab for a loaded anime. Main column: trailer, synopsis, genres & themes,
+ * alternative titles; side: Information, official links. On phones both wrappers dissolve and
+ * CSS orders trailer, synopsis, information, genres & themes, alternative titles, links.
  */
 export function Overview({ facts }: { readonly facts: OverviewFacts }) {
   const rows = informationRows(facts);
+  const hasSide = rows.length > 0 || facts.links.length > 0;
+  const { themes } = facts;
   return (
-    <div className={rows.length > 0 ? 'ov-grid' : 'ov-grid ov-grid--single'}>
+    <div className={hasSide ? 'ov-grid' : 'ov-grid ov-grid--single'}>
       <div className="ov-main">
         {facts.trailer !== null && (
           <Trailer trailer={facts.trailer} title={facts.title} />
@@ -160,11 +295,17 @@ export function Overview({ facts }: { readonly facts: OverviewFacts }) {
           </div>
           <Synopsis synopsis={facts.synopsis} />
         </section>
-        {facts.genres.length > 0 && <Genres genres={facts.genres} />}
+        {(themes.genres.length > 0 || themes.tags.length > 0) && (
+          <GenresAndThemes themes={themes} />
+        )}
+        {facts.altTitles.length > 0 && (
+          <AlternativeTitles titles={facts.altTitles} />
+        )}
       </div>
-      {rows.length > 0 && (
-        <aside className="ov-side" aria-labelledby="ov-info-h">
-          <InformationCard rows={rows} />
+      {hasSide && (
+        <aside className="ov-side" aria-label="Details">
+          {rows.length > 0 && <InformationCard rows={rows} />}
+          {facts.links.length > 0 && <OfficialLinks links={facts.links} />}
         </aside>
       )}
     </div>

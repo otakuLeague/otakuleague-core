@@ -26,7 +26,7 @@ describe('Overview', () => {
     ).toBeTruthy();
     expect(screen.getByText('Humanity lives behind walls.')).toBeTruthy();
     const facts = [
-      ...container.querySelectorAll('.ov-facts dt, .ov-facts dd'),
+      ...container.querySelectorAll('.ov-sec--info dt, .ov-sec--info dd'),
     ].map((node) => node.textContent);
     expect(facts).toEqual([
       'Format',
@@ -56,13 +56,16 @@ describe('Overview', () => {
     expect(container.querySelector('time')?.getAttribute('datetime')).toBe(
       '2013-04-07',
     );
-    expect(
-      screen.getByRole('complementary', { name: 'Information' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Details' })).toBeTruthy();
     const genres = screen
       .getAllByRole('listitem')
       .map((item) => item.textContent);
     expect(genres).toEqual(['Action', 'Drama']);
+    // No tags, no links in the base fixture: no Themes group, no links card.
+    expect(screen.queryByRole('heading', { name: 'Themes' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Official links' }),
+    ).toBeNull();
     // Genre browse routes don't exist yet: plain chips.
     expect(container.querySelector('.ov-chips a')).toBeNull();
   });
@@ -125,9 +128,20 @@ describe('Overview', () => {
   });
 
   it('hides empty rows, and the whole card when every fact is missing', () => {
-    renderOverview({ format: null, season: null, genres: null });
+    renderOverview({
+      format: null,
+      season: null,
+      genres: null,
+      titleRomaji: null,
+      titleNative: null,
+    });
     expect(screen.queryByText('Format')).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Genres' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Genres & themes' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Alternative titles' }),
+    ).toBeNull();
     expect(screen.getByText('Episodes')).toBeTruthy();
     cleanup();
 
@@ -189,11 +203,22 @@ describe('Overview', () => {
     const { container } = renderOverview({
       trailer: sourced({ site: 'youtube', id: 'LHtdKWJdif4' }),
       creators: sourced(['x'.repeat(300)]),
+      tags: sourced([{ name: 'Gore', rank: 90, spoiler: false }]),
+      links: sourced([
+        { site: 'Official Site', url: 'https://shingeki.tv/', kind: 'other' },
+      ]),
     });
     const headings = [...container.querySelectorAll('h2')].map(
       (h) => h.textContent,
     );
-    expect(headings).toEqual(['Trailer', 'Synopsis', 'Genres', 'Information']);
+    expect(headings).toEqual([
+      'Trailer',
+      'Synopsis',
+      'Genres & themes',
+      'Alternative titles',
+      'Information',
+      'Official links',
+    ]);
     const info = container.querySelector('.ov-sec--info');
     // On phones its wrapper is display: contents and reordered: a control would break focus order.
     expect(
@@ -221,6 +246,125 @@ describe('Overview', () => {
     expect(text?.textContent).toContain('<script>alert(1)</script>');
     expect(text?.textContent).toContain('<img src=x onerror=alert(1)>');
     expect(text?.textContent).toContain('<a href="javascript:alert(1)">x</a>');
+  });
+});
+
+describe('Overview themes, titles and links', () => {
+  afterEach(cleanup);
+
+  it('shows open tags, and spoiler tags only behind the toggle', () => {
+    const { container } = renderOverview({
+      tags: sourced([
+        { name: 'Gore', rank: 95, spoiler: false },
+        { name: 'Time Skip', rank: 80, spoiler: true },
+      ]),
+    });
+    expect(screen.getByText('Gore')).toBeTruthy();
+    expect(container.textContent).not.toContain('Time Skip');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show spoiler tags (1)' }),
+    );
+    expect(screen.getByText('Time Skip')).toBeTruthy();
+  });
+
+  it('has no spoiler toggle without spoiler tags, and hides it without JS', () => {
+    renderOverview({
+      tags: sourced([{ name: 'Gore', rank: 95, spoiler: false }]),
+    });
+    expect(screen.queryByRole('button', { name: /spoiler/u })).toBeNull();
+    const html = renderToStaticMarkup(
+      <Overview
+        facts={overviewFacts(
+          animeFixture({
+            tags: sourced([{ name: 'Time Skip', rank: 80, spoiler: true }]),
+          }),
+        )}
+      />,
+    );
+    expect(html).toMatch(
+      /<noscript><style>\.ov-spoiler-toggle\{display:none!important\}/u,
+    );
+    expect(html).not.toContain('Time Skip');
+  });
+
+  it('labels alternative titles and isolates the native one', () => {
+    const { container } = renderOverview({
+      synonyms: sourced(['AoT', 'SnK']),
+    });
+    const alt = [...container.querySelectorAll('.ov-alt dt, .ov-alt dd')].map(
+      (node) => node.textContent,
+    );
+    expect(alt).toEqual([
+      'Romaji',
+      'Shingeki no Kyojin',
+      'Native',
+      '進撃の巨人',
+      'Also known as',
+      'AoT',
+      'SnK',
+    ]);
+    expect(container.querySelector('.ov-alt bdi')?.textContent).toBe(
+      '進撃の巨人',
+    );
+  });
+
+  it('opens links in a new tab, with the country note only for streaming', () => {
+    const { container } = renderOverview({
+      links: sourced([
+        { site: 'Twitter', url: 'https://twitter.com/aot', kind: 'other' },
+        {
+          site: 'Crunchyroll',
+          url: 'https://cr.example/aot',
+          kind: 'streaming',
+        },
+      ]),
+    });
+    const links = [...container.querySelectorAll('a.ov-link')];
+    expect(links.map((a) => a.textContent)).toEqual([
+      'CWatch on Crunchyroll (opens in a new tab)↗',
+      'TTwitter (opens in a new tab)↗',
+    ]);
+    for (const a of links) {
+      expect(a.getAttribute('target')).toBe('_blank');
+      expect(a.getAttribute('rel')).toBe('noopener noreferrer');
+    }
+    expect(
+      (
+        container.querySelector('.ov-link__badge') as HTMLElement
+      ).style.getPropertyValue('--ov-badge'),
+    ).toBe('#f47521');
+    expect(
+      screen.getByText('Streaming availability depends on your country.'),
+    ).toBeTruthy();
+    cleanup();
+
+    renderOverview({
+      links: sourced([
+        { site: 'Twitter', url: 'https://twitter.com/aot', kind: 'other' },
+      ]),
+    });
+    expect(screen.queryByText(/Streaming availability/u)).toBeNull();
+  });
+
+  it('keeps the side column for links alone', () => {
+    const { container } = renderOverview({
+      format: null,
+      episodes: null,
+      durationMinutes: null,
+      status: null,
+      startDate: null,
+      season: null,
+      studios: null,
+      creators: null,
+      links: sourced([
+        { site: 'Official Site', url: 'https://shingeki.tv/', kind: 'other' },
+      ]),
+    });
+    expect(container.querySelector('.ov-grid--single')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Information' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'Official links' }),
+    ).toBeTruthy();
   });
 });
 
