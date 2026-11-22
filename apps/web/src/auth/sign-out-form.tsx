@@ -3,21 +3,30 @@
 import { unstable_rethrow } from 'next/navigation';
 import { Component, type FormEvent, useActionState } from 'react';
 import { signOutAction } from './sign-out-action';
-import type { SignOutFormState } from './sign-out-state';
+import {
+  type SignOutFormState,
+  type SignOutThrownState,
+  signOutStateFromThrow,
+} from './sign-out-state';
 
-const IDLE: SignOutFormState = { kind: 'idle' };
-const FAILED: SignOutFormState = { kind: 'failed' };
+// What the boundary mounts the form in: never `refused`, which only the action returns.
+type SignOutInitialState = { readonly kind: 'idle' } | SignOutThrownState;
+
+const IDLE: SignOutInitialState = { kind: 'idle' };
 
 // `failed` asks for a reload: a page loaded before a deploy posts a stale action id until reloaded.
+// `throttled` says "your network" (true behind a shared NAT) and "a minute" (both throttle windows
+// are 60 s at most, tested); not the 429 body itself, whose "go back" is wrong in a menu.
 const ALERT_TEXT: Record<Exclude<SignOutFormState['kind'], 'idle'>, string> = {
   refused: 'Could not sign out',
   failed: 'Could not sign out. Reload the page and try again.',
+  throttled: 'Could not sign out: too many requests from your network. Wait a minute, then try again.',
 };
 
 function SignOutFormView({
   initialState,
 }: {
-  readonly initialState: SignOutFormState;
+  readonly initialState: SignOutInitialState;
 }) {
   const [state, formAction, pending] = useActionState(
     signOutAction,
@@ -42,7 +51,7 @@ function SignOutFormView({
         type="submit"
         className="sh-menu__action"
         aria-disabled={pending}
-        autoFocus={initialState.kind === 'failed'}
+        autoFocus={initialState.kind !== 'idle'}
       >
         Sign out
       </button>
@@ -56,14 +65,16 @@ function SignOutFormView({
   );
 }
 
-type SignOutBoundaryState = { readonly initialState: SignOutFormState };
+type SignOutBoundaryState = { readonly initialState: SignOutInitialState };
 
 /**
  * The account menu's sign-out form, inside its own error boundary (ADR 0015 Addendum 1f-iv-c2). A
  * success is Next's redirect error, passed on by `unstable_rethrow` to the router's boundary. Any
  * other throw (the action threw, or never answered) mounts the form again in `failed`: the alert and
  * a Sign out button, never `global-error` (N2). After a stale action id (a deploy since the page
- * loaded) the button only works after a reload, so the `failed` alert says to reload (OTA-206).
+ * loaded) the button only works after a reload, so the `failed` alert says to reload (OTA-206). The
+ * proxy throttle's 429 (its exact `text/plain` body as the error message) mounts it in `throttled`
+ * instead, which says to wait (OTA-207).
  * Nothing is reported from the browser: a visitor can cause it, and a throw in the action is
  * reported by the server.
  */
@@ -72,7 +83,7 @@ export class SignOutForm extends Component<object, SignOutBoundaryState> {
 
   static getDerivedStateFromError(error: unknown): SignOutBoundaryState {
     unstable_rethrow(error);
-    return { initialState: FAILED };
+    return { initialState: signOutStateFromThrow(error) };
   }
 
   render() {

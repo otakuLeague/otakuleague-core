@@ -307,3 +307,10 @@ describe('memory and privacy (N25, decision 15)', () => {
     for (const log of logs) expect(log).not.toHaveBeenCalled();
   });
 });
+
+describe('the window behind the sign-out copy', () => {
+  it('keeps both tiers at 60 s or less, since the sign-out alert says "Wait a minute"', () => {
+    expect(DEFAULT_ACTION_THROTTLE_CONFIG.windowMs).toBeLessThanOrEqual(60_000);
+    expect(ACTION_SITE_THROTTLE_CONFIG.windowMs).toBeLessThanOrEqual(60_000);
+  });
+});

@@ -18,6 +18,7 @@ import {
   onTestFinished,
   vi,
 } from 'vitest';
+import { ACTION_THROTTLED_TEXT } from './action-throttle-text';
 import type { signOutAction } from './sign-out-action';
 import { SignOutForm } from './sign-out-form';
 import type { SignOutFormState } from './sign-out-state';
@@ -43,6 +44,11 @@ const RELOAD_TEXT = 'Could not sign out. Reload the page and try again.';
 const STALE_ACTION_ID = Object.assign(new Error(
   'Server Action "7f3a" was not found on the server. \nRead more: https://nextjs.org/docs/messages/failed-to-find-server-action',
 ), { name: 'UnrecognizedActionError' });
+
+// What Next's client throws when the proxy throttle answers the action POST 429 `text/plain`.
+const THROTTLED = new Error(ACTION_THROTTLED_TEXT);
+const WAIT_TEXT =
+  'Could not sign out: too many requests from your network. Wait a minute, then try again.';
 
 type RouterBoundaryState = { readonly caught: string | null };
 
@@ -205,7 +211,10 @@ describe('SignOutForm', () => {
     expect(await alertText()).toBe('Could not sign out');
   });
 
-  it('reports nothing from the browser after a rejection', async () => {
+  it.each([
+    ['failed', STALE_ACTION_ID, RELOAD_TEXT],
+    ['throttled', THROTTLED, WAIT_TEXT],
+  ])('reports nothing from the browser after a rejection (%s)', async (_kind, thrown, text) => {
     silenceBoundaryLogs();
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const sendBeacon = vi.fn<Navigator['sendBeacon']>(() => true);
@@ -217,12 +226,12 @@ describe('SignOutForm', () => {
     onTestFinished(() => {
       Reflect.deleteProperty(navigator, 'sendBeacon');
     });
-    mocks.signOutAction.mockRejectedValue(STALE_ACTION_ID);
+    mocks.signOutAction.mockRejectedValue(thrown);
     render(<SignOutForm />);
 
     submit();
 
-    expect(await alertText()).toBe(RELOAD_TEXT);
+    expect(await alertText()).toBe(text);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(sendBeacon).not.toHaveBeenCalled();
     expect(Sentry.captureException).not.toHaveBeenCalled();
@@ -243,6 +252,129 @@ describe('SignOutForm', () => {
     await screen.findByText('Router: the redirect');
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('at the throttle cap says to wait, with a focused button that submits again', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction.mockRejectedValue(THROTTLED);
+    render(
+      <RouterBoundary>
+        <SignOutForm />
+      </RouterBoundary>,
+    );
+
+    submit();
+    expect(await alertText()).toBe(WAIT_TEXT);
+    expect(document.activeElement).toBe(button());
+    expect(button().getAttribute('aria-disabled')).toBe('false');
+    expect(button().nextElementSibling).toBe(screen.getByRole('alert'));
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    expect(await alertText()).toBe(WAIT_TEXT);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(document.activeElement).toBe(button());
+    expect(screen.queryByText(/Router:/)).toBeNull();
+  });
+
+  it.each([
+    ['the throttle text with a trailing space', `${ACTION_THROTTLED_TEXT} `],
+    ['a generic text/plain answer', 'An unexpected response was received from the server.'],
+  ])('asks for a reload, not to wait, for %s', async (_case, message) => {
+    silenceBoundaryLogs();
+    mocks.signOutAction.mockRejectedValue(new Error(message));
+    render(<SignOutForm />);
+
+    submit();
+
+    expect(await alertText()).toBe(RELOAD_TEXT);
+  });
+
+  it('asks for a reload, not to wait, when the throttle text is thrown as a string', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction.mockRejectedValue(ACTION_THROTTLED_TEXT);
+    render(<SignOutForm />);
+
+    submit();
+
+    expect(await alertText()).toBe(RELOAD_TEXT);
+  });
+
+  it.each([
+    ['throttled then failed', THROTTLED, STALE_ACTION_ID, WAIT_TEXT, RELOAD_TEXT],
+    ['failed then throttled', STALE_ACTION_ID, THROTTLED, RELOAD_TEXT, WAIT_TEXT],
+  ])('shows only the latest alert when %s', async (_case, first, second, firstText, secondText) => {
+    silenceBoundaryLogs();
+    mocks.signOutAction
+      .mockRejectedValueOnce(first)
+      .mockRejectedValueOnce(second);
+    render(<SignOutForm />);
+
+    submit();
+    expect(await alertText()).toBe(firstText);
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    await screen.findByText(secondText);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(document.activeElement).toBe(button());
+  });
+
+  it('says only that it could not sign out when a refusal follows the throttle', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction
+      .mockRejectedValueOnce(THROTTLED)
+      .mockResolvedValueOnce({ kind: 'refused' });
+    render(<SignOutForm />);
+
+    submit();
+    expect(await alertText()).toBe(WAIT_TEXT);
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    await screen.findByText('Could not sign out');
+    expect(screen.queryByText(WAIT_TEXT)).toBeNull();
+  });
+
+  it('says to wait when the throttle follows a refusal', async () => {
+    silenceBoundaryLogs();
+    mocks.signOutAction
+      .mockResolvedValueOnce({ kind: 'refused' })
+      .mockRejectedValueOnce(THROTTLED);
+    render(<SignOutForm />);
+
+    submit();
+    expect(await alertText()).toBe('Could not sign out');
+    submit();
+
+    await waitFor(() => expect(mocks.signOutAction).toHaveBeenCalledTimes(2));
+    await screen.findByText(WAIT_TEXT);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
+  it('after the throttle, hides the alert and makes one call for a double click while pending', async () => {
+    silenceBoundaryLogs();
+    const answer = Promise.withResolvers<SignOutFormState>();
+    mocks.signOutAction
+      .mockRejectedValueOnce(THROTTLED)
+      .mockReturnValueOnce(answer.promise);
+    render(<SignOutForm />);
+    submit();
+    expect(await alertText()).toBe(WAIT_TEXT);
+
+    submit();
+    await waitFor(() =>
+      expect(button().getAttribute('aria-disabled')).toBe('true'),
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    submit();
+    await act(async () => {
+      answer.resolve({ kind: 'refused' });
+      await answer.promise;
+    });
+
+    expect(await alertText()).toBe('Could not sign out');
+    expect(mocks.signOutAction).toHaveBeenCalledTimes(2);
   });
 
   it('while pending hides the alert and cancels a second submit', async () => {
