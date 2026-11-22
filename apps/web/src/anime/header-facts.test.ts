@@ -11,6 +11,8 @@ describe('headerFacts', () => {
       initials: 'AT',
       coverUrl:
         'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498.jpg',
+      bannerUrl:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498.jpg',
       creators: ['Hajime Isayama'],
       studios: ['Wit Studio'],
       status: { key: 'finished', label: 'Finished' },
@@ -64,6 +66,7 @@ describe('headerFacts', () => {
       title: 'Shingeki no Kyojin',
       subtitle: null,
       coverUrl: null,
+      bannerUrl: null,
       creators: [],
       studios: [],
       status: null,
@@ -78,6 +81,17 @@ describe('headerFacts', () => {
       ranksShort: null,
       episodes: null,
     });
+  });
+
+  it('gives the banner and the cover independently of each other', () => {
+    const noBanner = headerFacts(animeFixture({ bannerImageUrl: null }));
+    expect(noBanner.bannerUrl).toBeNull();
+    expect(noBanner.coverUrl).not.toBeNull();
+    const noCover = headerFacts(animeFixture({ coverImageUrl: null }));
+    expect(noCover.coverUrl).toBeNull();
+    expect(noCover.bannerUrl).toBe(
+      'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498.jpg',
+    );
   });
 
   it('drops the format from a rank when the format is unknown', () => {

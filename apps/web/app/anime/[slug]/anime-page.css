@@ -1,10 +1,22 @@
 /*
- * Anime page (OTA-97): docs/design/anime-page/mockup-Main.html (desktop), mockup-Scrolled.html
- * (sticky bar) and mockup-Mobile.html (phone, under 640px). --accent, --accent-ink and
- * --on-accent come per anime from the header's <style> (src/anime/accent.ts).
+ * Anime page (OTA-97): docs/design/anime-page/mockup-Scrolled.html (sticky bar) and
+ * mockup-Mobile.html (phone, under 640px). The desktop header started from mockup-Main.html and
+ * now follows the old site's wide layout (OTA-210: taller band, full-width container, a right-hand
+ * column from 1440px). --accent, --accent-ink and --on-accent come per anime from the header's
+ * <style> (src/anime/accent.ts).
  */
 
 .anime-page {
+  /* The header, the tabs bar and the sticky bar share one wide container (OTA-210); the tab
+     content below keeps its own narrower column. */
+  --anime-wide: 1680px;
+  --anime-gutter: max(16px, 3vw);
+  /* Shared by the header and its loading skeleton, so the cover does not move when it streams
+     in. The band ends at --hero-line (22vw: about 317px at 1440px, capped at 330px); the cover
+     climbs --hero-cover-rise above it. */
+  --hero-line: clamp(220px, 22vw, 330px);
+  --hero-cover-rise: 120px;
+  --hero-cover-w: 216px;
   min-height: 100%;
   background: var(--ground);
   color: var(--ink);
@@ -38,16 +50,22 @@ html:has(.anime-sticky--shown) {
 .anime-header {
   display: grid;
   gap: var(--space-2);
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: var(--space-6) max(16px, 3vw);
+  max-width: var(--anime-wide);
+  margin-inline: auto;
+  padding: calc(var(--hero-line) - var(--hero-cover-rise)) var(--anime-gutter)
+    var(--space-6);
 }
 .anime-header .ol-skel--cover {
-  width: 216px;
+  width: var(--hero-cover-w);
 }
 
-/* Hero */
+/* Hero. The band ends in the neon line at --hero-line; the cover straddles it and the titles
+   always start under it (OTA-208), growing downward however long the title is. */
 .anime-hero {
+  --hero-pad-top: calc(var(--hero-line) - var(--hero-cover-rise));
+  --hero-neon: 2px;
+  /* From the cover's top to 18px under the line: where the titles (and right column) start. */
+  --hero-under: calc(var(--hero-cover-rise) + var(--hero-neon) + 18px);
   position: relative;
   background: linear-gradient(
     180deg,
@@ -58,7 +76,7 @@ html:has(.anime-sticky--shown) {
 .anime-hero__band {
   position: absolute;
   inset: 0 0 auto;
-  height: 196px;
+  height: var(--hero-line);
   background-image: radial-gradient(
     color-mix(in oklab, var(--accent) 22%, transparent) 1.2px,
     transparent 1.3px
@@ -66,10 +84,32 @@ html:has(.anime-sticky--shown) {
   background-size: 16px 16px;
   opacity: 0.6;
 }
+/* AniList's banner over the dot grid (the grid stays as the fallback if it fails to load),
+   faded into the page so the neon line and the cover's glow stay on top. Fixed band height:
+   nothing shifts while it loads. */
+.anime-hero__band--banner {
+  overflow: hidden;
+  opacity: 1;
+}
+.anime-hero__banner {
+  object-fit: cover;
+}
+.anime-hero__band--banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--ground) 35%, transparent) 0%,
+    transparent 30%,
+    transparent 50%,
+    color-mix(in oklab, var(--ground) 80%, transparent) 100%
+  );
+}
 .anime-hero__neon {
   position: absolute;
-  inset: 196px 0 auto;
-  height: 2px;
+  inset: var(--hero-line) 0 auto;
+  height: var(--hero-neon);
   background: var(--accent);
   box-shadow:
     0 0 12px var(--accent),
@@ -77,26 +117,32 @@ html:has(.anime-sticky--shown) {
 }
 .anime-hero__inner {
   position: relative;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 36px max(16px, 3vw) 32px;
+  max-width: var(--anime-wide);
+  margin-inline: auto;
+  padding: 0 var(--space-4) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-3);
 }
+/* Phone: the cover and score side by side, the titles on their own row under them. From 640px
+   this div steps aside for the grid (below). */
 .anime-hero__top {
   display: flex;
-  gap: 28px;
-  align-items: flex-end;
   flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-end;
 }
+/* Content at the bottom: a short title lines up with the cover's bottom, a long one starts
+   18px under the line and pushes the row down (never up). */
 .anime-hero__titles {
-  flex: 1 1 420px;
+  order: 2;
+  flex-basis: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 6px;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-block-end: 6px;
 }
 .anime-hero__title {
   margin: 0;
@@ -111,6 +157,7 @@ html:has(.anime-sticky--shown) {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 .anime-hero__bar {
   display: block;
@@ -124,6 +171,7 @@ html:has(.anime-sticky--shown) {
   margin: 2px 0 0;
   font-size: 15px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .anime-hero__credits a {
   font-weight: 600;
@@ -132,13 +180,6 @@ html:has(.anime-sticky--shown) {
 .anime-hero__dot {
   margin: 0 10px;
   color: var(--faint);
-}
-.anime-hero__bottom {
-  display: flex;
-  gap: var(--space-6);
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
 }
 .anime-hero__meta {
   display: flex;
@@ -159,6 +200,81 @@ html:has(.anime-sticky--shown) {
 .anime-hero__phone-score,
 .anime-hero__fav-short {
   display: none;
+}
+
+/* Tablet and up (OTA-210): one grid on __inner; __top, __bottom and __meta are plain divs that
+   step aside (display: contents) so their children take grid areas. DOM and reading order stay
+   cover, titles, chips, actions, stats. Medium widths: chips beside the cover under the titles,
+   actions and stats as full rows below. */
+@media (min-width: 640px) {
+  .anime-hero__inner {
+    padding: var(--hero-pad-top) var(--anime-gutter) 32px;
+    display: grid;
+    grid-template-columns: var(--hero-cover-w) minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto auto;
+    grid-template-areas:
+      'cover titles'
+      'cover chips'
+      'actions actions'
+      'stats stats';
+    gap: var(--space-4) 32px;
+  }
+  .anime-hero__top,
+  .anime-hero__bottom,
+  .anime-hero__meta {
+    display: contents;
+  }
+  .anime-cover--hero {
+    grid-area: cover;
+    align-self: start;
+  }
+  .anime-hero__titles {
+    grid-area: titles;
+    gap: 10px;
+    padding-block-start: var(--hero-under);
+  }
+  .anime-hero__chips {
+    grid-area: chips;
+  }
+  .anime-hero__actions {
+    grid-area: actions;
+  }
+  .anime-stats {
+    grid-area: stats;
+    justify-self: start;
+  }
+}
+
+/* Wide screens: a right-hand column like the old site. Chips top right, just under the line;
+   the stats card bottom right, level with the end of the title block; the actions take the
+   full width under both, closing the cover's row (under it when the title is long). */
+@media (min-width: 1440px) {
+  .anime-hero__inner {
+    grid-template-columns: var(--hero-cover-w) minmax(0, 1fr) fit-content(42%);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      'cover titles chips'
+      'cover titles stats'
+      'cover actions actions';
+    column-gap: var(--space-10);
+  }
+  /* Smaller than the stacked layout's 64px: the title shares the row with the right column. */
+  .anime-hero__title {
+    font-size: clamp(38px, 2.9vw, 56px);
+  }
+  .anime-hero__chips {
+    align-self: start;
+    justify-content: flex-end;
+    padding-block-start: var(--hero-under);
+  }
+  .anime-stats {
+    align-self: end;
+    justify-self: end;
+    margin-block-end: 6px;
+  }
+  .anime-stat {
+    padding-inline: 18px;
+  }
 }
 
 /* Season selector (OTA-97): opens in place under its trigger, no animation. */
@@ -195,7 +311,7 @@ html:has(.anime-sticky--shown) {
   );
 }
 .anime-cover--hero {
-  width: 216px;
+  width: var(--hero-cover-w);
   height: auto;
   aspect-ratio: 2 / 3;
   border-radius: 16px;
@@ -276,7 +392,8 @@ html:has(.anime-sticky--shown) {
 .anime-chip--muted {
   color: var(--muted);
 }
-.anime-chip__dot {
+.anime-chip__dot,
+.anime-countdown .ol-label::before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -320,12 +437,22 @@ html:has(.anime-sticky--shown) {
   margin: 0;
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in oklab, var(--good) 10%, var(--surface));
-  border: 1px solid color-mix(in oklab, var(--good) 40%, transparent);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
+/* Neutral readout (OTA-211): only the label is green, led by the Airing chip's dot. */
 .anime-countdown .ol-label {
-  color: var(--good);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  --chip-color: var(--status-airing);
+  color: var(--chip-color);
   font-size: 11px;
+}
+/* Static dot: the pulse lives only on .anime-chip__dot--pulse. */
+.anime-countdown .ol-label::before {
+  content: '';
+  flex: none;
 }
 .anime-countdown time {
   font-weight: 600;
@@ -403,11 +530,11 @@ html:has(.anime-sticky--shown) {
   color: var(--stat-color);
 }
 
-/* Tabs, styled as in mockup-Main */
+/* Tabs, styled as in mockup-Main, edges lined up with the header's. */
 .anime-page .ol-tabs {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 max(16px, 3vw);
+  max-width: var(--anime-wide);
+  margin-inline: auto;
+  padding-inline: var(--anime-gutter);
 }
 .anime-page .ol-tab {
   text-transform: none;
@@ -435,7 +562,7 @@ html:has(.anime-sticky--shown) {
 .anime-page__tab {
   max-width: 1240px;
   margin: 0 auto;
-  padding: var(--space-6) max(16px, 3vw);
+  padding: var(--space-6) var(--anime-gutter);
 }
 
 /* Sticky bar (mockup-Scrolled), right under the global header (z-index 20), hidden behind it. */
@@ -474,9 +601,9 @@ html:has(.anime-sticky--shown) {
   }
 }
 .anime-sticky__inner {
-  max-width: 1360px;
-  margin: 0 auto;
-  padding: var(--space-2) max(16px, 2vw);
+  max-width: var(--anime-wide);
+  margin-inline: auto;
+  padding: var(--space-2) var(--anime-gutter);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -549,12 +676,16 @@ html:has(.anime-sticky--shown) {
 
 /* Phone (mockup-Mobile) */
 @media (max-width: 639px) {
+  .anime-page {
+    --hero-line: 168px;
+    --hero-cover-rise: 72px;
+    --hero-cover-w: 112px;
+  }
   .anime-hero {
     background: var(--ground);
   }
   .anime-hero__band {
     position: static;
-    height: 120px;
     opacity: 1;
     background-color: color-mix(in oklab, var(--accent) 22%, var(--surface));
     background-image: radial-gradient(
@@ -562,20 +693,14 @@ html:has(.anime-sticky--shown) {
       transparent 1.6px
     );
   }
+  .anime-hero__band--banner {
+    position: relative;
+  }
   .anime-hero__neon {
     display: none;
   }
-  .anime-hero__inner {
-    padding: 0 var(--space-4) var(--space-4);
-    gap: var(--space-3);
-  }
-  .anime-hero__top {
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
   .anime-cover--hero {
-    width: 112px;
-    margin-top: -72px;
+    margin-block-start: calc(-1 * var(--hero-cover-rise));
     border-radius: var(--radius-lg);
     border: 0;
     outline: 2px solid var(--accent);
@@ -613,11 +738,6 @@ html:has(.anime-sticky--shown) {
     color: var(--xp-gold);
     font-size: 11px;
   }
-  .anime-hero__titles {
-    order: 2;
-    flex-basis: 100%;
-    gap: 6px;
-  }
   .anime-hero__title {
     font-size: 34px;
     line-height: 38px;
@@ -631,9 +751,6 @@ html:has(.anime-sticky--shown) {
   }
   .anime-hero__credits {
     font-size: 14px;
-  }
-  .anime-hero__meta {
-    width: 100%;
   }
   .anime-hero__chips {
     gap: 6px;

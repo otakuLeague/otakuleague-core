@@ -243,4 +243,29 @@ export class AuthController {
   async signOut(@CurrentSession() session: SignedInSession): Promise<void> {
     await this.sessions.delete(session.sessionId);
   }
+
+  @Post('sign-out-everywhere')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionGuard)
+  @ApiNoContentResponse({
+    description:
+      "Every session of the Bearer session's member is ended, that one included, and the member's epoch is raised: the next request with any of their tokens gets 401. No new session is issued.",
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'UNAUTHORIZED: no, malformed, unknown, expired or revoked session (a replay included).',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'INTERNAL_KEY_REQUIRED: a caller other than the production web server.',
+  })
+  @ApiServiceUnavailableResponse({ description: 'The database is down.' })
+  async signOutEverywhere(
+    @CurrentSession() session: SignedInSession,
+  ): Promise<void> {
+    await this.sessions.signOutEverywhere(
+      session.userId,
+      session.sessionEpoch,
+    );
+  }
 }

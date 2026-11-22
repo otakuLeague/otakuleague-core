@@ -8,6 +8,7 @@ import { seasonOptions, tabHref } from '../../../src/anime/tabs';
 import { SeasonChip, StatusChip } from './chips';
 import { Countdown } from './countdown';
 import { Cover } from './cover';
+import { HeroBand } from './hero-band';
 import { SeasonSelector } from './season-selector';
 import {
   FormatIcon,
@@ -283,7 +284,7 @@ export function AnimeHeader({
     <>
       <AccentStyle coverColor={coverColor} />
       <header id={HERO_ID} className="anime-hero">
-        <div className="anime-hero__band" aria-hidden="true" />
+        <HeroBand bannerUrl={facts.bannerUrl} />
         <div className="anime-hero__neon" aria-hidden="true" />
         <div className="anime-hero__inner">
           <div className="anime-hero__top">

@@ -19,37 +19,53 @@ const LONG = `${'Gold Roger was the Pirate King. '.repeat(15)}\n\nEnter Monkey D
 describe('Overview', () => {
   afterEach(cleanup);
 
-  it('renders the synopsis, details and genres of a finished anime', () => {
+  it('renders the synopsis, information and genres of a finished anime', () => {
     const { container } = renderOverview();
     expect(
       screen.getByRole('heading', { level: 2, name: 'Synopsis' }),
     ).toBeTruthy();
     expect(screen.getByText('Humanity lives behind walls.')).toBeTruthy();
     const facts = [
-      ...container.querySelectorAll('.ov-facts dt, .ov-facts dd'),
+      ...container.querySelectorAll('.ov-sec--info dt, .ov-sec--info dd'),
     ].map((node) => node.textContent);
     expect(facts).toEqual([
       'Format',
       'TV',
       'Episodes',
-      '25 × 24 min',
-      'Aired',
-      '7 Apr 2013 – 29 Sep 2013',
+      '25',
+      'Duration',
+      '24 min per ep',
+      'Status',
+      'Finished',
+      'Start date',
+      '7 Apr 2013',
+      'End date',
+      '29 Sep 2013',
       'Season',
       'Spring 2013',
       'Studio',
       'Wit Studio',
+      'Created by',
+      'Hajime Isayama',
     ]);
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Information' }),
+    ).toBeTruthy();
+    // No trailer in the base fixture: no section, no player.
+    expect(screen.queryByRole('heading', { name: 'Trailer' })).toBeNull();
     expect(container.querySelector('time')?.getAttribute('datetime')).toBe(
       '2013-04-07',
     );
-    expect(
-      screen.getByRole('complementary', { name: 'Key facts' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Details' })).toBeTruthy();
     const genres = screen
       .getAllByRole('listitem')
       .map((item) => item.textContent);
     expect(genres).toEqual(['Action', 'Drama']);
+    // No tags, no links in the base fixture: no Themes group, no links card.
+    expect(screen.queryByRole('heading', { name: 'Themes' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Official links' }),
+    ).toBeNull();
     // Genre browse routes don't exist yet: plain chips.
     expect(container.querySelector('.ov-chips a')).toBeNull();
   });
@@ -102,17 +118,30 @@ describe('Overview', () => {
       nextEpisode: sourced({ episode: 1181, airingAt: '2026-11-15T00:00:00Z' }),
       startDate: sourced({ year: 1999, month: 10, day: 20 }),
     });
-    expect(screen.getByText('1180 so far × 24 min')).toBeTruthy();
-    const aired = [...container.querySelectorAll('.ov-facts dd')].find((dd) =>
-      dd.textContent?.includes('1999'),
+    expect(screen.getByText('1180 so far')).toBeTruthy();
+    const values = [...container.querySelectorAll('.ov-facts dd')].map(
+      (dd) => dd.textContent,
     );
-    expect(aired?.textContent).toBe('20 Oct 1999 – now');
+    expect(values).toContain('20 Oct 1999');
+    expect(screen.queryByText('End date')).toBeNull();
+    expect(screen.getByText('Airing')).toBeTruthy();
   });
 
   it('hides empty rows, and the whole card when every fact is missing', () => {
-    renderOverview({ format: null, season: null, genres: null });
+    renderOverview({
+      format: null,
+      season: null,
+      genres: null,
+      titleRomaji: null,
+      titleNative: null,
+    });
     expect(screen.queryByText('Format')).toBeNull();
-    expect(screen.queryByText('Genres')).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Genres & themes' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Alternative titles' }),
+    ).toBeNull();
     expect(screen.getByText('Episodes')).toBeTruthy();
     cleanup();
 
@@ -120,9 +149,11 @@ describe('Overview', () => {
       format: null,
       episodes: null,
       durationMinutes: null,
+      status: null,
       startDate: null,
       season: null,
       studios: null,
+      creators: null,
       genres: null,
     });
     expect(screen.queryByRole('complementary')).toBeNull();
@@ -161,10 +192,41 @@ describe('Overview', () => {
     );
   });
 
-  it('shows the premiere date of a not yet released anime', () => {
+  it('shows the status and start date of a not yet released anime', () => {
     renderOverview({ status: sourced('NOT_YET_RELEASED'), endDate: null });
-    expect(screen.getByText('Premieres')).toBeTruthy();
-    expect(screen.queryByText('Aired')).toBeNull();
+    expect(screen.getByText('Start date')).toBeTruthy();
+    expect(screen.getByText('Not yet aired')).toBeTruthy();
+    expect(screen.queryByText('End date')).toBeNull();
+  });
+
+  it('orders sections main then side, and keeps Information free of focusable elements', () => {
+    const { container } = renderOverview({
+      trailer: sourced({ site: 'youtube', id: 'LHtdKWJdif4' }),
+      creators: sourced(['x'.repeat(300)]),
+      tags: sourced([{ name: 'Gore', rank: 90, spoiler: false }]),
+      links: sourced([
+        { site: 'Official Site', url: 'https://shingeki.tv/', kind: 'other' },
+      ]),
+    });
+    const headings = [...container.querySelectorAll('h2')].map(
+      (h) => h.textContent,
+    );
+    expect(headings).toEqual([
+      'Trailer',
+      'Synopsis',
+      'Genres & themes',
+      'Alternative titles',
+      'Information',
+      'Official links',
+    ]);
+    const info = container.querySelector('.ov-sec--info');
+    // On phones its wrapper is display: contents and reordered: a control would break focus order.
+    expect(
+      info?.querySelector(
+        'a, button, input, select, textarea, iframe, [tabindex]',
+      ),
+    ).toBeNull();
+    expect(info?.textContent).toContain('x'.repeat(300));
   });
 
   it('shows the empty box for a synopsis from MyAnimeList (OTA-127)', () => {
@@ -184,6 +246,132 @@ describe('Overview', () => {
     expect(text?.textContent).toContain('<script>alert(1)</script>');
     expect(text?.textContent).toContain('<img src=x onerror=alert(1)>');
     expect(text?.textContent).toContain('<a href="javascript:alert(1)">x</a>');
+  });
+});
+
+describe('Overview themes, titles and links', () => {
+  afterEach(cleanup);
+
+  it('shows open tags, and spoiler tags only behind the toggle', () => {
+    const { container } = renderOverview({
+      tags: sourced([
+        { name: 'Gore', rank: 95, spoiler: false },
+        { name: 'Time Skip', rank: 80, spoiler: true },
+      ]),
+    });
+    expect(screen.getByText('Gore')).toBeTruthy();
+    expect(container.textContent).not.toContain('Time Skip');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show spoiler tags (1)' }),
+    );
+    expect(screen.getByText('Time Skip')).toBeTruthy();
+  });
+
+  it('has no spoiler toggle without spoiler tags, and hides it without JS', () => {
+    renderOverview({
+      tags: sourced([{ name: 'Gore', rank: 95, spoiler: false }]),
+    });
+    expect(screen.queryByRole('button', { name: /spoiler/u })).toBeNull();
+    const html = renderToStaticMarkup(
+      <Overview
+        facts={overviewFacts(
+          animeFixture({
+            tags: sourced([{ name: 'Time Skip', rank: 80, spoiler: true }]),
+          }),
+        )}
+      />,
+    );
+    expect(html).toContain(
+      '<noscript><style>.ov-spoiler-toggle,.ov-group--spoilers-only{display:none!important}',
+    );
+    // Only spoiler tags: without JS the Themes group hides too.
+    expect(html).toContain('class="ov-group ov-group--spoilers-only"');
+    expect(html).not.toContain('Time Skip');
+  });
+
+  it('labels alternative titles and isolates the native one', () => {
+    const { container } = renderOverview({
+      synonyms: sourced(['AoT', 'SnK']),
+    });
+    const alt = [...container.querySelectorAll('.ov-alt dt, .ov-alt dd')].map(
+      (node) => node.textContent,
+    );
+    expect(alt).toEqual([
+      'Romaji',
+      'Shingeki no Kyojin',
+      'Native',
+      '進撃の巨人',
+      'Also known as',
+      'AoT',
+      'SnK',
+    ]);
+    expect(container.querySelectorAll('.ov-alt dd > bdi')).toHaveLength(4);
+  });
+
+  it('opens links in a new tab, with the country note only for streaming', () => {
+    const { container } = renderOverview({
+      links: sourced([
+        { site: 'Twitter', url: 'https://twitter.com/aot', kind: 'other' },
+        {
+          site: 'Crunchyroll',
+          url: 'https://www.crunchyroll.com/aot',
+          kind: 'streaming',
+        },
+      ]),
+    });
+    const links = [
+      screen.getByRole('link', {
+        name: 'Watch on Crunchyroll (opens in a new tab)',
+      }),
+      screen.getByRole('link', { name: 'Twitter (opens in a new tab)' }),
+    ];
+    expect(
+      [...container.querySelectorAll<HTMLAnchorElement>('a.ov-link')].map(
+        (a) => a.href,
+      ),
+    ).toEqual(['https://www.crunchyroll.com/aot', 'https://twitter.com/aot']);
+    for (const a of links) {
+      expect(a.getAttribute('target')).toBe('_blank');
+      expect(a.getAttribute('rel')).toBe('noopener noreferrer nofollow');
+      expect(a.querySelector('bdi')).toBeTruthy();
+    }
+    expect(
+      container
+        .querySelector<HTMLElement>('.ov-link__badge')
+        ?.style.getPropertyValue('--ov-badge'),
+    ).toBe('#f47521');
+    expect(
+      screen.getByText('Streaming availability depends on your country.'),
+    ).toBeTruthy();
+    cleanup();
+
+    renderOverview({
+      links: sourced([
+        { site: 'Twitter', url: 'https://twitter.com/aot', kind: 'other' },
+      ]),
+    });
+    expect(screen.queryByText(/Streaming availability/u)).toBeNull();
+  });
+
+  it('keeps the side column for links alone', () => {
+    const { container } = renderOverview({
+      format: null,
+      episodes: null,
+      durationMinutes: null,
+      status: null,
+      startDate: null,
+      season: null,
+      studios: null,
+      creators: null,
+      links: sourced([
+        { site: 'Official Site', url: 'https://shingeki.tv/', kind: 'other' },
+      ]),
+    });
+    expect(container.querySelector('.ov-grid--single')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Information' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'Official links' }),
+    ).toBeTruthy();
   });
 });
 

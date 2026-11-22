@@ -140,6 +140,39 @@ describe('AnimeHeader', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 
+  it('paints the banner in the band as a decorative image when AniList has one', () => {
+    renderHeader();
+    const band = document.querySelector('.anime-hero__band');
+    expect(band?.getAttribute('aria-hidden')).toBe('true');
+    expect(band?.classList.contains('anime-hero__band--banner')).toBe(true);
+    const banner = band?.querySelector('img');
+    expect(banner?.getAttribute('alt')).toBe('');
+    expect(decodeURIComponent(banner?.getAttribute('src') ?? '')).toContain(
+      '/media/anime/banner/16498.jpg',
+    );
+    expect(banner?.getAttribute('fetchpriority')).toBeNull();
+    expect(banner?.getAttribute('loading')).toBe('eager');
+  });
+
+  it('keeps the dot grid only, with no image, when there is no banner', () => {
+    renderHeader({ bannerImageUrl: null });
+    const band = document.querySelector('.anime-hero__band');
+    expect(band?.getAttribute('aria-hidden')).toBe('true');
+    expect(band?.classList.contains('anime-hero__band--banner')).toBe(false);
+    expect(band?.childElementCount).toBe(0);
+    expect(
+      hero().getByRole('img', { name: 'Attack on Titan cover' }),
+    ).toBeDefined();
+  });
+
+  it('keeps the banner when there is no cover', () => {
+    renderHeader({ coverImageUrl: null });
+    expect(
+      hero().getByRole('img', { name: 'No cover available' }),
+    ).toBeDefined();
+    expect(document.querySelector('.anime-hero__band img')).not.toBeNull();
+  });
+
   it('hides every value AniList does not give: no 0, no #null, no empty card', () => {
     renderHeader({
       rankRated: null,
@@ -409,7 +442,9 @@ describe('AnimeHeaderLoader', () => {
       failure: {
         kind: 'api_error',
         status: 429,
-        error: { error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' } },
+        error: {
+          error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' },
+        },
       },
     });
     expect(screen.getByText(/Try again in a minute/)).toBeTruthy();
