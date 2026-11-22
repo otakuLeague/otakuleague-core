@@ -9,10 +9,15 @@ const readFlashEmail = vi.hoisted(() =>
 vi.mock('../../../src/auth/flash-email', () => ({ readFlashEmail }));
 // jsdom cannot render an async Server Component: inside the page the hole never resolves, so the
 // page renders exactly what the static shell holds. The real one is awaited below.
+const { NEVER, addressStub } = vi.hoisted(() => {
+  const never = new Promise<never>(() => undefined);
+  return { NEVER: never, addressStub: vi.fn() };
+});
 vi.mock('./check-email-lede', async (importActual) => ({
   ...(await importActual<typeof import('./check-email-lede')>()),
-  CheckEmailAddress: () => use(new Promise<never>(() => undefined)),
+  CheckEmailAddress: addressStub,
 }));
+addressStub.mockImplementation(() => use(NEVER));
 const { CheckEmailAddress, CheckEmailLede } =
   await vi.importActual<typeof import('./check-email-lede')>(
     './check-email-lede',
@@ -48,7 +53,7 @@ describe('Check email page', () => {
     ).toBe('/auth');
     expect(page.querySelector('strong, form, input, button')).toBeNull();
     expect(page.innerHTML).not.toContain('@');
-    expect(readFlashEmail).not.toHaveBeenCalled();
+    expect(addressStub).toHaveBeenCalledOnce();
   });
 
   it('has a title only: no canonical, no description, no robots key', () => {
@@ -73,6 +78,16 @@ describe('CheckEmailLede', () => {
     const strongs = lede.querySelectorAll('strong');
     expect([...strongs].map((s) => s.textContent)).toEqual([ADDRESS]);
     expect(lede.innerHTML.split(ADDRESS)).toHaveLength(2);
+  });
+});
+
+describe('CheckEmailLede markup in the address', () => {
+  it('renders it as text only, never as an element', () => {
+    const planted = '<img/src=x/onerror=alert(1)>@x';
+    const lede = render(<CheckEmailLede email={planted} />).container;
+
+    expect(lede.querySelector('img')).toBeNull();
+    expect(lede.querySelector('strong')?.textContent).toBe(planted);
   });
 });
 

@@ -185,3 +185,15 @@
   font-size: 14px;
   text-align: center;
 }
+.au-foot a {
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: underline;
+}
+@media (max-width: 767.98px) {
+  .au-foot a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+  }
+}

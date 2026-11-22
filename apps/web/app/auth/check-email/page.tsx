@@ -16,7 +16,7 @@ export default function CheckEmailPage() {
   return (
     <main className="au-page">
       <div className="au-badge" aria-hidden="true">
-        ✉
+        {'✉︎'}
       </div>
       <h1 tabIndex={-1}>Check your email</h1>
       <Suspense fallback={<CheckEmailLede email={undefined} />}>
