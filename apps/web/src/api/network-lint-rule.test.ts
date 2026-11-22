@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
 import { ESLint } from 'eslint';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -12,6 +13,8 @@ const CLIENT = 'src/api/client.ts';
 const SENTRY_TUNNEL = 'src/observability/sentry-tunnel.ts';
 const AUTH_FILE = 'src/auth/web-public-url.ts';
 const AUTH_PAGE = 'app/auth/page.tsx';
+const SESSION_CALL = 'src/auth/session-call.ts';
+const LOAD_VIEWER = 'src/auth/load-viewer.ts';
 const REDIRECT_TO = 'src/auth/redirect-to.ts';
 const REDIRECT_ALLOWLIST = [
   REDIRECT_TO,
@@ -50,6 +53,9 @@ async function ruleIdsFor(code: string, filePath: string): Promise<string[]> {
   expect(messages.filter((message) => message.fatal === true)).toEqual([]);
   return messages.map((message) => message.ruleId ?? 'unknown');
 }
+
+const everywhere = (files: readonly string[], codes: readonly string[]) =>
+  files.flatMap((file) => codes.map((code) => [file, code] as const));
 
 describe('network lint rule', () => {
   // The first lint builds the TypeScript program (over 5 s on a CI runner); pay it once here so
@@ -109,8 +115,6 @@ describe('network lint rule', () => {
   });
 
   describe('auth gate: API calls only through credentialCall() or sessionCall()', () => {
-    const SESSION_CALL = 'src/auth/session-call.ts';
-
     it.each([
       "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
       "import { createApiClient } from '../api/client.ts';\nexport const build = createApiClient;\n",
@@ -155,6 +159,79 @@ describe('network lint rule', () => {
     });
   });
 
+  describe('session cookie gate: hasSessionCookie and SESSION_COOKIE_NAMES have one importer each', () => {
+    // Written from src/auth; `from()` moves the './' specifiers to another folder.
+    const HAS =
+      "import { hasSessionCookie } from './session-call';\nexport const has = hasSessionCookie;\n";
+    const NAMES =
+      "import { SESSION_COOKIE_NAMES } from './auth-cookies';\nexport const names = SESSION_COOKIE_NAMES;\n";
+    const OTHERS =
+      "import { readSessionToken } from './session-call';\nimport { sessionCookie } from './auth-cookies';\n" +
+      'export const used = [readSessionToken, sessionCookie];\n';
+    const from = (folder: string, code: string) =>
+      code.replace(/'\.\//g, `'${folder}`);
+    const PAGE = '../src/auth/';
+    const SIBLING = '../auth/';
+    const ELSEWHERE = ['src/shell/viewer-actions.tsx', OUTSIDE_CLIENT, CLIENT];
+
+    it.each([
+      ...everywhere([OUTSIDE_API_FOLDER], [
+        from(PAGE, HAS),
+        from(PAGE, NAMES),
+        from('@/src/auth/', HAS),
+        from(PAGE, NAMES).replace("cookies'", "cookies.ts'"),
+        from(PAGE, "import { hasSessionCookie as has } from './session-call';\nexport const check = has;\n"),
+        from(PAGE, "import * as cookies from './auth-cookies';\nexport const names = cookies.SESSION_COOKIE_NAMES;\n"),
+        from(PAGE, "export { SESSION_COOKIE_NAMES } from './auth-cookies';\n"),
+        from(PAGE, "export * from './session-call';\n"),
+      ]),
+      ...everywhere([AUTH_FILE, 'src/auth/credential-call.ts'], [HAS, NAMES]),
+      // The groups have no folder part, so a path variant still ends in the gated name.
+      ...everywhere([AUTH_FILE], [HAS.replace("'./", "'./session-call/../")]),
+      ...everywhere(ELSEWHERE, [from(SIBLING, HAS), from(SIBLING, NAMES)]),
+      // Each exception frees one name only.
+      ...everywhere([LOAD_VIEWER], [NAMES]),
+      ...everywhere([SESSION_CALL], [HAS]),
+    ])('fires in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      ...everywhere([LOAD_VIEWER], [HAS, OTHERS]),
+      ...everywhere([SESSION_CALL], [NAMES]),
+      ...everywhere([AUTH_FILE], [OTHERS]),
+      ...everywhere([OUTSIDE_API_FOLDER], [from(PAGE, OTHERS)]),
+      ...everywhere(ELSEWHERE, [from(SIBLING, OTHERS)]),
+    ])('allows in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).not.toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it.each([
+      "import { apiClient } from '../api/client';\nexport const build = apiClient;\n",
+      "import { request } from 'node:http';\nexport const send = request;\n",
+    ])('still forbids in load-viewer.ts:\n%s', async (code) => {
+      expect(await ruleIdsFor(code, LOAD_VIEWER)).toContain(
+        'no-restricted-imports',
+      );
+    });
+
+    it('pins both names to the modules the gate finds them in by file name', () => {
+      const source = (name: string) =>
+        readFileSync(new URL(`../auth/${name}`, import.meta.url), 'utf8');
+
+      expect(source('session-call.ts')).toMatch(
+        /^export async function hasSessionCookie\(/m,
+      );
+      expect(source('auth-cookies.ts')).toMatch(
+        /^export const SESSION_COOKIE_NAMES\b/m,
+      );
+    });
+  });
+
   describe('redirect gate: redirect() only in the three allowlisted files', () => {
     const REDIRECT_IMPORTS = [
       "import { redirect } from 'next/navigation';\nexport const leave = redirect;\n",
@@ -171,8 +248,6 @@ describe('network lint rule', () => {
     ];
     // Banned in the allowlisted files too: only a named redirect import is freed there.
     const NEVER_ALLOWED = REDIRECT_IMPORTS.slice(2, 8);
-    const everywhere = (files: readonly string[], codes: readonly string[]) =>
-      files.flatMap((file) => codes.map((code) => [file, code] as const));
 
     it.each(
       everywhere([OUTSIDE_API_FOLDER, AUTH_FILE, AUTH_PAGE], REDIRECT_IMPORTS),
