@@ -584,6 +584,58 @@ request with a next-action or content-type header (any path)
 - **OTA-142**: a budget for POST handlers under `/api` before the first one ships.
 - **OTA-205**: decision 8.
 
+## Addendum (1f-v3)
+Added 2026-11-22 (OTA-139 slice 1f-v3), written before the code. It wires the merged pieces (`SignUpFormState`, `signUpAction`, `/auth/check-email`) into `/auth` and settles what earlier addenda left to it: the form while sign-up is closed ([1f-v](#addendum-1f-v)), the throttle boundary ([OTA-207](#addendum-ota-207)) and the switch between sign-in and sign-up. Sized again: about 400 lines of code and tests (the view and its test are about 220), about 450 with this addendum, so one PR. The mockup's confirm field, Show buttons and live rule checklist are **v3b** (decision 8). Web only: no API change, no new variable, dependency or error code.
+
+| # | Requirement |
+|---|---|
+| F17 | A visitor on `/auth?mode=sign-up` (or `signup`) gets the sign-up form (username, email, password); an accepted submit lands on "Check your email" (F10), a refused one shows its own copy (F11, decision 4). |
+| F18 | Each form links to the other one under it; `/auth` with no or any other `mode` is sign-in, as today. |
+| N28 | Sign-in is untouched: its h1 and form stay in the static shell, 0 of its nodes are replaced by a stream (text typed or autofilled before hydration survives, 1f-iii-b), and it still works without JavaScript. |
+| N29 | At most 1 submit in flight per form: a submit while one is pending makes 0 POSTs (N7, OTA-207 decision 8). |
+| N30 | The password is in 0 React states and 0 `defaultValue`s, and 0 typed values appear in an alert. The username and the email come back after 100 % of refused submits, the password after 0 %. |
+| N31 | A preview renders 0 forms and 0 inputs. 0 states say that nothing was saved (1f-v, "Too simple?"). |
+
+**Consistency vs availability.** The submit is unchanged: consistency (1f-v: nothing optimistic, nothing retried). The page: availability. It renders with 0 API calls, so it cannot know whether sign-up is open (decision 2). **Entities:** none new (`AuthMode`, `SignUpFormState`); two components, `SignUpFormView` and `SignUpForm`. **API:** none new.
+
+```
+app/auth/page.tsx (static shell; a preview: the sign-in h1 and PreviewOffNotice only)
+main.au-page
+├─ Suspense fallback=null
+│  └─ SignUpPanel (async, awaits searchParams): mode sign-up ? the panel below : nothing
+│        div.au-panel[data-auth-panel=sign-up]: h1 "Create your account" · SignUpForm · foot → /auth
+└─ div.au-panel[data-auth-panel=sign-in] (shell, as today): h1 · SignInForm { Suspense → next } · foot → /auth?mode=sign-up
+auth.css: [data-auth-panel='sign-up'] ~ [data-auth-panel='sign-in'] { display: none }
+```
+
+**Decisions.**
+1. **The query switches; the shell does not change.** `/auth?mode=sign-up` is the mockup's URL and the one the home page and the guest menu already link to. The sign-in panel stays in the shell exactly as it is. A second `Suspense` before it holds `SignUpPanel` (in `auth-query-fields.tsx`), which renders only when `parseAuthMode` says sign-up; one CSS rule then takes the sign-in panel out of the page, the accessibility tree and the tab order. A test holds the two attribute values and the stylesheet's selector together. The switch is a `Link` under each form (design README): "No account yet? Create one, it's free" and "Already a member? Sign in". `AuthQueryFields` keeps only `next`; `SignUpClosedNote` goes.
+2. **The form renders whenever credential routes are on, open or closed.** Whether sign-up is open is one fact and the API holds it: 403 `SIGN_UP_CLOSED` while it has no email sender, before any counter or hash. The web learns it from that answer and shows `sign_up_closed`. So sign-up opens when Farouk configures the sender on Railway, with no web deploy and no second switch to keep in step.
+3. **`SignUpFormView` (pure) and `SignUpForm` (client) mirror the sign-in pair.** Three uncontrolled, `required` fields with ids `sign-up-*`: `username` (`autoComplete="username"`, no capitalisation, correction or spellcheck), `email` (`type="email"`, `maxLength` `IDENTIFIER_MAX`), `password` (`autoComplete="new-password"`, `maxLength` `PASSWORD_RAW_MAX`, described by the line "At least 8 characters, with a number or symbol."). The container holds `useActionState(signUpAction, idle)` and the last submitted username and email, read from the `FormData` on submit and given back as `defaultValue`s, so React's reset after a refusal restores them (N30). No validation in the browser: the action's local bounds cost 0 calls and the password rule stays the API's.
+4. **Copy**: one `role="alert"` above the fields (title, then detail), hidden while pending so a repeated refusal is announced again. `invalid_fields`: "Some details need another look." and one sentence per named field ("Usernames are 3 to 20 letters, numbers or underscores." "Enter a valid email address." "Passwords need at least 8 characters with a number or symbol, and common ones are refused."). `username_taken`: "That username is taken." "Pick another one. If you already signed up with it, the confirmation email we sent still works." `sign_up_closed`: "New accounts aren't open yet." "Already have one? Sign in below." `rate_limited`: "Slow down a little." "Too many sign-ups from this network. Try again in N minutes." (`retryWaitCopy`). `busy`: "Sign-up is busy." "Wait a moment, then try again." `unavailable`: "We couldn't confirm your sign-up." "Something went wrong on our side. If a confirmation email arrives, its link still works. Otherwise try again in a little while." `off_on_preview`: "Sign-up is off on preview deployments" "Use the live site to sign up." The first two mark their fields `aria-invalid`, described by the alert. Farouk confirms the wording in the PR.
+5. **One submit in flight** (N29), as on the other two forms: `onSubmit` prevents a submit while pending, the button is `aria-disabled` with the spinner and "Creating account…", the fields are `readOnly`, the form `aria-busy`. Never `disabled`, which drops focus.
+6. **No throttle boundary, on either credential form.** The API refuses the 6th sign-up per address per hour with its own copy; the proxy's cap is the 61st POST per network per minute. A person therefore meets the 429 only behind an address someone else is flooding, and `error.tsx` ("Something went wrong", Try again) is then true. A boundary would not keep the typed fields either: it mounts the form again. A shared one costs about 110 lines with tests and changes the sign-in form: a ticket to file, worth building when Vercel's request log shows 429s on `/auth`.
+7. **What earlier addenda assigned here.** The privacy cookie table names `__Host-ol_signup` and `__Host-ol_flash` (the test asks for the exact names; Farouk confirms). `auth-sign-up` (`/auth?mode=sign-up`) replaces `auth-check-email` in `scripts/screenshots/routes.json`: that page has not changed since v2a and comes back with Resend (1f-vii). `/sign-up` joins `LEGACY_AUTH_REDIRECTS` (308 to `/auth?mode=sign-up`).
+8. **v3b** (about 250 lines): the confirm field (compared in the browser, never posted), the Show buttons, the live two-rule checklist (`PASSWORD_MIN` and `meetsSignUpPasswordRule` move to shared types, as 1f-v foresaw), focus after the switch and on "Check your email".
+
+**Rejected.**
+- **Its own route, `/auth/sign-up`**, with a redirect from `?mode=sign-up`. Two static shells, no flash, sign-up without JavaScript, its own title. But the mockup, the design README, PARITY and the links already shipped (home page, guest menu) fix `/auth?mode=`, and it needs a canonical and indexing decision. It is the way out if the flash below bothers Farouk on beta: about 30 lines move.
+- **One `Suspense` that renders either panel.** With the sign-in panel as its fallback, every sign-in visit has its form nodes replaced when the stream arrives (against N28); with `null`, sign-in leaves the shell and stops working without JavaScript.
+- **A `SIGN_UP_OPEN` web variable, or a status call at render.** A second switch to forget, or a new route and an API call on a page that makes none.
+
+**Too simple?**
+- **A flash.** On a hard load of `/auth?mode=sign-up`, or a first navigation to it, the shell paints "Welcome back" and the sign-in form until the hole arrives (same response; not measured on Vercel). Without JavaScript the hole is never placed, so that URL shows sign-in: sign-up needs JavaScript, sign-in does not.
+- While production is closed a visitor fills three fields to learn it, and a password crosses to the API for nothing (validated, never hashed or stored).
+- Until v3b nothing catches a mistyped password: the account is confirmed through the binding cookie and there is no reset flow yet. Farouk may prefer to configure the sender after v3b.
+- A throttled submit, a throw or a stale action id after a deploy lands on `error.tsx` and loses the typed fields (decision 6).
+- In sign-up mode the sign-in form is in the DOM, not rendered: a password manager may fill it, harmlessly. The tab title is "Sign in" in both modes, and the switch links drop `next`.
+- Focus after the switch is wherever the browser leaves it (the pressed link is gone); nothing announces the new panel. v3b.
+- The "8" of the hint is a literal while `PASSWORD_MIN` lives in the API, until v3b.
+
+**Too complicated?** The sibling rule is the one unusual part: one line of CSS instead of replacing the sign-in form. The kept username and email are about 10 lines; without them a taken username means typing everything again. Left out: a countdown on the 429, username suggestions, the Google button, `next` on the sign-up path, metadata per mode, any check in the browser.
+
+**Not verified by running:** `next build` with the second hole; how long the flash lasts on Vercel; what Next's route announcer says on a query-only navigation; password managers with the unrendered form; that the `/sign-up` 308 keeps the query.
+
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.
 - Each signed-in page costs one extra API call (`GET /me`), and viewer-dependent UI must sit outside the static shell (ADR 0014). `apiClient()` calls that carry a session are always `no-store`, which closes the open point of ADR 0003.
