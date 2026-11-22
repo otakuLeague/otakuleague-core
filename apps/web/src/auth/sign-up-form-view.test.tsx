@@ -3,31 +3,150 @@ import { Activity } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SignUpFormState } from './sign-up-form-state';
 import { SignUpFormView } from './sign-up-form-view';
+import type { SignUpSubmitBlock } from './sign-up-password-checks';
 
 const KEPT = { username: 'kaito_tanaka', email: 'kaito@example.com' };
-const HINT_ID = 'sign-up-password-hint';
+const RULE_IDS = 'sign-up-rule-length sign-up-rule-symbol';
+const UNMET = { longEnough: false, hasDigitOrSymbol: false };
+const spiesOf = () => ({
+  onFieldsSubmit: vi.fn(),
+  onRulesChange: vi.fn(),
+  onBlockChange: vi.fn(),
+  formAction: vi.fn(),
+});
 
 const view = (
   state: SignUpFormState,
   pending = false,
-  spies = { onFieldsSubmit: vi.fn(), formAction: vi.fn() },
-) => <SignUpFormView state={state} pending={pending} kept={KEPT} {...spies} />;
+  spies = spiesOf(),
+  {
+    rules = UNMET,
+    block = 'none',
+  }: { rules?: typeof UNMET; block?: SignUpSubmitBlock } = {},
+) => (
+  <SignUpFormView
+    state={state}
+    pending={pending}
+    kept={KEPT}
+    rules={rules}
+    block={block}
+    {...spies}
+  />
+);
 
 const input = (label: string) => screen.getByLabelText<HTMLInputElement>(label);
 const fields = () => ['Username', 'Email', 'Password'].map(input);
+const type = (label: string, value: string) =>
+  fireEvent.change(input(label), { target: { value } });
+const submit = () =>
+  fireEvent.submit(input('Username').closest('form') as HTMLFormElement);
 
 describe('SignUpFormView', () => {
   afterEach(cleanup);
 
-  it('shows no alert before the first submit, and the password hint', () => {
+  it('shows no alert before the first submit, and both rules unmet under the password', () => {
     render(view({ kind: 'idle' }));
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
-    expect(document.getElementById(HINT_ID)?.textContent).toBe(
-      '8 to 128 characters, with a number or symbol.',
-    );
-    expect(input('Password').getAttribute('aria-describedby')).toBe(HINT_ID);
+    const rules = screen.getByRole('list', { name: 'Password rules' });
+    expect(
+      [...rules.querySelectorAll('li')].map((rule) => [
+        rule.textContent,
+        rule.hasAttribute('data-met'),
+      ]),
+    ).toEqual([
+      ['At least 8 characters', false],
+      ['A number or symbol', false],
+    ]);
+    expect(input('Password').getAttribute('aria-describedby')).toBe(RULE_IDS);
   });
+
+  it('ticks each met rule with text, not colour alone', () => {
+    render(
+      view({ kind: 'idle' }, false, spiesOf(), {
+        rules: { longEnough: false, hasDigitOrSymbol: true },
+      }),
+    );
+    const [length, symbol] = screen.getAllByRole('listitem');
+    expect(length?.hasAttribute('data-met')).toBe(false);
+    expect(symbol?.getAttribute('data-met')).toBe('');
+    expect(symbol?.textContent).toBe('A number or symbol: done');
+  });
+
+  it('reports only rule booleans as the password is typed, and clears a block on any edit', () => {
+    const spies = spiesOf();
+    render(view({ kind: 'idle' }, false, spies));
+    type('Password', 'abcdefg');
+    type('Password', 'abcdefg1');
+    type('Confirm password', 'abc');
+    expect(spies.onRulesChange.mock.calls).toEqual([
+      [{ longEnough: false, hasDigitOrSymbol: false }],
+      [{ longEnough: true, hasDigitOrSymbol: true }],
+    ]);
+    expect(spies.onBlockChange.mock.calls).toEqual([
+      ['none'],
+      ['none'],
+      ['none'],
+    ]);
+  });
+
+  it.each<[string, string, string, SignUpSubmitBlock, string]>([
+    ['a short password', 'abc1', 'abc1', 'rules_unmet', 'Password'],
+    ['empty fields', '', '', 'rules_unmet', 'Password'],
+    [
+      'a mismatch',
+      'secret-pass-1',
+      'secret-pass-2',
+      'confirm_mismatch',
+      'Confirm password',
+    ],
+  ])(
+    'cancels a submit with %s and focuses that field',
+    (_, password, confirm, block, label) => {
+      const spies = spiesOf();
+      render(view({ kind: 'idle' }, false, spies));
+      type('Password', password);
+      type('Confirm password', confirm);
+      spies.onBlockChange.mockClear();
+
+      expect(submit()).toBe(false);
+      expect(spies.onBlockChange.mock.calls).toEqual([[block]]);
+      expect(document.activeElement).toBe(input(label));
+      expect(spies.onFieldsSubmit).not.toHaveBeenCalled();
+      expect(spies.formAction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each<[SignUpSubmitBlock, string, string, string]>([
+    [
+      'rules_unmet',
+      'Password',
+      'Passwords need at least 8 characters and a number or symbol.',
+      `sign-up-password-error ${RULE_IDS}`,
+    ],
+    [
+      'confirm_mismatch',
+      'Confirm password',
+      "Passwords don't match.",
+      'sign-up-confirm-error',
+    ],
+  ])(
+    'shows %s under its field, which it marks invalid and describes',
+    (block, label, message, describedBy) => {
+      render(view({ kind: 'idle' }, false, spiesOf(), { block }));
+      const alert = screen.getByRole('alert');
+      expect([
+        alert.className,
+        alert.getAttribute('data-tone'),
+        alert.textContent,
+      ]).toEqual(['au-msg', 'bad', message]);
+      expect(alert.closest('.au-field')?.contains(input(label))).toBe(true);
+      expect(input(label).getAttribute('aria-invalid')).toBe('true');
+      expect(input(label).getAttribute('aria-describedby')).toBe(describedBy);
+      const other = label === 'Password' ? 'Confirm password' : 'Password';
+      expect(input(other).hasAttribute('aria-invalid')).toBe(false);
+    },
+  );
 
   it.each<[SignUpFormState, string, string]>([
     [
@@ -89,7 +208,7 @@ describe('SignUpFormView', () => {
     expect(email?.getAttribute('aria-describedby')).toBe(alertId);
     expect(password?.getAttribute('aria-invalid')).toBe('true');
     expect(password?.getAttribute('aria-describedby')).toBe(
-      `${alertId} ${HINT_ID}`,
+      `${alertId} ${RULE_IDS}`,
     );
   });
 
@@ -106,7 +225,7 @@ describe('SignUpFormView', () => {
   });
 
   it('locks the form while pending, hides the alert and cancels a second submit', () => {
-    const spies = { onFieldsSubmit: vi.fn(), formAction: vi.fn() };
+    const spies = spiesOf();
     const { rerender } = render(view({ kind: 'username_taken' }));
     const first = screen.getByRole('alert');
     rerender(view({ kind: 'username_taken' }, true, spies));
@@ -118,6 +237,7 @@ describe('SignUpFormView', () => {
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.hasAttribute('disabled')).toBe(false);
     expect(fields().every((field) => field.readOnly)).toBe(true);
+    expect(input('Confirm password').readOnly).toBe(true);
     expect(fireEvent.submit(button.closest('form') as HTMLFormElement)).toBe(
       false,
     );
@@ -156,7 +276,17 @@ describe('SignUpFormView', () => {
       value: '',
       defaultValue: '',
     });
-    for (const field of [input('Username'), input('Password')]) {
+    expect(input('Confirm password')).toMatchObject({
+      id: 'sign-up-confirm',
+      name: '',
+      type: 'password',
+      autocomplete: 'new-password',
+      maxLength: 1024,
+      required: true,
+      defaultValue: '',
+    });
+    const passwords = [input('Password'), input('Confirm password')];
+    for (const field of [input('Username'), ...passwords]) {
       expect(
         ['autocapitalize', 'autocorrect', 'spellcheck'].map((name) =>
           field.getAttribute(name),
@@ -181,32 +311,29 @@ describe('SignUpFormView', () => {
     );
     const { rerender } = render(inActivity('visible'));
     const password = input('Password');
+    const confirm = input('Confirm password');
     fireEvent.change(password, { target: { value: 'secret-pass-1' } });
+    fireEvent.change(confirm, { target: { value: 'secret-pass-1' } });
     fireEvent.change(input('Email'), { target: { value: 'kept@example.com' } });
 
     rerender(inActivity('hidden'));
-    expect(password.value).toBe('');
+    expect([password.value, confirm.value]).toEqual(['', '']);
     expect(
       document.querySelector<HTMLInputElement>('#sign-up-email')?.value,
     ).toBe('kept@example.com');
   });
 
   it('reports the submitted username and email, never the password', () => {
-    const onFieldsSubmit = vi.fn();
-    render(
-      <SignUpFormView
-        state={{ kind: 'idle' }}
-        pending={false}
-        kept={{ username: '', email: '' }}
-        onFieldsSubmit={onFieldsSubmit}
-        formAction={vi.fn()}
-      />,
-    );
-    fireEvent.change(input('Username'), { target: { value: 'mio' } });
-    fireEvent.change(input('Email'), { target: { value: 'mio@example.com' } });
-    fireEvent.change(input('Password'), { target: { value: 'secret-1' } });
-    fireEvent.submit(input('Username').closest('form') as HTMLFormElement);
-    expect(onFieldsSubmit).toHaveBeenCalledWith({
+    const spies = spiesOf();
+    render(view({ kind: 'idle' }, false, spies));
+    type('Username', 'mio');
+    type('Email', 'mio@example.com');
+    type('Password', 'secret-1');
+    type('Confirm password', 'secret-1');
+    spies.onBlockChange.mockClear();
+    submit();
+    expect(spies.onBlockChange.mock.calls).toEqual([['none']]);
+    expect(spies.onFieldsSubmit).toHaveBeenCalledWith({
       username: 'mio',
       email: 'mio@example.com',
     });
