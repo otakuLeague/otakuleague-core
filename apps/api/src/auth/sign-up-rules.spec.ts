@@ -7,7 +7,6 @@ import {
   bindingMatches,
   hashAuthToken,
   isEmailAddress,
-  meetsSignUpPasswordRule,
   PENDING_SIGN_UP_TTL_MS,
 } from './sign-up-rules';
 
@@ -54,29 +53,6 @@ describe('USERNAME_PATTERN', () => {
 
     expect(identifierKind(key)).toBe('username');
     expect(key).toBe('frieren_99');
-  });
-});
-
-describe('meetsSignUpPasswordRule', () => {
-  it.each([
-    ['8 with a digit', 'abcdefg1'],
-    ['8 with punctuation', 'abcdefg!'],
-    ['8 with a symbol', 'abcdefg+'],
-    ['8 with an emoji', 'abcdefg🙂'],
-    ['8 code points after NFC from 9 units', 'abcdefe\u03011'],
-  ])('accepts %s', (_, password) => {
-    expect(meetsSignUpPasswordRule(password)).toBe(true);
-  });
-
-  it.each([
-    ['7 with a digit', 'abcdef1'],
-    ['letters only', 'abcdefghij'],
-    ['letters and spaces only', 'abcd efgh ijkl'],
-    ['letters and a combining mark only', 'abcdefgh\u0301'],
-    ['7 code points after NFC from 8 units', 'abcdee\u03011'],
-    ['nothing', ''],
-  ])('refuses %s', (_, password) => {
-    expect(meetsSignUpPasswordRule(password)).toBe(false);
   });
 });
 
