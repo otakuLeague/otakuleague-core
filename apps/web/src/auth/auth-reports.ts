@@ -6,7 +6,7 @@ import type { ApiFailure } from '../api/client';
 // browser bundle loads.
 
 /** The credential routes that can report a refusal; each later action adds its own. */
-export type CredentialRoute = 'sign-in';
+export type CredentialRoute = 'sign-in' | 'sign-up';
 
 /** One report per server instance every 10 minutes: a broken header refuses every visitor at once. */
 export const REFUSAL_REPORT_INTERVAL_MS = 600_000;
@@ -27,10 +27,10 @@ export function isRefusalReportDue(
 
 /**
  * `client_ip_unknown` on a credential route: on Vercel the platform's `x-forwarded-for` was missing
- * or not one address, so sign-in is down for everyone until it is fixed (never `action_forwarded`,
- * which a visitor can cause at will). The event carries the
- * route only (never an IP, a header or a form field) and is flushed after the response, since a
- * serverless instance can freeze before Sentry's queue drains.
+ * or not one address, so every credential route is down for everyone until it is fixed (never
+ * `action_forwarded`, which a visitor can cause at will). The event carries the route only (never
+ * an IP, a header or a form field) and is flushed after the response, since a serverless instance
+ * can freeze before Sentry's queue drains.
  */
 export function reportClientIpUnknown(
   route: CredentialRoute,
@@ -50,7 +50,7 @@ export function reportClientIpUnknown(
 }
 
 /** The auth routes that can see an `AuthCallFault` (ADR 0015 Addendum 1f-iv). */
-export type AuthCallRoute = 'sign-in' | 'sign-out' | 'me';
+export type AuthCallRoute = 'sign-in' | 'sign-up' | 'sign-out' | 'me';
 
 /** A misconfiguration a visitor cannot cause: the key refused, a body off contract, a throw. */
 export type AuthCallFault =

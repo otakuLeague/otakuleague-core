@@ -27,6 +27,7 @@ export function passwordLength(password: string): number {
 /**
  * Trimmed and lower-cased, then NFC last so the result is NFC even where lower-casing
  * decomposes (U+0130 becomes "i" plus a combining dot). Applying it twice changes nothing.
+ * Keep in sync with the web's copy, `flashEmailFrom` in apps/web/src/auth/flash-email.ts.
  */
 export function normaliseIdentifier(identifier: string): NormalisedIdentifier {
   return identifier
