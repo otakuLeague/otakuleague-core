@@ -93,7 +93,7 @@ describe('signOutAction', () => {
   it('ignores anything a client sends to the action: only the cookie names the session', async () => {
     const forged = new FormData();
     forged.append('session', OTHER_TOKEN);
-    const callWithInput = signOutAction as (input: unknown) => Promise<void>;
+    const callWithInput = signOutAction as (input: unknown) => Promise<unknown>;
 
     await expect(callWithInput(forged)).rejects.toBe(REDIRECT_SIGNAL);
     expect(mocks.deleteSession.mock.calls).toEqual([[TOKEN]]);
@@ -164,23 +164,25 @@ describe('signOutAction', () => {
   });
 
   it.each([[{}], [{ origin: 'null' }], [{ origin: 'https://evil.com' }]])(
-    'does nothing for Origin %o (logout CSRF): no cookie read, call, write or redirect',
+    'answers refused for Origin %o (logout CSRF): no cookie read, call, write or redirect',
     async (requestHeaders) => {
       mocks.requestHeaders = new Headers(requestHeaders);
 
-      await expect(signOutAction()).resolves.toBeUndefined();
+      await expect(signOutAction()).resolves.toEqual({ kind: 'refused' });
       expectNothingDone();
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
     },
   );
 
   it.each(['preview', 'development', ''])(
-    'does nothing with VERCEL_ENV=%o, before WEB_PUBLIC_URL is read',
+    'answers refused with VERCEL_ENV=%o, before WEB_PUBLIC_URL is read',
     async (vercelEnv) => {
       vi.stubEnv('VERCEL_ENV', vercelEnv);
       vi.stubEnv('WEB_PUBLIC_URL', undefined);
 
-      await expect(signOutAction()).resolves.toBeUndefined();
+      await expect(signOutAction()).resolves.toEqual({ kind: 'refused' });
       expectNothingDone();
+      expect(mocks.sessionCall).not.toHaveBeenCalled();
     },
   );
 

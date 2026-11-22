@@ -28,6 +28,9 @@ export async function loadViewer(): Promise<Viewer> {
   }
   try {
     // Request time only: a prerender stops here, before the cookies or the configuration are read.
+    // `cookies()` would leave a prerender too, but this is the line that keeps everything below out
+    // of the build: without it, a refactor that reads WEB_PUBLIC_URL before the cookie would throw
+    // at build time, be caught below, and prerender `unavailable` for every visitor (1f-iv-c2).
     await connection();
     if (!(await hasSessionCookie())) {
       return { kind: 'signed_out' };

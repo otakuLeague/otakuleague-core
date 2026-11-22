@@ -12,6 +12,7 @@ import {
 
 const loadViewer = vi.hoisted(() => vi.fn<() => Promise<Viewer>>());
 vi.mock('../auth/load-viewer', () => ({ loadViewer }));
+vi.mock('../auth/sign-out-action', () => ({ signOutAction: vi.fn() }));
 
 function expectGuestLinks() {
   expect(
@@ -62,6 +63,30 @@ describe('ViewerActionsView', () => {
     expect(head.closest('.sh-menu')?.firstElementChild).toBe(head);
     expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
   });
+
+  it('puts the sign-out form in the member menu, after the username', () => {
+    render(
+      <ViewerActionsView
+        viewer={{ kind: 'signed_in', username: 'kaito_tanaka' }}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Sign out' });
+    const form = button.closest('form');
+    expect(form?.classList.contains('sh-menu__form')).toBe(true);
+    expect(form?.closest('.sh-menu')).not.toBeNull();
+    expect(form?.previousElementSibling?.textContent).toBe('kaito_tanaka');
+  });
+
+  it.each<Viewer>([{ kind: 'signed_out' }, { kind: 'unavailable' }])(
+    'offers no sign-out form to %j',
+    (viewer) => {
+      const { container } = render(<ViewerActionsView viewer={viewer} />);
+
+      expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+      expect(container.querySelector('form')).toBeNull();
+    },
+  );
 
   it('keeps the username out of the summary label (Sentry click breadcrumbs record aria-label)', () => {
     const username = 'kaito_tanaka';
