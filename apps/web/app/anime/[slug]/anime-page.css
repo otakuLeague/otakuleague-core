@@ -392,7 +392,8 @@ html:has(.anime-sticky--shown) {
 .anime-chip--muted {
   color: var(--muted);
 }
-.anime-chip__dot {
+.anime-chip__dot,
+.anime-countdown .ol-label::before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -436,12 +437,22 @@ html:has(.anime-sticky--shown) {
   margin: 0;
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in oklab, var(--good) 10%, var(--surface));
-  border: 1px solid color-mix(in oklab, var(--good) 40%, transparent);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
+/* Neutral readout (OTA-211): only the label is green, led by the Airing chip's dot. */
 .anime-countdown .ol-label {
-  color: var(--good);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  --chip-color: var(--status-airing);
+  color: var(--chip-color);
   font-size: 11px;
+}
+/* Static dot: the pulse lives only on .anime-chip__dot--pulse. */
+.anime-countdown .ol-label::before {
+  content: '';
+  flex: none;
 }
 .anime-countdown time {
   font-weight: 600;
