@@ -62,7 +62,7 @@ describe('Auth page', () => {
       'utf8',
     );
     expect(css).toMatch(
-      /\[data-auth-panel='sign-up'\] ~ \[data-auth-panel='sign-in'\] \{\s*display: none;\s*\}/,
+      /\.au-panel\[data-auth-panel='sign-up'\] ~ \.au-panel\[data-auth-panel='sign-in'\] \{\s*display: none;\s*\}/,
     );
   });
 
