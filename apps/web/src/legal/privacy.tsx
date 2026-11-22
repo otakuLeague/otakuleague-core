@@ -12,7 +12,7 @@ export const PRIVACY_POLICY: LegalDocument = {
   title: 'Privacy policy',
   description:
     'What OtakuLeague collects, why, who processes it, which cookies we set and how to use your rights.',
-  lastUpdated: '2026-11-15',
+  lastUpdated: '2026-11-22',
   summary: [
     'We collect what your account needs to work: email, username, your list and your XP. Nothing is sold, and there are no ads.',
     'Only essential cookies: one keeps you signed in, a few short ones carry sign-in steps. No cookie banner, because there is nothing to opt out of.',
@@ -191,8 +191,8 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: 'Images from our data sources',
       body: (
         <p>
-          Anime cover images load straight from AniList’s servers (
-          <code>s4.anilist.co</code>), or from MyAnimeList’s (
+          Anime cover and banner images load straight from AniList’s servers (
+          <code>s4.anilist.co</code>), or cover images from MyAnimeList’s (
           <code>cdn.myanimelist.net</code>) when AniList has none, so your
           browser sends them your IP address and browser details when it shows
           them, as with any image on the web. Each handles them under its own

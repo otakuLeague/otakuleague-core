@@ -10,10 +10,10 @@ export const DATA_SOURCES: LegalDocument = {
   title: 'Data sources',
   description:
     'Where the anime information on OtakuLeague comes from, who owns it, and how to report a mistake.',
-  lastUpdated: '2026-11-12',
+  lastUpdated: '2026-11-22',
   summary: [
     'Anime information on OtakuLeague comes from AniList, with MyAnimeList (through Jikan) filling gaps and AnimeThemes for openings and endings.',
-    'Cover images belong to their rights holders and load from the sources’ servers.',
+    'Cover and banner images belong to their rights holders and load from the sources’ servers.',
     'Your list, scores and XP stay on OtakuLeague and are never sent to our data sources.',
   ],
   sections: [
@@ -36,7 +36,7 @@ export const DATA_SOURCES: LegalDocument = {
                 <a key="n" href="https://anilist.co">
                   AniList
                 </a>,
-                'Titles, synopses, format, episodes, dates, season, status, studios, genres, scores, rankings, popularity, favourites, airing times, seasons of a series and cover images',
+                'Titles, synopses, format, episodes, dates, season, status, studios, genres, scores, rankings, popularity, favourites, airing times, seasons of a series and cover and banner images',
                 <a key="t" href="https://docs.anilist.co/guide/terms-of-use">
                   AniList API terms
                 </a>,
@@ -73,8 +73,8 @@ export const DATA_SOURCES: LegalDocument = {
       title: 'Images',
       body: (
         <p>
-          Cover images are the property of the anime’s studios, publishers and
-          other rights holders. We do not copy them: your browser loads them
+          Cover and banner images are the property of the anime’s studios,
+          publishers and other rights holders. We do not copy them: your browser loads them
           from AniList’s servers, or MyAnimeList’s when AniList has none. If you
           own an image and want it removed, write to us.
         </p>

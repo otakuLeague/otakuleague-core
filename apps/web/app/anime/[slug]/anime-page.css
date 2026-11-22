@@ -46,8 +46,12 @@ html:has(.anime-sticky--shown) {
   width: 216px;
 }
 
-/* Hero */
+/* Hero. The band ends in the neon line at --hero-line; the cover straddles it and the titles
+   always start under it (OTA-208), growing downward however long the title is. */
 .anime-hero {
+  --hero-line: 196px;
+  --hero-pad-top: 36px;
+  --hero-neon: 2px;
   position: relative;
   background: linear-gradient(
     180deg,
@@ -58,7 +62,7 @@ html:has(.anime-sticky--shown) {
 .anime-hero__band {
   position: absolute;
   inset: 0 0 auto;
-  height: 196px;
+  height: var(--hero-line);
   background-image: radial-gradient(
     color-mix(in oklab, var(--accent) 22%, transparent) 1.2px,
     transparent 1.3px
@@ -66,10 +70,32 @@ html:has(.anime-sticky--shown) {
   background-size: 16px 16px;
   opacity: 0.6;
 }
+/* AniList's banner over the dot grid (the grid stays as the fallback if it fails to load),
+   faded into the page so the neon line and the cover's glow stay on top. Fixed band height:
+   nothing shifts while it loads. */
+.anime-hero__band--banner {
+  overflow: hidden;
+  opacity: 1;
+}
+.anime-hero__banner {
+  object-fit: cover;
+}
+.anime-hero__band--banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--ground) 35%, transparent) 0%,
+    transparent 30%,
+    transparent 50%,
+    color-mix(in oklab, var(--ground) 80%, transparent) 100%
+  );
+}
 .anime-hero__neon {
   position: absolute;
-  inset: 196px 0 auto;
-  height: 2px;
+  inset: var(--hero-line) 0 auto;
+  height: var(--hero-neon);
   background: var(--accent);
   box-shadow:
     0 0 12px var(--accent),
@@ -79,7 +105,7 @@ html:has(.anime-sticky--shown) {
   position: relative;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 36px max(16px, 3vw) 32px;
+  padding: var(--hero-pad-top) max(16px, 3vw) 32px;
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
@@ -87,15 +113,21 @@ html:has(.anime-sticky--shown) {
 .anime-hero__top {
   display: flex;
   gap: 28px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  align-items: flex-start;
 }
+/* As tall as the row, its content at the bottom: a short title lines up with the cover's
+   bottom, a long one starts 18px under the line and pushes the row down (never up). */
 .anime-hero__titles {
-  flex: 1 1 420px;
+  flex: 1 1 0;
+  align-self: stretch;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   gap: 10px;
+  padding-block-start: calc(
+    var(--hero-line) + var(--hero-neon) + 18px - var(--hero-pad-top)
+  );
   padding-bottom: 6px;
 }
 .anime-hero__title {
@@ -111,6 +143,7 @@ html:has(.anime-sticky--shown) {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 .anime-hero__bar {
   display: block;
@@ -124,6 +157,7 @@ html:has(.anime-sticky--shown) {
   margin: 2px 0 0;
   font-size: 15px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .anime-hero__credits a {
   font-weight: 600;
@@ -562,6 +596,9 @@ html:has(.anime-sticky--shown) {
       transparent 1.6px
     );
   }
+  .anime-hero__band--banner {
+    position: relative;
+  }
   .anime-hero__neon {
     display: none;
   }
@@ -571,6 +608,7 @@ html:has(.anime-sticky--shown) {
   }
   .anime-hero__top {
     gap: var(--space-4);
+    align-items: flex-end;
     flex-wrap: wrap;
   }
   .anime-cover--hero {
@@ -613,10 +651,12 @@ html:has(.anime-sticky--shown) {
     color: var(--xp-gold);
     font-size: 11px;
   }
+  /* Its own row under the cover, so already under the band. */
   .anime-hero__titles {
     order: 2;
     flex-basis: 100%;
     gap: 6px;
+    padding-block-start: 0;
   }
   .anime-hero__title {
     font-size: 34px;

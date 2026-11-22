@@ -50,6 +50,8 @@ export interface HeaderFacts {
   /** Shown on the cover placeholder when there is no cover image. */
   readonly initials: string;
   readonly coverUrl: string | null;
+  /** The wide banner AniList shows above the page; decorative, painted in the header band. */
+  readonly bannerUrl: string | null;
   readonly creators: readonly string[];
   readonly studios: readonly string[];
   readonly status: { readonly key: StatusKey; readonly label: string } | null;
@@ -177,6 +179,7 @@ export function headerFacts(anime: AnimeDetails): HeaderFacts {
     subtitle: subtitleParts.length > 0 ? subtitleParts.join(' · ') : null,
     initials: initialsOf(title),
     coverUrl: anime.coverImageUrl?.value ?? null,
+    bannerUrl: anime.bannerImageUrl?.value ?? null,
     creators: anime.creators?.value ?? [],
     studios: (anime.studios?.value ?? [])
       .filter((studio) => studio.main)
