@@ -8,6 +8,7 @@ import {
 import { afterEach, expect, it, vi } from 'vitest';
 import type { signUpAction } from './sign-up-action';
 import type { SignUpFormState } from './sign-up-form-state';
+import { SIGN_IN_PASSWORD_ID } from './sign-in-form-view';
 import { SignUpForm } from './sign-up-form';
 
 const mocks = vi.hoisted(() => ({
@@ -73,4 +74,25 @@ it('makes one call for two submits while the first is pending (N29)', async () =
   });
   expect((await screen.findByRole('alert')).textContent).toMatch(/busy/);
   expect(mocks.signUpAction).toHaveBeenCalledTimes(1);
+});
+
+it('empties a typed sign-in password when it mounts, and leaves other fields alone', () => {
+  // The sign-in form stays mounted (CSS-hidden) while the sign-up panel appears beside it.
+  const page = (signUp: boolean) => (
+    <>
+      <input id="sign-in-identifier" aria-label="Sign-in identifier" />
+      <input id={SIGN_IN_PASSWORD_ID} type="password" aria-label="Sign-in password" />
+      {signUp && <SignUpForm />}
+    </>
+  );
+  const { rerender } = render(page(false));
+  const identifier = screen.getByLabelText<HTMLInputElement>('Sign-in identifier');
+  const signInPassword = screen.getByLabelText<HTMLInputElement>('Sign-in password');
+  fireEvent.change(identifier, { target: { value: 'mio' } });
+  fireEvent.change(signInPassword, { target: { value: 'typed-before-switch' } });
+
+  rerender(page(true));
+  expect(screen.getByLabelText('Sign-in password')).toBe(signInPassword);
+  expect(signInPassword.value).toBe('');
+  expect(identifier.value).toBe('mio');
 });

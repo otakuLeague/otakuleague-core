@@ -141,6 +141,12 @@ describe('SignInFormView', () => {
     expect(
       document.querySelector<HTMLInputElement>('#sign-in-identifier')?.value,
     ).toBe('mio');
+
+    // Revealed again, the ref is re-attached, so a second hide still clears.
+    rerender(inActivity('visible'));
+    fireEvent.change(password, { target: { value: 'secret-pass-2' } });
+    rerender(inActivity('hidden'));
+    expect(password.value).toBe('');
   });
 
   it('names, limits and autocompletes both fields and keeps children in the form', () => {
