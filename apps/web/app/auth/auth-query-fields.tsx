@@ -1,27 +1,42 @@
+import Link from 'next/link';
 import { parseAuthMode } from '../../src/auth/auth-mode';
 import { rawNextParam } from '../../src/auth/safe-next-path';
-import { SignUpClosedNote } from '../../src/auth/sign-in-form-view';
+import { SignUpForm } from '../../src/auth/sign-up-form';
 
 export type AuthSearchParams = Readonly<
   Record<string, string | string[] | undefined>
 >;
 
+type QueryProps = { readonly searchParams: Promise<AuthSearchParams> };
+
 /**
- * The only part of /auth that reads the query, streamed inside the form so the rest stays in the
- * static shell (ADR 0014). `next` goes into the form exactly as sent: the action alone validates it
- * (`safeNextPath`), and React escapes it as an attribute value.
+ * The `next` field of the sign-in form, streamed inside it so the rest stays in the static shell
+ * (ADR 0014). `next` goes in exactly as sent: the action alone validates it (`safeNextPath`), and
+ * React escapes it as an attribute value.
  */
-export async function AuthQueryFields({
-  searchParams,
-}: {
-  readonly searchParams: Promise<AuthSearchParams>;
-}) {
-  const query = await searchParams;
-  const next = rawNextParam(query.next);
+export async function AuthQueryFields({ searchParams }: QueryProps) {
+  const next = rawNextParam((await searchParams).next);
+  return next === undefined ? null : (
+    <input type="hidden" name="next" value={next} />
+  );
+}
+
+/**
+ * The sign-up panel, only for `mode=sign-up` (ADR 0015 Addendum 1f-v3 decision 1). It is placed
+ * before the shell's sign-in panel, which `auth.css` then hides (`[data-auth-panel]` sibling rule).
+ */
+export async function SignUpPanel({ searchParams }: QueryProps) {
+  if (parseAuthMode((await searchParams).mode) !== 'sign-up') {
+    return null;
+  }
   return (
-    <>
-      {parseAuthMode(query.mode) === 'sign-up' && <SignUpClosedNote />}
-      {next !== undefined && <input type="hidden" name="next" value={next} />}
-    </>
+    <div className="au-panel" data-auth-panel="sign-up">
+      <h1>Create your account</h1>
+      <p className="au-sub">Takes a minute.</p>
+      <SignUpForm />
+      <p className="au-foot">
+        Already a member? <Link href="/auth">Sign in</Link>
+      </p>
+    </div>
   );
 }
