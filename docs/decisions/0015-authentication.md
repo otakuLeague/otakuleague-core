@@ -374,7 +374,7 @@ Added 2026-11-22 (OTA-139 slice 1f-v), written before the code. Web sign-up and 
 3. **`readSignUpFields(formData)`** checks a `FormData` and three strings, sent as typed: username against `USERNAME_PATTERN`, email 1 to `IDENTIFIER_MAX`, password 1 to `PASSWORD_RAW_MAX`. Anything else is `invalid_fields` naming the fields, with no call. The password rule and the email shape stay the API's: its 400 comes from the validation pipe, before any counter or hash, and the common-password list exists only there.
 4. **`signUpOutcomeFrom(callResult)`** maps by error code only. `VALIDATION_FAILED` → `invalid_fields` from `details[].field` kept to the three names, never a message; none of the three → `unavailable`. `USERNAME_TAKEN` → `username_taken`; `SIGN_UP_CLOSED` → `sign_up_closed`, its own state and never reported (it is production's normal answer today); `TOO_MANY_REQUESTS` keeps its Retry-After; `AUTH_BUSY` drops it; a `preview_deployment` refusal → `off_on_preview`; everything else (`INTERNAL_KEY_REQUIRED`, `BAD_REQUEST`, network, timeout, a body off contract, the other refusals) → `unavailable`. One password copy covers both refusals (too weak, too common), so the message constant stays in the API (ADR 0020 Addendum 1e-iii).
 5. **`isSignUpResponse`** (shared types, the guard ADR 0020 left to 1f): a record whose own `bindingToken` is 43 base64url characters; other keys are ignored, like `isSignInResponse`. A 202 with any other body is `invalid_response`: `unavailable`, a reported fault, no cookie.
-6. **v2, fixed here.** `signUpAction(previousState, formData)` mirrors `signInAction` (previous state ignored, no try/catch) and never reads the session cookie or `next`. `ol_signup` holds the `bindingToken` and has no other writer; `ol_flash` holds the email trimmed and lower-cased, for display only (the API's normalisation decides what is mailed). `redirectToCheckEmail()` is a third helper in `redirect-to.ts`: the constant `/auth/check-email`, replacing the history entry. `'sign-up'` joins `CredentialRoute` and `AuthCallRoute`. The page reads the flash in its one `Suspense` hole and, without a plausible one, shows the same screen with no address.
+6. **v2, fixed here.** `signUpAction(previousState, formData)` mirrors `signInAction` (previous state ignored, no try/catch) and never reads the session cookie or `next`. `ol_signup` holds the `bindingToken` and has no other writer; `ol_flash` holds the email trimmed and lower-cased, for display only (the API's normalisation decides what is mailed). `redirectToCheckEmail()` is a third helper in `redirect-to.ts`: the constant `/auth/check-email`, replacing the history entry. `'sign-up'` joins `CredentialRoute` and `AuthCallRoute`. The page reads the flash in its one `Suspense` hole and, without a plausible one, shows the same screen with no address. *Refined by [Addendum (1f-v2)](#addendum-1f-v2): v2 ships as two (v2a the page, v2b the action), and the flash is also NFC-normalised.*
 
 **Rejected.**
 - **The binding in a hidden field or a query, the address in `?email=`.** ADR 0020 forbids the first (a link or a script could plant a binding: sign-up CSRF into an attacker's account); the second puts an address in logs and history.
@@ -396,6 +396,62 @@ Added 2026-11-22 (OTA-139 slice 1f-v), written before the code. Web sign-up and 
 **Not verified by running:** that Next percent-encodes a cookie value on write and decodes it on read (the "@" of the flash); that 5,000 ms covers a full hash queue on Railway's CPU (8 waiting, 2 at a time).
 
 **For 1f-v2 and v3.** v2 lands the page before v3 wires the form, or an accepted sign-up meets a 404. v3 renames the two rows of the privacy cookie table to the `__Host-` names (Farouk confirms the wording). **For 1f-vi.** Read `ol_signup` under the configured name only and post it in the body; clear it with `Max-Age=0` and `Secure` (never `cookies().delete()`) once the token is consumed; decide what a verifying transition does to a session the browser already holds (sign-in deletes the old one); add the import gate.
+
+## Addendum (1f-v2)
+Added 2026-11-22 (OTA-139 slice 1f-v2), written before the code. It builds decision 6 of [Addendum (1f-v)](#addendum-1f-v) and refines it in one place (decision 3). Sized again, the action and the page come to about 500 lines of code and tests (the action's test alone is about 180), not 350, so v2 ships as two: **v2a** the `/auth/check-email` page (about 490 lines with this addendum, about 270 of them tests) and **v2b** `signUpAction` (about 270). v2a goes first so nothing ever redirects to a missing route; the reverse order is safe too, since nothing imports the action before v3. Web only: no API change, no new variable, dependency or error code.
+
+| # | Requirement |
+|---|---|
+| F13 | A visitor on `/auth/check-email` sees "Check your email" and a way back to sign-in; the browser that just signed up also sees the address, for 600 s. |
+| F10 | As in 1f-v: an accepted submit lands on that page (v2b). |
+| N15, N16, N18 | As in 1f-v, built by v2b. N18 made exact: for every accepted submit the flash is the address the API mails (decision 3). |
+| N19 | Static shell: 0 request-time reads outside the one `Suspense` (`next build` fails otherwise) and 0 addresses in the prerendered HTML or the fallback. The page makes 0 API calls and 0 cookie writes. |
+| N20 | An address is shown for 100 % of flashes that pass the check of decision 3 and 0 % of anything else; a missing or invalid `WEB_PUBLIC_URL` shows the screen without one: 0 error pages. |
+| N21 | 100 % of the responses Next serves for `/auth/check-email` carry `X-Robots-Tag: noindex, nofollow` whatever `SEARCH_INDEXING` is; 0 sitemap entries; 0 links to the page before v3. |
+| N22 | v2a adds 0 client components. |
+
+**Consistency vs availability.** The page: availability. It never calls the API, never fails on a bad or missing flash and never waits; the address is a best-effort display. The action: consistency, unchanged from 1f-v. **Entities:** none new (the flash is a checked string). **API:** none new; one page route, `GET /auth/check-email`.
+
+**Data flow (v2a).** Request → static shell with the fallback sentence → hole: `await cookies()` → `readWebPublicUrl` (a throw: no address) → the value under `flashCookie(url).name` only → `plausibleFlashEmail` → the sentence with or without the address. v2b runs the flow of 1f-v unchanged.
+
+```
+app/auth/check-email/page.tsx (server, static)
+main.au-page
+├─ div.au-badge                       aria-hidden envelope
+├─ h1 tabIndex=-1                     "Check your email"
+├─ Suspense fallback=<CheckEmailLede email={undefined} />
+│  └─ CheckEmailAddress (async) = <CheckEmailLede email={await readFlashEmail()} />
+├─ p                                  "Not there after a few minutes? Check spam and promotions."
+└─ p.au-foot                          Link "Back to sign in" → /auth
+```
+
+**Decisions.**
+1. **The page is the mockup's card without what is not built**: no Resend button and no "then resend" (1f-vii), no showcase panel (the shell slices of OTA-152). `app/auth/check-email/check-email-lede.tsx` holds the pure `CheckEmailLede({ email })` (tested for both states) and the one-line async `CheckEmailAddress`, as `auth-query-fields.tsx` does for `/auth`. The page renders the same on a preview: it holds no credential field.
+2. **Copy.** With an address: "We sent a confirmation link to **address**. Open it to finish signing up. It works for 24 hours." Without: "Open the confirmation link we sent to the address you signed up with. It works for 24 hours." The second claims nothing about a visitor who opened the URL cold, and it is the whole screen for a visitor without JavaScript (a streamed hole needs a script to replace its fallback). The "24" is computed from `SIGN_UP_COOKIE_MAX_AGE_SECONDS`. The address is React text in one `strong` (`overflow-wrap: anywhere`), never an attribute, the title or metadata. Farouk confirms the wording in the PR.
+3. **`src/auth/flash-email.ts`** owns the flash value. `plausibleFlashEmail(value)` (pure) answers the string only when it is 3 to `IDENTIFIER_MAX` characters, each visible ASCII (U+0021 to U+007E) and none a capital letter, with exactly one "@", neither first nor last; one linear pattern. `readFlashEmail()` beside it is total: `await cookies()` first (a prerender stops there), then `readWebPublicUrl` inside the only try/catch (a throw is no address, unreported: the action that writes the flash throws on the same error, so a holder under a broken configuration is a planted cookie or a ten-minute window), then the value under the configured name only. It never sets or clears the cookie (a Server Component cannot); 600 s ends it. `flashEmailFrom(typed)` (v2b, pure) is trim, lower-case, NFC: the API's `normaliseIdentifier`, where decision 6 of 1f-v said trim and lower-case. So a 202 means the flash equals the mailed address, is ASCII, at most 254 characters, and passes the check; a test holds the two functions together.
+4. **Never indexed, no canonical.** `robotsHeaders('allowed')` gains a rule for `/auth/check-email` beside the AniList id route (the root-only `robots` test forbids the metadata key, and the header also covers a streamed head). The page joins `NO_CANONICAL` in `site.test.ts`, stays out of the sitemap and gets no `Disallow` (a crawler must fetch it to see the noindex). `metadata` is a title only.
+5. **No `Cache-Control` rule.** Read in Next 16.4.5, not run: a response that resumes a postponed shell is `revalidate: 0`, sent as `private, no-cache, no-store, max-age=0, must-revalidate` (`app-page-runtime.js`, `cache-control.js`), and the shell that may be cached holds no address (N19, a test renders the fallback). The root layout's viewer slot already makes every document such a response.
+6. **No client component** (N22). The h1 carries `tabIndex={-1}`, ready for the focus the design README asks for; nothing moves focus yet. v3 decides it with the form, when the navigation can be run in a browser.
+7. **v2b.** `signUpAction` as fixed in 1f-v: after an accepted outcome it sets `ol_signup`, then `ol_flash` with `flashEmailFrom(request.email)`, then `redirectToCheckEmail()`; it reads no cookie. `'sign-up'` joins `CredentialRoute` and `AuthCallRoute`; `authCallFaultOf` already keeps `SIGN_UP_CLOSED`, `VALIDATION_FAILED`, `USERNAME_TAKEN` and the 429s out of Sentry. The helper lives in `redirect-to.ts`, so the redirect allowlist in `eslint.config.mjs` does not change; only `REDIRECT_MESSAGE` names the third helper. No other lint gate moves in either slice.
+8. **The PR shows the page**: `auth-check-email` joins `scripts/screenshots/routes.json` (the eighth of eight). The job has no `WEB_PUBLIC_URL`, so it captures the screen without an address.
+
+**Rejected.**
+- **The API's `EMAIL_PATTERN` as the check.** A second copy of a rule that lives in the API, for a value that is only displayed; the looser check already stops spaces, control and bidi characters and look-alike letters.
+- **Clearing the flash after the first read** (a route handler or a `proxy.ts` pass). A moving part to save ten minutes, and 1f-vii resends to the same cookie.
+- **Reading the flash under either name, or checking presence first as `loadViewer` does.** The first lets a sibling host choose the address (rejected in 1f-v); the second is two lines and a names list to skip a pure function call.
+- **One PR.** About 500 lines, and the action deserves a security review of its own.
+
+**Too simple?**
+- Anyone can open the URL: the screen says "Check your email" to a visitor who never signed up, and offers no Resend until 1f-vii.
+- On a hard load a flash holder sees the fallback sentence replaced once by the longer one: a reflow of the two lines under it, not measured. Without JavaScript the address never shows.
+- Focus stays where the navigation left it (decision 6).
+- On loopback http the flash has no `__Host-` prefix: any local page can plant an address-shaped ASCII string. Development only.
+- Between v2a and v2b nothing writes the flash: the address branch is covered by tests alone.
+- The screenshot list is full after decision 8: v3 swaps a route or raises the cap.
+
+**Too complicated?** `plausibleFlashEmail` is the one optional part: one pattern and a length against a planted value. NFC is one call for an exact N18. Left out: a branded type for the flash, a report for the configuration throw, a cleared-flash helper, an import gate for the two cookies (1f-vi), a `Cache-Control` rule, the focus island.
+
+**Not verified by running:** `next build` with the new hole; the headers Vercel puts on the document (`curl -I` on beta for `Cache-Control` and, after cutover, `X-Robots-Tag`); the long address at 390 px. The open point of 1f-v is now read, not run, in Next 16.4.5 (`@edge-runtime/cookies`): a value is written with `encodeURIComponent` and read with `decodeURIComponent`, and a pair that does not decode is dropped, so a malformed flash reads as none.
 
 ## Consequences
 - **We own the security of this code.** Accepted because the surface is small (no MFA, no email change, no JWT, no cookie cache) and every property above is an integration test. OTA-139 goes through `secure-builder` and `security-reviewer`.

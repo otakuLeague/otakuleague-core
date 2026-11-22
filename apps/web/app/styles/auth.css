@@ -154,3 +154,46 @@
     animation-duration: 2.4s;
   }
 }
+
+/* Check your email (OTA-139 1f-v2a): envelope badge, the long address, the spam hint, the way back. */
+.au-badge {
+  display: grid;
+  place-items: center;
+  inline-size: 64px;
+  block-size: 64px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--accent-ink);
+  font: 700 28px/1 var(--font-display);
+}
+.au-email {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.au-hint {
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 14px;
+}
+.au-foot {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+.au-foot a {
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: underline;
+}
+@media (max-width: 767.98px) {
+  .au-foot a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+  }
+}

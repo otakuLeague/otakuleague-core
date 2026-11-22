@@ -23,10 +23,14 @@ describe('robotsHeaders', () => {
     ]);
   });
 
-  it('keeps only the AniList id redirect route out of the index when allowed', () => {
+  it('keeps only the AniList id redirect route and check-email out of the index when allowed', () => {
     expect(robotsHeaders('allowed')).toEqual([
       {
         source: '/anime/anilist/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/auth/check-email',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       },
     ]);

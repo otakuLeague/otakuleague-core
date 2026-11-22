@@ -32,5 +32,10 @@ export function robotsHeaders(indexing: SearchIndexing): RobotsHeaderRule[] {
           source: '/anime/anilist/:path*',
           headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
         },
+        // "Check your email" is a step of sign-up, never a search result (OTA-139, ADR 0015 1f-v2).
+        {
+          source: '/auth/check-email',
+          headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+        },
       ];
 }
