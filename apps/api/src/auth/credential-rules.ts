@@ -1,5 +1,7 @@
-/** Password length bounds, in Unicode code points after NFC (passwordLength; ADR 0015, parity). */
-export const PASSWORD_MIN = 8;
+/**
+ * Longest password, in Unicode code points after NFC (passwordLength; ADR 0015, parity). The
+ * shortest, `PASSWORD_MIN`, is in `@otakuleague/shared-types` with the sign-up rule.
+ */
 export const PASSWORD_MAX = 128;
 
 declare const identifierBrand: unique symbol;

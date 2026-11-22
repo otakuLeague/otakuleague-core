@@ -1,11 +1,14 @@
-import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_MIN,
+  PASSWORD_RAW_MAX,
+} from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
   identifierKind,
   normaliseIdentifier,
   normalisePassword,
   PASSWORD_MAX,
-  PASSWORD_MIN,
   passwordLength,
 } from './credential-rules';
 

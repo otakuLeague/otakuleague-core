@@ -290,7 +290,14 @@ export {
   scrubErrorEvent,
 } from './redaction';
 export * from './anime';
-export { IDENTIFIER_MAX, PASSWORD_RAW_MAX, USERNAME_PATTERN } from './auth';
+export {
+  IDENTIFIER_MAX,
+  meetsSignUpPasswordRule,
+  PASSWORD_MIN,
+  PASSWORD_RAW_MAX,
+  signUpPasswordRules,
+  USERNAME_PATTERN,
+} from './auth';
 export type {
   EmailVerificationConfirmRequest,
   EmailVerificationConfirmResponse,
@@ -299,6 +306,7 @@ export type {
   MeResponse,
   SignInRequest,
   SignInResponse,
+  SignUpPasswordRules,
   SignUpRequest,
   SignUpResponse,
   UsernameAvailabilityResponse,
