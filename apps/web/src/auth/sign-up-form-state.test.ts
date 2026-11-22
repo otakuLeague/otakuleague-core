@@ -42,36 +42,58 @@ const invalid = (fields: readonly string[]) => ({
 
 describe('readSignUpFields', () => {
   it.each([
-    VALID,
-    { username: 'abc', email: ' F@Example.COM ', password: ' p ' },
-    {
-      username: 'u'.repeat(20),
-      email: 'e'.repeat(254),
-      password: 'p'.repeat(1024),
-    },
-  ])('keeps $username and $email exactly as typed', (fields) => {
+    ['plain', VALID],
+    [
+      'spaces and case',
+      { username: 'abc', email: ' F@X.CO ', password: ' p ' },
+    ],
+    [
+      'upper bounds',
+      {
+        username: 'u'.repeat(20),
+        email: 'e'.repeat(254),
+        password: 'p'.repeat(1024),
+      },
+    ],
+  ])('keeps the fields exactly as typed: %s', (_label, fields) => {
     expect(readSignUpFields(formWith(fields))).toEqual({
       kind: 'read',
       request: fields,
     });
   });
 
-  it.each<[Fields, readonly string[]]>([
-    [{ ...VALID, username: 'ab' }, ['username']],
-    [{ ...VALID, username: 'u'.repeat(21) }, ['username']],
-    [{ ...VALID, username: 'far@ouk' }, ['username']],
-    [{ ...VALID, username: ' farouk' }, ['username']],
-    [{ ...VALID, email: '' }, ['email']],
-    [{ ...VALID, email: 'e'.repeat(255) }, ['email']],
-    [{ ...VALID, password: '' }, ['password']],
-    [{ ...VALID, password: 'p'.repeat(1025) }, ['password']],
-    [{ ...VALID, password: aFile() }, ['password']],
-    [{ email: VALID.email }, ['username', 'password']],
-    [{ password: '', email: aFile(), username: '' }, ALL],
-    [{}, ALL],
-  ])('names each field out of bounds, in form order: %o', (fields, named) => {
-    expect(readSignUpFields(formWith(fields))).toEqual(invalid(named));
+  it('drops other keys and takes the first value of a repeated one', () => {
+    const formData = formWith({ ...VALID, role: 'admin', $ACTION_ID_x: '' });
+    formData.append('username', 'Other_02');
+    expect(readSignUpFields(formData)).toStrictEqual({
+      kind: 'read',
+      request: VALID,
+    });
   });
+
+  it.each<[string, Fields, readonly string[]]>([
+    ['username too short', { ...VALID, username: 'ab' }, ['username']],
+    ['username too long', { ...VALID, username: 'u'.repeat(21) }, ['username']],
+    ['username with @', { ...VALID, username: 'far@ouk' }, ['username']],
+    ['username with a space', { ...VALID, username: ' farouk' }, ['username']],
+    ['email empty', { ...VALID, email: '' }, ['email']],
+    ['email too long', { ...VALID, email: 'e'.repeat(255) }, ['email']],
+    ['password empty', { ...VALID, password: '' }, ['password']],
+    [
+      'password too long',
+      { ...VALID, password: 'p'.repeat(1025) },
+      ['password'],
+    ],
+    ['password a file', { ...VALID, password: aFile() }, ['password']],
+    ['two missing', { email: VALID.email }, ['username', 'password']],
+    ['all three', { password: '', email: aFile(), username: '' }, ALL],
+    ['none sent', {}, ALL],
+  ])(
+    'names each field out of bounds, in form order: %s',
+    (_label, fields, named) => {
+      expect(readSignUpFields(formWith(fields))).toEqual(invalid(named));
+    },
+  );
 
   it.each([undefined, null, 'username=abc', VALID, new URLSearchParams(VALID)])(
     'names every field for %o, which is not a FormData',

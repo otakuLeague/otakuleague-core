@@ -142,14 +142,14 @@ export function isSignInResponse(value: unknown): value is SignInResponse {
 }
 
 /**
- * True when `value` is a POST /auth/sign-up 202 body (ADR 0015 Addendum 1f-v): exactly one key, a
- * `bindingToken` shaped like a session token (43 base64url characters, safe in a cookie). Another
- * key is refused too: the 202 is the same for every address, so nothing else may ride along.
+ * True when `value` is a POST /auth/sign-up 202 body (ADR 0015 Addendum 1f-v): an own `bindingToken`
+ * shaped like a session token (43 base64url characters, safe in a cookie). Other keys are ignored,
+ * as `isSignInResponse` does, so an additive API change never breaks sign-up.
  */
 export function isSignUpResponse(value: unknown): value is SignUpResponse {
   return (
     isRecord(value) &&
-    Object.keys(value).length === 1 &&
+    Object.hasOwn(value, 'bindingToken') &&
     isSessionToken(value.bindingToken)
   );
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clearedSessionCookie,
   flashCookie,
+  SIGN_UP_COOKIE_MAX_AGE_SECONDS,
   sessionCookie,
   signUpCookie,
 } from './auth-cookies';
@@ -33,9 +34,10 @@ describe.each([
   });
 
   it('sets the sign-up binding for 24 hours, the pending sign-up TTL', () => {
+    expect(SIGN_UP_COOKIE_MAX_AGE_SECONDS).toBe(86_400);
     expect(signUpCookie(webPublicUrl)).toStrictEqual({
       name: `${prefix}ol_signup`,
-      options: { ...options, maxAge: 86_400 },
+      options: { ...options, maxAge: SIGN_UP_COOKIE_MAX_AGE_SECONDS },
     });
   });
 

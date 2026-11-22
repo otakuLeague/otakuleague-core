@@ -73,7 +73,7 @@ export function sessionCookie(webPublicUrl: WebPublicUrl): SessionCookie {
 
 /**
  * `ol_signup`: the sign-up's `bindingToken`, so only this browser confirms in one click (ADR 0020).
- * Written only by the sign-up action, on a 202 that passed `isSignUpResponse`.
+ * Written only by the sign-up action, on a 2xx (the API answers 202) that passed `isSignUpResponse`.
  */
 export function signUpCookie(
   webPublicUrl: WebPublicUrl,
@@ -81,7 +81,10 @@ export function signUpCookie(
   return authCookie('ol_signup', SIGN_UP_COOKIE_MAX_AGE_SECONDS, webPublicUrl);
 }
 
-/** `ol_flash`: the address "Check your email" shows, for display only (at most 254 characters). */
+/**
+ * `ol_flash`: the address "Check your email" shows (at most 254 characters), and the one 1f-vii
+ * resends to: that is why it keeps `__Host-`, so a sibling host cannot choose it.
+ */
 export function flashCookie(
   webPublicUrl: WebPublicUrl,
 ): AuthCookie<'ol_flash'> {

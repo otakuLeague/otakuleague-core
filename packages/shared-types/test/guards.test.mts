@@ -235,11 +235,16 @@ void describe('isSignInResponse', () => {
 void describe('isSignUpResponse', () => {
   const BINDING = `${'aZ09_-'.repeat(7)}x`;
 
-  void it('accepts exactly one bindingToken of 43 base64url characters', () => {
-    assert.equal(isSignUpResponse({ bindingToken: BINDING }), true);
+  void it('accepts an own bindingToken of 43 base64url characters, other keys ignored', () => {
+    for (const body of [
+      { bindingToken: BINDING },
+      { bindingToken: BINDING, extra: 1 },
+    ]) {
+      assert.equal(isSignUpResponse(body), true, JSON.stringify(body));
+    }
   });
 
-  void it('rejects another length or symbol, a non-string, a missing or an extra key and non-objects', () => {
+  void it('rejects another length or symbol, a non-string, a missing or inherited key and non-objects', () => {
     for (const candidate of [
       ...NOT_OBJECTS,
       {},
@@ -250,7 +255,7 @@ void describe('isSignUpResponse', () => {
       { bindingToken: 43 },
       { bindingToken: [BINDING] },
       { bindingtoken: BINDING },
-      { bindingToken: BINDING, email: 'a@b.co' },
+      Object.create({ bindingToken: BINDING }) as unknown,
     ]) {
       assert.equal(
         isSignUpResponse(candidate),

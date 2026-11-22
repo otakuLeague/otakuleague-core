@@ -123,7 +123,7 @@ function failureStateFrom(failure: ApiFailure): SignUpFailureState {
       // A 400 naming none of the three fields is not the visitor's to fix.
       return (
         fieldsNamed((field) =>
-          error.details.some((d) => d.field === field),
+          error.details.some((issue) => issue.field === field),
         ) ?? {
           kind: 'unavailable',
         }
