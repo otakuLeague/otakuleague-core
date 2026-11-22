@@ -81,6 +81,26 @@ describe('hashtags', () => {
     expect(hashtags('https://example.com/p#frag')).toEqual(['#frag']);
   });
 
+  it('keeps middle dots and underscores, and drops URL, markup, control and bidi characters', () => {
+    expect(hashtags('#ぼっち・ざ・ろっく #a_b #x·y')).toEqual([
+      '#ぼっち・ざ・ろっく',
+      '#a_b',
+      '#x·y',
+    ]);
+    expect(hashtags('#../intent/tweet?text=x')).toEqual([]);
+    expect(hashtags('#a\u202Eb')).toEqual(['#ab']);
+    expect(hashtags('#a\u001Bb #c\u00ADd')).toEqual(['#a', '#cd']);
+    expect(hashtags('#<b>x</b>')).toEqual([]);
+  });
+
+  it('cuts hostile input short and stays linear', () => {
+    const started = performance.now();
+
+    expect(hashtags(`#${'!'.repeat(80_000)}a`)).toEqual([]);
+    expect(hashtags(`${'#'.repeat(80_000)}a`).length).toBeLessThanOrEqual(5);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
   it('keeps the first 5 only', () => {
     expect(hashtags('#1 #2 #3 #4 #5 #6 #7')).toEqual([
       '#1',
@@ -244,5 +264,8 @@ describe('boundedNames', () => {
     expect(boundedNames(['x'.repeat(400)])[0]).toHaveLength(300);
     expect(boundedNames(many)).toEqual(many.slice(0, 50));
     expect(boundedNames([])).toEqual([]);
+    expect(
+      boundedNames(['A\u202EB', 'AB', 'C\u001B\u200BD', 'E\u00ADF']),
+    ).toEqual(['AB', 'CD', 'EF']);
   });
 });

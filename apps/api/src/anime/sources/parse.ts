@@ -51,24 +51,27 @@ export function countryCode(value: unknown): string | null {
 export const MAX_PRODUCERS = 50;
 const MAX_HASHTAGS = 5;
 const MAX_HASHTAG_CHARS = 100;
+const MAX_HASHTAG_SOURCE_CHARS = 1_000;
 
 /**
- * AniList's `hashtag` is one string that can hold several tags ("#フリーレン #frieren"). Every
- * "#" (or full-width "＃", stored as "#") followed by characters that are neither whitespace
- * nor "#" is a tag. Zero-width characters are removed and trailing punctuation trimmed
- * ("#a、#b" gives two tags); words without "#", a bare "#", case-insensitive duplicates (first
- * spelling kept) and over-long tags are dropped; the first 5 are kept.
+ * AniList's `hashtag` is one string that can hold several tags ("#フリーレン #frieren"). The
+ * text is cut to 1,000 characters first (linear work on hostile input) and format characters
+ * (zero-width, bidi, soft hyphen) are removed. Every "#" (or full-width "＃", stored as "#")
+ * followed by letters, marks, digits, "_" or a middle dot is a tag, so URL and markup
+ * characters end it ("#a、#b" gives two tags). Words without "#", a bare "#", case-insensitive
+ * duplicates (first spelling kept) and over-long tags are dropped; the first 5 are kept.
  */
 export function hashtags(value: unknown): string[] {
   const raw = text(value);
   if (raw === null) return [];
   const found = (
     raw
-      .replace(/[\u200B-\u200D\u2060\uFEFF]/gu, '')
-      .match(/[#＃][^\s#＃]+/gu) ?? []
+      .slice(0, MAX_HASHTAG_SOURCE_CHARS)
+      .replace(/\p{Cf}/gu, '')
+      .match(/[#＃][\p{L}\p{M}\p{N}_·・･]+/gu) ?? []
   )
-    .map((tag) => `#${tag.slice(1).replace(/\p{P}+$/u, '')}`)
-    .filter((tag) => tag.length > 1 && tag.length <= MAX_HASHTAG_CHARS);
+    .map((tag) => `#${tag.slice(1)}`)
+    .filter((tag) => tag.length <= MAX_HASHTAG_CHARS);
   const seen = new Set<string>();
   const unique = found.filter((tag) => {
     const key = tag.toLowerCase();
@@ -79,7 +82,13 @@ export function hashtags(value: unknown): string[] {
 
 /** Company names bounded before they are stored: each once, at most 300 characters, first 50. */
 export function boundedNames(values: readonly unknown[]): string[] {
-  const names = values.map(boundedText).filter((name) => name !== null);
+  const names = values
+    .map((value) =>
+      typeof value === 'string'
+        ? boundedText(value.replace(/[\p{Cc}\p{Cf}]/gu, ''))
+        : null,
+    )
+    .filter((name) => name !== null);
   return [...new Set(names)].slice(0, MAX_PRODUCERS);
 }
 
