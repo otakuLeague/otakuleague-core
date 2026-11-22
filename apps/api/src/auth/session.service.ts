@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Clock, Random } from '../common/clock-and-random.module';
+import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   hashSessionToken,
@@ -78,6 +79,30 @@ export class SessionService {
   /** Sign-out: the row goes, so the next request with the token is refused (0 s, ADR 0015). */
   async delete(sessionId: string): Promise<void> {
     await this.prisma.session.deleteMany({ where: { id: sessionId } });
+  }
+
+  /**
+   * Sign out everywhere (ADR 0015 Addendum OTA-205): one statement raises the user's epoch and
+   * deletes every session row of that user, the caller's included. The user row is locked first,
+   * then the sessions (the cleanup's order): the DELETE only sees users the UPDATE returned. A
+   * sign-in racing it either read the old epoch (its row is refused on first use) or the new one
+   * (valid). `db` is the caller's transaction client, so a password reset (OTA-140) runs it inside
+   * its own transaction and `session_epoch` keeps one writer. Database errors propagate (503).
+   * Logs nothing.
+   */
+  async revokeAll(
+    userId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    const now = this.clock.now().toISOString();
+    await db.$executeRaw`
+      WITH raised AS (
+        UPDATE app_user SET session_epoch = session_epoch + 1,
+          updated_at = ${now}::timestamptz
+        WHERE id = ${userId}::uuid
+        RETURNING id
+      )
+      DELETE FROM auth_session WHERE user_id IN (SELECT id FROM raised)`;
   }
 
   /**
