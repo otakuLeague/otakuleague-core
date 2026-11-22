@@ -108,6 +108,7 @@ function ipv4FromGroups(high: number, low: number): string {
  * home line owns a whole /64). Anything else, a missing header, a list, a zone id, brackets, a
  * port, padding or text, is the shared key `unknown`, so a call site that forgets the header
  * shows up as early 429s instead of having no limit. Pure: no I/O, never logs the value.
+ * The web keeps a copy of the cut, `clientNetworkOf` (apps/web/src/api/client-ip.ts): change them together.
  */
 export function visitorKeyFromClientIp(header: unknown): VisitorKey {
   if (typeof header !== 'string' || header.length > MAX_CLIENT_IP_LENGTH) {

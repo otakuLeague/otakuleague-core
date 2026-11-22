@@ -51,6 +51,25 @@ describe('visitorKeyFromClientIp', () => {
     expect(visitorKeyFromClientIp(header)).toBe(key);
   });
 
+  // The same table runs in apps/web/src/api/client-ip.test.ts against clientNetworkOf.
+  it.each<[string, string]>([
+  ['203.0.113.7', '203.0.113.7'],
+  ['::ffff:203.0.113.7', '203.0.113.7'],
+  ['::FFFF:cb00:7107', '203.0.113.7'],
+  ['0:0:0:0:0:ffff:cb00:7107', '203.0.113.7'],
+  ['2001:db8:1:2::9', '2001:db8:1:2::/64'],
+  ['2001:DB8:1:2:3:4:5:6', '2001:db8:1:2::/64'],
+  ['2001:0db8:0001:0002:ffff:ffff:ffff:ffff', '2001:db8:1:2::/64'],
+  ['2001:db8:1:2:3:4:1.2.3.4', '2001:db8:1:2::/64'],
+  ['2001:db8::1', '2001:db8:0:0::/64'],
+  ['1:2:3:4:5:6:7::', '1:2:3:4::/64'],
+  ['::1', '0:0:0:0::/64'],
+  ['::', '0:0:0:0::/64'],
+  ['::1.2.3.4', '0:0:0:0::/64'],
+])('cuts %s to %s like the web copy', (header, key) => {
+    expect(visitorKeyFromClientIp(header)).toBe(key);
+  });
+
   it.each<[string, unknown]>([
     ['a missing header', undefined],
     ['an empty header', ''],

@@ -42,6 +42,53 @@ export async function readClientIp(): Promise<ClientIp | undefined> {
     : undefined;
 }
 
+const IPV6_GROUPS = 8;
+const IPV6_MAPPED_MARKER = 0xffff;
+
+/** Dotted IPv4 tail of an IPv6 ("::ffff:1.2.3.4") as two hex groups; other text is unchanged. */
+function withHexTail(ip: string): string {
+  const tail = /^(.*:)(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip);
+  if (tail === null) return ip;
+  const [, head = '', ...octets] = tail;
+  const [a = 0, b = 0, c = 0, d = 0] = octets.map(Number);
+  return `${head}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+}
+
+/** The eight 16-bit groups of a valid IPv6 without a zone id. */
+function ipv6Groups(ip: string): readonly number[] {
+  const [head = '', tail] = withHexTail(ip).split('::');
+  const parse = (part: string) =>
+    part === '' ? [] : part.split(':').map((group) => parseInt(group, 16));
+  const front = parse(head);
+  if (tail === undefined) return front;
+  const back = parse(tail);
+  return [
+    ...front,
+    ...new Array<number>(IPV6_GROUPS - front.length - back.length).fill(0),
+    ...back,
+  ];
+}
+
+/**
+ * The network a client address stands for, for counting per visitor: an IPv4 as it is, an
+ * IPv4-mapped IPv6 as that IPv4, any other IPv6 as its first 64 bits in one spelling
+ * ("2001:db8:1:2::/64"), since one home line owns a whole /64. The same rule as the API's
+ * `visitorKeyFromClientIp` (apps/api/src/common/api-caller.ts, ADR 0019 item 7), copied on
+ * purpose: both specs run the same table of addresses, so change them together. Pure.
+ */
+export function clientNetworkOf(clientIp: ClientIp): string {
+  if (isIP(clientIp) === 4) return clientIp;
+  const groups = ipv6Groups(clientIp);
+  const isMapped =
+    groups.slice(0, 5).every((group) => group === 0) &&
+    groups[5] === IPV6_MAPPED_MARKER;
+  if (isMapped) {
+    const [high = 0, low = 0] = groups.slice(6);
+    return [high >> 8, high & 0xff, low >> 8, low & 0xff].join('.');
+  }
+  return `${groups.slice(0, 4).map((group) => group.toString(16)).join(':')}::/64`;
+}
+
 const LOOPBACK_CLIENT_IP = '127.0.0.1' as ClientIp;
 
 /** The IP a credential call sends, or why it must not be sent (the caller refuses the call). */
