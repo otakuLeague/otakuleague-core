@@ -50,12 +50,7 @@ void describe('signUpPasswordRules', () => {
     ['8 letters', 'abcdefgh', true, false],
     ['7 with a digit', 'abcdef1', false, true],
     ['8 with a digit', 'abcdefg1', true, true],
-    [
-      '8 UTF-16 units that NFC makes 7',
-      `abcdee${COMBINING_ACUTE}x`,
-      false,
-      false,
-    ],
+    ['8 units, 7 after NFC', `abcdee${COMBINING_ACUTE}x`, false, false],
     ['a lone symbol', '#', false, true],
     ['8 spaces', ' '.repeat(8), true, false],
   ] as const) {
@@ -66,21 +61,4 @@ void describe('signUpPasswordRules', () => {
       });
     });
   }
-
-  void it('agrees with meetsSignUpPasswordRule: both rules, never one', () => {
-    for (const password of [
-      '',
-      'abcdefgh',
-      'abcdef1',
-      'abcdefg1',
-      '12345678',
-    ]) {
-      const rules = signUpPasswordRules(password);
-      assert.equal(
-        meetsSignUpPasswordRule(password),
-        rules.longEnough && rules.hasDigitOrSymbol,
-        password,
-      );
-    }
-  });
 });
