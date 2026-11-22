@@ -1,19 +1,19 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-22 (OTA-139-v3)
+Updated: 2026-11-22 (OTA-139 wiring)
 ## Current milestone
-W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-v2b (#122–#134), OTA-207 throttle for Server Action POSTs (#135, #145, #146), OTA-197, 199–204, earlier W3/W7 slices.
+W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-v3 (#122–#147), OTA-207 throttle for Server Action POSTs (#135, #145, #146), OTA-197, 199–204, earlier W3/W7 slices.
 ## Last session
-OTA-139 1f-v3 (this branch): `SignUpForm` and pure `SignUpFormView` with tests, unreachable. Password empties on hide (`clearOnHide`), one submit in flight, username and email kept after a refusal. Wiring is pushed on `feat/OTA-139-sign-up-wiring`.
-Merged: OTA-217 trailer stops when hidden (#144; browser check not verified), OTA-205-a sign-out-everywhere API (#137, no web caller yet), OTA-206 (#139), OTA-214 slice A (#140), OTA-215 (#141). OTA-208, 210, 211: PR state not checked.
+OTA-139 sign-up wiring (this branch, `feat/OTA-139-sign-up-wiring-2`): sign-up panel in `/auth?mode=sign-up`, switch links, `/sign-up` 308, `__Host-` privacy rows. Owed checks done on `next start` (build, `method="POST"`, redirect query); one-frame sign-in flash on hard load accepted. Details: `docs/progress/OTA-139.md`.
+Merged: #147 (1f-v3 form), OTA-217 (#144), OTA-205-a (#137), OTA-206 (#139), OTA-214 slice A (#140), OTA-215 (#141).
 ## In progress
-- OTA-139 (Todo): sign-up wiring PR opens once this PR merges; then v3b (confirm field, Show buttons, live checklist, focus after switch), 1f-vi, 1f-vii. 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
+- OTA-139 (In Review): wiring PR open; then v3b (confirm field, Show buttons, live checklist, focus after switch), 1f-vi, 1f-vii. 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
 - OTA-205 (High): 205-b (bounded retry in `deleteSession`) and 205-c (sign-out-everywhere button, `session_ended`); independent.
 - OTA-222 (new): same `clearOnHide` on the sign-in password.
 - OTA-214 slice B on its branch; OTA-215 web slice waits on OTA-216. OTA-197 leftovers: Vercel firewall rule, forged `X-Forwarded-For` spoof check on a preview. OTA-136 slices 2–4; OTA-147 `/contact` (needs an email provider).
 ## Next 3 tasks
-1. OTA-139 sign-up wiring PR (`feat/OTA-139-sign-up-wiring`, after this PR merges). Checks owed first: `next build` with the second hole; sign-in flash on a hard load of `/auth?mode=sign-up`; `/sign-up` redirect keeps the query; `method="POST"` in served HTML. Then v3b, 1f-vi, 1f-vii.
-2. OTA-222 (sign-in password `clearOnHide`) and OTA-205 205-b / 205-c.
+1. OTA-222 (sign-in password `clearOnHide`; the new "Create one" link widens the gap).
+2. OTA-139 v3b (after the wiring PR merges), then 1f-vi, 1f-vii; OTA-205 205-b / 205-c.
 3. OTA-207 beta gate after deploy (Farouk): 200 sign-out POSTs in 50 s; more than 60 passing means several instances, so 207-b is not the whole answer.
 Later: OTA-216 (needs-human): live AniList run, re-record OTA-215 fixtures; OTA-209 (pin image URLs); OTA-212 Design: error pages mascot; Design for the empty right half of the anime header; OTA-186 Mailpit or OTA-184 slice 2 (Farouk decides); OTA-198 `claimsSlugs` gate; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 (shared `currentSeason`). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
 ## Blockers
