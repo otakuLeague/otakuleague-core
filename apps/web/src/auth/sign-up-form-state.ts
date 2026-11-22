@@ -30,7 +30,10 @@ export type SignUpFormState =
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'off_on_preview' };
 
-type SignUpFailureState = Exclude<SignUpFormState, { readonly kind: 'idle' }>;
+export type SignUpFailureState = Exclude<
+  SignUpFormState,
+  { readonly kind: 'idle' }
+>;
 
 export type SignUpOutcome =
   | { readonly kind: 'accepted'; readonly bindingToken: string }
