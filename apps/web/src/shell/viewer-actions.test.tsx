@@ -55,12 +55,20 @@ describe('ViewerActionsView', () => {
 
     const summary = screen.getByText('KA');
     expect(summary.tagName).toBe('SUMMARY');
-    expect(summary.getAttribute('aria-label')).toBe('Account menu, kaito_tanaka');
+    expect(summary.getAttribute('aria-label')).toBe('Account menu');
     expect(summary.classList.contains('sh-avatar')).toBe(true);
     const head = screen.getByText('kaito_tanaka');
     expect(head.classList.contains('sh-menu__head')).toBe(true);
     expect(head.closest('.sh-menu')?.firstElementChild).toBe(head);
     expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
+  });
+
+  it('keeps the username out of the summary label (Sentry click breadcrumbs record aria-label)', () => {
+    const username = 'kaito_tanaka';
+    render(<ViewerActionsView viewer={{ kind: 'signed_in', username }} />);
+
+    const label = screen.getByText('KA').getAttribute('aria-label') ?? '';
+    expect(label.toLowerCase()).not.toContain(username.toLowerCase());
   });
 
   it('keeps the longest username whole in the DOM (CSS ellipsis only)', () => {

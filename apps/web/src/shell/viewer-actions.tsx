@@ -67,7 +67,7 @@ function AccountMenu({ username }: { readonly username: string }) {
     <Disclosure
       summary={viewerInitials(username)}
       summaryClassName="sh-avatar"
-      summaryLabel={`Account menu, ${username}`}
+      summaryLabel="Account menu"
     >
       <p className="sh-menu__head">{username}</p>
     </Disclosure>
