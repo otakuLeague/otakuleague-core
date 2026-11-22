@@ -44,7 +44,7 @@ export async function readClientIp(): Promise<ClientIp | undefined> {
 
 declare const clientNetworkBrand: unique symbol;
 
-/** What a client address stands for in a counter. Only `clientNetworkOf` and the loopback constant make one. */
+/** What a client address stands for in a counter. Only `clientNetworkOf`, `clientSiteOf` and the loopback constant make one. */
 export type ClientNetwork = string & { readonly [clientNetworkBrand]: true };
 
 const IPV6_GROUPS = 8;
@@ -84,19 +84,38 @@ function ipv6Groups(ip: string): readonly number[] {
 export function clientNetworkOf(clientIp: ClientIp): ClientNetwork {
   if (isIP(clientIp) === 4) return clientIp as string as ClientNetwork;
   const groups = ipv6Groups(clientIp);
-  const isMapped =
-    groups.slice(0, 5).every((group) => group === 0) &&
-    groups[5] === IPV6_MAPPED_MARKER;
-  if (isMapped) {
+  if (isIpv4Mapped(groups)) {
     const [high = 0, low = 0] = groups.slice(6);
     return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(
       '.',
     ) as ClientNetwork;
   }
+  return ipv6PrefixOf(groups, 4);
+}
+
+/**
+ * The /48 an IPv6 client's /64 sits in ("2001:db8:1::/48"), the second tier of the action throttle
+ * (ADR 0015 Addendum OTA-207, decision 12); none for an IPv4 or an IPv4-mapped IPv6. Pure.
+ */
+export function clientSiteOf(clientIp: ClientIp): ClientNetwork | undefined {
+  if (isIP(clientIp) === 4) return undefined;
+  const groups = ipv6Groups(clientIp);
+  return isIpv4Mapped(groups) ? undefined : ipv6PrefixOf(groups, 3);
+}
+
+function isIpv4Mapped(groups: readonly number[]): boolean {
+  return (
+    groups.slice(0, 5).every((group) => group === 0) &&
+    groups[5] === IPV6_MAPPED_MARKER
+  );
+}
+
+/** The first `count` groups in one spelling, then the prefix length: "2001:db8:1:2::/64". */
+function ipv6PrefixOf(groups: readonly number[], count: number): ClientNetwork {
   return `${groups
-    .slice(0, 4)
+    .slice(0, count)
     .map((group) => group.toString(16))
-    .join(':')}::/64` as ClientNetwork;
+    .join(':')}::/${count * 16}` as ClientNetwork;
 }
 
 const LOOPBACK_CLIENT_IP = '127.0.0.1' as ClientIp;

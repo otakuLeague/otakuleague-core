@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import {
   clientIpFromHeaders,
   clientNetworkOf,
+  clientSiteOf,
   readClientIp,
   readCredentialClientIp,
   type ClientIp,
@@ -177,5 +178,18 @@ describe('clientNetworkOf', () => {
     expect(network('2001:db8:aa:bc:1:2:3:4')).not.toBe(
       network('2001:db8:aa:bb:1:2:3:4'),
     );
+  });
+});
+
+describe('clientSiteOf', () => {
+  it.each<[string, string | undefined]>([
+    ['2001:db8:1:2::9', '2001:db8:1::/48'],
+    ['2001:0DB8:0001:ffff:1:2:3:4', '2001:db8:1::/48'],
+    ['2001:db8::1', '2001:db8:0::/48'],
+    ['::1', '0:0:0::/48'],
+    ['203.0.113.7', undefined],
+    ['::ffff:203.0.113.7', undefined],
+  ])('puts %s in %s', (address, site) => {
+    expect(clientSiteOf(validIp(address))).toBe(site);
   });
 });

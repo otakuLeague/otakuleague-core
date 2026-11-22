@@ -20,7 +20,7 @@ vi.mock('@sentry/nextjs', () => ({
 vi.mock('next/server', () => ({ after: mocks.after }));
 
 const REPORT = [
-  'Credential call refused: client IP unknown',
+  'Client IP unknown',
   {
     level: 'error',
     tags: { auth_route: 'sign-in' },
