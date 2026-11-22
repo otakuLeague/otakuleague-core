@@ -1,7 +1,8 @@
 import type { AnimeDetails, AnimeTrailer } from '@otakuleague/shared-types';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Activity } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { animeFixture, sourced } from '../../../src/anime/fixtures';
 import { overviewFacts } from '../../../src/anime/overview-facts';
 import { Overview } from './overview';
@@ -16,6 +17,17 @@ function facts(trailer: AnimeTrailer, overrides: Partial<AnimeDetails> = {}) {
 }
 
 /** Every URL the page could fetch: iframes, scripts, images, link hints. */
+/** jsdom does not navigate frames, so the player's window is a stub recording `replace` calls. */
+function stubPlayer(frame: HTMLIFrameElement | null) {
+  const replace = vi.fn<(url: string) => void>();
+  if (frame !== null) {
+    Object.defineProperty(frame, 'contentWindow', {
+      value: { location: { replace } },
+    });
+  }
+  return replace;
+}
+
 function requestedUrls(root: ParentNode): string[] {
   return [
     ...root.querySelectorAll<HTMLElement>(
@@ -100,6 +112,32 @@ describe('TrailerPlayer', () => {
     expect(container.querySelector('iframe')?.getAttribute('src')).toBe(
       'https://www.dailymotion.com/embed/video/x7tgad0?autoplay=1',
     );
+  });
+
+  // cacheComponents keeps a left page mounted in a hidden <Activity> (OTA-217).
+  it.each([
+    ['YouTube', YOUTUBE],
+    ['Dailymotion', { site: 'dailymotion', id: 'x7tgad0' } as const],
+  ])('stops the %s player when the page is hidden, and shows the poster on return', (_, trailer) => {
+    const page = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <Overview facts={facts(trailer)} />
+      </Activity>
+    );
+    const { container, rerender } = render(page('visible'));
+    fireEvent.click(screen.getByRole('button', { name: /Play trailer/u }));
+    const replace = stubPlayer(container.querySelector('iframe'));
+
+    act(() => rerender(page('hidden')));
+    expect(replace).toHaveBeenCalledExactlyOnceWith('about:blank');
+    expect(container.querySelector('iframe')).toBeNull();
+
+    act(() => rerender(page('visible')));
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(
+      container.querySelector('.ov-trailer')?.getAttribute('data-state'),
+    ).toBe('poster');
+    expect(screen.getByRole('button', { name: /Play trailer/u })).toBeTruthy();
   });
 
   it('shows a plain panel without any image, and no section for a bad id', () => {
