@@ -162,12 +162,12 @@ export const PRIVACY_POLICY: LegalDocument = {
                 '30 days without a visit, 180 days at most',
               ],
               [
-                <code key="n">ol_signup</code>,
+                <code key="n">__Host-ol_signup</code>,
                 'Ties your sign-up to its confirmation email, so only your browser signs in from the link',
                 '24 hours',
               ],
               [
-                <code key="n">ol_flash</code>,
+                <code key="n">__Host-ol_flash</code>,
                 'Shows a one-time message after a redirect (for example the address on “Check your email”)',
                 '10 minutes',
               ],

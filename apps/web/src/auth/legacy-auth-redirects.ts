@@ -11,4 +11,5 @@ type RouteRedirect = Awaited<
  */
 export const LEGACY_AUTH_REDIRECTS: readonly RouteRedirect[] = [
   { source: '/sign-in', destination: '/auth?mode=sign-in', permanent: true },
+  { source: '/sign-up', destination: '/auth?mode=sign-up', permanent: true },
 ];
