@@ -212,6 +212,12 @@ If AniList refuses us keeping even the id and two title-derived slugs:
 
 Imported identities, their slugs and snapshots are part of the re-decision the Status line above requires.
 
+## Update 2026-11-22: trailer players (OTA-214)
+
+The trailer id comes from AniList, or MyAnimeList (Jikan) when AniList has none; the video itself stays with its host. Both players (YouTube through `youtube-nocookie.com`, Dailymotion) are embedded click-to-load: before a press the page holds no iframe, script or preconnect from them, only a poster from AniList's CDN, a line naming the host and a link to `/privacy#trailers`. We never download, proxy or re-host a video. The privacy policy (`#trailers`) names what the host receives and links its policy; the data sources page links YouTube's Terms of Service and Dailymotion's terms of use, which govern playback.
+
+The iframe has no `sandbox`: both players need scripts, same-origin storage and popups to their own site, so a sandbox that lets them work grants nearly everything, and one that restricts them breaks playback. It is isolated by origin instead: ids pass anchored regexes and URLs are built from fixed origins (`TRAILER_EMBED_ORIGINS`, ready for a `frame-src`). `allow` is limited to `autoplay; fullscreen; picture-in-picture` (autoplay only because the press already asked to play), and the referrer is `strict-origin-when-cross-origin` (origin only).
+
 ## Update 2026-11-22: At a Glance facts (OTA-215)
 
 Four facts the old site showed and we did not store: source material, country of origin, producers, official hashtags. API and shared types only; the web card is a later slice. No new ADR: this follows the OTA-97 precedent (nullable columns on `anime_source_snapshot`, a row in the coverage table).

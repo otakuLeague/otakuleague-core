@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { CONTACT_EMAIL } from '../shell/site-footer';
 import type { LegalDocument } from './legal-document';
 import { LegalTable } from './legal-page';
@@ -74,9 +75,31 @@ export const DATA_SOURCES: LegalDocument = {
       body: (
         <p>
           Cover and banner images are the property of the anime’s studios,
-          publishers and other rights holders. We do not copy them: your browser loads them
-          from AniList’s servers, or MyAnimeList’s when AniList has none. If you
-          own an image and want it removed, write to us.
+          publishers and other rights holders. We do not copy them: your browser
+          loads them from AniList’s servers, or MyAnimeList’s when AniList has
+          none. If you own an image and want it removed, write to us.
+        </p>
+      ),
+    },
+    {
+      id: 'trailers',
+      title: 'Trailers',
+      body: (
+        <p>
+          Trailers are hosted by YouTube or Dailymotion and play in their
+          player; we do not copy them. Which trailer belongs to an anime comes
+          from AniList, or MyAnimeList when AniList has none. A trailer only
+          loads when you press play (see the{' '}
+          <Link href="/privacy#trailers">privacy policy</Link>). Playing one is
+          subject to{' '}
+          <a href="https://www.youtube.com/t/terms">
+            YouTube’s Terms of Service
+          </a>{' '}
+          or{' '}
+          <a href="https://legal.dailymotion.com/en/terms-of-use/">
+            Dailymotion’s terms of use
+          </a>
+          .
         </p>
       ),
     },

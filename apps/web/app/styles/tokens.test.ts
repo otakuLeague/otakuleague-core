@@ -82,4 +82,20 @@ describe('design tokens', () => {
       }
     },
   );
+
+  it.each([
+    ['dark', dark],
+    ['light', light],
+    ['system light', systemLight],
+  ])(
+    'reads muted text on a chip (--surface-2) at 4.5:1 in the %s theme',
+    (_, theme) => {
+      // The Overview tag chip's relevance percentage (overview.css .ov-tag__rank).
+      const muted = theme.get('--muted') ?? resolve(dark, '--muted');
+      const chip = theme.get('--surface-2') ?? resolve(dark, '--surface-2');
+      expect(contrastRatio(muted, chip)).toBeGreaterThanOrEqual(
+        MIN_TEXT_CONTRAST,
+      );
+    },
+  );
 });

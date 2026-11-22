@@ -442,7 +442,9 @@ describe('AnimeHeaderLoader', () => {
       failure: {
         kind: 'api_error',
         status: 429,
-        error: { error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' } },
+        error: {
+          error: { code: 'ANIME_IMPORT_LIMIT_REACHED', message: 'Busy.' },
+        },
       },
     });
     expect(screen.getByText(/Try again in a minute/)).toBeTruthy();
