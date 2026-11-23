@@ -84,19 +84,26 @@ describe('PER_IP_LIMITS', () => {
 });
 
 describe('PER_IPV6_SITE_LIMITS', () => {
-  it('pins the ADR 0020 (1f gate) number: availability 120 per IPv6 /48 per minute', () => {
+  it('pins the ADR 0020 numbers: sign-up and resend 30 per IPv6 /48 per hour (OTA-224), availability 120 per /48 per minute (1f gate)', () => {
     expect(PER_IPV6_SITE_LIMITS).toEqual({
+      'sign-up': { limit: 30, windowMs: 60 * 60_000 },
+      'email-verification-resend': { limit: 30, windowMs: 60 * 60_000 },
       'username-availability': { limit: 120, windowMs: 60_000 },
     });
   });
 
-  it('leaves room for two busy /64s of one site: at least twice the /64 limit, same window', () => {
-    const site = PER_IPV6_SITE_LIMITS['username-availability'];
-    const perIp = PER_IP_LIMITS['username-availability'];
+  it.each(
+    Object.keys(PER_IPV6_SITE_LIMITS) as (keyof typeof PER_IPV6_SITE_LIMITS)[],
+  )(
+    'leaves room for two busy /64s of one site on %s: at least twice the /64 limit, same window',
+    (route) => {
+      const site = PER_IPV6_SITE_LIMITS[route];
+      const perIp = PER_IP_LIMITS[route];
 
-    expect(site.limit).toBeGreaterThanOrEqual(2 * perIp.limit);
-    expect(site.windowMs).toBe(perIp.windowMs);
-  });
+      expect(site.limit).toBeGreaterThanOrEqual(2 * perIp.limit);
+      expect(site.windowMs).toBe(perIp.windowMs);
+    },
+  );
 });
 
 describe('confirmPasswordHits', () => {
@@ -168,43 +175,37 @@ describe('perIpHits', () => {
     expect(hex(resend.key)).not.toBe(hex(confirm.key));
   });
 
-  it('counts an IPv6 availability check per /64, then per /48, in that order', () => {
-    const ip = ipKey('2001:db8:aa:1::9');
-
-    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
-      {
-        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
-        rule: PER_IP_LIMITS['username-availability'],
-      },
-      {
-        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ipv6Site', [
-          siteKey(ip),
-        ]),
-        rule: PER_IPV6_SITE_LIMITS['username-availability'],
-      },
-    ]);
-  });
-
-  it.each([
-    ['an IPv4', '203.0.113.7'],
-    ['a mapped IPv4', '::ffff:203.0.113.7'],
-  ])('counts %s availability check once: no /48 exists', (_, header) => {
-    const ip = ipKey(header);
-
-    expect(perIpHits(HMAC_KEY, 'username-availability', ip)).toEqual([
-      {
-        key: rateLimitKey(HMAC_KEY, 'username-availability', 'ip', [ip]),
-        rule: PER_IP_LIMITS['username-availability'],
-      },
-    ]);
-  });
-
   it.each([
     'sign-up',
-    'email-verification-confirm',
     'email-verification-resend',
-  ] as const)('counts an IPv6 %s once: no site rule', (route) => {
-    const ip = ipKey('2001:db8:aa:1::9');
+    'username-availability',
+  ] as const)(
+    'counts an IPv6 %s per /64, then per /48, in that order',
+    (route) => {
+      const ip = ipKey('2001:db8:aa:1::9');
+
+      expect(perIpHits(HMAC_KEY, route, ip)).toEqual([
+        {
+          key: rateLimitKey(HMAC_KEY, route, 'ip', [ip]),
+          rule: PER_IP_LIMITS[route],
+        },
+        {
+          key: rateLimitKey(HMAC_KEY, route, 'ipv6Site', [siteKey(ip)]),
+          rule: PER_IPV6_SITE_LIMITS[route],
+        },
+      ]);
+    },
+  );
+
+  it.each([
+    ['an IPv4', '203.0.113.7', 'username-availability'],
+    ['a mapped IPv4', '::ffff:203.0.113.7', 'username-availability'],
+    ['an IPv4', '203.0.113.7', 'sign-up'],
+    ['a mapped IPv4', '::ffff:203.0.113.7', 'sign-up'],
+    ['an IPv4', '203.0.113.7', 'email-verification-resend'],
+    ['a mapped IPv4', '::ffff:203.0.113.7', 'email-verification-resend'],
+  ] as const)('counts %s %s once: no /48 exists', (_, header, route) => {
+    const ip = ipKey(header);
 
     expect(perIpHits(HMAC_KEY, route, ip)).toEqual([
       {
@@ -214,14 +215,58 @@ describe('perIpHits', () => {
     ]);
   });
 
-  it('throws, never counts the /64 alone, when an IPv6 key yields no /48 on a route with a site rule', () => {
-    // Brand bypassed on purpose: a spelling visitorKeyFromClientIp does not make (a future change).
+  it('counts an IPv6 email-verification-confirm once: no site rule', () => {
+    const ip = ipKey('2001:db8:aa:1::9');
+
+    expect(perIpHits(HMAC_KEY, 'email-verification-confirm', ip)).toEqual([
+      {
+        key: rateLimitKey(HMAC_KEY, 'email-verification-confirm', 'ip', [ip]),
+        rule: PER_IP_LIMITS['email-verification-confirm'],
+      },
+    ]);
+  });
+
+  it.each([
+    'sign-up',
+    'email-verification-resend',
+    'username-availability',
+  ] as const)(
+    'throws on %s, never counts the /64 alone, when an IPv6 key yields no /48 on a route with a site rule',
+    (route) => {
+      // Brand bypassed on purpose: a spelling visitorKeyFromClientIp does not make (a future change).
+      const respelt = '2001:db8:aa:1:0:0:0:0/64' as ClientIpKey;
+
+      expect(() => perIpHits(HMAC_KEY, route, respelt)).toThrow(
+        'An IPv6 client IP key has no /48',
+      );
+    },
+  );
+
+  it('counts that respelt key once on a route without a site rule', () => {
     const respelt = '2001:db8:aa:1:0:0:0:0/64' as ClientIpKey;
 
-    expect(() => perIpHits(HMAC_KEY, 'username-availability', respelt)).toThrow(
-      'An IPv6 client IP key has no /48',
-    );
-    expect(perIpHits(HMAC_KEY, 'sign-up', respelt)).toHaveLength(1);
+    expect(
+      perIpHits(HMAC_KEY, 'email-verification-confirm', respelt),
+    ).toHaveLength(1);
+  });
+
+  it('gives each route its own counter for the same /48', () => {
+    const ip = ipKey('2001:db8:aa:1::9');
+    const siteOf = (
+      route: 'sign-up' | 'email-verification-resend' | 'username-availability',
+    ): string => {
+      const [, site] = perIpHits(HMAC_KEY, route, ip);
+      if (site === undefined) throw new Error(`${route} has no /48 hit`);
+      return hex(site.key);
+    };
+
+    expect(
+      new Set([
+        siteOf('sign-up'),
+        siteOf('email-verification-resend'),
+        siteOf('username-availability'),
+      ]).size,
+    ).toBe(3);
   });
 
   it("gives the /48 its own counter: not the /64's, not another site's, shared by the site's /64s", () => {

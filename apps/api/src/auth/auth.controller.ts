@@ -111,7 +111,7 @@ export class AuthController {
   })
   @ApiTooManyRequestsResponse({
     description:
-      'TOO_MANY_REQUESTS: 5 submits per IP per hour. AUTH_BUSY: too many passwords being hashed (Retry-After 1).',
+      'TOO_MANY_REQUESTS: 5 submits per IP (an IPv6 counts per /64) per hour, and 30 per IPv6 /48 per hour. AUTH_BUSY: too many passwords being hashed (Retry-After 1).',
   })
   @ApiServiceUnavailableResponse({ description: 'The database is down.' })
   async signUp(
