@@ -7,7 +7,7 @@ import type { ApiFailure } from '../api/client';
 
 /** The credential routes that refuse a call, and the proxy's action throttle that passes it uncounted. */
 export type ClientIpRoute =
-  'sign-in' | 'sign-up' | 'email-confirm' | 'action-throttle';
+  'sign-in' | 'sign-up' | 'email-confirm' | 'email-resend' | 'action-throttle';
 
 /** One report per server instance every 10 minutes: a broken header refuses every visitor at once. */
 export const REFUSAL_REPORT_INTERVAL_MS = 600_000;
@@ -59,7 +59,7 @@ export function reportClientIpUnknown(
 
 /** The auth routes that can see an `AuthCallFault` (ADR 0015 Addendum 1f-iv). */
 export type AuthCallRoute =
-  'sign-in' | 'sign-up' | 'email-confirm' | 'sign-out' | 'me';
+  'sign-in' | 'sign-up' | 'email-confirm' | 'email-resend' | 'sign-out' | 'me';
 
 /** A misconfiguration a visitor cannot cause: the key refused, a body off contract, a throw. */
 export type AuthCallFault =

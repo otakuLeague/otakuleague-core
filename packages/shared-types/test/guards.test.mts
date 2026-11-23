@@ -6,6 +6,7 @@ import {
   isAnimeListPage,
   isApiError,
   isEmailVerificationConfirmResponse,
+  isEmailVerificationResendResponse,
   isHealthResponse,
   isMeResponse,
   isSessionToken,
@@ -386,6 +387,24 @@ void describe('isEmailVerificationConfirmResponse', () => {
       }),
       false,
     );
+  });
+});
+
+void describe('isEmailVerificationResendResponse', () => {
+  void it('accepts the empty object, other keys ignored', () => {
+    for (const body of [{}, { extra: 1 }, Object.create(null) as unknown]) {
+      assert.equal(isEmailVerificationResendResponse(body), true);
+    }
+  });
+
+  void it('rejects non-objects, arrays included', () => {
+    for (const candidate of [...NOT_OBJECTS, [{}]]) {
+      assert.equal(
+        isEmailVerificationResendResponse(candidate),
+        false,
+        String(candidate),
+      );
+    }
   });
 });
 
