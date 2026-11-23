@@ -199,7 +199,7 @@ describe('SignUpFormView', () => {
     expect(alert.textContent).not.toMatch(/nothing was saved/i);
   });
 
-  it('marks only the named fields invalid, described by the alert (and the hint)', () => {
+  it('marks only the named fields invalid, described by the alert (and the two rule items)', () => {
     render(view({ kind: 'invalid_fields', fields: ['email', 'password'] }));
     const alertId = screen.getByRole('alert').id;
     const [username, email, password] = fields();

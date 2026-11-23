@@ -5,7 +5,7 @@ import {
   render,
   screen,
 } from '@testing-library/react';
-import { Activity } from 'react';
+import { Activity, lazy, Suspense } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { signUpAction } from './sign-up-action';
 import type { SignUpFormState } from './sign-up-form-state';
@@ -116,26 +116,72 @@ it('posts once after a blocked submit is fixed', async () => {
   expect(mocks.signUpAction).toHaveBeenCalledTimes(1);
 });
 
-it('forgets the ticks and the block when hidden in an Activity (the inputs are emptied)', () => {
+const Suspends = lazy(() => new Promise<never>(() => undefined));
+it.each([
+  [
+    'hidden in an Activity',
+    (hidden: boolean) => (
+      <Activity mode={hidden ? 'hidden' : 'visible'}>
+        <SignUpForm />
+      </Activity>
+    ),
+  ],
+  [
+    'behind a Suspense fallback shown again',
+    (hidden: boolean) => (
+      <Suspense fallback={null}>
+        <SignUpForm />
+        {hidden && <Suspends />}
+      </Suspense>
+    ),
+  ],
+])(
+  'forgets the ticks and the block when %s (the inputs are emptied)',
+  (_, tree) => {
+    mocks.signUpAction.mockReset();
+    const { rerender } = render(tree(false));
+    type('Username', 'mio');
+    type('Email', 'mio@example.com');
+    type('Password', 'secret-pass-1');
+    type('Confirm password', 'secret-pass-2');
+    createAccount();
+    expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([2, 1]);
+
+    rerender(tree(true));
+    rerender(tree(false));
+    expect(screen.getByLabelText<HTMLInputElement>('Password').value).toBe('');
+    expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([0, 0]);
+    expect(mocks.signUpAction).not.toHaveBeenCalled();
+  },
+);
+
+it('hides a refused answer and its field marks after a blocked submit (refused, then blocked)', async () => {
   mocks.signUpAction.mockReset();
-  const inActivity = (mode: 'visible' | 'hidden') => (
-    <Activity mode={mode}>
-      <SignUpForm />
-    </Activity>
-  );
-  const { rerender } = render(inActivity('visible'));
+  mocks.signUpAction.mockResolvedValue({
+    kind: 'invalid_fields',
+    fields: ['password'],
+  });
+  render(<SignUpForm />);
   type('Username', 'mio');
   type('Email', 'mio@example.com');
   type('Password', 'secret-pass-1');
+  type('Confirm password', 'secret-pass-1');
+  createAccount();
+  await screen.findByRole('alert');
+  expect(screen.getByLabelText('Password').getAttribute('aria-invalid')).toBe(
+    'true',
+  );
+
+  type('Password', 'secret-pass-1');
   type('Confirm password', 'secret-pass-2');
   createAccount();
-  expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([2, 1]);
-
-  rerender(inActivity('hidden'));
-  rerender(inActivity('visible'));
-  expect(screen.getByLabelText<HTMLInputElement>('Password').value).toBe('');
-  expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([0, 0]);
-  expect(mocks.signUpAction).not.toHaveBeenCalled();
+  expect(mocks.signUpAction).toHaveBeenCalledTimes(1);
+  expect(screen.getAllByRole('alert').map((a) => a.textContent)).toEqual([
+    expect.stringMatching(/don't match/),
+  ]);
+  expect(screen.getByLabelText('Password').hasAttribute('aria-invalid')).toBe(
+    false,
+  );
 });
 
 it('makes one call for two submits while the first is pending (N29)', async () => {

@@ -102,6 +102,7 @@
   color: var(--bad);
 }
 .au-msg[data-tone='bad']::before {
+  content: '!';
   content: '!' / '';
   flex: none;
   display: grid;
@@ -143,6 +144,7 @@
   color: var(--ink);
 }
 .au-rules li[data-met]::before {
+  content: '✓';
   content: '✓' / '';
   border-color: transparent;
   background: var(--good);

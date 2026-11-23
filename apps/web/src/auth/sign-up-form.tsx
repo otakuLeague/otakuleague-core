@@ -1,7 +1,7 @@
 'use client';
 
 import type { SignUpPasswordRules } from '@otakuleague/shared-types';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useLayoutEffect, useState } from 'react';
 import { SIGN_IN_PASSWORD_ID } from './sign-in-form-view';
 import { signUpAction } from './sign-up-action';
 import type { SignUpFormState } from './sign-up-form-state';
@@ -28,15 +28,19 @@ export function SignUpForm() {
   const [kept, setKept] = useState(EMPTY);
   const [rules, setRules] = useState(UNMET);
   const [block, setBlock] = useState<SignUpSubmitBlock>('none');
+  // A blocked submit hides the last answer (and its field marks) until the next one: it is stale.
+  const [answerDismissed, setAnswerDismissed] = useState(false);
   const [wasPending, setWasPending] = useState(pending);
   if (wasPending !== pending) {
     setWasPending(pending);
+    setAnswerDismissed(false);
     // The action answered: React's form reset empties the password without an input event.
     if (!pending) setRules(UNMET);
   }
   useEffect(emptySignInPassword, []);
-  // clearOnHide empties both password inputs when <Activity> hides the route, with no input event.
-  useEffect(
+  // clearOnHide empties both password inputs when <Activity> hides the route or a Suspense boundary
+  // shows its fallback again, with no input event; a layout cleanup runs in both cases.
+  useLayoutEffect(
     () => () => {
       setRules(UNMET);
       setBlock('none');
@@ -45,7 +49,7 @@ export function SignUpForm() {
   );
   return (
     <SignUpFormView
-      state={state}
+      state={answerDismissed ? IDLE : state}
       pending={pending}
       kept={kept}
       rules={rules}
@@ -54,7 +58,10 @@ export function SignUpForm() {
       onRulesChange={(next) =>
         setRules((current) => (sameRules(current, next) ? current : next))
       }
-      onBlockChange={setBlock}
+      onBlockChange={(next) => {
+        setBlock(next);
+        if (next !== 'none') setAnswerDismissed(true);
+      }}
       formAction={formAction}
     />
   );
