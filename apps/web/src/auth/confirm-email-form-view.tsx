@@ -32,7 +32,7 @@ function alertCopy(state: ConfirmEmailFailureState): AlertCopy {
     case 'rate_limited':
       return {
         title: 'Too many attempts.',
-        detail: `For your safety, confirming is paused. Try again ${retryWaitCopy(state.retryAfterSeconds)}.`,
+        detail: `For your safety, confirming is paused. Wait, then open the link in your email again ${retryWaitCopy(state.retryAfterSeconds)}.`,
         tone: 'wait',
       };
     case 'busy':

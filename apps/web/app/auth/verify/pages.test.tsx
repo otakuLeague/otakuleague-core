@@ -214,7 +214,10 @@ describe('the password page (decision 9)', () => {
     (vercelEnv) => {
       const page = renderPage(vercelEnv);
 
-      expect(screen.getByText('Sign-in is off on preview deployments')).toBeTruthy();
+      expect(screen.getByRole('heading', { level: 1 }).nextElementSibling?.textContent).toBe(
+        'Email confirmation is off on preview deployments' +
+          'Use the live site to confirm your email.',
+      );
       expect(page.querySelector('form, input')).toBeNull();
     },
   );

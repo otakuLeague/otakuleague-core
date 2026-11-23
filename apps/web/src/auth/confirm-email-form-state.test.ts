@@ -29,15 +29,27 @@ const failedWith = (failure: ApiFailure): ConfirmCall => ({
   result: { ok: false, failure },
 });
 /** Always a 429 with Retry-After, so only the code can decide the state. */
-const apiError = (code: ApiErrorCode, retryAfterSeconds?: number) =>
+const apiError = (
+  code: Exclude<ApiErrorCode, 'VALIDATION_FAILED'>,
+  retryAfterSeconds?: number,
+) =>
   failedWith({
     kind: 'api_error',
     status: 429,
-    error:
-      code === 'VALIDATION_FAILED'
-        ? { error: { code, message: 'x', details: [] } }
-        : { error: { code, message: 'x' } },
+    error: { error: { code, message: 'x' } },
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
+  });
+const validationFailed = (...fields: readonly string[]) =>
+  failedWith({
+    kind: 'api_error',
+    status: 400,
+    error: {
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: 'x',
+        details: fields.map((field) => ({ field, message: 'x' })),
+      },
+    },
   });
 const failed = (formState: object) => ({ kind: 'failed', formState });
 const UNAVAILABLE = failed({ kind: 'unavailable' });
@@ -100,10 +112,12 @@ describe('confirmEmailOutcomeFrom', () => {
       failed({ kind: 'wrong_password' }),
     ],
     [
-      'VALIDATION_FAILED',
-      apiError('VALIDATION_FAILED'),
+      'VALIDATION_FAILED naming the password',
+      validationFailed('token', 'password'),
       failed({ kind: 'wrong_password' }),
     ],
+    ['VALIDATION_FAILED naming the token', validationFailed('token'), UNAVAILABLE],
+    ['VALIDATION_FAILED naming nothing', validationFailed(), UNAVAILABLE],
     ['AUTH_BUSY', apiError('AUTH_BUSY', 1), failed({ kind: 'busy' })],
     [
       'TOO_MANY_REQUESTS with Retry-After',

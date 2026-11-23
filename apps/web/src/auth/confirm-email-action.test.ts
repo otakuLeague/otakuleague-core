@@ -340,9 +340,10 @@ describe('confirmEmailAction', () => {
   });
 
   it.each(['preview', 'development', ''])(
-    'is off with VERCEL_ENV=%o before reading the form, a cookie or calling the API',
+    'is off with VERCEL_ENV=%o before reading WEB_PUBLIC_URL, the form, a cookie or calling the API',
     async (vercelEnv) => {
       vi.stubEnv('VERCEL_ENV', vercelEnv);
+      vi.stubEnv('WEB_PUBLIC_URL', undefined);
       const notAForm = 'never read' as unknown as FormData;
       expect(await confirmEmailAction(IDLE, notAForm)).toEqual({
         kind: 'off_on_preview',
@@ -395,6 +396,16 @@ describe('confirmEmailAction', () => {
       kind: 'wrong_password',
     });
     expect(mocks.setCookie).not.toHaveBeenCalled();
+  });
+
+  it('lets a missing WEB_PUBLIC_URL throw before the Origin, the form or a cookie is read', async () => {
+    vi.stubEnv('WEB_PUBLIC_URL', undefined);
+    const thrown = await confirmEmailAction(IDLE, passwordForm()).catch(
+      (error: unknown) => error,
+    );
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).not.toBe(REDIRECT_SIGNAL);
+    expectUntouched();
   });
 
   it('lets a configuration error from the credential call propagate, with no cookie write', async () => {

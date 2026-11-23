@@ -49,7 +49,7 @@ describe('ConfirmEmailFormView', () => {
     [{ kind: 'wrong_password' }, /password didn't match.*when you signed up/],
     [
       { kind: 'rate_limited', retryAfterSeconds: 900 },
-      /Too many attempts.*in 15 minutes/,
+      /Too many attempts.*Wait, then open the link in your email again in 15 minutes\./,
     ],
     [{ kind: 'rate_limited', retryAfterSeconds: null }, /in a few minutes/],
     [{ kind: 'busy' }, /busy.*Wait a moment/],

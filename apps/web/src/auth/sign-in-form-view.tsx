@@ -161,11 +161,18 @@ export function SignInFormView({
   );
 }
 
-export function PreviewOffNotice() {
+/** The preview note of a page that shows no form; sign-in's copy unless the page names its own. */
+export function PreviewOffNotice({
+  title = PREVIEW_OFF_TITLE,
+  detail = PREVIEW_OFF_DETAIL,
+}: {
+  readonly title?: string;
+  readonly detail?: string;
+}) {
   return (
     <div className="au-alert" data-tone="info">
-      <strong>{PREVIEW_OFF_TITLE}</strong>
-      <span>{PREVIEW_OFF_DETAIL}</span>
+      <strong>{title}</strong>
+      <span>{detail}</span>
     </div>
   );
 }

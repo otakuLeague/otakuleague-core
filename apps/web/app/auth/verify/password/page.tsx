@@ -19,7 +19,10 @@ export default function ConfirmEmailPasswordPage() {
     return (
       <main className="au-page">
         <h1>Confirm your email</h1>
-        <PreviewOffNotice />
+        <PreviewOffNotice
+          title="Email confirmation is off on preview deployments"
+          detail="Use the live site to confirm your email."
+        />
       </main>
     );
   }
@@ -28,7 +31,7 @@ export default function ConfirmEmailPasswordPage() {
       <FocusHeading>Confirm your email</FocusHeading>
       <p className="au-sub">
         Enter the password you chose when you signed up. We ask because this
-        link was opened in another browser.
+        browser isn&apos;t the one that signed up.
       </p>
       <ConfirmEmailForm />
       <p className="au-foot">

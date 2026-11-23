@@ -85,12 +85,19 @@ function failureOutcomeFrom(failure: ApiFailure): ConfirmEmailOutcome {
   if (failure.kind !== 'api_error') {
     return failed({ kind: 'unavailable' });
   }
-  switch (failure.error.error.code) {
+  const { error } = failure.error;
+  switch (error.code) {
     case 'AUTH_TOKEN_INVALID':
       return { kind: 'expired' };
     case 'INVALID_CREDENTIALS':
-    case 'VALIDATION_FAILED':
       return failed({ kind: 'wrong_password' });
+    case 'VALIDATION_FAILED':
+      // Only a 400 naming the password is the visitor's to fix (as sign-up reads it).
+      return failed(
+        error.details.some(({ field }) => field === 'password')
+          ? { kind: 'wrong_password' }
+          : { kind: 'unavailable' },
+      );
     case 'AUTH_BUSY':
       return failed({ kind: 'busy' });
     case 'TOO_MANY_REQUESTS':
