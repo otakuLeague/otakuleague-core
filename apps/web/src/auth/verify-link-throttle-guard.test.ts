@@ -5,12 +5,14 @@ import {
   createActionThrottle,
   createActionThrottleKeyer,
 } from './action-throttle';
-import type { ActionClientSource } from './action-throttle-guard';
+import type {
+  ActionClientSource,
+  ActionGuardVerdict,
+} from './action-throttle-guard';
 import { EMAIL_LINK_LANDINGS } from './email-link';
 import {
   createVerifyLinkThrottleGuard,
   VERIFY_LINK_THROTTLE_CONFIG,
-  type VerifyLinkGuardVerdict,
 } from './verify-link-throttle-guard';
 
 const TOKEN = 'Vk3'.padEnd(43, 'q');
@@ -59,11 +61,11 @@ function setup(source: ActionClientSource = 'vercel') {
   return { clock, perNetwork, open, openMany };
 }
 
-const statusOf = (verdict: VerifyLinkGuardVerdict) =>
+const statusOf = (verdict: ActionGuardVerdict) =>
   verdict.kind === 'pass' ? 'pass' : verdict.response.status;
-const passCount = (verdicts: readonly VerifyLinkGuardVerdict[]) =>
+const passCount = (verdicts: readonly ActionGuardVerdict[]) =>
   verdicts.filter((verdict) => verdict.kind === 'pass').length;
-function responseOf(verdict: VerifyLinkGuardVerdict): Response {
+function responseOf(verdict: ActionGuardVerdict): Response {
   if (verdict.kind === 'pass') throw new Error('expected an answer');
   return verdict.response;
 }
@@ -162,6 +164,14 @@ describe('what is never counted (the handler makes 0 calls for it)', () => {
       { headers: { 'x-forwarded-for': undefined } },
     ],
     ['a list of addresses on Vercel', { ip: '203.0.113.7, 198.51.100.1' }],
+    [
+      'a path that cannot be decoded',
+      { url: `https://otakuleague.com/auth/verify%?token=${TOKEN}` },
+    ],
+    [
+      'a landing spelled with escapes',
+      { url: `https://otakuleague.com/auth/verify/%74ry-again?token=${TOKEN}` },
+    ],
   ])('%s passes uncounted, the cap reached or not', (_label, opening) => {
     const { perNetwork, openMany } = setup();
 
@@ -188,6 +198,23 @@ describe('what is never counted (the handler makes 0 calls for it)', () => {
 
     expect(passCount(openMany(10, { headers: noMetadata }))).toBe(10);
     expect(statusOf(open({ headers: noMetadata }))).toBe(303);
+  });
+});
+
+describe('the path as Next routes it (decoded, one trailing slash)', () => {
+  it.each<[string, string]>([
+    ['an escaped letter', '/auth/%76erify'],
+    ['an escaped first segment', '/%61uth/verify'],
+    ['an escaped slash', '/auth%2Fverify'],
+    ['a trailing slash', '/auth/verify/'],
+  ])('counts %s on the same budget as the plain link', (_label, path) => {
+    const { open, openMany } = setup();
+    const url = `https://otakuleague.com${path}?token=${TOKEN}`;
+
+    expect(passCount(openMany(5, { url }))).toBe(5);
+    expect(passCount(openMany(5))).toBe(5);
+    expect(statusOf(open({ url }))).toBe(303);
+    expect(statusOf(open())).toBe(303);
   });
 });
 

@@ -38,13 +38,30 @@ async function freshProxy() {
           headers: VISITOR_POST,
         }),
       ),
-    openLink: () =>
+    openLink: (link: string = LINK) =>
       proxy(
-        new NextRequest(`https://otakuleague.com${LINK}`, {
+        new NextRequest(`https://otakuleague.com${link}`, {
           headers: VISITOR_CLICK,
         }),
       ),
   };
+}
+
+/**
+ * Whether Next invokes the proxy: like its server (`resolve-routes.js`, Next 16.4.6), the matcher
+ * is tried on the raw path and on the percent-decoded one; the testing helper tries the raw only.
+ */
+function proxyInvoked(url: string, headers: Record<string, string>) {
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(url);
+    } catch {
+      return url;
+    }
+  })();
+  return [url, decoded].some((path) =>
+    unstable_doesMiddlewareMatch({ config, url: path, headers }),
+  );
 }
 
 afterEach(() => {
@@ -73,10 +90,26 @@ describe('proxy matcher (N26)', () => {
     ['the password page', EMAIL_LINK_LANDINGS.password, {}, false],
     ['a look-alike path', '/auth/verified', {}, false],
     ['the sign-in page', '/auth', {}, false],
+    [
+      'the link with an escaped letter',
+      `/auth/%76erify?token=${TOKEN}`,
+      {},
+      true,
+    ],
+    [
+      'the link with an escaped segment',
+      `/%61uth/verify?token=${TOKEN}`,
+      {},
+      true,
+    ],
+    [
+      'the link with a trailing slash',
+      `/auth/verify/?token=${TOKEN}`,
+      {},
+      true,
+    ],
   ])('%s: invoked %o', (_label, url, headers, invoked) => {
-    expect(unstable_doesMiddlewareMatch({ config, url, headers })).toBe(
-      invoked,
-    );
+    expect(proxyInvoked(url, headers)).toBe(invoked);
   });
 
   it('names the mailed link by its one definition', () => {
@@ -105,6 +138,17 @@ describe('proxy with the email link throttle (OTA-223)', () => {
     expect(refused.headers.get('x-middleware-next')).toBeNull();
     expect(refused.headers.get('x-middleware-rewrite')).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('counts the escaped spelling Next routes to the handler on the same 10', async () => {
+    const { openLink } = await freshProxy();
+    for (let opening = 1; opening <= 10; opening += 1) {
+      expect((await openLink(`/auth/%76erify?token=${TOKEN}`)).status).toBe(
+        200,
+      );
+    }
+
+    expect((await openLink()).status).toBe(303);
   });
 
   it('keeps all 10 openings after 60 action POSTs from the same network', async () => {

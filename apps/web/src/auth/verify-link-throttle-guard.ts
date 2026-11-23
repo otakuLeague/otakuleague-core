@@ -6,8 +6,10 @@ import type {
   ActionThrottleKey,
 } from './action-throttle';
 import {
+  GUARD_PASS,
   throttleClientOf,
   type ActionClientSource,
+  type ActionGuardVerdict,
 } from './action-throttle-guard';
 import {
   EMAIL_LINK_LANDINGS,
@@ -26,13 +28,6 @@ export const VERIFY_LINK_THROTTLE_CONFIG: ActionThrottleConfig = {
   maxEntries: 10_000,
 };
 
-/** Let the request through to the rest of the proxy, or answer it here so nothing else runs. */
-export type VerifyLinkGuardVerdict =
-  | { readonly kind: 'pass' }
-  | { readonly kind: 'answer'; readonly response: Response };
-
-const PASS: VerifyLinkGuardVerdict = { kind: 'pass' };
-
 export interface VerifyLinkThrottleGuardOptions {
   /** The keyer under this instance's secret, shared with the action guard. */
   readonly keyOf: (network: ClientNetwork) => ActionThrottleKey;
@@ -43,15 +38,32 @@ export interface VerifyLinkThrottleGuardOptions {
 }
 
 /**
- * Exactly the requests `verifyEmailLink` sends to the API: the link's path, a person opening it
- * (`navigate`, which is a GET only) and a well-formed token. A prefetch, HEAD, image tag or bad
- * token passes uncounted, since the handler answers it with 0 calls.
+ * The path as Next routes it: it invokes the proxy and finds the route on the percent-decoded path
+ * too (`/auth/%76erify` reaches the handler), so compare that, one trailing `/` ignored. A path
+ * that cannot be decoded is not the link.
+ */
+function routedPathOf(rawPathname: string): string | undefined {
+  try {
+    const decoded = decodeURIComponent(rawPathname);
+    return decoded.length > 1 && decoded.endsWith('/')
+      ? decoded.slice(0, -1)
+      : decoded;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Exactly the requests `verifyEmailLink` sends to the API: a person opening it (`navigate`, which
+ * is a GET only, checked first so an action POST parses no URL), the link's path and a well-formed
+ * token. A prefetch, HEAD, image tag or bad token passes uncounted, since the handler answers it
+ * with 0 calls.
  */
 function wouldConfirm(request: Request): boolean {
+  if (linkRequestKindOf(request) !== 'navigate') return false;
   const url = new URL(request.url);
   return (
-    url.pathname === EMAIL_VERIFICATION_LINK.path &&
-    linkRequestKindOf(request) === 'navigate' &&
+    routedPathOf(url.pathname) === EMAIL_VERIFICATION_LINK.path &&
     emailLinkTokenFrom(url.searchParams) !== undefined
   );
 }
@@ -68,16 +80,14 @@ export function createVerifyLinkThrottleGuard({
   keyOf,
   perNetwork,
   clientSource,
-}: VerifyLinkThrottleGuardOptions): (
-  request: Request,
-) => VerifyLinkGuardVerdict {
+}: VerifyLinkThrottleGuardOptions): (request: Request) => ActionGuardVerdict {
   return (request) => {
     perNetwork.forgetEnded();
-    if (!wouldConfirm(request)) return PASS;
+    if (!wouldConfirm(request)) return GUARD_PASS;
     const client = throttleClientOf(request.headers, clientSource());
-    if (client.kind === 'unknown') return PASS;
+    if (client.kind === 'unknown') return GUARD_PASS;
     return perNetwork.take(keyOf(client.network)).kind === 'allowed'
-      ? PASS
+      ? GUARD_PASS
       : { kind: 'answer', response: seeOther(EMAIL_LINK_LANDINGS.tryAgain) };
   };
 }
