@@ -13,7 +13,7 @@
     <!-- 429 on /anime/<slug>: ImportBusyState (app/anime/[slug]/header.tsx) replaces the anime header; its <header> holds the page's only h1; TabsNav still renders below (layout.tsx). Top: retry time known (Retry-After, rounded). Bottom: retry time unknown. Mascot pose: sleepy. -->
     <div class="sh">
       <div class="sh-bg" aria-hidden="true"></div>
-      <p class="ol-label demo-tag">Retry time known</p>
+      <p class="ol-label demo-tag">Retry time known (variant 1 of 2: each variant is its own page with one h1)</p>
       <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
       <header class="sh-header ol-glass">
         <div class="sh-header__in">
@@ -45,7 +45,7 @@
   <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#mg-rl1)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
-  <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
+  <path class="m-spark m-spark--dim" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
   <path class="m-line" d="M82 114q7 6 14 0M120 114q7 6 14 0"/>
   <ellipse class="m-cheek" cx="76" cy="128" rx="7" ry="4"/>
   <ellipse class="m-cheek" cx="140" cy="128" rx="7" ry="4"/>
@@ -53,7 +53,7 @@
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
   <path class="m-mark" d="M148 54h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <path class="m-mark m-mark--sm" d="M166 32h9l-9 10h9"/>
   <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
   <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
   <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
@@ -72,7 +72,7 @@
     </div>
     <div class="sh demo-sec">
       <div class="sh-bg" aria-hidden="true"></div>
-      <p class="ol-label demo-tag">Retry time unknown</p>
+      <p class="ol-label demo-tag">Retry time unknown (variant 2 of 2)</p>
       <a class="sh-skip ol-btn ol-btn--primary ol-btn--sm" href="#main">Skip to content</a>
       <header class="sh-header ol-glass">
         <div class="sh-header__in">
@@ -104,7 +104,7 @@
   <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#mg-rl2)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
-  <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
+  <path class="m-spark m-spark--dim" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
   <path class="m-line" d="M82 114q7 6 14 0M120 114q7 6 14 0"/>
   <ellipse class="m-cheek" cx="76" cy="128" rx="7" ry="4"/>
   <ellipse class="m-cheek" cx="140" cy="128" rx="7" ry="4"/>
@@ -112,7 +112,7 @@
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
   <path class="m-mark" d="M148 54h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <path class="m-mark m-mark--sm" d="M166 32h9l-9 10h9"/>
   <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
   <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
   <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
@@ -159,7 +159,7 @@
               <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
               <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
             </ul>
-            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <h2 class="ol-label err-foot-gap" id="f-theme">Theme</h2>
             <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
               <button role="radio" aria-checked="true">System</button>
               <button role="radio" aria-checked="false">Light</button>

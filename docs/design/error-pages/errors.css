@@ -200,6 +200,15 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.m-mark--x {
+  stroke: var(--bad);
+}
+.m-mark--sm {
+  stroke-width: 3.5;
+}
+.m-spark--dim {
+  opacity: 0.6;
+}
 .m-markdot {
   fill: var(--muted);
 }
@@ -298,4 +307,10 @@
   max-width: 1280px;
   margin: 0 auto;
   color: var(--muted);
+}
+.demo-cap--left {
+  text-align: left;
+}
+.err-foot-gap {
+  margin-top: var(--space-6);
 }
