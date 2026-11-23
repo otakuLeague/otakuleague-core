@@ -1,7 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RateLimiter } from './rate-limiter';
 import {
   requestJson,
@@ -335,5 +335,80 @@ describe('requestJson body limit', () => {
       'response body too large',
     );
     expect(source.calls()).toBe(2);
+  });
+});
+
+// OTA-220: fetch reports every network failure as "TypeError: fetch failed"; the cause says why.
+describe('requestJson network failures', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const url = 'https://api.jikan.moe/v4/anime/1?q=secret';
+  /** Like the errors Node puts in `cause`: the message quotes the URL. */
+  const nodeError = (name: string, code?: string): Error =>
+    Object.assign(new Error(`${name} for ${url}`), { name, code });
+
+  it.each([
+    [
+      'names a code-only cause',
+      new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } }),
+      'jikan unavailable: TypeError (ECONNREFUSED)',
+    ],
+    [
+      'names an Error cause by its code',
+      new TypeError('fetch failed', {
+        cause: nodeError('Error', 'ECONNREFUSED'),
+      }),
+      'jikan unavailable: TypeError (ECONNREFUSED)',
+    ],
+    [
+      'names an Error cause without a code by its class',
+      new TypeError('terminated', { cause: nodeError('SocketError') }),
+      'jikan unavailable: TypeError (SocketError)',
+    ],
+    [
+      'names each address tried (IPv4, then IPv6)',
+      new TypeError('fetch failed', {
+        cause: Object.assign(
+          new AggregateError([
+            nodeError('Error', 'ETIMEDOUT'),
+            nodeError('Error', 'ENETUNREACH'),
+          ]),
+          { code: 'ETIMEDOUT' },
+        ),
+      }),
+      'jikan unavailable: TypeError (ETIMEDOUT, ENETUNREACH)',
+    ],
+    [
+      'leaves out a cause that is not a plain code or class name',
+      new TypeError(`Failed to parse URL from ${url}`, {
+        cause: { code: url, name: url },
+      }),
+      'jikan unavailable: TypeError',
+    ],
+  ])('%s, never the URL', async (_case, error, expected) => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(error);
+
+    await expect(requestJson(url, {}, options())).rejects.toMatchObject({
+      name: 'SourceUnavailableError',
+      message: expected,
+    });
+  });
+
+  it('names the cause of real fetch failures, without the address', async () => {
+    const closed = createServer();
+    await new Promise<void>((resolve) =>
+      closed.listen(0, '127.0.0.1', resolve),
+    );
+    const { port } = closed.address() as AddressInfo;
+    await new Promise((resolve) => closed.close(resolve));
+
+    await expect(requestJson('/anime/1', {}, options())).rejects.toThrow(
+      /^jikan unavailable: TypeError \(ERR_INVALID_URL\)$/,
+    );
+    await expect(
+      requestJson(`http://127.0.0.1:${port}/anime/1`, {}, options()),
+    ).rejects.toThrow(/^jikan unavailable: TypeError \(ECONNREFUSED\)$/);
   });
 });

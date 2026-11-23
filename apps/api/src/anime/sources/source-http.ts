@@ -73,6 +73,43 @@ async function readCappedBody(
   return { kind: 'read', text: new TextDecoder().decode(bytes) };
 }
 
+/** Node error codes ("ECONNREFUSED", "UND_ERR_SOCKET") and class names ("SocketError"). */
+const SAFE_CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
+const SAFE_NAME = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
+/** An AggregateError holds one error per address tried (IPv4 and IPv6 of one host). */
+const MAX_ADDRESS_ERRORS = 4;
+
+function errorLabel(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const code: unknown = Reflect.get(value, 'code');
+  if (typeof code === 'string' && SAFE_CODE.test(code)) return code;
+  const name: unknown = Reflect.get(value, 'name');
+  return typeof name === 'string' && SAFE_NAME.test(name) ? name : undefined;
+}
+
+/**
+ * The reason logged for a fetch or body read that threw (OTA-220): its class, then the code (or
+ * class) of its cause, since fetch reports every network failure as "TypeError: fetch failed"
+ * and keeps the real error in `cause`; an AggregateError adds each address's code. Never a
+ * message: it can quote the URL.
+ */
+function fetchFailureReason(error: unknown): string {
+  if (!(error instanceof Error)) return 'network error';
+  const { cause } = error;
+  const addressErrors: readonly unknown[] =
+    cause instanceof AggregateError
+      ? cause.errors.slice(0, MAX_ADDRESS_ERRORS)
+      : [];
+  const labels = new Set(
+    [cause, ...addressErrors]
+      .map(errorLabel)
+      .filter((label) => label !== undefined),
+  );
+  return labels.size === 0
+    ? error.name
+    : `${error.name} (${[...labels].join(', ')})`;
+}
+
 /** Seconds ("30") or an HTTP date; anything else is the default. */
 export function retryAfterMs(header: string | null, now: number): number {
   if (header === null) return DEFAULT_RETRY_AFTER_MS;
@@ -132,7 +169,7 @@ export async function requestJson(
         signal: AbortSignal.timeout(options.timeoutMs),
       });
     } catch (error) {
-      return fail(error instanceof Error ? error.name : 'network error');
+      return fail(fetchFailureReason(error));
     }
     if (response.status === 429) {
       const delay = retryAfterMs(response.headers.get('retry-after'), now());
@@ -156,7 +193,7 @@ export async function requestJson(
         options.maxBodyBytes ?? MAX_BODY_BYTES,
       );
     } catch (error) {
-      return fail(error instanceof Error ? error.name : 'network error');
+      return fail(fetchFailureReason(error));
     }
     if (capped.kind === 'too_large') {
       throw new UnusableAnswerError(options.source, 'response body too large');
