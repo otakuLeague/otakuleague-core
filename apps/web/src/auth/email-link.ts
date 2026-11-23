@@ -41,23 +41,30 @@ export function emailLinkTokenFrom(
 }
 
 /**
- * A person opening the link, as far as the request says: a GET (Next runs GET for HEAD), and no
- * Fetch Metadata or purpose header naming a subresource, a frame, a fetch or a prefetch. Missing
- * headers pass (an older browser, a mail app's view). Anything else spends no confirm attempt: a
- * cross-site image tag or a prefetch would count against the IP's budget, and with the binding
- * attached a prefetch would spend the token before the click.
+ * How the request reached the link, as far as it says. `speculative`: any `Sec-Purpose`, or a
+ * `Purpose` naming `prefetch` (a prefetch or prerender), whatever else it carries. `navigate`: a
+ * person opening it, a GET (Next runs GET for HEAD) with no Fetch Metadata naming a subresource, a
+ * frame or a fetch; missing headers pass (an older browser, a mail app's view). `other`: the rest.
+ * Only `navigate` spends a confirm attempt: a cross-site image tag would count against the IP's
+ * budget, and with the binding attached a prefetch would spend the token before the click.
  */
-export function isLinkNavigation(request: Request): boolean {
+export type LinkRequestKind = 'navigate' | 'speculative' | 'other';
+
+export function linkRequestKindOf(request: Request): LinkRequestKind {
   const { headers } = request;
+  if (
+    headers.has('sec-purpose') ||
+    /prefetch/i.test(headers.get('purpose') ?? '')
+  ) {
+    return 'speculative';
+  }
   const mode = headers.get('sec-fetch-mode');
   const dest = headers.get('sec-fetch-dest');
-  return (
-    request.method === 'GET' &&
+  return request.method === 'GET' &&
     (mode === null || mode === 'navigate') &&
-    (dest === null || dest === 'document') &&
-    !headers.has('sec-purpose') &&
-    !/prefetch/i.test(headers.get('purpose') ?? '')
-  );
+    (dest === null || dest === 'document')
+    ? 'navigate'
+    : 'other';
 }
 
 /**

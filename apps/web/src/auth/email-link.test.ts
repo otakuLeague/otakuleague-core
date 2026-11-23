@@ -9,10 +9,11 @@ import type { CredentialCallResult } from './credential-call';
 import {
   EMAIL_LINK_LANDINGS,
   emailLinkTokenFrom,
-  isLinkNavigation,
   landingOf,
+  linkRequestKindOf,
   verifyLinkOutcomeFrom,
   wellFormedAuthToken,
+  type LinkRequestKind,
   type VerifyLinkOutcome,
 } from './email-link';
 
@@ -61,26 +62,46 @@ describe('emailLinkTokenFrom', () => {
   });
 });
 
-describe('isLinkNavigation', () => {
+describe('linkRequestKindOf', () => {
   const opened = (init: RequestInit = {}) =>
     new Request('https://beta.otakuleague.com/auth/verify', init);
+  const navigation = { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' };
 
-  it.each<[string, RequestInit, boolean]>([
-    ['a GET with no Fetch Metadata', {}, true],
+  it.each<[string, RequestInit, LinkRequestKind]>([
+    ['a GET with no Fetch Metadata', {}, 'navigate'],
+    ['a top-level navigation', { headers: navigation }, 'navigate'],
+    ['another Purpose', { headers: { purpose: 'preview' } }, 'navigate'],
+    ['HEAD', { method: 'HEAD' }, 'other'],
+    ['POST', { method: 'POST' }, 'other'],
+    ['a no-cors subresource', { headers: { 'sec-fetch-mode': 'no-cors' } }, 'other'],
+    ['an iframe', { headers: { 'sec-fetch-dest': 'iframe' } }, 'other'],
     [
-      'a top-level navigation',
-      { headers: { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' } },
-      true,
+      'a speculation-rules prefetch',
+      { headers: { ...navigation, 'sec-purpose': 'prefetch' } },
+      'speculative',
     ],
-    ['HEAD', { method: 'HEAD' }, false],
-    ['POST', { method: 'POST' }, false],
-    ['a no-cors subresource', { headers: { 'sec-fetch-mode': 'no-cors' } }, false],
-    ['an iframe', { headers: { 'sec-fetch-dest': 'iframe' } }, false],
-    ['any Sec-Purpose', { headers: { 'sec-purpose': 'prefetch' } }, false],
-    ['Purpose: prefetch', { headers: { purpose: 'prefetch' } }, false],
-    ['another Purpose', { headers: { purpose: 'preview' } }, true],
+    [
+      'a prerender',
+      { headers: { ...navigation, 'sec-purpose': 'prefetch;prerender' } },
+      'speculative',
+    ],
+    ['an empty Sec-Purpose', { headers: { 'sec-purpose': '' } }, 'speculative'],
+    [
+      'a <link rel=prefetch> (a subresource with Sec-Purpose)',
+      {
+        headers: {
+          'sec-fetch-mode': 'no-cors',
+          'sec-fetch-dest': 'empty',
+          'sec-purpose': 'prefetch',
+        },
+      },
+      'speculative',
+    ],
+    ['HEAD with Sec-Purpose', { method: 'HEAD', headers: { 'sec-purpose': 'prefetch' } }, 'speculative'],
+    ['Purpose: prefetch', { headers: { purpose: 'prefetch' } }, 'speculative'],
+    ['Purpose: Prefetch, any case', { headers: { purpose: 'Prefetch' } }, 'speculative'],
   ])('reads %s as %s', (_name, init, expected) => {
-    expect(isLinkNavigation(opened(init))).toBe(expected);
+    expect(linkRequestKindOf(opened(init))).toBe(expected);
   });
 });
 

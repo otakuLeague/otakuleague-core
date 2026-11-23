@@ -79,7 +79,7 @@ const SIGNED_IN = answered({
   session: { sessionToken: NEW_SESSION, expiresAt: '2026-12-23T12:00:00.000Z' },
 });
 
-/** N36 on every answer: a bodiless 303, the three headers, a landing constant, never the token. */
+/** N36 but a speculative load: a bodiless 303, three headers, a landing constant, never the token. */
 async function expectSeeOther(
   response: Response,
   landing: EmailLinkLanding,
@@ -133,18 +133,6 @@ describe('verifyEmailLink: before any call', () => {
     ['an iframe', { headers: { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'iframe' } }],
     ['a mode alone that is not navigate', { headers: { 'sec-fetch-mode': 'no-cors' } }],
     ['a destination alone that is not document', { headers: { 'sec-fetch-dest': 'image' } }],
-    [
-      'a speculative prefetch',
-      {
-        headers: {
-          'sec-fetch-mode': 'navigate',
-          'sec-fetch-dest': 'document',
-          'sec-purpose': 'prefetch',
-        },
-      },
-    ],
-    ['a prerender', { headers: { 'sec-purpose': 'prefetch;prerender' } }],
-    ['a legacy prefetch', { headers: { purpose: 'Prefetch' } }],
   ])(
     'answers %s with try-again, 0 cookie reads and 0 calls (the token stays unspent)',
     async (_name, init) => {
@@ -158,6 +146,61 @@ describe('verifyEmailLink: before any call', () => {
       expect(mocks.setCookie).not.toHaveBeenCalled();
     },
   );
+
+  // Chrome serves a prefetched 303 as the later click (checked in Chrome 153, vi-b): a speculative
+  // load gets nothing it could reuse, so the click reaches the handler as a real navigation.
+  it.each<[string, Record<string, string>]>([
+    [
+      'a speculation-rules prefetch',
+      { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document', 'sec-purpose': 'prefetch' },
+    ],
+    ['a prerender', { 'sec-purpose': 'prefetch;prerender' }],
+    ['a <link rel=prefetch>', { 'sec-fetch-dest': 'empty', 'sec-purpose': 'prefetch' }],
+    ['a legacy prefetch', { purpose: 'Prefetch' }],
+  ])(
+    'answers %s with a bodiless 503, no Location, 0 cookie reads and 0 calls',
+    async (_name, headers) => {
+      const response = await verifyEmailLink(
+        new Request(linkRequest().url, { headers }),
+      );
+
+      expect(response.status).toBe(503);
+      expect(await response.text()).toBe('');
+      expect(Object.fromEntries(response.headers)).toEqual({
+        'cache-control': 'no-store',
+        'referrer-policy': 'no-referrer',
+      });
+      expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.reads).toEqual([]);
+      expect(mocks.setCookie).not.toHaveBeenCalled();
+      expect(mocks.reportAuthCallFault).not.toHaveBeenCalled();
+    },
+  );
+
+  // Order: preview first, then the speculative branch before the token, any read or any call.
+  it('answers a speculative load on a preview with the preview 303 to /auth', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    const prefetch = new Request(linkRequest().url, {
+      headers: { 'sec-purpose': 'prefetch' },
+    });
+
+    await expectSeeOther(await verifyEmailLink(prefetch), '/auth');
+    expect(mocks.credentialCall).not.toHaveBeenCalled();
+    expect(mocks.reads).toEqual([]);
+  });
+
+  it('answers a speculative load with a malformed token with the 503, never expired', async () => {
+    const prefetch = new Request(linkRequest(`token=${TOKEN}A`).url, {
+      headers: { 'sec-purpose': 'prefetch' },
+    });
+    const response = await verifyEmailLink(prefetch);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('location')).toBeNull();
+    expect(await response.text()).toBe('');
+    expect(mocks.credentialCall).not.toHaveBeenCalled();
+    expect(mocks.reads).toEqual([]);
+  });
 
   it.each<[string, Record<string, string>]>([
     [
