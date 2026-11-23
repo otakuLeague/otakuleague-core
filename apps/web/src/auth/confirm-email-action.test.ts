@@ -383,10 +383,9 @@ describe('confirmEmailAction', () => {
     await expect(confirmEmailAction(IDLE, passwordForm(longest))).rejects.toBe(
       REDIRECT_SIGNAL,
     );
-    expect(mocks.credentialCall.mock.calls[0]?.[0]?.body).toEqual({
-      token: TOKEN,
-      password: longest,
-    });
+    expect(mocks.credentialCall).toHaveBeenCalledWith(
+      expect.objectContaining({ body: { token: TOKEN, password: longest } }),
+    );
   });
 
   it('ignores a forged previous state', async () => {
