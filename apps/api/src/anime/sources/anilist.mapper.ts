@@ -216,8 +216,9 @@ export function mapAniListMedia(value: unknown): AnimeSnapshot | null {
     episodes: integer(media.episodes, 1),
     durationMinutes: integer(media.duration, 1),
     synopsis: synopsisText(media.description),
-    coverImageUrl: httpUrl(cover.extraLarge) ?? httpUrl(cover.large),
-    bannerImageUrl: httpUrl(media.bannerImage),
+    coverImageUrl:
+      anilistImageUrl(cover.extraLarge) ?? anilistImageUrl(cover.large),
+    bannerImageUrl: anilistImageUrl(media.bannerImage),
     trailer: trailer(media.trailer),
     genres: texts(media.genres),
     tags: tags(media.tags),
@@ -255,7 +256,7 @@ function mediaSummary(value: unknown): MediaSummary | null {
     startDate: partialDate(media.startDate),
     titleEnglish: text(title.english),
     titleRomaji: text(title.romaji),
-    coverImageUrl: httpUrl(record(media.coverImage).large),
+    coverImageUrl: anilistImageUrl(record(media.coverImage).large),
   };
   if (media.type === 'ANIME') {
     return {

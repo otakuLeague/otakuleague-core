@@ -14,7 +14,7 @@ import type {
   Prisma,
 } from '../generated/prisma/client';
 import type { StoredAnime, StoredSnapshot } from './anime.merge';
-import { integer, oneOf, record, text } from './sources/parse';
+import { integer, oneOf, record, sourceImageUrl, text } from './sources/parse';
 import type { AnimeSnapshot } from './sources/source.types';
 
 // Conversions between our model and the database rows. The JSON columns are only ever
@@ -165,8 +165,11 @@ function fromSnapshotRow(row: SnapshotRow): StoredSnapshot {
       episodes: row.episodes,
       durationMinutes: row.durationMinutes,
       synopsis: row.synopsis,
-      coverImageUrl: row.coverImageUrl,
-      bannerImageUrl: row.bannerImageUrl,
+      coverImageUrl: sourceImageUrl(DATA_SOURCE[row.source], row.coverImageUrl),
+      bannerImageUrl: sourceImageUrl(
+        DATA_SOURCE[row.source],
+        row.bannerImageUrl,
+      ),
       trailer: readTrailer(row),
       genres: row.genres,
       tags: jsonArray(row.tags, readTag),

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { loadAnime, resolveAnimeSlug } from '../../../src/anime/data';
 import { animeTitle, excerpt } from '../../../src/anime/format';
+import { imageSrc } from '../../../src/anime/image-src';
 import { resolveTab } from '../../../src/anime/resolve-tab';
 import {
   type AnimeTabSegment,
@@ -78,7 +79,7 @@ export async function tabMetadata(
       ? animeTitle(anime)
       : `${animeTitle(anime)} · ${tabLabel(segment)}`;
   const description = excerpt(anime.synopsis?.value);
-  const cover = anime.coverImageUrl?.value;
+  const cover = imageSrc(anime.coverImageUrl?.value);
   return {
     title,
     description,
@@ -86,7 +87,7 @@ export async function tabMetadata(
     openGraph: {
       title,
       description,
-      images: cover === undefined ? [] : [cover],
+      images: cover === null ? [] : [cover],
     },
     twitter: { card: 'summary', title, description },
   };

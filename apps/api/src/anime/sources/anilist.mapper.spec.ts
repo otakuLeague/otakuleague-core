@@ -370,7 +370,52 @@ function walkLevels(name: string): Record<string, unknown>[] {
   );
 }
 
+describe('mapAniListMedia images', () => {
+  const base = media('anilist-attack-on-titan');
+  const cover = record(base.coverImage);
+
+  it('drops a banner that is not an AniList https URL', () => {
+    expect(
+      mapAniListMedia({ ...base, bannerImage: 'https://evil.example/b.jpg' })
+        ?.bannerImageUrl,
+    ).toBeNull();
+  });
+
+  it('falls back to the large cover when extraLarge is foreign', () => {
+    const snapshot = mapAniListMedia({
+      ...base,
+      coverImage: {
+        ...cover,
+        extraLarge: 'https://evil.example/c.jpg',
+        large: 'https://s4.anilist.co/large.jpg',
+      },
+    });
+    expect(snapshot?.coverImageUrl).toBe('https://s4.anilist.co/large.jpg');
+  });
+
+  it('has no cover when both are foreign', () => {
+    const snapshot = mapAniListMedia({
+      ...base,
+      coverImage: { extraLarge: 'http://s4.anilist.co/a.jpg', large: 'x' },
+    });
+    expect(snapshot?.coverImageUrl).toBeNull();
+  });
+});
+
 describe('mapAniListRelationNodes', () => {
+  it('drops a relation cover that is not an AniList https URL', () => {
+    const level = walkLevels('attack-on-titan')[0];
+    const foreign = mapAniListRelationNodes({
+      Page: {
+        media: (record(level?.Page).media as unknown[]).map((entry) => ({
+          ...record(entry),
+          coverImage: { large: 'https://evil.example/c.jpg' },
+        })),
+      },
+    });
+    expect(foreign[0]?.coverImageUrl).toBeNull();
+  });
+
   it('maps a node, its edges and their targets, manga source included', () => {
     const [aot] = mapAniListRelationNodes(walkLevels('attack-on-titan')[0]);
 

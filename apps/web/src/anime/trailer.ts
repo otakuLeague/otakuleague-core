@@ -1,4 +1,5 @@
 import type { AnimeDetails, AnimeTrailer } from '@otakuleague/shared-types';
+import { imageSrc } from './image-src';
 
 const YOUTUBE_EMBED_ORIGIN = 'https://www.youtube-nocookie.com';
 const YOUTUBE_WATCH_ORIGIN = 'https://www.youtube.com';
@@ -56,15 +57,11 @@ function urlsOf(
   }
 }
 
-function httpsUrl(url: string | undefined): string | null {
-  return url !== undefined && url.startsWith('https://') ? url : null;
-}
-
 /** The poster behind the play button: the banner, else the cover, else a plain panel. */
 function posterOf(anime: AnimeDetails): TrailerPoster {
   const url =
-    httpsUrl(anime.bannerImageUrl?.value) ??
-    httpsUrl(anime.coverImageUrl?.value);
+    imageSrc(anime.bannerImageUrl?.value) ??
+    imageSrc(anime.coverImageUrl?.value);
   return url === null ? { kind: 'placeholder' } : { kind: 'image', url };
 }
 

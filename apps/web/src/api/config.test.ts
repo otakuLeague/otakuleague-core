@@ -232,6 +232,8 @@ it('next.config.ts keeps Server Action arguments out of the dev log, serves the 
     'utf8',
   );
 
+  // Images are never proxied or resized by this server (OTA-97, OTA-209).
+  expect(nextConfig).toContain('images: { unoptimized: true },');
   expect(nextConfig).toContain('serverFunctions: false,');
   // Next tests each pattern against the request's path and query: the mailed link's token stays
   // out of the dev request log.

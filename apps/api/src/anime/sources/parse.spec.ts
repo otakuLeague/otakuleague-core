@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  anilistImageUrl,
   boundedNames,
   countryCode,
   hashtags,
   httpUrl,
+  myanimelistImageUrl,
   partialDate,
   stripTags,
   synopsisText,
@@ -175,12 +177,72 @@ describe('partialDate', () => {
 describe('httpUrl', () => {
   it.each([
     ['https://anilist.co/anime/1', 'https://anilist.co/anime/1'],
+    ['HTTPS://anilist.co/x', 'HTTPS://anilist.co/x'],
+    ['https:/s4.anilist.co/a.jpg', null],
+    ['https:s4.anilist.co/a.jpg', null],
+    ['https:\\s4.anilist.co/a.jpg', null],
+    ['http:/x', null],
     ['javascript:alert(1)', null],
     ['not a url', null],
     [42, null],
   ])('%j -> %j', (input, expected) => {
     expect(httpUrl(input)).toBe(expected);
   });
+});
+
+const BAD_IMAGES: readonly unknown[] = [
+  'http://s4.anilist.co/a.jpg',
+  'https://evil.example/a.jpg',
+  'https://anilist.co.evil.example/a.jpg',
+  'https://evilanilist.co/a.jpg',
+  'https://cdn.myanimelist.net.evil.example/a.jpg',
+  'https://evilmyanimelist.net/a.jpg',
+  'https://user:pw@s4.anilist.co/a.jpg',
+  'HTTPS://s4.anilist.co/a.jpg',
+  'https://s4.anilist.co:8443/a.jpg',
+  'https://s4.anilist.co\\@evil.example/a.jpg',
+  'https://@s4.anilist.co/a.jpg',
+  'https://s4%2Eanilist.co/a.jpg',
+  'https://s4.anilist.co/a\t.jpg',
+  'https://\\s4.anilist.co/a.jpg',
+  `https://s4.anilist.co/${'a'.repeat(2_048)}`,
+  'https:/s4.anilist.co/a.jpg',
+  'https:s4.anilist.co/a.jpg',
+  'https:\\s4.anilist.co/a.jpg',
+  '//s4.anilist.co/a.jpg',
+  '',
+  null,
+  42,
+];
+
+describe('anilistImageUrl', () => {
+  it.each(['https://s4.anilist.co/a.jpg', 'https://anilist.co/a.jpg'])(
+    'keeps %s',
+    (url) => {
+      expect(anilistImageUrl(url)).toBe(url);
+    },
+  );
+
+  it.each([...BAD_IMAGES, 'https://cdn.myanimelist.net/a.jpg'])(
+    'rejects %j',
+    (url) => {
+      expect(anilistImageUrl(url)).toBeNull();
+    },
+  );
+});
+
+describe('myanimelistImageUrl', () => {
+  it('keeps the MyAnimeList CDN', () => {
+    const url = 'https://cdn.myanimelist.net/images/a.jpg';
+    expect(myanimelistImageUrl(url)).toBe(url);
+  });
+
+  it.each([...BAD_IMAGES, 'https://s4.anilist.co/a.jpg'])(
+    'rejects %j',
+    (url) => {
+      expect(myanimelistImageUrl(url)).toBeNull();
+    },
+  );
 });
 
 describe('synopsisText hostile markup', () => {

@@ -1,4 +1,4 @@
-import type { PartialDate } from '@otakuleague/shared-types';
+import type { AnimeDataSource, PartialDate } from '@otakuleague/shared-types';
 
 // Source responses are `unknown` until checked field by field: a field that is missing or
 // changes type becomes null (or empty), and the rest of the import goes on.
@@ -92,10 +92,19 @@ export function boundedNames(values: readonly unknown[]): string[] {
   return [...new Set(names)].slice(0, MAX_PRODUCERS);
 }
 
-/** An absolute http(s) URL, or null. */
+/**
+ * An absolute http(s) URL, or null. The text must start with "scheme://": the URL parser
+ * would also accept "https:/path" and "https:host", which browsers read differently.
+ */
 export function httpUrl(value: unknown): string | null {
   const candidate = text(value);
-  if (candidate === null || !URL.canParse(candidate)) return null;
+  if (
+    candidate === null ||
+    !/^https?:\/\//i.test(candidate) ||
+    !URL.canParse(candidate)
+  ) {
+    return null;
+  }
   const { protocol } = new URL(candidate);
   return protocol === 'https:' || protocol === 'http:' ? candidate : null;
 }
@@ -137,15 +146,61 @@ export function boundedTexts(value: unknown): string[] {
     : [];
 }
 
-/** An https URL on anilist.co or one of its subdomains (its CDN), or null. */
-export function anilistImageUrl(value: unknown): string | null {
-  const url = httpUrl(value);
-  if (url === null) return null;
-  const { protocol, hostname } = new URL(url);
-  return protocol === 'https:' &&
-    (hostname === 'anilist.co' || hostname.endsWith('.anilist.co'))
+const MAX_IMAGE_URL_LENGTH = 2_048;
+
+/**
+ * Only the canonical form of an https URL is accepted (the parser's own `href` must equal the
+ * text), so backslashes, `@` tricks, escaped dots, tabs and the like are rejected rather than
+ * rewritten; no credentials, no port.
+ */
+function imageUrlOn(value: unknown, domains: readonly string[]): string | null {
+  const url = text(value);
+  if (
+    url === null ||
+    url.length > MAX_IMAGE_URL_LENGTH ||
+    !url.startsWith('https://') ||
+    !URL.canParse(url)
+  ) {
+    return null;
+  }
+  const parsed = new URL(url);
+  const onDomain = domains.some(
+    (domain) =>
+      parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`),
+  );
+  return parsed.protocol === 'https:' &&
+    parsed.username === '' &&
+    parsed.password === '' &&
+    parsed.port === '' &&
+    onDomain &&
+    parsed.href === url
     ? url
     : null;
+}
+
+/** An https URL on anilist.co or one of its subdomains (its CDN), or null. */
+export function anilistImageUrl(value: unknown): string | null {
+  return imageUrlOn(value, ['anilist.co']);
+}
+
+/** An https URL on myanimelist.net or one of its subdomains (its CDN), or null. */
+export function myanimelistImageUrl(value: unknown): string | null {
+  return imageUrlOn(value, ['myanimelist.net']);
+}
+
+const IMAGE_CHECK: Readonly<
+  Record<AnimeDataSource, (value: unknown) => string | null>
+> = {
+  anilist: anilistImageUrl,
+  jikan: myanimelistImageUrl,
+};
+
+/** The image check for the source that supplied the URL. */
+export function sourceImageUrl(
+  source: AnimeDataSource,
+  value: unknown,
+): string | null {
+  return IMAGE_CHECK[source](value);
 }
 
 /** A score out of 100 above zero (0 is AniList's "unrated"), or null. */

@@ -29,6 +29,17 @@ describe('relation rows', () => {
     );
   });
 
+  it('drops a stored node cover that is not an AniList https URL', () => {
+    const row = toRelationRow(frieren, FETCHED_AT);
+
+    expect(
+      fromRelationRow({
+        ...rowOf(row.edges),
+        coverImageUrl: 'https:/s4.anilist.co/cover.jpg',
+      }).coverImageUrl,
+    ).toBeNull();
+  });
+
   it('drops edges with an unknown relation or a corrupt target, and edges that are not a list', () => {
     const kept = toRelationRow(frieren, FETCHED_AT).edges[0];
     const corrupt = [
