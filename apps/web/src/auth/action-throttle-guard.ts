@@ -48,7 +48,7 @@ export function actionClientSourceOf(
   }
 }
 
-type ActionClient =
+export type ThrottleClient =
   | {
       readonly kind: 'known';
       readonly network: ClientNetwork;
@@ -56,10 +56,11 @@ type ActionClient =
     }
   | { readonly kind: 'unknown' };
 
-function actionClientOf(
+/** The client both proxy throttles count (actions and the email link), read the same way. */
+export function throttleClientOf(
   headers: Pick<Headers, 'get'>,
   source: ActionClientSource,
-): ActionClient {
+): ThrottleClient {
   if (source === 'one_machine') {
     return { kind: 'known', network: LOOPBACK_CLIENT_NETWORK, site: undefined };
   }
@@ -74,12 +75,15 @@ function actionClientOf(
       };
 }
 
-/** Let the request through to the rest of the proxy, or answer it here so nothing else runs. */
+/**
+ * Let the request through to the rest of the proxy, or answer it here so nothing else runs. Shared
+ * with the email link guard.
+ */
 export type ActionGuardVerdict =
   | { readonly kind: 'pass' }
-  | { readonly kind: 'answer'; readonly response: NextResponse };
+  | { readonly kind: 'answer'; readonly response: Response };
 
-const PASS: ActionGuardVerdict = { kind: 'pass' };
+export const GUARD_PASS: ActionGuardVerdict = { kind: 'pass' };
 
 function plainText(
   status: 403 | 429,
@@ -144,18 +148,18 @@ export function createActionThrottleGuard({
   return (request) => {
     perNetwork.forgetEnded();
     perSite.forgetEnded();
-    if (!isPossibleActionPost(request)) return PASS;
+    if (!isPossibleActionPost(request)) return GUARD_PASS;
     if (isCrossSitePost(request.headers)) {
       return plainText(403, ACTION_CROSS_SITE_TEXT);
     }
-    const client = actionClientOf(request.headers, clientSource());
+    const client = throttleClientOf(request.headers, clientSource());
     if (client.kind === 'unknown') {
       reportClientIpUnknown();
-      return PASS;
+      return GUARD_PASS;
     }
     const decision = take(client.network, client.site);
     return decision.kind === 'allowed'
-      ? PASS
+      ? GUARD_PASS
       : plainText(429, ACTION_THROTTLED_TEXT, {
           'Retry-After': String(decision.retryAfterSeconds),
         });
