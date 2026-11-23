@@ -11,6 +11,6 @@
     { "name": "anime-sparse", "path": "/anime/minami-ke" },
     { "name": "anime-not-found", "path": "/anime/no-such-anime" },
     { "name": "auth-sign-in", "path": "/auth" },
-    { "name": "auth-sign-up", "path": "/sign-up" }
+    { "name": "auth-verify-expired", "path": "/auth/verify/expired" }
   ]
 }

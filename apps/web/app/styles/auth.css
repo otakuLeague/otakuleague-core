@@ -269,11 +269,23 @@
   place-items: center;
   inline-size: 64px;
   block-size: 64px;
-  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border: 1px solid
+    color-mix(in oklab, var(--tone, var(--accent)) 40%, transparent);
   border-radius: var(--radius-lg);
-  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
-  color: var(--accent-ink);
+  background: color-mix(
+    in oklab,
+    var(--tone, var(--accent)) 16%,
+    var(--surface)
+  );
+  color: var(--tone, var(--accent-ink));
   font: 700 28px/1 var(--font-display);
+}
+/* Email link landings (OTA-139 1f-vi-b): a check when the address is confirmed, a clock otherwise. */
+.au-badge[data-tone='ok'] {
+  --tone: var(--good);
+}
+.au-badge[data-tone='wait'] {
+  --tone: var(--xp-gold);
 }
 .au-email {
   color: var(--ink);

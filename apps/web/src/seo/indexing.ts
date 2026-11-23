@@ -37,5 +37,10 @@ export function robotsHeaders(indexing: SearchIndexing): RobotsHeaderRule[] {
           source: '/auth/check-email',
           headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
         },
+        // The emailed link and its landings, the GET handler included (ADR 0015 1f-vi, decision 8).
+        {
+          source: '/auth/verify/:path*',
+          headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+        },
       ];
 }
