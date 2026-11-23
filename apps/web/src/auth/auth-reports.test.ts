@@ -175,15 +175,21 @@ describe('reportAuthCallFault', () => {
     const linkReporters = await import('./auth-reports');
     linkReporters.reportClientIpUnknown('email-confirm', 5_000);
     linkReporters.reportAuthCallFault('email-confirm', 'configuration', 5_000);
+    linkReporters.reportClientIpUnknown('email-resend', 605_000);
+    linkReporters.reportAuthCallFault('email-resend', 'invalid_response', 1);
 
     const sent = mocks.captureMessage.mock.calls.map(
       ([, context]: unknown[]) => context,
     );
-    expect(sent).toHaveLength(7);
+    expect(sent).toHaveLength(9);
     expect(sent.slice(5)).toEqual([
       expect.objectContaining({ tags: { auth_route: 'email-confirm' } }),
       expect.objectContaining({
         tags: { auth_route: 'email-confirm', auth_fault: 'configuration' },
+      }),
+      expect.objectContaining({ tags: { auth_route: 'email-resend' } }),
+      expect.objectContaining({
+        tags: { auth_route: 'email-resend', auth_fault: 'invalid_response' },
       }),
     ]);
     expect(

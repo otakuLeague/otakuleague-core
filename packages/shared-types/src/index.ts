@@ -9,6 +9,7 @@ import {
 import {
   USERNAME_PATTERN,
   type EmailVerificationConfirmResponse,
+  type EmailVerificationResendResponse,
   type MeResponse,
   type SignInResponse,
   type SignUpResponse,
@@ -191,6 +192,16 @@ export function isEmailVerificationConfirmResponse(
     default:
       return false;
   }
+}
+
+/**
+ * True when `value` is a POST /auth/email-verification/resend 202 body (ADR 0015 Addendum 1f-vii
+ * decision 5): any object, other keys ignored as `isSignInResponse` does. The web reads nothing in it.
+ */
+export function isEmailVerificationResendResponse(
+  value: unknown,
+): value is EmailVerificationResendResponse {
+  return isRecord(value);
 }
 
 const FRANCHISE_STATES: readonly unknown[] = [
