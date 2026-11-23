@@ -35,6 +35,10 @@ const SCANNED = filesUnder('').filter(
   (file) => !TEST_FILE.test(file) && !file.endsWith('.tsbuildinfo'),
 );
 
+// The one exception (ADR 0015 Addendum 1f-vi decision 3): the email link handler's bodiless 303,
+// which no document or form inherits. The literal appears there exactly once.
+const SEE_OTHER = path.join('src', 'auth', 'see-other.ts');
+
 describe('referrer guard', () => {
   it('matches the policy in any letter case and its legacy value, never rel="noopener noreferrer"', () => {
     const matching = [
@@ -75,11 +79,21 @@ describe('referrer guard', () => {
     ).toEqual([]);
   });
 
-  it('finds the policy in no non-test file of apps/web, comments included', () => {
-    const offenders = SCANNED.filter((file) =>
-      holdsNoReferrer(readFileSync(path.join(WEB_DIR, file), 'utf8')),
+  it('finds the policy in no non-test file of apps/web but the 303 helper, comments included', () => {
+    const offenders = SCANNED.filter(
+      (file) =>
+        file !== SEE_OTHER &&
+        holdsNoReferrer(readFileSync(path.join(WEB_DIR, file), 'utf8')),
     );
 
     expect(offenders).toEqual([]);
+  });
+
+  it('finds the literal exactly once in the 303 helper, and never the legacy value', () => {
+    const text = readFileSync(path.join(WEB_DIR, SEE_OTHER), 'utf8');
+
+    expect(SCANNED).toContain(SEE_OTHER);
+    expect(text.match(/no-referrer/gi)).toEqual(['no-referrer']);
+    expect(NO_REFERRER_PATTERNS[1]?.test(text)).toBe(false);
   });
 });

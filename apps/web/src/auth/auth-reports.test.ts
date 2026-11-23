@@ -171,11 +171,21 @@ describe('reportAuthCallFault', () => {
     reporters.reportAuthCallFault('me', 'invalid_response', 5_000);
     reporters.reportAuthCallFault('sign-out', 'configuration', 5_000);
     reporters.reportAuthCallFault('sign-out', 'revocation_unconfirmed', 5_000);
+    vi.resetModules();
+    const linkReporters = await import('./auth-reports');
+    linkReporters.reportClientIpUnknown('email-confirm', 5_000);
+    linkReporters.reportAuthCallFault('email-confirm', 'configuration', 5_000);
 
     const sent = mocks.captureMessage.mock.calls.map(
       ([, context]: unknown[]) => context,
     );
-    expect(sent).toHaveLength(5);
+    expect(sent).toHaveLength(7);
+    expect(sent.slice(5)).toEqual([
+      expect.objectContaining({ tags: { auth_route: 'email-confirm' } }),
+      expect.objectContaining({
+        tags: { auth_route: 'email-confirm', auth_fault: 'configuration' },
+      }),
+    ]);
     expect(
       sent.map((context) => scrubErrorEvent({ ...(context as object) })),
     ).toEqual(sent);

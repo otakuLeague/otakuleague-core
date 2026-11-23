@@ -15,6 +15,9 @@ export const SIGN_UP_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
 /** 10 minutes: the "Check your email" screen reads the address right after the redirect. */
 const FLASH_COOKIE_MAX_AGE_SECONDS = 10 * 60;
 
+/** 10 minutes: the password page of an emailed link reads its token right after the redirect. */
+const VERIFY_COOKIE_MAX_AGE_SECONDS = 10 * 60;
+
 const SESSION_COOKIE_NAME = 'ol_session';
 
 /**
@@ -79,6 +82,28 @@ export function signUpCookie(
   webPublicUrl: WebPublicUrl,
 ): AuthCookie<'ol_signup'> {
   return authCookie('ol_signup', SIGN_UP_COOKIE_MAX_AGE_SECONDS, webPublicUrl);
+}
+
+/**
+ * The binding with `Max-Age=0`, written by the link handler only once its token was consumed
+ * there (ADR 0015 Addendum 1f-vi decision 6). Never `cookies().delete()`: no `Secure`, so a
+ * browser would keep a `__Host-` cookie.
+ */
+export function clearedSignUpCookie(
+  webPublicUrl: WebPublicUrl,
+): AuthCookie<'ol_signup'> {
+  return authCookie('ol_signup', 0, webPublicUrl);
+}
+
+/**
+ * `ol_verify`: an emailed token, taken out of the address bar for the password page, written only
+ * on `confirmation_required` (ADR 0015 Addendum 1f-vi). Alone it confirms nothing: the sign-up
+ * password must go with it.
+ */
+export function verifyCookie(
+  webPublicUrl: WebPublicUrl,
+): AuthCookie<'ol_verify'> {
+  return authCookie('ol_verify', VERIFY_COOKIE_MAX_AGE_SECONDS, webPublicUrl);
 }
 
 /**

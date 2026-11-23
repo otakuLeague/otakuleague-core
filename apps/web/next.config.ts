@@ -69,8 +69,12 @@ const nextConfig: NextConfig = {
   headers: () =>
     Promise.resolve([...robotsHeaders(SEARCH_INDEXING), FRAME_DENY_RULE]),
   redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),
-  // Keeps Server Action arguments (could include credentials) out of the dev log (OTA-139).
-  logging: { serverFunctions: false },
+  // Keeps Server Action arguments (could include credentials) out of the dev log, and the mailed
+  // link's URL, whose query holds the token (OTA-139, ADR 0015 Addendum 1f-vi).
+  logging: {
+    serverFunctions: false,
+    incomingRequests: { ignore: [/^\/auth\/verify/] },
+  },
   // Inlined into the server and browser bundles at build time: the browser cannot read env vars.
   env: {
     SENTRY_ENVIRONMENT:

@@ -2,10 +2,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearedSessionCookie,
+  clearedSignUpCookie,
   flashCookie,
   SIGN_UP_COOKIE_MAX_AGE_SECONDS,
   sessionCookie,
   signUpCookie,
+  verifyCookie,
 } from './auth-cookies';
 import { parseWebPublicUrl } from './web-public-url';
 
@@ -44,6 +46,20 @@ describe.each([
   it('sets the flash address for 10 minutes', () => {
     expect(flashCookie(webPublicUrl)).toStrictEqual({
       name: `${prefix}ol_flash`,
+      options: { ...options, maxAge: 600 },
+    });
+  });
+
+  it('clears the binding with the same name and attributes and Max-Age 0 (Secure on https)', () => {
+    expect(clearedSignUpCookie(webPublicUrl)).toStrictEqual({
+      name: `${prefix}ol_signup`,
+      options: { ...options, maxAge: 0 },
+    });
+  });
+
+  it('sets the link token for the password page for 10 minutes', () => {
+    expect(verifyCookie(webPublicUrl)).toStrictEqual({
+      name: `${prefix}ol_verify`,
       options: { ...options, maxAge: 600 },
     });
   });

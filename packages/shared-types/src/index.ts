@@ -291,6 +291,7 @@ export {
 } from './redaction';
 export * from './anime';
 export {
+  EMAIL_VERIFICATION_LINK,
   IDENTIFIER_MAX,
   meetsSignUpPasswordRule,
   PASSWORD_MIN,

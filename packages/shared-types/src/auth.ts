@@ -87,6 +87,16 @@ export interface SignInResponse {
   readonly expiresAt: string;
 }
 
+/**
+ * The mailed confirmation link, written once (ADR 0015 Addendum 1f-vi): the email builds
+ * `<WEB_PUBLIC_URL><path>?<tokenParam>=<token>` from it, and the web serves `path` as a GET route
+ * handler. The parameter stays `token`, a name the redaction pattern masks in any text.
+ */
+export const EMAIL_VERIFICATION_LINK = {
+  path: '/auth/verify',
+  tokenParam: 'token',
+} as const;
+
 /** POST /auth/email-verification/confirm body (ADR 0020 Addendum 1e-ii). Sent only by the web server. */
 export interface EmailVerificationConfirmRequest {
   /** The emailed token, as the link carried it; at most 128 characters. */
