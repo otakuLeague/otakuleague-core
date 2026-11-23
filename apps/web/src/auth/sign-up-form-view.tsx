@@ -1,12 +1,11 @@
 import {
   IDENTIFIER_MAX,
   PASSWORD_MIN,
-  PASSWORD_RAW_MAX,
   type SignUpPasswordRules,
   signUpPasswordRules,
 } from '@otakuleague/shared-types';
 import type { FormEvent } from 'react';
-import { clearOnHide } from './clear-on-hide';
+import { PasswordInput } from './password-input';
 import { retryWaitCopy } from './sign-in-form-view';
 import {
   type SignUpSubmitBlock,
@@ -274,30 +273,19 @@ export function SignUpFormView({
       </div>
       <div className="au-field">
         <label htmlFor={PASSWORD_ID}>Password</label>
-        <div
-          className="au-input"
-          data-state={passwordInvalid ? 'error' : undefined}
-        >
-          <input
-            id={PASSWORD_ID}
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={PASSWORD_RAW_MAX}
-            required
-            readOnly={pending}
-            ref={clearOnHide}
-            aria-invalid={passwordInvalid || undefined}
-            aria-describedby={passwordDescribedBy}
-            onChange={(event) => {
-              onRulesChange(signUpPasswordRules(event.currentTarget.value));
-              onBlockChange('none');
-            }}
-          />
-        </div>
+        <PasswordInput
+          id={PASSWORD_ID}
+          name="password"
+          autoComplete="new-password"
+          fieldName="password"
+          pending={pending}
+          invalid={passwordInvalid}
+          describedBy={passwordDescribedBy}
+          onChange={(event) => {
+            onRulesChange(signUpPasswordRules(event.currentTarget.value));
+            onBlockChange('none');
+          }}
+        />
         {passwordBlocked && <BlockMessage block="rules_unmet" />}
         {/* The items describe the password, not the list: its aria-label would replace their text. */}
         {/* role="list": Safari drops list semantics under list-style: none. */}
@@ -316,28 +304,15 @@ export function SignUpFormView({
       </div>
       <div className="au-field">
         <label htmlFor={CONFIRM_ID}>Confirm password</label>
-        <div
-          className="au-input"
-          data-state={confirmBlocked ? 'error' : undefined}
-        >
-          <input
-            id={CONFIRM_ID}
-            type="password"
-            autoComplete="new-password"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={PASSWORD_RAW_MAX}
-            required
-            readOnly={pending}
-            ref={clearOnHide}
-            aria-invalid={confirmBlocked || undefined}
-            aria-describedby={
-              confirmBlocked ? `${CONFIRM_ID}-error` : undefined
-            }
-            onChange={() => onBlockChange('none')}
-          />
-        </div>
+        <PasswordInput
+          id={CONFIRM_ID}
+          autoComplete="new-password"
+          fieldName="confirmation"
+          pending={pending}
+          invalid={confirmBlocked}
+          describedBy={confirmBlocked ? `${CONFIRM_ID}-error` : undefined}
+          onChange={() => onBlockChange('none')}
+        />
         {confirmBlocked && <BlockMessage block="confirm_mismatch" />}
       </div>
       <button className="ol-btn ol-btn--primary au-btn" aria-disabled={pending}>

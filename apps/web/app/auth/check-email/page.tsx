@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { FocusHeading } from '../../../src/auth/focus-heading';
 import { CheckEmailAddress, CheckEmailLede } from './check-email-lede';
 import '../../styles/auth.css';
 
@@ -18,7 +19,7 @@ export default function CheckEmailPage() {
       <div className="au-badge" aria-hidden="true">
         {'✉︎'}
       </div>
-      <h1 tabIndex={-1}>Check your email</h1>
+      <FocusHeading>Check your email</FocusHeading>
       <Suspense fallback={<CheckEmailLede email={undefined} />}>
         <CheckEmailAddress />
       </Suspense>
