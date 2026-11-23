@@ -173,7 +173,7 @@ export const PRIVACY_POLICY: LegalDocument = {
               ],
               [
                 <span key="n">
-                  <code>ol_verify</code>, <code>ol_reset</code>
+                  <code>__Host-ol_verify</code>, <code>ol_reset</code>
                 </span>,
                 'Hold the token of a confirmation or password-reset link once it is taken out of the address bar',
                 '10 minutes',

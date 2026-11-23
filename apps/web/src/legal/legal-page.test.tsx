@@ -145,7 +145,7 @@ describe('privacy facts', () => {
       '__Host-ol_session',
       '__Host-ol_flash',
       '__Host-ol_signup',
-      'ol_verify',
+      '__Host-ol_verify',
       'ol_reset',
       'ol-theme',
     ]) {
