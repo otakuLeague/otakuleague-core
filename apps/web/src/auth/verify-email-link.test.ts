@@ -177,6 +177,31 @@ describe('verifyEmailLink: before any call', () => {
     },
   );
 
+  // Order: preview first, then the speculative branch before the token, any read or any call.
+  it('answers a speculative load on a preview with the preview 303 to /auth', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    const prefetch = new Request(linkRequest().url, {
+      headers: { 'sec-purpose': 'prefetch' },
+    });
+
+    await expectSeeOther(await verifyEmailLink(prefetch), '/auth');
+    expect(mocks.credentialCall).not.toHaveBeenCalled();
+    expect(mocks.reads).toEqual([]);
+  });
+
+  it('answers a speculative load with a malformed token with the 503, never expired', async () => {
+    const prefetch = new Request(linkRequest(`token=${TOKEN}A`).url, {
+      headers: { 'sec-purpose': 'prefetch' },
+    });
+    const response = await verifyEmailLink(prefetch);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('location')).toBeNull();
+    expect(await response.text()).toBe('');
+    expect(mocks.credentialCall).not.toHaveBeenCalled();
+    expect(mocks.reads).toEqual([]);
+  });
+
   it.each<[string, Record<string, string>]>([
     [
       'a click from a mail (cross-site top-level navigation)',

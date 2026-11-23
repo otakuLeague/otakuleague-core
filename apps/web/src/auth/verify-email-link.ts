@@ -55,7 +55,8 @@ export async function verifyEmailLink(request: Request): Promise<Response> {
     if (requestKind === 'speculative') {
       return refuseSpeculation();
     }
-    if (requestKind === 'other') {
+    // Fails closed: only `navigate` reaches the token, a kind added later lands on try-again.
+    if (requestKind !== 'navigate') {
       return seeOther(EMAIL_LINK_LANDINGS.tryAgain);
     }
     const token = emailLinkTokenFrom(searchParams);
