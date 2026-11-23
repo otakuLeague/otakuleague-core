@@ -94,6 +94,17 @@ describe('headerFacts', () => {
     );
   });
 
+  it('drops a banner or cover that is not a canonical https URL', () => {
+    const facts = headerFacts(
+      animeFixture({
+        bannerImageUrl: sourced('https:/s4.anilist.co/banner.jpg'),
+        coverImageUrl: sourced('https:s4.anilist.co/cover.jpg'),
+      }),
+    );
+    expect(facts.bannerUrl).toBeNull();
+    expect(facts.coverUrl).toBeNull();
+  });
+
   it('drops the format from a rank when the format is unknown', () => {
     expect(headerFacts(animeFixture({ format: null })).rankRated).toBe(
       '#69 highest rated',

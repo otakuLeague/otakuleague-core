@@ -12,6 +12,8 @@ describe('coverSrc', () => {
       'javascript:alert(1)',
       '/cover.jpg',
       '//evil.example/cover.jpg',
+      'https:/s4.anilist.co/cover.jpg',
+      'https:s4.anilist.co/cover.jpg',
     ]) {
       expect(coverSrc({ coverImageUrl }), String(coverImageUrl)).toBeNull();
     }
@@ -35,8 +37,6 @@ describe('cardTitle', () => {
     expect(cardTitle({ titleEnglish: '  ', titleRomaji: 'Mushishi' })).toBe(
       'Mushishi',
     );
-    expect(cardTitle({ titleEnglish: '', titleRomaji: '\t' })).toBe(
-      'Untitled',
-    );
+    expect(cardTitle({ titleEnglish: '', titleRomaji: '\t' })).toBe('Untitled');
   });
 });

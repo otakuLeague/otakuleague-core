@@ -6,6 +6,7 @@ import type {
   AnimeStatus,
 } from '@otakuleague/shared-types';
 import { animeTitle } from './format';
+import { imageSrc } from './image-src';
 
 export type StatusKey =
   'airing' | 'finished' | 'upcoming' | 'hiatus' | 'cancelled';
@@ -178,8 +179,8 @@ export function headerFacts(anime: AnimeDetails): HeaderFacts {
     title,
     subtitle: subtitleParts.length > 0 ? subtitleParts.join(' · ') : null,
     initials: initialsOf(title),
-    coverUrl: anime.coverImageUrl?.value ?? null,
-    bannerUrl: anime.bannerImageUrl?.value ?? null,
+    coverUrl: imageSrc(anime.coverImageUrl?.value),
+    bannerUrl: imageSrc(anime.bannerImageUrl?.value),
     creators: anime.creators?.value ?? [],
     studios: (anime.studios?.value ?? [])
       .filter((studio) => studio.main)

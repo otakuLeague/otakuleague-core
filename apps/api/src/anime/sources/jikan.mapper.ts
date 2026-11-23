@@ -10,6 +10,7 @@ import {
   boundedNames,
   finite,
   httpUrl,
+  myanimelistImageUrl,
   integer,
   partialDate,
   record,
@@ -123,8 +124,8 @@ export function mapJikanAnime(value: unknown): AnimeSnapshot | null {
     durationMinutes: durationMinutes(anime.duration),
     synopsis: synopsisText(anime.synopsis),
     coverImageUrl:
-      httpUrl(record(images.webp).large_image_url) ??
-      httpUrl(record(images.jpg).large_image_url),
+      myanimelistImageUrl(record(images.webp).large_image_url) ??
+      myanimelistImageUrl(record(images.jpg).large_image_url),
     bannerImageUrl: null,
     trailer: youtubeTrailer(record(anime.trailer).youtube_id),
     genres: names(anime.genres),

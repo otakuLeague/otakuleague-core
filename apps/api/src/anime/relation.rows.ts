@@ -1,6 +1,13 @@
 import { ANIME_FORMATS, ANIME_STATUSES } from '@otakuleague/shared-types';
 import type { AnimeRelationNode } from '../generated/prisma/client';
-import { integer, oneOf, partialDate, record, text } from './sources/parse';
+import {
+  anilistImageUrl,
+  integer,
+  oneOf,
+  partialDate,
+  record,
+  text,
+} from './sources/parse';
 import {
   MANGA_FORMATS,
   MEDIA_RELATIONS,
@@ -45,7 +52,7 @@ function readSummary(value: unknown): MediaSummary | null {
     startDate: partialDate(raw.startDate),
     titleEnglish: text(raw.titleEnglish),
     titleRomaji: text(raw.titleRomaji),
-    coverImageUrl: text(raw.coverImageUrl),
+    coverImageUrl: anilistImageUrl(raw.coverImageUrl),
   };
   if (raw.mediaType === 'ANIME') {
     return {

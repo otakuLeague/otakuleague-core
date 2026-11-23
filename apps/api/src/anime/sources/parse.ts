@@ -1,4 +1,4 @@
-import type { PartialDate } from '@otakuleague/shared-types';
+import type { AnimeDataSource, PartialDate } from '@otakuleague/shared-types';
 
 // Source responses are `unknown` until checked field by field: a field that is missing or
 // changes type becomes null (or empty), and the rest of the import goes on.
@@ -92,10 +92,19 @@ export function boundedNames(values: readonly unknown[]): string[] {
   return [...new Set(names)].slice(0, MAX_PRODUCERS);
 }
 
-/** An absolute http(s) URL, or null. */
+/**
+ * An absolute http(s) URL, or null. The text must start with "scheme://": the URL parser
+ * would also accept "https:/path" and "https:host", which browsers read differently.
+ */
 export function httpUrl(value: unknown): string | null {
   const candidate = text(value);
-  if (candidate === null || !URL.canParse(candidate)) return null;
+  if (
+    candidate === null ||
+    !/^https?:\/\//i.test(candidate) ||
+    !URL.canParse(candidate)
+  ) {
+    return null;
+  }
   const { protocol } = new URL(candidate);
   return protocol === 'https:' || protocol === 'http:' ? candidate : null;
 }
@@ -137,15 +146,38 @@ export function boundedTexts(value: unknown): string[] {
     : [];
 }
 
-/** An https URL on anilist.co or one of its subdomains (its CDN), or null. */
-export function anilistImageUrl(value: unknown): string | null {
-  const url = httpUrl(value);
-  if (url === null) return null;
-  const { protocol, hostname } = new URL(url);
-  return protocol === 'https:' &&
-    (hostname === 'anilist.co' || hostname.endsWith('.anilist.co'))
+function imageUrlOn(value: unknown, domains: readonly string[]): string | null {
+  const url = text(value);
+  if (url === null || !/^https:\/\//i.test(url) || !URL.canParse(url)) {
+    return null;
+  }
+  const { protocol, hostname, username, password } = new URL(url);
+  const onDomain = domains.some(
+    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+  );
+  return protocol === 'https:' && username === '' && password === '' && onDomain
     ? url
     : null;
+}
+
+/** An https URL on anilist.co or one of its subdomains (its CDN), or null. */
+export function anilistImageUrl(value: unknown): string | null {
+  return imageUrlOn(value, ['anilist.co']);
+}
+
+/** An https URL on myanimelist.net or one of its subdomains (its CDN), or null. */
+export function myanimelistImageUrl(value: unknown): string | null {
+  return imageUrlOn(value, ['myanimelist.net']);
+}
+
+/** The image check for the source that supplied the URL. */
+export function sourceImageUrl(
+  source: AnimeDataSource,
+  value: unknown,
+): string | null {
+  return source === 'anilist'
+    ? anilistImageUrl(value)
+    : myanimelistImageUrl(value);
 }
 
 /** A score out of 100 above zero (0 is AniList's "unrated"), or null. */

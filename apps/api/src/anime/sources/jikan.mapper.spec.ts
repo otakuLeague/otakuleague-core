@@ -72,6 +72,30 @@ describe('mapJikanAnime', () => {
     });
   });
 
+  it('keeps only MyAnimeList https images, preferring webp', () => {
+    const base = anime('jikan-frieren');
+    const images = (webp: string, jpg: string) => ({
+      ...base,
+      images: {
+        webp: { large_image_url: webp },
+        jpg: { large_image_url: jpg },
+      },
+    });
+    const good = 'https://cdn.myanimelist.net/images/a.jpg';
+
+    expect(
+      mapJikanAnime(images('https://evil.example/a.webp', good))?.coverImageUrl,
+    ).toBe(good);
+    expect(
+      mapJikanAnime(
+        images(
+          'https://evil.example/a.webp',
+          'http://cdn.myanimelist.net/a.jpg',
+        ),
+      )?.coverImageUrl,
+    ).toBeNull();
+  });
+
   it('maps MAL producers (not licensors) and source material, with no country or hashtags', () => {
     expect(mapJikanAnime(anime('jikan-attack-on-titan'))).toMatchObject({
       sourceMaterial: 'MANGA',
