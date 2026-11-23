@@ -287,6 +287,10 @@
 .au-badge[data-tone='wait'] {
   --tone: var(--xp-gold);
 }
+.au-badge-icon {
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+}
 .au-email {
   color: var(--ink);
   overflow-wrap: anywhere;

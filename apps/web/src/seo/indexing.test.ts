@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { EMAIL_VERIFICATION_LINK } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
+import { EMAIL_LINK_LANDINGS } from '../auth/email-link';
 import { robotsHeaders, robotsMetadata } from './indexing';
 
 describe('robotsMetadata', () => {
@@ -38,6 +40,23 @@ describe('robotsHeaders', () => {
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       },
     ]);
+  });
+});
+
+describe('the email link rule', () => {
+  it('covers the link path and every landing but the preview one', () => {
+    const { preview, ...landings } = EMAIL_LINK_LANDINGS;
+    const rule = robotsHeaders('allowed').find(({ source }) =>
+      source.startsWith(EMAIL_VERIFICATION_LINK.path),
+    );
+
+    expect(preview).toBe('/auth');
+    expect(rule?.source).toBe(`${EMAIL_VERIFICATION_LINK.path}/:path*`);
+    expect(
+      Object.values(landings).filter(
+        (landing) => !landing.startsWith(`${EMAIL_VERIFICATION_LINK.path}/`),
+      ),
+    ).toEqual([]);
   });
 });
 

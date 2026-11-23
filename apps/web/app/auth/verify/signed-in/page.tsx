@@ -10,7 +10,7 @@ export default function SignedInPage() {
     <EmailLinkScreen
       tone="ok"
       heading="Email confirmed"
-      sentence="You're signed in. Welcome to the league."
+      sentence="Welcome to the league."
       link={{ href: '/', label: 'Continue', look: 'primary' }}
     />
   );

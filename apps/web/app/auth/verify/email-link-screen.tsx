@@ -15,7 +15,11 @@ type EmailLinkScreenProps = {
   };
 };
 
-const BADGE = { ok: '✓', wait: '◷' } as const;
+/** Stroke paths on a 24-unit grid, drawn in `currentColor`: a check, and a clock face with its hands. */
+const BADGE_PATHS = {
+  ok: ['M5 12.5l4.5 4.5L19 7.5'],
+  wait: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 7v5l3.5 2'],
+} as const;
 
 /**
  * One landing of the emailed link (ADR 0015 Addendum 1f-vi, decision 8): badge, the `h1` focused on
@@ -30,7 +34,21 @@ export function EmailLinkScreen({
   return (
     <main className="au-page">
       <div className="au-badge" data-tone={tone} aria-hidden="true">
-        {BADGE[tone]}
+        <svg
+          className="au-badge-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          {BADGE_PATHS[tone].map((d) => (
+            <path key={d} d={d} />
+          ))}
+        </svg>
       </div>
       <FocusHeading>{heading}</FocusHeading>
       <p className="au-sub">{sentence}</p>

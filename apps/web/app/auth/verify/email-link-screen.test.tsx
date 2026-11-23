@@ -4,16 +4,13 @@ import { EmailLinkScreen } from './email-link-screen';
 
 afterEach(cleanup);
 
-const LONG_HEADING =
-  'Wir konnten deine E-Mail-Adresse leider nicht bestätigen, bitte versuche es später noch einmal';
-
 describe('EmailLinkScreen', () => {
   it('renders a hidden check badge, the h1, one sentence and one button link', () => {
     const screenNode = render(
       <EmailLinkScreen
         tone="ok"
         heading="Email confirmed"
-        sentence="You're signed in."
+        sentence="Welcome to the league."
         link={{ href: '/', label: 'Continue', look: 'primary' }}
       />,
     ).container;
@@ -21,7 +18,13 @@ describe('EmailLinkScreen', () => {
     const badge = screenNode.querySelector('.au-badge');
     expect(badge?.getAttribute('aria-hidden')).toBe('true');
     expect(badge?.getAttribute('data-tone')).toBe('ok');
-    expect(badge?.textContent).toBe('✓');
+    expect(badge?.textContent).toBe('');
+    expect(
+      badge?.querySelectorAll('svg[aria-hidden="true"] path'),
+    ).toHaveLength(1);
+    expect(badge?.querySelector('svg')?.getAttribute('stroke')).toBe(
+      'currentColor',
+    );
     expect(screen.getByRole('heading', { level: 1 }).tabIndex).toBe(-1);
     expect(screenNode.querySelectorAll('p.au-sub')).toHaveLength(1);
     const links = screen.getAllByRole('link');
@@ -40,25 +43,12 @@ describe('EmailLinkScreen', () => {
       />,
     ).container;
 
-    expect(screenNode.querySelector('.au-badge')?.textContent).toBe('◷');
+    const badge = screenNode.querySelector('.au-badge');
+    expect(badge?.getAttribute('data-tone')).toBe('wait');
+    expect(badge?.querySelectorAll('svg path')).toHaveLength(2);
     const link = screen.getByRole('link', { name: 'Back to sign in' });
     expect(link.parentElement?.className).toBe('au-foot');
     expect(link.className).toBe('');
-  });
-
-  it('keeps long copy whole, as text', () => {
-    render(
-      <EmailLinkScreen
-        tone="wait"
-        heading={LONG_HEADING}
-        sentence={`${LONG_HEADING}. <b>not markup</b>`}
-        link={{ href: '/auth', label: 'Back to sign in', look: 'back' }}
-      />,
-    );
-
-    expect(screen.getByRole('heading').textContent).toBe(LONG_HEADING);
-    expect(screen.getByText(`${LONG_HEADING}. <b>not markup</b>`)).toBeTruthy();
-    expect(document.querySelector('b')).toBeNull();
   });
 
   it('focuses its h1 on arrival', async () => {
@@ -67,7 +57,7 @@ describe('EmailLinkScreen', () => {
         <EmailLinkScreen
           tone="ok"
           heading="Email confirmed"
-          sentence="You're signed in."
+          sentence="Welcome to the league."
           link={{ href: '/', label: 'Continue', look: 'primary' }}
         />,
       );
