@@ -126,6 +126,56 @@ describe('verifyEmailLink: before any call', () => {
     expect(mocks.setCookie).not.toHaveBeenCalled();
   });
 
+  it.each<[string, RequestInit]>([
+    ['HEAD', { method: 'HEAD' }],
+    ['an image tag', { headers: { 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'image' } }],
+    ['a script fetch', { headers: { 'sec-fetch-mode': 'cors', 'sec-fetch-dest': 'empty' } }],
+    ['an iframe', { headers: { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'iframe' } }],
+    ['a mode alone that is not navigate', { headers: { 'sec-fetch-mode': 'no-cors' } }],
+    ['a destination alone that is not document', { headers: { 'sec-fetch-dest': 'image' } }],
+    [
+      'a speculative prefetch',
+      {
+        headers: {
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-dest': 'document',
+          'sec-purpose': 'prefetch',
+        },
+      },
+    ],
+    ['a prerender', { headers: { 'sec-purpose': 'prefetch;prerender' } }],
+    ['a legacy prefetch', { headers: { purpose: 'Prefetch' } }],
+  ])(
+    'answers %s with try-again, 0 cookie reads and 0 calls (the token stays unspent)',
+    async (_name, init) => {
+      const response = await verifyEmailLink(
+        new Request(linkRequest().url, init),
+      );
+
+      await expectSeeOther(response, '/auth/verify/try-again');
+      expect(mocks.credentialCall).not.toHaveBeenCalled();
+      expect(mocks.reads).toEqual([]);
+      expect(mocks.setCookie).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each<[string, Record<string, string>]>([
+    [
+      'a click from a mail (cross-site top-level navigation)',
+      {
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-site': 'cross-site',
+        'sec-fetch-user': '?1',
+      },
+    ],
+    ['a browser with no Fetch Metadata', {}],
+  ])('lets %s through to one call', async (_name, headers) => {
+    await verifyEmailLink(new Request(linkRequest().url, { headers }));
+
+    expect(mocks.credentialCall).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ['no token', ''],
     ['an empty token', 'token='],
@@ -380,14 +430,24 @@ describe('verifyEmailLink: reports and failures', () => {
     },
   );
 
-  it("lets Next's signals through (a prerender stop must never bake a landing)", async () => {
-    const signal = Object.assign(new Error('dynamic'), {
-      digest: 'DYNAMIC_SERVER_USAGE',
+  it('lets the prerender stop at request.url through (a build must never bake a landing)', async () => {
+    // What Next 16.4.6 throws when a prerendered GET handler reads request.url.
+    const signal = Object.assign(
+      new Error('Route /auth/verify needs to bail out of prerendering'),
+      { digest: 'NEXT_PRERENDER_INTERRUPTED' },
+    );
+    const request = linkRequest();
+    Object.defineProperty(request, 'url', {
+      get() {
+        throw signal;
+      },
     });
-    mocks.credentialCall.mockRejectedValue(signal);
 
-    await expect(verifyEmailLink(linkRequest())).rejects.toBe(signal);
+    await expect(verifyEmailLink(request)).rejects.toBe(signal);
     expect(mocks.reportAuthCallFault).not.toHaveBeenCalled();
+    expect(mocks.reportClientIpUnknown).not.toHaveBeenCalled();
+    expect(mocks.credentialCall).not.toHaveBeenCalled();
+    expect(mocks.reads).toEqual([]);
   });
 
   it('never writes the token to the console or a report, and the scrubber masks it in a request event', async () => {

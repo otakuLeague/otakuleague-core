@@ -40,7 +40,30 @@ export function emailLinkTokenFrom(
   return values.length === 1 ? wellFormedAuthToken(values[0]) : undefined;
 }
 
-/** The binding read from `ol_signup`: sent only when well-formed, else left out (never `null`). */
+/**
+ * A person opening the link, as far as the request says: a GET (Next runs GET for HEAD), and no
+ * Fetch Metadata or purpose header naming a subresource, a frame, a fetch or a prefetch. Missing
+ * headers pass (an older browser, a mail app's view). Anything else spends no confirm attempt: a
+ * cross-site image tag or a prefetch would count against the IP's budget, and with the binding
+ * attached a prefetch would spend the token before the click.
+ */
+export function isLinkNavigation(request: Request): boolean {
+  const { headers } = request;
+  const mode = headers.get('sec-fetch-mode');
+  const dest = headers.get('sec-fetch-dest');
+  return (
+    request.method === 'GET' &&
+    (mode === null || mode === 'navigate') &&
+    (dest === null || dest === 'document') &&
+    !headers.has('sec-purpose') &&
+    !/prefetch/i.test(headers.get('purpose') ?? '')
+  );
+}
+
+/**
+ * A cookie value of the token shape (43 base64url characters), else nothing. The handler uses it
+ * on `ol_signup` and leaves a missing binding out of the body, never `null`.
+ */
 export function wellFormedAuthToken(
   value: string | undefined,
 ): string | undefined {

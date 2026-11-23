@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { EMAIL_VERIFICATION_LINK } from '@otakuleague/shared-types';
 import { describe, expect, it } from 'vitest';
 import {
   checkInternalApiKeyConfig,
@@ -231,7 +232,17 @@ it('next.config.ts keeps Server Action arguments out of the dev log, serves the 
     'utf8',
   );
 
-  expect(nextConfig).toContain('logging: { serverFunctions: false },');
+  expect(nextConfig).toContain('serverFunctions: false,');
+  // Next tests each pattern against the request's path and query: the mailed link's token stays
+  // out of the dev request log.
+  expect(nextConfig).toContain(
+    'incomingRequests: { ignore: [/^\\/auth\\/verify/] },',
+  );
+  expect(
+    /^\/auth\/verify/.test(
+      `${EMAIL_VERIFICATION_LINK.path}?${EMAIL_VERIFICATION_LINK.tokenParam}=${'A'.repeat(43)}`,
+    ),
+  ).toBe(true);
   expect(nextConfig).toContain(
     'redirects: () => Promise.resolve([...LEGACY_AUTH_REDIRECTS]),',
   );

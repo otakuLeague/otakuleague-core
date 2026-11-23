@@ -9,6 +9,7 @@ import type { CredentialCallResult } from './credential-call';
 import {
   EMAIL_LINK_LANDINGS,
   emailLinkTokenFrom,
+  isLinkNavigation,
   landingOf,
   verifyLinkOutcomeFrom,
   wellFormedAuthToken,
@@ -57,6 +58,29 @@ describe('emailLinkTokenFrom', () => {
     ['another parameter name', `Token=${TOKEN}`],
   ])('refuses %s', (_name, query) => {
     expect(emailLinkTokenFrom(new URLSearchParams(query))).toBeUndefined();
+  });
+});
+
+describe('isLinkNavigation', () => {
+  const opened = (init: RequestInit = {}) =>
+    new Request('https://beta.otakuleague.com/auth/verify', init);
+
+  it.each<[string, RequestInit, boolean]>([
+    ['a GET with no Fetch Metadata', {}, true],
+    [
+      'a top-level navigation',
+      { headers: { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' } },
+      true,
+    ],
+    ['HEAD', { method: 'HEAD' }, false],
+    ['POST', { method: 'POST' }, false],
+    ['a no-cors subresource', { headers: { 'sec-fetch-mode': 'no-cors' } }, false],
+    ['an iframe', { headers: { 'sec-fetch-dest': 'iframe' } }, false],
+    ['any Sec-Purpose', { headers: { 'sec-purpose': 'prefetch' } }, false],
+    ['Purpose: prefetch', { headers: { purpose: 'prefetch' } }, false],
+    ['another Purpose', { headers: { purpose: 'preview' } }, true],
+  ])('reads %s as %s', (_name, init, expected) => {
+    expect(isLinkNavigation(opened(init))).toBe(expected);
   });
 });
 

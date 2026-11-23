@@ -92,12 +92,18 @@ const OTHER_REDIRECT_SELECTORS = syntaxBans([
 
 // Response redirect gate (ADR 0015 Addendum 1f-vi decision 3): a route handler answers a redirect
 // with seeOther() (a landing constant, relative, no-store); the canonical-slug 308 of the proxy is
-// the one exception. Dot, string-keyed, through a namespace or globalThis, and destructured.
+// the one exception. It catches `.redirect` on NextResponse or Response by dot, string or template
+// key, directly or through one member (a namespace, globalThis), a top-level destructuring of it,
+// and an aliased NextResponse import. Not seen: Reflect.get, a subclass, an aliased Response
+// binding, assignment or nested destructuring, a hand-written Location header on a 3xx.
 const RESPONSE_CLASS = '/^(NextResponse|Response)$/';
+const REDIRECT_KEY = (/** @type {string} */ key) =>
+  `:matches([${key}.name='redirect'], [${key}.value='redirect'], [${key}.quasis.0.value.cooked='redirect'])`;
 const RESPONSE_REDIRECT_SELECTORS = syntaxBans(
   [
-    `MemberExpression:matches([object.name=${RESPONSE_CLASS}], [object.property.name=${RESPONSE_CLASS}]):matches([property.name='redirect'], [property.value='redirect'])`,
-    `VariableDeclarator:matches([init.name=${RESPONSE_CLASS}], [init.property.name=${RESPONSE_CLASS}]) > ObjectPattern > Property:matches([key.name='redirect'], [key.value='redirect'])`,
+    `MemberExpression:matches([object.name=${RESPONSE_CLASS}], [object.property.name=${RESPONSE_CLASS}])${REDIRECT_KEY('property')}`,
+    `VariableDeclarator:matches([init.name=${RESPONSE_CLASS}], [init.property.name=${RESPONSE_CLASS}]) > ObjectPattern > Property${REDIRECT_KEY('key')}`,
+    `ImportSpecifier${VALUE}:matches([imported.name='NextResponse'], [imported.value='NextResponse'])[local.name!='NextResponse']`,
   ].map((selector) => [
     selector,
     'Answer a redirect with seeOther() (src/auth/see-other.ts); NextResponse.redirect and Response.redirect only in src/anime/slug-proxy.ts (ADR 0015 Addendum 1f-vi).',

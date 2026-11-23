@@ -686,13 +686,13 @@ Added 2026-11-23 (OTA-139 slice 1f-vi), written before the code. It builds the "
 | F23 | The link opened anywhere else (another browser, a mail scanner) changes nothing; a person lands on a screen that asks for the sign-up password (vi-c). |
 | F24 | A link to an account already confirmed, a dead link and a link that cannot be checked right now each get their own screen, which says what to do next. |
 | N36 | 100 % of the answers to `GET /auth/verify` (a throw included) are a 303 with no body, `Cache-Control: no-store`, the no-referrer policy and a relative `Location` taken from 6 constants: 0 request input in it. The token is in 0 `Location`s, log lines, Sentry events and API URLs. |
-| N37 | At most 1 `POST /auth/email-verification/confirm` per GET (5,000 ms, never retried), then at most 1 sign-out call (2,000 ms) and only after a session came back: 7 s worst case. 0 calls on a preview, or when `token` is not exactly one value of 43 base64url characters. |
+| N37 | At most 1 `POST /auth/email-verification/confirm` per GET (5,000 ms, never retried), then at most 1 sign-out call (2,000 ms) and only after a session came back: 7 s worst case. 0 calls on a preview, on a request that is not a top-level navigation (HEAD, a subresource, a prefetch; added in review), or when `token` is not exactly one value of 43 base64url characters. |
 | N38 | The session cookie is set on 100 % of `verified` answers that carry a session and on 0 % of anything else; `ol_signup` is cleared on exactly those answers; `ol_verify` is written on `confirmation_required` only. A GET without the matching binding costs the API 1 counter upsert and 1 read, consumes 0 tokens and signs nobody in or out. |
 | N39 | Each cookie helper (`signUpCookie`, `clearedSignUpCookie`, `verifyCookie`, `flashCookie`) is named in a pinned list of files, 4 in all; the binding is read under 1 name (the configured one) and sent only as 43 base64url characters. |
 
 **Consistency vs availability.** Consistency: a cookie is written only from an answer the API gave and the guard accepted, nothing is optimistic, nothing is retried (each attempt counts against 10 per IP per 15 min). An outage is the `try-again` screen and the link still works afterwards. **Entities:** `VerifyLinkOutcome`, `EmailLinkLanding`. **API:** none new: `POST /auth/email-verification/confirm` as ADR 0020 fixed it, with `isEmailVerificationConfirmResponse` already in shared types. Web: `GET /auth/verify?token=`, always a 303.
 
-**Data flow (vi-a).** GET → `request.url` (a build stops here) → preview? 303 `/auth`, nothing read → `token`, else `expired` → `readWebPublicUrl` → binding under `signUpCookie(url).name` → old session token (`readSessionToken`) → one `credentialCall` with `{ token, bindingToken? }` → reports (`client_ip_unknown`, a fault) → `verifyLinkOutcomeFrom` → cookies → `seeOther(landing)`.
+**Data flow (vi-a).** GET → `request.url` (a build stops here) → preview? 303 `/auth`, nothing read → not a top-level navigation (`isLinkNavigation`, added in review)? 303 `try-again`, nothing read → `token`, else `expired` → `readWebPublicUrl` → binding under `signUpCookie(url).name` → old session token (`readSessionToken`) → one `credentialCall` with `{ token, bindingToken? }` → reports (`client_ip_unknown`, a fault) → `verifyLinkOutcomeFrom` → cookies → `seeOther(landing)`.
 
 | Answer | Cookies | Landing |
 |---|---|---|
@@ -702,6 +702,7 @@ Added 2026-11-23 (OTA-139 slice 1f-vi), written before the code. It builds the "
 | 400 `AUTH_TOKEN_INVALID`, or no usable `token` | none | `/auth/verify/expired` |
 | 429, network, timeout, 5xx, any other answer, a refusal, a throw | none | `/auth/verify/try-again` |
 | a preview deployment | none, 0 calls | `/auth` |
+| HEAD, a subresource or frame, a prefetch or prerender | none, 0 reads, 0 calls | `/auth/verify/try-again` |
 
 **Decisions.**
 1. **The link is `/auth/verify?token=`, written once.** `EMAIL_VERIFICATION_LINK` (`path`, `tokenParam`) lives in shared types: the email slice builds the link from it and `WEB_PUBLIC_URL`, and a test holds `app/auth/verify/route.ts` to it. The parameter stays `token`, the name the redaction pattern masks in any text.
@@ -717,14 +718,15 @@ Added 2026-11-23 (OTA-139 slice 1f-vi), written before the code. It builds the "
 **Rejected.**
 - **`NextResponse.redirect(new URL(path, request.url), 303)`.** An absolute URL built from the request's host, and a lint exception for the one call a redirect gate exists to watch.
 - **No API call without `ol_signup`** (straight to the password page). 0 calls for a scanner, but a dead link or a confirmed account would ask for a password before saying so.
-- **The token in the fragment, read by a script and posted.** No server log ever sees it, but one click becomes a page, a client component and a POST, and without JavaScript nothing happens. Here a logged token is worth nothing alone (N38).
+- **The token in the fragment, read by a script and posted.** No server log ever sees it, but one click becomes a page, a client component and a POST, and without JavaScript nothing happens. Here a logged token is worth nothing to a third party (N38; see the first "Too simple?" bullet for who it does help).
 - **One screen with `?state=`, or one `[outcome]` segment.** The first needs a `Suspense` hole whose fallback is the whole screen without JavaScript; the second depends on how `params` behave under `cacheComponents`, not verified. Four files of 15 lines are certain.
 - **Three more one-file lint blocks for the cookie helpers.** Each restates every option of the rule (a later block replaces it); the scan is one table.
 - **One PR.** About 760 lines without tests.
 
 **Too simple?**
-- The platform's request log may keep the query (not verified). Accepted here only because the token needs the binding or the sign-up password. A reset token is enough by itself: OTA-140 decides again and must not copy this handler as it is.
-- Next answers HEAD by running GET, and a browser that prefetches or prerenders the link sends the binding: the token is spent before the click, and the click then lands on `confirmed` ("Sign in") while signed in. A second click does the same. No `Sec-Purpose` check.
+- The platform's request log may keep the query (not verified). Accepted here only because the token needs the binding or the sign-up password. A reset token is enough by itself: OTA-140 decides again and must not copy this handler as it is. *Amended 2026-11-23 (vi-a review): that holds for a third party, not for whoever created the pending sign-up, who holds both the binding and the password: with a logged token they confirm an address they do not own (the pre-hijack ADR 0020 guards against). So Vercel's request log must be checked, and the query kept out of it, before any mail carries a link (1f-vii, OTA-178). The dev request log ignores `/auth/verify` (`logging.incomingRequests`).*
+- *Amended 2026-11-23 (vi-a review), replacing "HEAD and a prefetch spend the token":* a HEAD, a subresource or frame (`Sec-Fetch-Mode` present and not `navigate`, `Sec-Fetch-Dest` present and not `document`) and a prefetch or prerender (`Sec-Purpose` present, or `Purpose` naming `prefetch`) land on `try-again` with 0 reads and 0 calls, so a cross-site image tag cannot spend the IP's confirm budget and a prefetch cannot spend the token. Missing headers pass (older browsers, mail apps). Residual: a forced top-level navigation (a cross-site page that sets `location`) still counts against the 10 per IP per 15 min, and a second click on a used link lands on `confirmed` while signed in.
+- `/auth/verify` is not under the web-tier throttle of `proxy.ts` (its matcher sees possible action POSTs only). Accepted: the API's 10 per IP per 15 min bounds it, and each attempt is one counter upsert and one read. Follow-up: a GET throttle for this route if the API counter shows abuse.
 - A mail app's in-app browser has its own cookie jar, so a member who signed up in the phone's browser gets the password path there.
 - Anyone can open a landing URL cold: `signed-in` says "Email confirmed" to a stranger (the header shows the truth).
 - `try-again` shows no wait time for a 429 (up to 15 min) and reads the same for an outage. A link from another site can replace `ol_verify` with a token of its own: the password typed next is checked against that account and answers 401.

@@ -44,6 +44,21 @@ const filesNaming = (helper: string) =>
     .map(({ file }) => file)
     .sort();
 
+// The cookie names themselves: a hand-built `cookies().get('__Host-ol_verify')` or a second
+// `authCookie('ol_signup', …)` skips the helpers. Comments count; prose says "the binding".
+const PRIVACY = 'src/legal/privacy.tsx';
+const EMAIL_LINK = 'src/auth/email-link.ts';
+const PINNED_NAMES: Readonly<Record<string, readonly string[]>> = {
+  ol_signup: [DEFINITION, EMAIL_LINK, PRIVACY, SIGN_UP_ACTION, VERIFY_EMAIL_LINK],
+  ol_verify: [DEFINITION, PRIVACY, VERIFY_EMAIL_LINK],
+  ol_flash: [DEFINITION, FLASH_EMAIL, PRIVACY, SIGN_UP_ACTION],
+};
+
+const filesHolding = (literal: string) =>
+  SOURCES.filter(({ text }) => text.includes(literal))
+    .map(({ file }) => file)
+    .sort();
+
 describe('auth cookie import gate', () => {
   it('scans the sources of apps/web, never a test or build output', () => {
     const files = SOURCES.map(({ file }) => file);
@@ -69,4 +84,11 @@ describe('auth cookie import gate', () => {
   it('pins 4 files in all, the definition included', () => {
     expect(new Set(Object.values(PINNED).flat()).size).toBe(4);
   });
+
+  it.each(Object.entries(PINNED_NAMES))(
+    'finds the cookie name %s only in its pinned files',
+    (literal, files) => {
+      expect(filesHolding(literal)).toEqual([...files].sort());
+    },
+  );
 });

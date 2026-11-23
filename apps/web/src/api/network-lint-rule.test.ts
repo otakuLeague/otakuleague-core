@@ -324,6 +324,10 @@ describe('network lint rule', () => {
       "import * as server from 'next/server';\nexport const leave = () => server.NextResponse.redirect('https://x.example/');\n",
       "import { NextResponse } from 'next/server';\nconst { redirect } = NextResponse;\nexport const leave = redirect;\n",
       "const { redirect: leave } = Response;\nexport const go = leave;\n",
+      'export const leave = () => Response[`redirect`](\'https://x.example/\');\n',
+      "const { ['redirect']: leave } = Response;\nexport const go = leave;\n",
+      "import { NextResponse as Answer } from 'next/server';\nexport const leave = () => Answer.next();\n",
+      "import { 'NextResponse' as Answer } from 'next/server';\nexport const leave = () => Answer.next();\n",
     ];
 
     it.each(
@@ -361,9 +365,11 @@ describe('network lint rule', () => {
       ).toContain('no-restricted-syntax');
     });
 
-    it('allows the other Response members and a hand-built 303', async () => {
+    it('allows the other Response members, a type-only alias and a hand-built 303', async () => {
       const code =
         "import { NextResponse } from 'next/server';\n" +
+        "import { type NextResponse as Answer } from 'next/server';\n" +
+        'export type Reply = Answer;\n' +
         'export const pass = () => [NextResponse.next(), NextResponse.rewrite(new URL("https://x.example/"))];\n' +
         "export const see = () => new Response(null, { status: 303, headers: { Location: '/auth' } });\n" +
         'export const followed = (response: Response) => response.redirected;\n';

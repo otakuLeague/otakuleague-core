@@ -20,6 +20,7 @@ import { deleteSession } from './delete-session';
 import {
   EMAIL_LINK_LANDINGS,
   emailLinkTokenFrom,
+  isLinkNavigation,
   landingOf,
   verifyLinkOutcomeFrom,
   wellFormedAuthToken,
@@ -30,7 +31,9 @@ import { readWebPublicUrl } from './web-public-url';
 
 /**
  * `GET /auth/verify?token=` (ADR 0015 Addendum 1f-vi), total: every answer, a throw included, is
- * `seeOther(landing)`. A preview or a malformed token makes no call and reads no cookie. Then the
+ * `seeOther(landing)`. A preview, a request that is not a person opening the link
+ * (`isLinkNavigation`: HEAD, a subresource, a prefetch → `try-again`) or a malformed token makes
+ * no call and reads no cookie. Then the
  * binding (`ol_signup`, configured name only, sent only when well-formed) and the old session are
  * read, and one credential call goes out (5,000 ms, never retried). Cookies come only from an
  * answer the guard accepted: a session (old one revoked first, `ol_signup` cleared) on `verified`
@@ -46,6 +49,9 @@ export async function verifyEmailLink(request: Request): Promise<Response> {
     const { searchParams } = new URL(request.url);
     if (credentialRoutesOff(process.env)) {
       return seeOther(EMAIL_LINK_LANDINGS.preview);
+    }
+    if (!isLinkNavigation(request)) {
+      return seeOther(EMAIL_LINK_LANDINGS.tryAgain);
     }
     const token = emailLinkTokenFrom(searchParams);
     if (token === undefined) {
