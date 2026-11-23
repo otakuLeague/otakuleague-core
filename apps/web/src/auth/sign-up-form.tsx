@@ -10,6 +10,8 @@ import type { SignUpSubmitBlock } from './sign-up-password-checks';
 
 const IDLE: SignUpFormState = { kind: 'idle' };
 const EMPTY: SignUpKeptFields = { username: '', email: '' };
+const sameRules = (a: SignUpPasswordRules, b: SignUpPasswordRules) =>
+  a.longEnough === b.longEnough && a.hasDigitOrSymbol === b.hasDigitOrSymbol;
 const UNMET: SignUpPasswordRules = {
   longEnough: false,
   hasDigitOrSymbol: false,
@@ -33,6 +35,14 @@ export function SignUpForm() {
     if (!pending) setRules(UNMET);
   }
   useEffect(emptySignInPassword, []);
+  // clearOnHide empties both password inputs when <Activity> hides the route, with no input event.
+  useEffect(
+    () => () => {
+      setRules(UNMET);
+      setBlock('none');
+    },
+    [],
+  );
   return (
     <SignUpFormView
       state={state}
@@ -41,7 +51,9 @@ export function SignUpForm() {
       rules={rules}
       block={block}
       onFieldsSubmit={setKept}
-      onRulesChange={setRules}
+      onRulesChange={(next) =>
+        setRules((current) => (sameRules(current, next) ? current : next))
+      }
       onBlockChange={setBlock}
       formAction={formAction}
     />

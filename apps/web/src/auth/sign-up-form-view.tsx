@@ -163,7 +163,7 @@ function PasswordRule({
   return (
     <li id={id} data-met={met ? '' : undefined}>
       {label}
-      {met && <span className="au-sr">: done</span>}
+      <span className="au-sr">{met ? ': done.' : ': not met.'}</span>
     </li>
   );
 }
@@ -300,7 +300,8 @@ export function SignUpFormView({
         </div>
         {passwordBlocked && <BlockMessage block="rules_unmet" />}
         {/* The items describe the password, not the list: its aria-label would replace their text. */}
-        <ul className="au-rules" aria-label="Password rules">
+        {/* role="list": Safari drops list semantics under list-style: none. */}
+        <ul className="au-rules" role="list" aria-label="Password rules">
           <PasswordRule
             id={RULE_LENGTH_ID}
             met={rules.longEnough}

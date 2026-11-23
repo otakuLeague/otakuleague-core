@@ -55,8 +55,8 @@ describe('SignUpFormView', () => {
         rule.hasAttribute('data-met'),
       ]),
     ).toEqual([
-      ['At least 8 characters', false],
-      ['A number or symbol', false],
+      ['At least 8 characters: not met.', false],
+      ['A number or symbol: not met.', false],
     ]);
     expect(input('Password').getAttribute('aria-describedby')).toBe(RULE_IDS);
   });
@@ -70,7 +70,8 @@ describe('SignUpFormView', () => {
     const [length, symbol] = screen.getAllByRole('listitem');
     expect(length?.hasAttribute('data-met')).toBe(false);
     expect(symbol?.getAttribute('data-met')).toBe('');
-    expect(symbol?.textContent).toBe('A number or symbol: done');
+    expect(symbol?.textContent).toBe('A number or symbol: done.');
+    expect(length?.textContent).toBe('At least 8 characters: not met.');
   });
 
   it('reports only rule booleans as the password is typed, and clears a block on any edit', () => {

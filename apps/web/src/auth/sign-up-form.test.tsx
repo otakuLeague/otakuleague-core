@@ -5,6 +5,7 @@ import {
   render,
   screen,
 } from '@testing-library/react';
+import { Activity } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { signUpAction } from './sign-up-action';
 import type { SignUpFormState } from './sign-up-form-state';
@@ -55,6 +56,9 @@ it('posts the three fields once, then restores username and email but never the 
   expect(email.value).toBe('kaito@example.com');
   expect(password.value).toBe('');
   expect(password.defaultValue).toBe('');
+  expect(
+    screen.getByLabelText<HTMLInputElement>('Confirm password').value,
+  ).toBe('');
   // React's reset emptied the password without an input event: the ticks follow it.
   expect(metRules()).toBe(0);
 });
@@ -94,6 +98,45 @@ it.each([
     );
   },
 );
+
+it('posts once after a blocked submit is fixed', async () => {
+  mocks.signUpAction.mockReset();
+  mocks.signUpAction.mockResolvedValue({ kind: 'busy' });
+  render(<SignUpForm />);
+  type('Username', 'mio');
+  type('Email', 'mio@example.com');
+  type('Password', 'secret-pass-1');
+  type('Confirm password', 'secret-pass-2');
+  createAccount();
+  expect(mocks.signUpAction).not.toHaveBeenCalled();
+
+  type('Confirm password', 'secret-pass-1');
+  createAccount();
+  expect((await screen.findByRole('alert')).textContent).toMatch(/busy/);
+  expect(mocks.signUpAction).toHaveBeenCalledTimes(1);
+});
+
+it('forgets the ticks and the block when hidden in an Activity (the inputs are emptied)', () => {
+  mocks.signUpAction.mockReset();
+  const inActivity = (mode: 'visible' | 'hidden') => (
+    <Activity mode={mode}>
+      <SignUpForm />
+    </Activity>
+  );
+  const { rerender } = render(inActivity('visible'));
+  type('Username', 'mio');
+  type('Email', 'mio@example.com');
+  type('Password', 'secret-pass-1');
+  type('Confirm password', 'secret-pass-2');
+  createAccount();
+  expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([2, 1]);
+
+  rerender(inActivity('hidden'));
+  rerender(inActivity('visible'));
+  expect(screen.getByLabelText<HTMLInputElement>('Password').value).toBe('');
+  expect([metRules(), screen.queryAllByRole('alert').length]).toEqual([0, 0]);
+  expect(mocks.signUpAction).not.toHaveBeenCalled();
+});
 
 it('makes one call for two submits while the first is pending (N29)', async () => {
   let settle: (state: SignUpFormState) => void = () => undefined;
