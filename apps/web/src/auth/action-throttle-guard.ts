@@ -48,7 +48,7 @@ export function actionClientSourceOf(
   }
 }
 
-type ActionClient =
+export type ThrottleClient =
   | {
       readonly kind: 'known';
       readonly network: ClientNetwork;
@@ -56,10 +56,11 @@ type ActionClient =
     }
   | { readonly kind: 'unknown' };
 
-function actionClientOf(
+/** The client both proxy throttles count (actions and the email link), read the same way. */
+export function throttleClientOf(
   headers: Pick<Headers, 'get'>,
   source: ActionClientSource,
-): ActionClient {
+): ThrottleClient {
   if (source === 'one_machine') {
     return { kind: 'known', network: LOOPBACK_CLIENT_NETWORK, site: undefined };
   }
@@ -148,7 +149,7 @@ export function createActionThrottleGuard({
     if (isCrossSitePost(request.headers)) {
       return plainText(403, ACTION_CROSS_SITE_TEXT);
     }
-    const client = actionClientOf(request.headers, clientSource());
+    const client = throttleClientOf(request.headers, clientSource());
     if (client.kind === 'unknown') {
       reportClientIpUnknown();
       return PASS;
