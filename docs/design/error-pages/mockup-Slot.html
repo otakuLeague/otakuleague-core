@@ -18,7 +18,7 @@
       .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: var(--space-4); }
       .slot-card { margin: 0; padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
       .slot-frame { position: relative; width: fit-content; margin: 0 auto; outline: 1px dashed var(--muted); outline-offset: 0; }
-      .slot-frame::after { content: ''; position: absolute; inset: 12px; border: 1px dotted color-mix(in oklab, var(--muted) 60%, transparent); pointer-events: none; }
+      .slot-frame::after { content: ''; position: absolute; inset: 6%; border: 1px dotted color-mix(in oklab, var(--muted) 60%, transparent); pointer-events: none; }
       .slot-frame .err-art { animation: none; }
       .slot-card figcaption { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-3); text-align: center; font-size: 14px; }
       .slot-card figcaption span { color: var(--muted); }
@@ -26,20 +26,20 @@
       .slot-theme { background: var(--ground); }
       .slot-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0 0 var(--space-4); padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
       .slot-legend b { color: var(--ink); font-weight: 600; }
-      @container (max-width: 767px) { .slot { padding: var(--space-6) var(--space-4); } .slot-frame::after { inset: 10px; } }
+      @container (max-width: 767px) { .slot { padding: var(--space-6) var(--space-4); } }
     </style>
     <div class="sh">
       <div class="sh-bg" aria-hidden="true"></div>
       <main id="main" class="slot">
         <h1>Mascot: art slot and poses</h1>
         <p>One original character, coloured only with theme tokens. Each page renders exactly one art block; anything inside it can be swapped for a commissioned SVG or PNG without touching the layout.</p>
-        <ul class="slot-legend"><li><b>Dashed</b> slot: 1:1, 200 × 200 px (160 × 160 under 768 px, as here on a phone)</li><li><b>Dotted</b> safe area: 12 px inset</li><li><b>Ground line</b> y ≈ 184 of 200</li></ul>
+        <ul class="slot-legend"><li><b>Dashed</b> slot: 1:1, 200 × 200 px (160 × 160 under 768 px, as here on a phone)</li><li><b>Dotted</b> safe area: 12 of 200 viewBox units (6 %) on every side</li><li><b>Ground line</b> y ≈ 181 of 200</li></ul>
         <p class="ol-label demo-cap" style="text-align:left">Dark theme</p>
         <div class="slot-grid">
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="lost"><defs><linearGradient id="ms-1d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
   <g transform="rotate(-5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -58,8 +58,8 @@
     <path class="m-trail" d="M70 162c10-14 22 2 32-10s16-10 26-14"/>
     <path class="m-mark" style="stroke: var(--bad)" d="M127 133l7 7m0-7l-7 7"/>
   </g>
-  <path class="m-mark" d="M150 34c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
-  <circle class="m-markdot" cx="166" cy="62" r="3.2"/>
+  <path class="m-mark" d="M146 38c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
+  <circle class="m-markdot" cx="162" cy="66" r="3.2"/>
 </svg>
         </div></div>
             <figcaption><strong>Lost</strong><span>404</span></figcaption>
@@ -67,9 +67,9 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="searching"><defs><linearGradient id="ms-2d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="104" cy="186" rx="48" ry="6"/>
-  <ellipse class="m-step" cx="26" cy="182" rx="6" ry="3"/>
-  <ellipse class="m-step" cx="44" cy="176" rx="6" ry="3"/>
+  <ellipse class="m-shadow" cx="104" cy="181" rx="46" ry="5"/>
+  <ellipse class="m-step" cx="28" cy="178" rx="6" ry="3"/>
+  <ellipse class="m-step" cx="44" cy="172" rx="6" ry="3"/>
   <g transform="rotate(5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -92,8 +92,8 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="confused"><defs><linearGradient id="ms-3d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
-  <ellipse class="m-orbit" cx="100" cy="40" rx="46" ry="11"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
+  <ellipse class="m-orbit" cx="100" cy="42" rx="44" ry="10"/>
   <g transform="rotate(-3 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -108,8 +108,8 @@
     <path class="m-limb" d="M53 126q-8 12-2 22"/>
     <path class="m-limb m-limb--b" d="M147 110q16-6 12-28"/>
   </g>
-  <circle class="m-dot-a" cx="56" cy="44" r="4"/>
-  <circle class="m-dot-b" cx="142" cy="34" r="3.5"/>
+  <circle class="m-dot-a" cx="58" cy="45" r="4"/>
+  <circle class="m-dot-b" cx="140" cy="37" r="3.5"/>
   <path class="m-dot-c" transform="translate(124 50) scale(.5)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
 </svg>
         </div></div>
@@ -118,9 +118,9 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="sleepy"><defs><linearGradient id="ms-4d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="108" cy="186" rx="56" ry="6"/>
-  <rect class="m-foot" x="76" y="168" width="24" height="14" rx="7"/>
-  <rect class="m-foot" x="116" y="168" width="24" height="14" rx="7"/>
+  <ellipse class="m-shadow" cx="110" cy="181" rx="50" ry="5"/>
+  <rect class="m-foot" x="78" y="164" width="24" height="14" rx="7"/>
+  <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#ms-4d)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
   <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
@@ -130,13 +130,13 @@
   <ellipse class="m-eye" cx="108" cy="134" rx="3.5" ry="4"/>
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
-  <path class="m-mark" d="M150 52h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M170 28h9l-9 10h9"/>
-  <rect class="m-markdot" x="14" y="128" width="34" height="5" rx="2.5"/>
-  <rect class="m-markdot" x="14" y="177" width="34" height="5" rx="2.5"/>
-  <path class="m-prop" d="M19 133h24l-12 22 12 22H19l12-22z"/>
-  <path class="m-sand" d="M24 138h14l-7 12z"/>
-  <path class="m-sand" d="M22 177q9-13 18 0z"/>
+  <path class="m-mark" d="M148 54h12l-12 13h12"/>
+  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
+  <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
+  <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
+  <path class="m-sand" d="M29.5 134h13l-6.5 11z"/>
+  <path class="m-sand" d="M28 171q8-12 16 0z"/>
 </svg>
         </div></div>
             <figcaption><strong>Sleepy</strong><span>429</span></figcaption>
@@ -155,7 +155,7 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="lost"><defs><linearGradient id="ms-1l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
   <g transform="rotate(-5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -174,8 +174,8 @@
     <path class="m-trail" d="M70 162c10-14 22 2 32-10s16-10 26-14"/>
     <path class="m-mark" style="stroke: var(--bad)" d="M127 133l7 7m0-7l-7 7"/>
   </g>
-  <path class="m-mark" d="M150 34c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
-  <circle class="m-markdot" cx="166" cy="62" r="3.2"/>
+  <path class="m-mark" d="M146 38c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
+  <circle class="m-markdot" cx="162" cy="66" r="3.2"/>
 </svg>
         </div></div>
             <figcaption><strong>Lost</strong><span>404</span></figcaption>
@@ -183,9 +183,9 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="searching"><defs><linearGradient id="ms-2l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="104" cy="186" rx="48" ry="6"/>
-  <ellipse class="m-step" cx="26" cy="182" rx="6" ry="3"/>
-  <ellipse class="m-step" cx="44" cy="176" rx="6" ry="3"/>
+  <ellipse class="m-shadow" cx="104" cy="181" rx="46" ry="5"/>
+  <ellipse class="m-step" cx="28" cy="178" rx="6" ry="3"/>
+  <ellipse class="m-step" cx="44" cy="172" rx="6" ry="3"/>
   <g transform="rotate(5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -208,8 +208,8 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="confused"><defs><linearGradient id="ms-3l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
-  <ellipse class="m-orbit" cx="100" cy="40" rx="46" ry="11"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
+  <ellipse class="m-orbit" cx="100" cy="42" rx="44" ry="10"/>
   <g transform="rotate(-3 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -224,8 +224,8 @@
     <path class="m-limb" d="M53 126q-8 12-2 22"/>
     <path class="m-limb m-limb--b" d="M147 110q16-6 12-28"/>
   </g>
-  <circle class="m-dot-a" cx="56" cy="44" r="4"/>
-  <circle class="m-dot-b" cx="142" cy="34" r="3.5"/>
+  <circle class="m-dot-a" cx="58" cy="45" r="4"/>
+  <circle class="m-dot-b" cx="140" cy="37" r="3.5"/>
   <path class="m-dot-c" transform="translate(124 50) scale(.5)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
 </svg>
         </div></div>
@@ -234,9 +234,9 @@
           <figure class="slot-card">
             <div class="slot-frame"><div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="sleepy"><defs><linearGradient id="ms-4l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="108" cy="186" rx="56" ry="6"/>
-  <rect class="m-foot" x="76" y="168" width="24" height="14" rx="7"/>
-  <rect class="m-foot" x="116" y="168" width="24" height="14" rx="7"/>
+  <ellipse class="m-shadow" cx="110" cy="181" rx="50" ry="5"/>
+  <rect class="m-foot" x="78" y="164" width="24" height="14" rx="7"/>
+  <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#ms-4l)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
   <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
@@ -246,13 +246,13 @@
   <ellipse class="m-eye" cx="108" cy="134" rx="3.5" ry="4"/>
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
-  <path class="m-mark" d="M150 52h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M170 28h9l-9 10h9"/>
-  <rect class="m-markdot" x="14" y="128" width="34" height="5" rx="2.5"/>
-  <rect class="m-markdot" x="14" y="177" width="34" height="5" rx="2.5"/>
-  <path class="m-prop" d="M19 133h24l-12 22 12 22H19l12-22z"/>
-  <path class="m-sand" d="M24 138h14l-7 12z"/>
-  <path class="m-sand" d="M22 177q9-13 18 0z"/>
+  <path class="m-mark" d="M148 54h12l-12 13h12"/>
+  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
+  <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
+  <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
+  <path class="m-sand" d="M29.5 134h13l-6.5 11z"/>
+  <path class="m-sand" d="M28 171q8-12 16 0z"/>
 </svg>
         </div></div>
             <figcaption><strong>Sleepy</strong><span>429</span></figcaption>

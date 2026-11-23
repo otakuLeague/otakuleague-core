@@ -87,6 +87,25 @@
   border-radius: 2px;
 }
 
+/* 429 in context: the state is the anime page's <header> (only h1), TabsNav below it. */
+.anime-ctx {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.err--in-page {
+  padding-bottom: var(--space-10);
+}
+.anime-ctx__tabs {
+  margin: 0 var(--space-6);
+}
+.anime-ctx__note {
+  margin: 0;
+  padding: var(--space-6);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* ---------- Art slot: one replaceable block, 1:1, 200 px (160 px under 768 px) ---------- */
 .err-art {
   flex: none;
@@ -149,7 +168,7 @@
 }
 .m-cheek {
   fill: var(--neon-magenta);
-  opacity: 0.55;
+  opacity: 0.8;
 }
 .m-stem {
   fill: none;
@@ -158,8 +177,9 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* Accent parts use --accent-ink: same mint in dark, deep teal in light (mint is 1.6:1 on cream). */
 .m-spark {
-  fill: var(--accent);
+  fill: var(--accent-ink);
 }
 .m-prop {
   fill: var(--surface-2);
@@ -185,14 +205,14 @@
 }
 .m-trail {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--accent-ink);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: 4 5;
 }
 .m-lens {
   fill: color-mix(in oklab, var(--surface) 35%, transparent);
-  stroke: var(--accent);
+  stroke: var(--accent-ink);
   stroke-width: 6;
 }
 .m-handle {
@@ -201,7 +221,7 @@
   stroke-linecap: round;
 }
 .m-sand {
-  fill: var(--accent);
+  fill: var(--accent-ink);
 }
 .m-orbit {
   fill: none;
@@ -211,7 +231,7 @@
   stroke-linecap: round;
 }
 .m-dot-a {
-  fill: var(--accent);
+  fill: var(--accent-ink);
 }
 .m-dot-b {
   fill: var(--neon-magenta);
@@ -247,6 +267,12 @@
   }
   .err__searchrow {
     flex-direction: column;
+  }
+  .err .sh-kbd {
+    display: none;
+  }
+  .anime-ctx__tabs {
+    margin: 0 var(--space-4);
   }
   .err__actions .ol-btn,
   .err__searchrow .ol-btn {

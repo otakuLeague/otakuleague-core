@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="errors.css" />
   </head>
   <body class="ol-root">
-    <!-- 429 on /anime/<slug> (ImportBusyState in app/anime/[slug]/header.tsx). Top: retry time known (Retry-After, rounded). Bottom: retry time unknown. Mascot pose: sleepy. -->
+    <!-- 429 on /anime/<slug>: ImportBusyState (app/anime/[slug]/header.tsx) replaces the anime header; its <header> holds the page's only h1; TabsNav still renders below (layout.tsx). Top: retry time known (Retry-After, rounded). Bottom: retry time unknown. Mascot pose: sleepy. -->
     <div class="sh">
       <div class="sh-bg" aria-hidden="true"></div>
       <p class="ol-label demo-tag">Retry time known</p>
@@ -36,12 +36,13 @@
           </div>
         </div>
       </header>
-      <main id="main" class="err">
-        <div class="err-art" aria-hidden="true">
+      <main id="main" class="anime-ctx">
+        <header class="err err--in-page">
+          <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="sleepy"><defs><linearGradient id="mg-rl1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="108" cy="186" rx="56" ry="6"/>
-  <rect class="m-foot" x="76" y="168" width="24" height="14" rx="7"/>
-  <rect class="m-foot" x="116" y="168" width="24" height="14" rx="7"/>
+  <ellipse class="m-shadow" cx="110" cy="181" rx="50" ry="5"/>
+  <rect class="m-foot" x="78" y="164" width="24" height="14" rx="7"/>
+  <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#mg-rl1)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
   <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
@@ -51,19 +52,22 @@
   <ellipse class="m-eye" cx="108" cy="134" rx="3.5" ry="4"/>
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
-  <path class="m-mark" d="M150 52h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M170 28h9l-9 10h9"/>
-  <rect class="m-markdot" x="14" y="128" width="34" height="5" rx="2.5"/>
-  <rect class="m-markdot" x="14" y="177" width="34" height="5" rx="2.5"/>
-  <path class="m-prop" d="M19 133h24l-12 22 12 22H19l12-22z"/>
-  <path class="m-sand" d="M24 138h14l-7 12z"/>
-  <path class="m-sand" d="M22 177q9-13 18 0z"/>
+  <path class="m-mark" d="M148 54h12l-12 13h12"/>
+  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
+  <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
+  <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
+  <path class="m-sand" d="M29.5 134h13l-6.5 11z"/>
+  <path class="m-sand" d="M28 171q8-12 16 0z"/>
 </svg>
         </div>
-        <p class="err__eyebrow">429 · Too many requests</p>
-        <h1>Taking a short breather</h1>
-        <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in about 40 seconds.</strong></p>
-        <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+          <p class="err__eyebrow">429 · Busy right now</p>
+          <h1>Taking a short breather</h1>
+          <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in about 40 seconds.</strong></p>
+          <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+        </header>
+        <nav class="ol-tabs anime-ctx__tabs" aria-label="Anime sections"><a class="ol-tab" href="#" aria-current="page" aria-selected="true">Overview</a><a class="ol-tab" href="#">Episodes</a><a class="ol-tab" href="#">Cast &amp; Crew</a><a class="ol-tab" href="#">Music</a><a class="ol-tab" href="#">Related &amp; Media</a><a class="ol-tab" href="#">Stats</a><a class="ol-tab" href="#">Community</a></nav>
+        <p class="anime-ctx__note">Overview panel: keeps its own loading or error state (outside this ticket).</p>
       </main>
     </div>
     <div class="sh demo-sec">
@@ -91,12 +95,13 @@
           </div>
         </div>
       </header>
-      <main id="main-2" class="err">
-        <div class="err-art" aria-hidden="true">
+      <main id="main-2" class="anime-ctx">
+        <header class="err err--in-page">
+          <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="sleepy"><defs><linearGradient id="mg-rl2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="108" cy="186" rx="56" ry="6"/>
-  <rect class="m-foot" x="76" y="168" width="24" height="14" rx="7"/>
-  <rect class="m-foot" x="116" y="168" width="24" height="14" rx="7"/>
+  <ellipse class="m-shadow" cx="110" cy="181" rx="50" ry="5"/>
+  <rect class="m-foot" x="78" y="164" width="24" height="14" rx="7"/>
+  <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#mg-rl2)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
   <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
@@ -106,20 +111,67 @@
   <ellipse class="m-eye" cx="108" cy="134" rx="3.5" ry="4"/>
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
-  <path class="m-mark" d="M150 52h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M170 28h9l-9 10h9"/>
-  <rect class="m-markdot" x="14" y="128" width="34" height="5" rx="2.5"/>
-  <rect class="m-markdot" x="14" y="177" width="34" height="5" rx="2.5"/>
-  <path class="m-prop" d="M19 133h24l-12 22 12 22H19l12-22z"/>
-  <path class="m-sand" d="M24 138h14l-7 12z"/>
-  <path class="m-sand" d="M22 177q9-13 18 0z"/>
+  <path class="m-mark" d="M148 54h12l-12 13h12"/>
+  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
+  <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
+  <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
+  <path class="m-sand" d="M29.5 134h13l-6.5 11z"/>
+  <path class="m-sand" d="M28 171q8-12 16 0z"/>
 </svg>
         </div>
-        <p class="err__eyebrow">429 · Too many requests</p>
-        <h1>Taking a short breather</h1>
-        <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in a minute or two.</strong></p>
-        <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+          <p class="err__eyebrow">429 · Busy right now</p>
+          <h1>Taking a short breather</h1>
+          <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in a minute or two.</strong></p>
+          <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+        </header>
+        <nav class="ol-tabs anime-ctx__tabs" aria-label="Anime sections"><a class="ol-tab" href="#" aria-current="page" aria-selected="true">Overview</a><a class="ol-tab" href="#">Episodes</a><a class="ol-tab" href="#">Cast &amp; Crew</a><a class="ol-tab" href="#">Music</a><a class="ol-tab" href="#">Related &amp; Media</a><a class="ol-tab" href="#">Stats</a><a class="ol-tab" href="#">Community</a></nav>
+        <p class="anime-ctx__note">Overview panel: keeps its own loading or error state (outside this ticket).</p>
       </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
     </div>
   </body>
 </html>

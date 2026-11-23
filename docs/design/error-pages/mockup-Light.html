@@ -37,7 +37,7 @@
       <main id="main" class="err">
         <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="lost"><defs><linearGradient id="ml-nf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
   <g transform="rotate(-5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -56,14 +56,17 @@
     <path class="m-trail" d="M70 162c10-14 22 2 32-10s16-10 26-14"/>
     <path class="m-mark" style="stroke: var(--bad)" d="M127 133l7 7m0-7l-7 7"/>
   </g>
-  <path class="m-mark" d="M150 34c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
-  <circle class="m-markdot" cx="166" cy="62" r="3.2"/>
+  <path class="m-mark" d="M146 38c0-9 7-14 14-14s14 5 14 12c0 9-12 10-12 19"/>
+  <circle class="m-markdot" cx="162" cy="66" r="3.2"/>
 </svg>
         </div>
         <p class="err__eyebrow">404 · Page not found</p>
         <h1>This page wandered off</h1>
         <p class="err__lead">There’s nothing at this address. The link may be old or mistyped.</p>
-        <div class="sh-search" role="search"><label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" placeholder="Search anime" aria-label="Search anime" /></label></div>
+        <form class="err__searchrow" role="search" action="/search">
+          <div class="sh-search"><label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" name="q" placeholder="Search anime" aria-label="Search anime" /><kbd class="sh-kbd" aria-hidden="true">/</kbd></label></div>
+          <button class="ol-btn ol-btn--secondary" type="submit">Search</button>
+        </form>
         <div class="err__actions"><a class="ol-btn ol-btn--primary" href="/">Go home</a><a class="ol-btn ol-btn--secondary" href="/season">Browse this season</a></div>
       </main>
     </div>
@@ -93,9 +96,9 @@
       <main id="main-2" class="err">
         <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="searching"><defs><linearGradient id="ml-anf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="104" cy="186" rx="48" ry="6"/>
-  <ellipse class="m-step" cx="26" cy="182" rx="6" ry="3"/>
-  <ellipse class="m-step" cx="44" cy="176" rx="6" ry="3"/>
+  <ellipse class="m-shadow" cx="104" cy="181" rx="46" ry="5"/>
+  <ellipse class="m-step" cx="28" cy="178" rx="6" ry="3"/>
+  <ellipse class="m-step" cx="44" cy="172" rx="6" ry="3"/>
   <g transform="rotate(5 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -115,12 +118,12 @@
         </div>
         <p class="err__eyebrow">404 · Anime not found</p>
         <h1>We searched every shelf</h1>
-        <p class="err__lead">No anime lives at <span class="err__slug">/anime/frieren-beyond-journeys-end-season-2-the-long-road-north-x</span>. The link may be mistyped, or the anime was removed.</p>
+        <p class="err__lead">No anime lives at this address. The link may be mistyped, or the anime was removed.</p>
         <form class="err__searchrow" role="search" action="/search">
           <div class="sh-search"><label class="sh-search__field"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><input type="search" name="q" value="frieren beyond journeys end season 2 the long road north x" aria-label="Search anime" /></label></div>
           <button class="ol-btn ol-btn--primary" type="submit">Search</button>
         </form>
-        <div class="err__actions"><a class="ol-btn ol-btn--ghost" href="/">Go home</a></div>
+        <div class="err__actions"><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
       </main>
     </div>
     <div class="sh demo-sec">
@@ -151,8 +154,8 @@
       <main id="main-3" class="err">
         <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="confused"><defs><linearGradient id="ml-err" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="100" cy="186" rx="50" ry="6"/>
-  <ellipse class="m-orbit" cx="100" cy="40" rx="46" ry="11"/>
+  <ellipse class="m-shadow" cx="100" cy="181" rx="48" ry="5"/>
+  <ellipse class="m-orbit" cx="100" cy="42" rx="44" ry="10"/>
   <g transform="rotate(-3 100 176)">
     <rect class="m-foot" x="70" y="164" width="22" height="18" rx="9"/>
     <rect class="m-foot" x="108" y="164" width="22" height="18" rx="9"/>
@@ -167,8 +170,8 @@
     <path class="m-limb" d="M53 126q-8 12-2 22"/>
     <path class="m-limb m-limb--b" d="M147 110q16-6 12-28"/>
   </g>
-  <circle class="m-dot-a" cx="56" cy="44" r="4"/>
-  <circle class="m-dot-b" cx="142" cy="34" r="3.5"/>
+  <circle class="m-dot-a" cx="58" cy="45" r="4"/>
+  <circle class="m-dot-b" cx="140" cy="37" r="3.5"/>
   <path class="m-dot-c" transform="translate(124 50) scale(.5)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
 </svg>
         </div>
@@ -204,12 +207,13 @@
           </div>
         </div>
       </header>
-      <main id="main-4" class="err">
-        <div class="err-art" aria-hidden="true">
+      <main id="main-4" class="anime-ctx">
+        <header class="err err--in-page">
+          <div class="err-art" aria-hidden="true">
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false" data-pose="sleepy"><defs><linearGradient id="ml-rl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="m-ga"/><stop offset="1" class="m-gb"/></linearGradient></defs>
-  <ellipse class="m-shadow" cx="108" cy="186" rx="56" ry="6"/>
-  <rect class="m-foot" x="76" y="168" width="24" height="14" rx="7"/>
-  <rect class="m-foot" x="116" y="168" width="24" height="14" rx="7"/>
+  <ellipse class="m-shadow" cx="110" cy="181" rx="50" ry="5"/>
+  <rect class="m-foot" x="78" y="164" width="24" height="14" rx="7"/>
+  <rect class="m-foot" x="118" y="164" width="24" height="14" rx="7"/>
   <rect x="54" y="72" width="108" height="104" rx="40" fill="url(#ml-rl)"/>
   <path class="m-stem" d="M108 72c0-12-7-18-17-18"/>
   <path class="m-spark" style="opacity:.6" transform="translate(86 54) scale(.75)" d="M0-11C1.6-3 3-1.6 11 0 3 1.6 1.6 3 0 11-1.6 3-3 1.6-11 0-3-1.6-1.6-3 0-11Z"/>
@@ -219,20 +223,67 @@
   <ellipse class="m-eye" cx="108" cy="134" rx="3.5" ry="4"/>
   <path class="m-limb" d="M58 136q6 14 22 12"/>
   <path class="m-limb m-limb--b" d="M158 136q-6 14-22 12"/>
-  <path class="m-mark" d="M150 52h12l-12 13h12"/>
-  <path class="m-mark" style="stroke-width:3.5" d="M170 28h9l-9 10h9"/>
-  <rect class="m-markdot" x="14" y="128" width="34" height="5" rx="2.5"/>
-  <rect class="m-markdot" x="14" y="177" width="34" height="5" rx="2.5"/>
-  <path class="m-prop" d="M19 133h24l-12 22 12 22H19l12-22z"/>
-  <path class="m-sand" d="M24 138h14l-7 12z"/>
-  <path class="m-sand" d="M22 177q9-13 18 0z"/>
+  <path class="m-mark" d="M148 54h12l-12 13h12"/>
+  <path class="m-mark" style="stroke-width:3.5" d="M166 32h9l-9 10h9"/>
+  <rect class="m-markdot" x="20" y="124" width="32" height="5" rx="2.5"/>
+  <rect class="m-markdot" x="20" y="171" width="32" height="5" rx="2.5"/>
+  <path class="m-prop" d="M25 129h22l-11 21 11 21H25l11-21z"/>
+  <path class="m-sand" d="M29.5 134h13l-6.5 11z"/>
+  <path class="m-sand" d="M28 171q8-12 16 0z"/>
 </svg>
         </div>
-        <p class="err__eyebrow">429 · Too many requests</p>
-        <h1>Taking a short breather</h1>
-        <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in about 40 seconds.</strong></p>
-        <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+          <p class="err__eyebrow">429 · Busy right now</p>
+          <h1>Taking a short breather</h1>
+          <p class="err__lead">Lots of new anime are being added right now, so this one is waiting its turn. <strong>Try again in about 40 seconds.</strong></p>
+          <div class="err__actions"><button class="ol-btn ol-btn--primary" type="button">Try again</button><a class="ol-btn ol-btn--secondary" href="/">Go home</a></div>
+        </header>
+        <nav class="ol-tabs anime-ctx__tabs" aria-label="Anime sections"><a class="ol-tab" href="#" aria-current="page" aria-selected="true">Overview</a><a class="ol-tab" href="#">Episodes</a><a class="ol-tab" href="#">Cast &amp; Crew</a><a class="ol-tab" href="#">Music</a><a class="ol-tab" href="#">Related &amp; Media</a><a class="ol-tab" href="#">Stats</a><a class="ol-tab" href="#">Community</a></nav>
+        <p class="anime-ctx__note">Overview panel: keeps its own loading or error state (outside this ticket).</p>
       </main>
+      <footer class="sh-foot">
+        <div class="sh-foot__in">
+          <div class="sh-foot__brand">
+            <a class="sh-logo" href="/"><span class="sh-logo__mark" aria-hidden="true">O</span><span>Otaku<b>League</b></span></a>
+            <p>Track. Compete. Level up. Your watchlist, XP and season leaderboard in one place.</p>
+          </div>
+          <nav aria-labelledby="f-about">
+            <h2 class="ol-label" id="f-about">OtakuLeague</h2>
+            <ul>
+              <li><a href="https://roadmap.example" rel="noopener">Roadmap ↗</a></li>
+              <li><a href="/faq">About &amp; FAQ</a></li>
+              <li><a href="/contact">Contact</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="f-legal">
+            <h2 class="ol-label" id="f-legal">Legal</h2>
+            <ul>
+              <li><a href="/privacy">Privacy</a></li>
+              <li><a href="/terms">Terms</a></li>
+              <li><a href="/cookies">Cookies</a></li>
+            </ul>
+          </nav>
+          <div>
+            <h2 class="ol-label" id="f-social">Follow</h2>
+            <ul class="sh-social" aria-labelledby="f-social">
+              <li><a href="#" aria-label="OtakuLeague on X">X</a></li>
+              <li><a href="#" aria-label="OtakuLeague Discord">Dc</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Instagram">Ig</a></li>
+              <li><a href="#" aria-label="OtakuLeague on TikTok">Tt</a></li>
+              <li><a href="#" aria-label="OtakuLeague on Facebook">Fb</a></li>
+            </ul>
+            <h2 class="ol-label" id="f-theme" style="margin-top: var(--space-6)">Theme</h2>
+            <div class="sh-seg" role="radiogroup" aria-labelledby="f-theme">
+              <button role="radio" aria-checked="true">System</button>
+              <button role="radio" aria-checked="false">Light</button>
+              <button role="radio" aria-checked="false">Dark</button>
+            </div>
+          </div>
+        </div>
+        <div class="sh-foot__base">
+          <span>© 2026 OtakuLeague · contact@otakuleague.com</span>
+          <span>Anime data from AniList</span>
+        </div>
+      </footer>
     </div>
   </body>
 </html>
