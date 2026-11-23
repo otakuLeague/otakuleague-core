@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { EMAIL_LINK_LANDINGS } from './email-link';
-import { refuseSpeculation, seeOther } from './see-other';
+import { refuseSpeculation, seeOther, seeOtherFromProxy } from './see-other';
 
 const NO_REFERRER = ['no', 'referrer'].join('-');
 
@@ -35,4 +35,31 @@ describe('seeOther', () => {
       });
     },
   );
+});
+
+describe('seeOtherFromProxy', () => {
+  it('answers the same bodiless 303 under the configured origin, never the request', async () => {
+    const response = seeOtherFromProxy(
+      { origin: 'https://beta.otakuleague.com', isHttps: true },
+      EMAIL_LINK_LANDINGS.tryAgain,
+    );
+
+    expect(response.status).toBe(303);
+    expect(await response.text()).toBe('');
+    expect(Object.fromEntries(response.headers)).toEqual({
+      location: 'https://beta.otakuleague.com/auth/verify/try-again',
+      'cache-control': 'no-store',
+      'referrer-policy': NO_REFERRER,
+    });
+  });
+
+  it('gives a Location that parses on its own, as the proxy adapter needs', () => {
+    // Next's proxy adapter runs `new NextURL(location)`: a relative Location throws (a 500).
+    const location = seeOtherFromProxy(
+      { origin: 'http://localhost:3000', isHttps: false },
+      EMAIL_LINK_LANDINGS.tryAgain,
+    ).headers.get('location');
+
+    expect(() => new URL(location ?? '')).not.toThrow();
+  });
 });

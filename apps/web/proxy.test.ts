@@ -26,9 +26,10 @@ const VISITOR_CLICK = {
 };
 
 /** A fresh module, so this instance's counters and secret start anew. */
-async function freshProxy() {
+async function freshProxy(webPublicUrl = 'https://otakuleague.com') {
   vi.resetModules();
   vi.stubEnv('VERCEL', '1');
+  vi.stubEnv('WEB_PUBLIC_URL', webPublicUrl);
   const { proxy } = await import('./proxy');
   return {
     postTo: (path: string) =>
@@ -129,7 +130,11 @@ describe('proxy with the email link throttle (OTA-223)', () => {
 
     const refused = await openLink();
     expect(refused.status).toBe(303);
-    expect(refused.headers.get('location')).toBe('/auth/verify/try-again');
+    // Absolute: Next's proxy adapter runs `new NextURL(location)`, so a relative one would be a 500.
+    // It turns this same-host one back into the path; the origin is WEB_PUBLIC_URL's.
+    expect(refused.headers.get('location')).toBe(
+      'https://otakuleague.com/auth/verify/try-again',
+    );
     expect(refused.headers.get('location')).not.toContain(TOKEN);
     expect(await refused.text()).toBe('');
     expect(refused.headers.get('cache-control')).toBe('no-store');
@@ -138,6 +143,13 @@ describe('proxy with the email link throttle (OTA-223)', () => {
     expect(refused.headers.get('x-middleware-next')).toBeNull();
     expect(refused.headers.get('x-middleware-rewrite')).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('passes every opening uncounted without a valid WEB_PUBLIC_URL', async () => {
+    const { openLink } = await freshProxy('');
+    for (let opening = 1; opening <= 11; opening += 1) {
+      expect((await openLink()).headers.get('x-middleware-next')).toBe('1');
+    }
   });
 
   it('counts the escaped spelling Next routes to the handler on the same 10', async () => {

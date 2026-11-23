@@ -16,7 +16,8 @@ import {
   emailLinkTokenFrom,
   linkRequestKindOf,
 } from './email-link';
-import { seeOther } from './see-other';
+import { seeOtherFromProxy } from './see-other';
+import { readWebPublicUrl, type WebPublicUrl } from './web-public-url';
 
 /**
  * 10 opened links per IPv4 or IPv6 /64 every 15 minutes, the API's confirm limit, on this
@@ -35,6 +36,22 @@ export interface VerifyLinkThrottleGuardOptions {
   readonly perNetwork: ActionThrottle;
   /** Read on each request it counts, never at build. */
   readonly clientSource: () => ActionClientSource;
+  /** `readOptionalWebPublicUrl(process.env)`: the origin of the over-cap `Location`. */
+  readonly webPublicUrl: () => WebPublicUrl | undefined;
+}
+
+/**
+ * `WEB_PUBLIC_URL` as the handler reads it, or nothing when it is missing or invalid (a preview
+ * included): the handler then makes 0 calls, so the guard passes uncounted.
+ */
+export function readOptionalWebPublicUrl(
+  env: Readonly<Record<string, string | undefined>>,
+): WebPublicUrl | undefined {
+  try {
+    return readWebPublicUrl(env);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -71,23 +88,30 @@ function wouldConfirm(request: Request): boolean {
 /**
  * The proxy's throttle on `GET /auth/verify` (OTA-223). Each pass drops ended windows. A link
  * opening without a known client passes uncounted: the handler's credential call then refuses
- * with 0 calls (`client_ip_unknown`, reported there). Else it counts on its /64 (or IPv4); over
- * the cap it gets the handler's own try-again answer (`seeOther`: bodiless 303, `no-store`, no
- * Referer, no token in `Location`), so the handler never runs and nothing reaches the API. No I/O,
- * no log, no try/catch.
+ * with 0 calls (`client_ip_unknown`, reported there); so does one without a valid
+ * `WEB_PUBLIC_URL` (the handler lands on try-again or `/auth`, 0 calls). Else it counts on its /64
+ * (or IPv4); over the cap it gets the handler's try-again answer with an absolute `Location` under
+ * that origin (`seeOtherFromProxy`: bodiless 303, `no-store`, no Referer, no token), so the
+ * handler never runs and nothing reaches the API. No I/O, no log.
  */
 export function createVerifyLinkThrottleGuard({
   keyOf,
   perNetwork,
   clientSource,
+  webPublicUrl,
 }: VerifyLinkThrottleGuardOptions): (request: Request) => ActionGuardVerdict {
   return (request) => {
     perNetwork.forgetEnded();
     if (!wouldConfirm(request)) return GUARD_PASS;
     const client = throttleClientOf(request.headers, clientSource());
     if (client.kind === 'unknown') return GUARD_PASS;
+    const origin = webPublicUrl();
+    if (origin === undefined) return GUARD_PASS;
     return perNetwork.take(keyOf(client.network)).kind === 'allowed'
       ? GUARD_PASS
-      : { kind: 'answer', response: seeOther(EMAIL_LINK_LANDINGS.tryAgain) };
+      : {
+          kind: 'answer',
+          response: seeOtherFromProxy(origin, EMAIL_LINK_LANDINGS.tryAgain),
+        };
   };
 }

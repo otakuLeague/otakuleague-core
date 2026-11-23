@@ -12,8 +12,10 @@ import type {
 import { EMAIL_LINK_LANDINGS } from './email-link';
 import {
   createVerifyLinkThrottleGuard,
+  readOptionalWebPublicUrl,
   VERIFY_LINK_THROTTLE_CONFIG,
 } from './verify-link-throttle-guard';
+import type { WebPublicUrl } from './web-public-url';
 
 const TOKEN = 'Vk3'.padEnd(43, 'q');
 const LINK_URL = `https://otakuleague.com${EMAIL_VERIFICATION_LINK.path}?${EMAIL_VERIFICATION_LINK.tokenParam}=${TOKEN}`;
@@ -33,7 +35,16 @@ interface Opening {
   readonly ip?: string;
 }
 
-function setup(source: ActionClientSource = 'vercel') {
+/** Another host than the request's, so the test shows `Location` never comes from the request. */
+const CONFIGURED: WebPublicUrl = {
+  origin: 'https://beta.otakuleague.com',
+  isHttps: true,
+};
+
+function setup(
+  source: ActionClientSource = 'vercel',
+  webPublicUrl: () => WebPublicUrl | undefined = () => CONFIGURED,
+) {
   const clock = { at: 1_000_000 };
   const perNetwork = createActionThrottle(
     VERIFY_LINK_THROTTLE_CONFIG,
@@ -43,6 +54,7 @@ function setup(source: ActionClientSource = 'vercel') {
     keyOf: createActionThrottleKeyer(new Uint8Array(32).fill(7)),
     perNetwork,
     clientSource: () => source,
+    webPublicUrl,
   });
   const open = ({
     url = LINK_URL,
@@ -91,7 +103,19 @@ describe('the cap', () => {
     expect(statusOf(open())).toBe('pass');
     const refused = responseOf(open());
     expect(refused.status).toBe(303);
-    expect(refused.headers.get('location')).toBe(EMAIL_LINK_LANDINGS.tryAgain);
+    expect(refused.headers.get('location')).toBe(
+      `https://beta.otakuleague.com${EMAIL_LINK_LANDINGS.tryAgain}`,
+    );
+  });
+
+  it('gives a Location Next can parse on its own, with no token', () => {
+    const { open, openMany } = setup();
+    openMany(10);
+
+    // Next's proxy adapter runs `new NextURL(location)`: a relative Location throws (a 500).
+    const location = responseOf(open()).headers.get('location') ?? '';
+    expect(new URL(location).origin).toBe(CONFIGURED.origin);
+    expect(location).not.toContain(TOKEN);
   });
 
   it('does not count a refused opening: the next window holds exactly 10 again', () => {
@@ -215,6 +239,43 @@ describe('the path as Next routes it (decoded, one trailing slash)', () => {
     expect(passCount(openMany(5))).toBe(5);
     expect(statusOf(open({ url }))).toBe(303);
     expect(statusOf(open())).toBe(303);
+  });
+});
+
+describe('the configured origin (WEB_PUBLIC_URL)', () => {
+  it('passes uncounted without one: the handler makes 0 calls there', () => {
+    const { perNetwork, openMany } = setup('vercel', () => undefined);
+
+    expect(passCount(openMany(30))).toBe(30);
+    expect(perNetwork.size()).toBe(0);
+  });
+
+  it.each<[string, Record<string, string>, string | undefined]>([
+    ['missing', {}, undefined],
+    ['empty', { WEB_PUBLIC_URL: '' }, undefined],
+    ['with a path', { WEB_PUBLIC_URL: 'https://otakuleague.com/x' }, undefined],
+    [
+      'http off loopback',
+      { WEB_PUBLIC_URL: 'http://otakuleague.com' },
+      undefined,
+    ],
+    [
+      'loopback http on Vercel',
+      { VERCEL: '1', WEB_PUBLIC_URL: 'http://localhost:3000' },
+      undefined,
+    ],
+    [
+      'https',
+      { WEB_PUBLIC_URL: 'https://otakuleague.com/' },
+      'https://otakuleague.com',
+    ],
+    [
+      'loopback http',
+      { WEB_PUBLIC_URL: 'http://127.0.0.1:3000' },
+      'http://127.0.0.1:3000',
+    ],
+  ])('reads %s as %s', (_label, env, origin) => {
+    expect(readOptionalWebPublicUrl(env)?.origin).toBe(origin);
   });
 });
 

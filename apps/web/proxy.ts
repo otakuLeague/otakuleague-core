@@ -17,6 +17,7 @@ import {
 import { reportClientIpUnknown } from './src/auth/auth-reports';
 import {
   createVerifyLinkThrottleGuard,
+  readOptionalWebPublicUrl,
   VERIFY_LINK_THROTTLE_CONFIG,
 } from './src/auth/verify-link-throttle-guard';
 
@@ -50,6 +51,7 @@ const guardVerifyLink = createVerifyLinkThrottleGuard({
   keyOf,
   perNetwork: createActionThrottle(VERIFY_LINK_THROTTLE_CONFIG, Date.now),
   clientSource: () => actionClientSourceOf(process.env),
+  webPublicUrl: () => readOptionalWebPublicUrl(process.env),
 });
 
 /**
