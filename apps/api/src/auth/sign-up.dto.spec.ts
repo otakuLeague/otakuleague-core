@@ -76,6 +76,7 @@ describe('SignUpDto', () => {
 
   it.each([
     ['7 characters', 'abcdef1'],
+    ['7 code points after NFC, from 8 units', 'abcdee\u03011'],
     ['no digit or symbol', 'abcdefghij'],
     ['one code point over the maximum', `1${'a'.repeat(PASSWORD_MAX)}`],
     ['an empty string', ''],
@@ -115,6 +116,12 @@ describe('SignUpDto', () => {
       expect(await refusedFields({ ...VALID, password })).toEqual([]);
     },
   );
+
+  it('accepts 8 code points after NFC, from 9 units (the shared rule normalises first)', async () => {
+    expect(
+      await refusedFields({ ...VALID, password: 'abcdefe\u03011' }),
+    ).toEqual([]);
+  });
 
   it(`accepts ${PASSWORD_MAX} code points after NFC, from ${2 * PASSWORD_MAX - 1} before`, async () => {
     const password = `1${'é'.repeat(PASSWORD_MAX - 1)}`;

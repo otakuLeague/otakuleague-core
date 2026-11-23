@@ -1,9 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import {
-  type NormalisedIdentifier,
-  normalisePassword,
-  PASSWORD_MIN,
-} from './credential-rules';
+import type { NormalisedIdentifier } from './credential-rules';
 
 /**
  * `PENDING_SIGN_UP_TTL` (ADR 0015): how long a sign-up submit holds its username, how long its
@@ -22,20 +18,6 @@ export const SIGN_UP_CLOSED_MESSAGE = 'Sign-up is not open yet.';
 /** `USERNAME_PATTERN`'s (`@otakuleague/shared-types`) message, for sign-up and the availability check alike; never echoes the value. */
 export const USERNAME_RULE_MESSAGE =
   'username must be 3 to 20 letters, digits or underscores';
-
-/** A digit, punctuation or symbol (an emoji included); a letter, a mark or a space is not one. */
-const DIGIT_OR_SYMBOL = /[\p{N}\p{P}\p{S}]/u;
-
-/**
- * Sign-up's password rule (parity): at least PASSWORD_MIN code points after NFC, at least one a
- * digit or symbol. The upper bound is checked apart (PasswordMaxLength), as sign-in checks it.
- */
-export function meetsSignUpPasswordRule(password: string): boolean {
-  const normalised = normalisePassword(password);
-  return (
-    [...normalised].length >= PASSWORD_MIN && DIGIT_OR_SYMBOL.test(normalised)
-  );
-}
 
 /**
  * Lower-case ASCII only, checked on normaliseIdentifier output (what is stored and mailed): a local

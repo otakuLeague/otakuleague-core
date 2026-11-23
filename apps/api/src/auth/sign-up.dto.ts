@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IDENTIFIER_MAX,
+  meetsSignUpPasswordRule,
+  PASSWORD_MIN,
   PASSWORD_RAW_MAX,
   type SignUpRequest,
   USERNAME_PATTERN,
@@ -14,17 +16,9 @@ import {
   type ValidatorConstraintInterface,
 } from 'class-validator';
 import { COMMON_PASSWORD_MESSAGE, isCommonPassword } from './common-passwords';
-import {
-  normaliseIdentifier,
-  PASSWORD_MAX,
-  PASSWORD_MIN,
-} from './credential-rules';
+import { normaliseIdentifier, PASSWORD_MAX } from './credential-rules';
 import { PasswordMaxLength } from './sign-in.dto';
-import {
-  isEmailAddress,
-  meetsSignUpPasswordRule,
-  USERNAME_RULE_MESSAGE,
-} from './sign-up-rules';
+import { isEmailAddress, USERNAME_RULE_MESSAGE } from './sign-up-rules';
 
 /**
  * The raw length first, so a long string is refused before normaliseIdentifier reads it. Shared

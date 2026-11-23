@@ -12,6 +12,36 @@ export const IDENTIFIER_MAX = 254;
  */
 export const PASSWORD_RAW_MAX = 1024;
 
+/** Shortest sign-up password, in Unicode code points after NFC (parity; ADR 0015 Addendum v3b). */
+export const PASSWORD_MIN = 8;
+
+/** A digit, punctuation or symbol (an emoji included); a letter, a mark or a space is not one. */
+const DIGIT_OR_SYMBOL = /[\p{N}\p{P}\p{S}]/u;
+
+/** Sign-up's two password rules, apart: the web ticks each one, the API needs both. */
+export interface SignUpPasswordRules {
+  readonly longEnough: boolean;
+  readonly hasDigitOrSymbol: boolean;
+}
+
+/**
+ * Judged on the NFC form (the API's `normalisePassword`): at least PASSWORD_MIN code points, and
+ * at least one a digit or symbol. The upper bound and the common-password list stay the API's.
+ */
+export function signUpPasswordRules(password: string): SignUpPasswordRules {
+  const normalised = password.normalize('NFC');
+  return {
+    longEnough: [...normalised].length >= PASSWORD_MIN,
+    hasDigitOrSymbol: DIGIT_OR_SYMBOL.test(normalised),
+  };
+}
+
+/** Sign-up's password rule (parity): both rules met. The API's DTO and the web's gate use it. */
+export function meetsSignUpPasswordRule(password: string): boolean {
+  const { longEnough, hasDigitOrSymbol } = signUpPasswordRules(password);
+  return longEnough && hasDigitOrSymbol;
+}
+
 /**
  * Parity (PARITY.md): 3 to 20 ASCII letters, digits or "_". Never "@", which sign-in reads as an
  * email, and nothing the API's identifier normalisation could change but the letter case. The API's
