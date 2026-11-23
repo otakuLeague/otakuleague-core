@@ -44,9 +44,14 @@ export const PER_IP_LIMITS = {
 
 /**
  * A second counter per IPv6 /48 ("site"), counted after the route's per-IP key, for the routes
- * listed here only (ADR 0020 Addendum 1f gate G1); a test pins these numbers.
+ * listed here only (ADR 0020 Addendum 1f gate G1, then Addendum OTA-224 for sign-up and
+ * resend); a test pins these numbers.
  */
 export const PER_IPV6_SITE_LIMITS = {
+  /** ADR 0020 Addendum (OTA-224): 30 per /48 per hour, six /64s' worth at 5 each. */
+  'sign-up': { limit: 30, windowMs: HOUR_MS },
+  /** ADR 0020 Addendum (OTA-224): 30 per /48 per hour, three /64s' worth at 10 each. */
+  'email-verification-resend': { limit: 30, windowMs: HOUR_MS },
   /** G1: 120 per /48 per minute, where 65,536 /64s at 60 each gave 3,932,160. */
   'username-availability': { limit: 120, windowMs: MINUTE_MS },
 } as const satisfies Partial<Record<PerIpRoute, RateLimitRule>>;

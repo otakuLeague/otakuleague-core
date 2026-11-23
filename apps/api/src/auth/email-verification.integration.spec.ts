@@ -1252,6 +1252,43 @@ describe('POST /auth/email-verification', () => {
       expect(await prisma.authRateLimit.count()).toBe(2);
     });
 
+    it('caps one IPv6 /48 at 30 resends an hour, across its /64s (ADR 0020 Addendum OTA-224); another /48 and an IPv4 still get 202', async () => {
+      // Four /64s of one /48 and a /64 of the next /48, in the documentation range (RFC 3849).
+      const site64 = (n: number): string => `2001:db8:aa:${n}::7`;
+      await seedAccount(1, { pendingExpiresAt: at(DAY) });
+      for (const n of [1, 2, 3]) {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          await resend(
+            { email: 'member1@example.test' },
+            from(site64(n)),
+          ).expect(202, {});
+        }
+      }
+
+      const refused = await resend(
+        { email: 'member1@example.test' },
+        from(site64(4)),
+      ).expect(429);
+
+      expect(refused.body).toEqual(RESEND_LIMITED);
+      expect(refused.headers['retry-after']).toBe('3600');
+      expect(refused.headers['cache-control']).toBe('no-store');
+      expect(await verificationMails()).toHaveLength(30);
+      // Four /64 counters and one counter for the whole site.
+      expect(await prisma.authRateLimit.count()).toBe(5);
+
+      await resend(
+        { email: 'member1@example.test' },
+        from('2001:db8:ab:1::7'),
+      ).expect(202, {});
+      await resend({ email: 'member1@example.test' }, from(OTHER_IP)).expect(
+        202,
+        {},
+      );
+      expect(await verificationMails()).toHaveLength(32);
+      expect(await prisma.authRateLimit.count()).toBe(8);
+    });
+
     it('answers 403 SIGN_UP_CLOSED while no email can be sent, before any counter or write', async () => {
       const userId = await seedAccount(1, { pendingExpiresAt: at(DAY) });
       const before = await snapshot(userId);

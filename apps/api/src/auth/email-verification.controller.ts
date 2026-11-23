@@ -172,7 +172,8 @@ export class EmailVerificationController {
       'INTERNAL_KEY_REQUIRED: a caller other than the production web server. SIGN_UP_CLOSED: no email provider yet.',
   })
   @ApiTooManyRequestsResponse({
-    description: 'TOO_MANY_REQUESTS: 10 per IP per hour.',
+    description:
+      'TOO_MANY_REQUESTS: 10 per IP (an IPv6 counts per /64) per hour, and 30 per IPv6 /48 per hour.',
   })
   @ApiServiceUnavailableResponse({ description: 'The database is down.' })
   async resend(

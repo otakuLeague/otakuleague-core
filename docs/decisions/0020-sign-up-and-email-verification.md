@@ -385,14 +385,24 @@ Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f e
 **Rejected.**
 - **A route-wide cap.** One busy visitor would deny every other visitor the hint; the /48 bounds the cheap address space and leaves other /48s alone.
 - **Reserved as 400 from a list in shared types.** It adds a web state and ships the list to the browser for no gain; taken already covers it.
-- **The /48 counter on every per-IP route in this slice.** Confirm and resend are bounded per hour or per account. Sign-up and sign-in are the accepted risk below, closed by a Gate item.
+- **The /48 counter on every per-IP route in this slice.** Confirm and resend are bounded per hour or per account. Sign-up and sign-in are the accepted risk below, closed by a Gate item. Since Addendum (OTA-224), sign-up and resend have a /48 counter; sign-in and confirm stay per /64.
 
 **Too simple?**
 - A carrier pool /48 shares 120 checks a minute among unrelated subscribers, and two busy /64s can use them all for the rest of the pool for up to a minute. Accepted: the hint is optional, and 1f treats 429 as unknown and never blocks the submit.
 - A reserved name answers without the read, so timing can tell reserved from taken. Accepted: the list is public in the repository.
-- **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens.
+- **Accepted risk (Medium), this slice only.** Sign-in, sign-up, confirm and resend stay per /64. One /48 can drive argon2 hashes from its 65,536 /64s: `AUTH_BUSY` for real members, and password spraying spread over a site. Production sign-up is closed; a Gate item (Consequences) closes this before it opens. Since Addendum (OTA-224), sign-up and resend are covered by a /48 counter; sign-in and confirm stay per /64, so sign-in's half of the risk remains.
 
 **For 1f.** `X-Client-Ip` comes only from `readClientIp()` (the platform's header), never from a client-supplied one; credential calls use `readCredentialClientIp()`, which sends 127.0.0.1 locally (ADR 0003, 1f-ii note). Treat 400 (no client IP, as locally) like 429 and 5xx: unknown, show nothing, never block the submit; 1f needs a test that a 429 never blocks the submit. A reserved name reads as taken.
+
+## Addendum (OTA-224)
+
+Added 2026-11-23: the sign-up half of the Gate item "a /48 tier for sign-up and sign-in", plus resend. No schema migration, no new variable, no new dependency, no new error code.
+
+- **Limits.** `PER_IPV6_SITE_LIMITS` gains `sign-up` and `email-verification-resend`, each 30 per IPv6 /48 per hour, counted after the /64 exactly as G1 and G2 (a submit or resend its /64 refuses never spends the /48). The refusal is the route's existing 429 `TOO_MANY_REQUESTS` with `Retry-After`. IPv4 and mapped IPv4 are unchanged (1 counter).
+- **Why 30.** Six sign-up /64s at their 5 an hour, three resend /64s at their 10 an hour: above two busy /64s (the "at least twice the /64 limit, same window" rule the table test pins) and well below what the 65,536 /64s of a /48 allowed. One /48 now drives at most 30 argon2 hashes an hour through sign-up (327,680 before) and at most 60 mails an hour (30 from sign-up's 202s, 30 from resend; 983,040 before), until the per-address email budget (Gate) exists.
+- **Cost.** An answered IPv6 request costs one more counter upsert (2 instead of 1) before the route's existing work; refused by its /64, 1 upsert; refused by its /48, 2 upserts, 0 reads, 0 hashes and 0 mails. A request refused by its /48 still writes its /64's counter row, kept until the cleanup (24 h), as in G3.
+- **Accepted risk.** A carrier pool /48 shares 30 sign-ups and 30 resends an hour among unrelated subscribers, and six busy /64s can use the sign-up budget up for the rest of the pool for up to an hour. Accepted while production sign-up is closed; the Gate's email budget and real traffic decide whether 30 stays.
+- **Not covered.** Sign-in and confirm stay per /64 (sign-in's half of the Gate item remains open; confirm is bounded per account by C4).
 
 ## Consequences
 
@@ -407,7 +417,7 @@ Added 2026-11-20: closes Gate items (a) and (b) of Addendum (1e-iii) before 1f e
   - the email budget (5 per address per 24 h, 20 per IP per 24 h, a global cap) enforced in `dispatch` before any real `EmailSender` adapter lands, with a test that fails if `canSend()` can be true in production without it;
   - no API rollback below the 1e-ii-b build once sign-up is open: an older build's delete-then-insert meets the UNIQUE index and answers 500 (23505) to a re-submit of a pending email;
   - the web (1f) never retries resend by itself: a resend is not idempotent, each call kills the previous link;
-  - a /48 tier for sign-up and sign-in (or a measured hash budget), so one IPv6 /48 cannot drive argon2 hashes from its 65,536 /64s (the accepted risk of Addendum (1f gate)).
+  - a /48 tier for sign-up and sign-in (or a measured hash budget), so one IPv6 /48 cannot drive argon2 hashes from its 65,536 /64s (the accepted risk of Addendum (1f gate)). Sign-up half done (with resend), Addendum (OTA-224); the sign-in half remains open.
 - Web contracts for 1f: 409 `USERNAME_TAKEN` and 403 `SIGN_UP_CLOSED` ("sign-up is not open yet") are separate states; the web keeps `bindingToken` in `ol_signup`; a member who did not get the mail uses "Resend", not the form again. Copy is chosen per route, never per error code (`INVALID_CREDENTIALS` from confirm means "wrong sign-up password", not a failed sign-in). `ol_signup` is a `__Host-` cookie, `HttpOnly`, `Secure`, `SameSite=Lax`, set only by the same-origin sign-up action; the binding is never read from a query string or a form field. A 401 from confirm is never treated as an expired session (no sign-out, no cookie cleared).
 
 **Too simple?**

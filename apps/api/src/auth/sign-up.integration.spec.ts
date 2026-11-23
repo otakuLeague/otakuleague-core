@@ -648,6 +648,52 @@ describe('POST /auth/sign-up', () => {
     await signUp(SIGN_UP, from(OTHER_IP)).expect(202);
   });
 
+  it('caps one IPv6 /48 at 30 submits an hour, counted after its /64s: a refused /64 never spends the site (ADR 0020 Addendum OTA-224)', async () => {
+    // Six /64s of one /48 and a /64 of the next /48, in the documentation range (RFC 3849).
+    const site64 = (n: number): string => `2001:db8:aa:${n}::7`;
+    const limited = {
+      error: { code: 'TOO_MANY_REQUESTS', message: SIGN_UP_LIMITED_MESSAGE },
+    };
+    // Every submit counts, a 409 too: one account, then 29 replays that never hash.
+    await signUp(SIGN_UP, from(site64(1))).expect(202);
+    for (let n = 0; n < 4; n += 1) {
+      await signUp(SIGN_UP, from(site64(1))).expect(409, USERNAME_TAKEN);
+    }
+    const refusedAt64 = await signUp(SIGN_UP, from(site64(1))).expect(429);
+    expect(refusedAt64.body).toEqual(limited);
+    expect(refusedAt64.headers['retry-after']).toBe('3600');
+    // The site counted /64 1's five answered submits only, so /64s 2 to 6 still get 25.
+    for (const n of [2, 3, 4, 5, 6]) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        await signUp(SIGN_UP, from(site64(n))).expect(409, USERNAME_TAKEN);
+      }
+    }
+
+    const refusedAt48 = await signUp(
+      { ...SIGN_UP, username: 'Himmel', email: 'himmel@example.test' },
+      from(site64(7)),
+    ).expect(429);
+
+    expect(refusedAt48.body).toEqual(limited);
+    expect(refusedAt48.headers['retry-after']).toBe('3600');
+    expect(refusedAt48.headers['cache-control']).toBe('no-store');
+    expect(argon2.derives).toBe(1);
+    expect(await prisma.user.count()).toBe(1);
+    // Seven /64 counters and one counter for the whole site.
+    expect(await prisma.authRateLimit.count()).toBe(8);
+
+    await signUp(
+      { ...SIGN_UP, username: 'Himmel', email: 'himmel@example.test' },
+      from('2001:db8:ab:1::7'),
+    ).expect(202);
+    await signUp(
+      { ...SIGN_UP, username: 'Heiter', email: 'heiter@example.test' },
+      from(OTHER_IP),
+    ).expect(202);
+    expect(argon2.derives).toBe(3);
+    expect(await prisma.authRateLimit.count()).toBe(11);
+  });
+
   it('answers 403 SIGN_UP_CLOSED and writes nothing while no email can be sent (ADR 0020 N5)', async () => {
     mail.open = false;
 
