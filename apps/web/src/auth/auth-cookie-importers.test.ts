@@ -31,11 +31,13 @@ const DEFINITION = 'src/auth/auth-cookies.ts';
 const SIGN_UP_ACTION = 'src/auth/sign-up-action.ts';
 const VERIFY_EMAIL_LINK = 'src/auth/verify-email-link.ts';
 const FLASH_EMAIL = 'src/auth/flash-email.ts';
+const CONFIRM_EMAIL_ACTION = 'src/auth/confirm-email-action.ts';
 
 const PINNED: Readonly<Record<string, readonly string[]>> = {
   signUpCookie: [DEFINITION, SIGN_UP_ACTION, VERIFY_EMAIL_LINK],
   clearedSignUpCookie: [DEFINITION, VERIFY_EMAIL_LINK],
-  verifyCookie: [DEFINITION, VERIFY_EMAIL_LINK],
+  verifyCookie: [DEFINITION, CONFIRM_EMAIL_ACTION, VERIFY_EMAIL_LINK],
+  clearedVerifyCookie: [DEFINITION, CONFIRM_EMAIL_ACTION],
   flashCookie: [DEFINITION, FLASH_EMAIL, SIGN_UP_ACTION],
 };
 
@@ -81,8 +83,8 @@ describe('auth cookie import gate', () => {
     },
   );
 
-  it('pins 4 files in all, the definition included', () => {
-    expect(new Set(Object.values(PINNED).flat()).size).toBe(4);
+  it('pins 5 files in all, the definition included', () => {
+    expect(new Set(Object.values(PINNED).flat()).size).toBe(5);
   });
 
   it.each(Object.entries(PINNED_NAMES))(

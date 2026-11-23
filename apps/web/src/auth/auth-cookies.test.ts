@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clearedSessionCookie,
   clearedSignUpCookie,
+  clearedVerifyCookie,
   flashCookie,
   SIGN_UP_COOKIE_MAX_AGE_SECONDS,
   sessionCookie,
@@ -61,6 +62,13 @@ describe.each([
     expect(verifyCookie(webPublicUrl)).toStrictEqual({
       name: `${prefix}ol_verify`,
       options: { ...options, maxAge: 600 },
+    });
+  });
+
+  it('clears the link token with the same name and attributes and Max-Age 0 (Secure on https)', () => {
+    expect(clearedVerifyCookie(webPublicUrl)).toStrictEqual({
+      name: `${prefix}ol_verify`,
+      options: { ...options, maxAge: 0 },
     });
   });
 });

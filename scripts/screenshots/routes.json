@@ -11,6 +11,6 @@
     { "name": "anime-sparse", "path": "/anime/minami-ke" },
     { "name": "auth-sign-in", "path": "/auth" },
     { "name": "auth-sign-up", "path": "/sign-up" },
-    { "name": "auth-verify-signed-in", "path": "/auth/verify/signed-in" }
+    { "name": "auth-verify-password", "path": "/auth/verify/password" }
   ]
 }
