@@ -12,9 +12,10 @@ const FLASH_EMAIL_PATTERN = /^[\x21-\x3f\x5b-\x7e]+@[\x21-\x3f\x5b-\x7e]+$/;
 /**
  * The flash value only when it could be an address the sign-up action wrote (ADR 0015 Addendum
  * 1f-v2 decision 3): a string of 3 to `IDENTIFIER_MAX` characters, else nothing. Not the API's email
- * rule: it is only displayed, and this already stops spaces, control and bidi characters and
- * look-alike letters a planted cookie could carry. Markup characters (`<`, `>`, `"`, `'`, `&`)
- * pass: the answer is safe only as React text, never in an attribute, HTML, a URL or a header.
+ * rule: it is displayed, and posted to the resend route (1f-vii), where the API's EmailAddress rule
+ * validates it; this already stops spaces, control and bidi characters and look-alike letters a
+ * planted cookie could carry. Markup characters (`<`, `>`, `"`, `'`, `&`) pass: the answer is safe
+ * only as React text or a JSON body field, never in an attribute, HTML, a URL or a header.
  */
 export function plausibleFlashEmail(value: unknown): string | undefined {
   return typeof value === 'string' &&

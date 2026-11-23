@@ -18,7 +18,7 @@ export type ResendVerificationState =
   | { readonly kind: 'off_on_preview' };
 
 /**
- * By status and error code only. No `busy`: the route hashes nothing, so an `AUTH_BUSY` is off
+ * By error code only (a 2xx is `sent`). No `busy`: the route hashes nothing, so an `AUTH_BUSY` is off
  * contract and `unavailable`, like a 400, a 503, a body off contract or any other refusal.
  */
 export function resendVerificationStateFrom(

@@ -24,8 +24,10 @@ import { isSameOrigin, readWebPublicUrl } from './web-public-url';
  * `readFlashEmail()` only (none or implausible: `no_address`, 0 calls), then exactly one credential
  * call with `{ email }`, never retried: each resend kills the previous link and counts against the
  * IP's limit. Takes no input, like `signOutAction`: what `useActionState` passes (a previous state, a
- * FormData) is ignored, so a forged call can never choose the address. Writes no cookie, reads no
- * session, never redirects. No try/catch: a configuration error must surface.
+ * FormData) is ignored, so a cross-site request cannot choose the address; a script that sets its
+ * own Cookie and Origin can, which public sign-up already allows, and the API's per-IP limit is the
+ * bound. Writes no cookie, reads no session, never redirects. No try/catch: a configuration error
+ * must surface.
  */
 export async function resendVerificationAction(): Promise<ResendVerificationState> {
   if (credentialRoutesOff(process.env)) {

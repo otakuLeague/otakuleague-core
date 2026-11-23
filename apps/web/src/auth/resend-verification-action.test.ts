@@ -128,6 +128,7 @@ describe('resendVerificationAction', () => {
     expect(await callWithInput(SENT_STATE, forged)).toEqual({
       kind: 'no_address',
     });
+    expect(mocks.credentialCall).toHaveBeenCalledTimes(1);
     expect(mocks.credentialCall.mock.calls).toEqual([
       [expect.objectContaining({ body: { email: ADDRESS } })],
     ]);
@@ -150,6 +151,8 @@ describe('resendVerificationAction', () => {
       'invalid_response',
     ],
     [failedWith({ kind: 'timeout' }), UNAVAILABLE],
+    // A visitor can send `x-action-forwarded`: never reported.
+    [{ kind: 'refused', reason: 'action_forwarded' }, UNAVAILABLE],
     [CLIENT_IP_UNKNOWN, UNAVAILABLE],
   ])(
     'returns %o as %o, reporting fault %s, after one call and no write',
