@@ -90,7 +90,7 @@ export function fromRelationRow(row: AnimeRelationNode): RelationNode {
         : { year: row.startYear, month: row.startMonth, day: row.startDay },
     titleEnglish: row.titleEnglish,
     titleRomaji: row.titleRomaji,
-    coverImageUrl: row.coverImageUrl,
+    coverImageUrl: anilistImageUrl(row.coverImageUrl),
     edges: (Array.isArray(row.edges) ? row.edges : []).flatMap((edge) => {
       const read = readEdge(edge);
       return read === null ? [] : [read];

@@ -403,6 +403,19 @@ describe('mapAniListMedia images', () => {
 });
 
 describe('mapAniListRelationNodes', () => {
+  it('drops a relation cover that is not an AniList https URL', () => {
+    const level = walkLevels('attack-on-titan')[0];
+    const foreign = mapAniListRelationNodes({
+      Page: {
+        media: (record(level?.Page).media as unknown[]).map((entry) => ({
+          ...record(entry),
+          coverImage: { large: 'https://evil.example/c.jpg' },
+        })),
+      },
+    });
+    expect(foreign[0]?.coverImageUrl).toBeNull();
+  });
+
   it('maps a node, its edges and their targets, manga source included', () => {
     const [aot] = mapAniListRelationNodes(walkLevels('attack-on-titan')[0]);
 
@@ -416,16 +429,6 @@ describe('mapAniListRelationNodes', () => {
       titleRomaji: 'Shingeki no Kyojin',
     });
     expect(aot?.coverImageUrl).toMatch(/^https:\/\//);
-    const level = walkLevels('attack-on-titan')[0];
-    const foreign = mapAniListRelationNodes({
-      Page: {
-        media: (record(level?.Page).media as unknown[]).map((entry) => ({
-          ...record(entry),
-          coverImage: { large: 'https://evil.example/c.jpg' },
-        })),
-      },
-    });
-    expect(foreign[0]?.coverImageUrl).toBeNull();
     const edge = (targetId: number) =>
       aot?.edges.find(({ target }) => target.anilistId === targetId);
     expect(edge(20958)).toMatchObject({

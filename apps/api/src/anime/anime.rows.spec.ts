@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mergeAnime } from './anime.merge';
 import { type AnimeRow, fromAnimeRow, toSnapshotRow } from './anime.rows';
 import { mapAniListMedia } from './sources/anilist.mapper';
 import { fixture } from './sources/fixtures';
@@ -60,6 +61,45 @@ describe('fromAnimeRow images', () => {
 
     expect(snapshot?.snapshot.coverImageUrl).toBeNull();
     expect(snapshot?.snapshot.bannerImageUrl).toBeNull();
+  });
+
+  it('turns stored non-canonical forms into null', () => {
+    const [snapshot] = fromAnimeRow(
+      rowWith('ANILIST', {
+        coverImageUrl: 'https:/s4.anilist.co/cover.jpg',
+        bannerImageUrl: 'https:s4.anilist.co/banner.jpg',
+      }),
+    ).snapshots;
+
+    expect(snapshot?.snapshot.coverImageUrl).toBeNull();
+    expect(snapshot?.snapshot.bannerImageUrl).toBeNull();
+  });
+
+  it('lets the next source supply the cover when the first one is rejected', () => {
+    const anime = {
+      ...fromAnimeRow(
+        rowWith('ANILIST', {
+          coverImageUrl: 'https://evil.example/cover.jpg',
+          bannerImageUrl: 'https://s4.anilist.co/banner.jpg',
+        }),
+      ),
+    };
+    const jikan = fromAnimeRow(
+      rowWith('JIKAN', {
+        coverImageUrl: 'https://cdn.myanimelist.net/images/a.jpg',
+        bannerImageUrl: 'https://s4.anilist.co/banner.jpg',
+      }),
+    ).snapshots;
+    const merged = mergeAnime(
+      { ...anime, snapshots: [...anime.snapshots, ...jikan] },
+      () => true,
+      FETCHED_AT,
+    );
+
+    expect(merged.coverImageUrl).toMatchObject({
+      value: 'https://cdn.myanimelist.net/images/a.jpg',
+      source: 'jikan',
+    });
   });
 
   it('checks a Jikan row against MyAnimeList, not AniList', () => {

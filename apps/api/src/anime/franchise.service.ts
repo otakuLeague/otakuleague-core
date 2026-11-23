@@ -18,6 +18,7 @@ import {
 import { FranchiseWalker, relationsKey } from './franchise-walker.service';
 import { fromRelationRow } from './relation.rows';
 import { SourceBackoff } from './source-backoff';
+import { anilistImageUrl } from './sources/parse';
 import { AnimeSourceSettings } from './sources/source-settings';
 
 /** last_used_at only drives the 30-day purge: one write per hour per row is plenty. */
@@ -212,7 +213,7 @@ export class AnimeFranchiseService {
                 month: snapshot.startMonth,
                 day: snapshot.startDay,
               },
-        coverImageUrl: snapshot.coverImageUrl,
+        coverImageUrl: anilistImageUrl(snapshot.coverImageUrl),
         label: 'Season 1',
         isCurrent: true,
       },

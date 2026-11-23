@@ -146,16 +146,34 @@ export function boundedTexts(value: unknown): string[] {
     : [];
 }
 
+const MAX_IMAGE_URL_LENGTH = 2_048;
+
+/**
+ * Only the canonical form of an https URL is accepted (the parser's own `href` must equal the
+ * text), so backslashes, `@` tricks, escaped dots, tabs and the like are rejected rather than
+ * rewritten; no credentials, no port.
+ */
 function imageUrlOn(value: unknown, domains: readonly string[]): string | null {
   const url = text(value);
-  if (url === null || !/^https:\/\//i.test(url) || !URL.canParse(url)) {
+  if (
+    url === null ||
+    url.length > MAX_IMAGE_URL_LENGTH ||
+    !url.startsWith('https://') ||
+    !URL.canParse(url)
+  ) {
     return null;
   }
-  const { protocol, hostname, username, password } = new URL(url);
+  const parsed = new URL(url);
   const onDomain = domains.some(
-    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+    (domain) =>
+      parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`),
   );
-  return protocol === 'https:' && username === '' && password === '' && onDomain
+  return parsed.protocol === 'https:' &&
+    parsed.username === '' &&
+    parsed.password === '' &&
+    parsed.port === '' &&
+    onDomain &&
+    parsed.href === url
     ? url
     : null;
 }
@@ -170,14 +188,19 @@ export function myanimelistImageUrl(value: unknown): string | null {
   return imageUrlOn(value, ['myanimelist.net']);
 }
 
+const IMAGE_CHECK: Readonly<
+  Record<AnimeDataSource, (value: unknown) => string | null>
+> = {
+  anilist: anilistImageUrl,
+  jikan: myanimelistImageUrl,
+};
+
 /** The image check for the source that supplied the URL. */
 export function sourceImageUrl(
   source: AnimeDataSource,
   value: unknown,
 ): string | null {
-  return source === 'anilist'
-    ? anilistImageUrl(value)
-    : myanimelistImageUrl(value);
+  return IMAGE_CHECK[source](value);
 }
 
 /** A score out of 100 above zero (0 is AniList's "unrated"), or null. */
