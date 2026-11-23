@@ -3,30 +3,36 @@ import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { Metadata } from 'next';
 import type { ComponentType } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EMAIL_LINK_LANDINGS,
   type EmailLinkLanding,
 } from '../../../src/auth/email-link';
+import { CONFIRM_EMAIL_LANDINGS } from '../../../src/auth/redirect-to';
 import ConfirmedPage, { metadata as confirmed } from './confirmed/page';
 import ExpiredPage, { metadata as expired } from './expired/page';
+import PasswordPage, { metadata as password } from './password/page';
 import SignedInPage, { metadata as signedIn } from './signed-in/page';
 import TryAgainPage, { metadata as tryAgain } from './try-again/page';
 
-afterEach(cleanup);
+vi.mock('../../../src/auth/confirm-email-action', () => ({
+  confirmEmailAction: vi.fn(),
+}));
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
 
 const APP_DIR = path.resolve(__dirname, '../..');
 
-// The password page is slice 1f-vi-c (ADR 0015 Addendum 1f-vi, decision 9). Until it ships, a click
-// on that path meets the 404 page; vi-c deletes this exclusion and the test then holds it too.
-const BUILT_IN_VI_C: readonly EmailLinkLanding[] = [
-  EMAIL_LINK_LANDINGS.password,
-];
-
-/** The landings that are pages of this slice: the handler's, without `/auth` and vi-c's. */
-const BUILT_LANDINGS = Object.values(EMAIL_LINK_LANDINGS).filter(
-  (landing) =>
-    landing !== EMAIL_LINK_LANDINGS.preview && !BUILT_IN_VI_C.includes(landing),
+/** Every landing of the handler is a page here, all but `/auth`. */
+const LANDING_PAGES = Object.values(EMAIL_LINK_LANDINGS).filter(
+  (landing) => landing !== EMAIL_LINK_LANDINGS.preview,
+);
+/** The one-link screens; the password page has its form instead (decision 9). */
+const SCREEN_LANDINGS = LANDING_PAGES.filter(
+  (landing) => landing !== EMAIL_LINK_LANDINGS.password,
 );
 
 const pageOf = (landing: string) =>
@@ -125,23 +131,22 @@ describe('email link landing pages', () => {
     },
   );
 
-  it('covers every built landing once', () => {
+  it('covers every one-link screen once', () => {
     expect(SCREENS.map(({ landing }) => landing).sort()).toEqual(
-      [...BUILT_LANDINGS].sort(),
+      [...SCREEN_LANDINGS].sort(),
     );
   });
 
-  it('has a page for every landing of the handler, password excepted until vi-c', () => {
+  it('has a page for every landing of the handler and of the password action', () => {
     expect(
-      BUILT_LANDINGS.filter((landing) => !existsSync(pageOf(landing))),
-    ).toEqual([]);
-    expect(
-      BUILT_IN_VI_C.filter((landing) => existsSync(pageOf(landing))),
+      [...LANDING_PAGES, ...Object.values(CONFIRM_EMAIL_LANDINGS)].filter(
+        (landing) => !existsSync(pageOf(landing)),
+      ),
     ).toEqual([]);
   });
 
   // Static by construction: no request-time read or API call can arrive without a new import.
-  it.each(BUILT_LANDINGS)(
+  it.each(SCREEN_LANDINGS)(
     '%s imports only Next types, the screen and the link lifetime, and stays a sync server component',
     (landing) => {
       const file = pageOf(landing);
@@ -169,6 +174,64 @@ describe('email link landing pages', () => {
         '../../../src/auth/focus-heading',
         '../../styles/auth.css',
         'next/link',
+      ].sort(),
+    );
+    expect(readFileSync(file, 'utf8')).not.toMatch(
+      /['"]use client['"]|\basync\b/,
+    );
+  });
+});
+
+describe('the password page (decision 9)', () => {
+  const renderPage = (vercelEnv: string) => {
+    vi.stubEnv('VERCEL', '1');
+    vi.stubEnv('VERCEL_ENV', vercelEnv);
+    return render(<PasswordPage />).container;
+  };
+
+  it('asks for the sign-up password in one form, with a way back to sign in', () => {
+    const page = renderPage('production');
+
+    expect(password).toEqual({ title: 'Confirm your email' });
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Confirm your email',
+    );
+    expect(
+      [...page.querySelectorAll('form input')].map((input) =>
+        input.getAttribute('name'),
+      ),
+    ).toEqual(['password']);
+    expect(
+      screen.getByRole('button', { name: 'Confirm my email' }).closest('form'),
+    ).toBe(page.querySelector('form'));
+    expect(
+      screen.getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')]),
+    ).toEqual([['Back to sign in', '/auth']]);
+  });
+
+  it.each(['preview', 'development', ''])(
+    'shows the preview notice and no form with VERCEL_ENV=%o',
+    (vercelEnv) => {
+      const page = renderPage(vercelEnv);
+
+      expect(screen.getByText('Sign-in is off on preview deployments')).toBeTruthy();
+      expect(page.querySelector('form, input')).toBeNull();
+    },
+  );
+
+  // The token is read by the action only: the shell reads nothing at render and makes no call.
+  it('imports only Next, its form, the preview check, the heading and the css, and stays a sync server component', () => {
+    const file = pageOf(EMAIL_LINK_LANDINGS.password);
+
+    expect(importsOf(file).sort()).toEqual(
+      [
+        'type:next',
+        'next/link',
+        '../../../../src/auth/confirm-email-form',
+        '../../../../src/auth/credential-call',
+        '../../../../src/auth/focus-heading',
+        '../../../../src/auth/sign-in-form-view',
+        '../../../styles/auth.css',
       ].sort(),
     );
     expect(readFileSync(file, 'utf8')).not.toMatch(

@@ -1,4 +1,5 @@
 import { redirect, RedirectType } from 'next/navigation';
+import { EMAIL_LINK_LANDINGS } from './email-link';
 import type { SafeNextPath } from './safe-next-path';
 
 /**
@@ -19,4 +20,24 @@ export function redirectToSignedOut(): never {
 /** After an accepted sign-up: "Check your email", a constant, replacing the history entry too. */
 export function redirectToCheckEmail(): never {
   redirect('/auth/check-email', RedirectType.replace);
+}
+
+/**
+ * Where the password page's action can land (ADR 0015 Addendum 1f-vi decision 9): three of the
+ * emailed link's own screens, constants. Never `signed-in`: that path gives no session.
+ */
+export const CONFIRM_EMAIL_LANDINGS = {
+  confirmed: EMAIL_LINK_LANDINGS.confirmed,
+  expired: EMAIL_LINK_LANDINGS.expired,
+  tryAgain: EMAIL_LINK_LANDINGS.tryAgain,
+} as const;
+
+export type ConfirmEmailLanding =
+  (typeof CONFIRM_EMAIL_LANDINGS)[keyof typeof CONFIRM_EMAIL_LANDINGS];
+
+/** After the password page's action: one of its landings, replacing the history entry too. */
+export function redirectToConfirmEmailLanding(
+  landing: ConfirmEmailLanding,
+): never {
+  redirect(landing, RedirectType.replace);
 }

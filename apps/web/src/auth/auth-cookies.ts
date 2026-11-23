@@ -107,6 +107,17 @@ export function verifyCookie(
 }
 
 /**
+ * The emailed token with `Max-Age=0`, written by the password page's action once the API answered
+ * for that token for good: confirmed or dead (ADR 0015 Addendum 1f-vi decision 9). Never
+ * `cookies().delete()`, for the reason `clearedSignUpCookie` gives.
+ */
+export function clearedVerifyCookie(
+  webPublicUrl: WebPublicUrl,
+): AuthCookie<'ol_verify'> {
+  return authCookie('ol_verify', 0, webPublicUrl);
+}
+
+/**
  * `ol_flash`: the address "Check your email" shows (at most 254 characters), and the one 1f-vii
  * resends to: that is why it keeps `__Host-`, so a sibling host cannot choose it.
  */
