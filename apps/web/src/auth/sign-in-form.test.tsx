@@ -21,7 +21,7 @@ it('posts the typed fields and next once, then keeps only the identifier after a
 
   fireEvent.change(identifier, { target: { value: 'kaito_tanaka' } });
   fireEvent.change(password, { target: { value: 'never-keep-this' } });
-  fireEvent.click(screen.getByRole('button'));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
   await screen.findByRole('alert');
 
   expect(mocks.signInAction).toHaveBeenCalledTimes(1);

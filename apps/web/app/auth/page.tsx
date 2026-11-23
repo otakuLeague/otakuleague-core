@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { credentialRoutesOff } from '../../src/auth/credential-call';
 import { SignInForm } from '../../src/auth/sign-in-form';
-import { PreviewOffNotice } from '../../src/auth/sign-in-form-view';
+import {
+  PreviewOffNotice,
+  SIGN_IN_HEADING_ID,
+} from '../../src/auth/sign-in-form-view';
 import {
   AuthQueryFields,
   type AuthSearchParams,
@@ -45,7 +48,10 @@ export default function AuthPage({
         <SignUpPanel searchParams={searchParams} />
       </Suspense>
       <div className="au-panel" data-auth-panel="sign-in">
-        <h1>Welcome back</h1>
+        {/* Focused only by the sign-up panel's FocusHeading as it goes: no island in the shell. */}
+        <h1 id={SIGN_IN_HEADING_ID} tabIndex={-1}>
+          Welcome back
+        </h1>
         <p className="au-sub">
           Sign in to keep your list, XP and rank in sync.
         </p>

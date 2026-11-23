@@ -115,6 +115,9 @@ describe('SignInFormView', () => {
     expect(button.hasAttribute('disabled')).toBe(false);
     expect(identifierInput().hasAttribute('readonly')).toBe(true);
     expect(passwordInput().hasAttribute('readonly')).toBe(true);
+    const show = screen.getByRole('button', { name: 'Show password' });
+    expect(show.getAttribute('aria-disabled')).toBe('true');
+    expect(show.hasAttribute('disabled')).toBe(false);
   });
 
   it('keeps a typed password when it re-renders as pending', () => {
@@ -170,6 +173,14 @@ describe('SignInFormView', () => {
       maxLength: 1024,
       required: true,
     });
+    expect(passwordInput().getAttribute('autocapitalize')).toBe('none');
+    const show = screen.getByRole('button', { name: 'Show password' });
+    expect(show.getAttribute('aria-controls')).toBe(passwordInput().id);
+    fireEvent.click(show);
+    expect([passwordInput().type, show.textContent]).toEqual([
+      'text',
+      'Hide password',
+    ]);
     expect(container.querySelector('form input[name="next"]')).not.toBeNull();
   });
 

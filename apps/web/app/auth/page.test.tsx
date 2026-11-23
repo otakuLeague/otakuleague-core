@@ -36,9 +36,13 @@ describe('Auth page', () => {
   it('shows the form, with the query fields inside it, in production', () => {
     const page = renderPage('production');
 
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect([heading.textContent, heading.id, heading.tabIndex]).toEqual([
       'Welcome back',
-    );
+      'sign-in-heading',
+      -1,
+    ]);
+    expect(document.activeElement).not.toBe(heading);
     expect(page.querySelector('form input[name="password"]')).not.toBeNull();
     expect(
       page.querySelector('form input[name="query-fields"]'),
@@ -123,6 +127,20 @@ describe('SignUpPanel', () => {
       expect(screen.queryByRole('alert')).toBeNull();
     },
   );
+
+  it('takes focus to its h1 when it mounts and gives it back to "Welcome back" when it goes', async () => {
+    renderPage('production');
+    const { unmount } = render(
+      await SignUpPanel({ searchParams: Promise.resolve({ mode: 'sign-up' }) }),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole('heading', { name: 'Create your account' }),
+    );
+    unmount();
+    expect(document.activeElement).toBe(
+      screen.getByRole('heading', { name: 'Welcome back' }),
+    );
+  });
 
   it('empties the shell sign-in password when the panel mounts ("Create one" keeps the route)', async () => {
     const page = renderPage('production');

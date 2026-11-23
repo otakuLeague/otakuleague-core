@@ -23,6 +23,10 @@
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
+/* Focused on arrival (FocusHeading), but not operable: no ring. */
+.au-page h1[tabindex='-1']:focus {
+  outline: none;
+}
 .au-card {
   --au-focus: var(--accent);
   --au-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent);
@@ -80,19 +84,43 @@
 .au-input input:read-only {
   color: var(--muted);
 }
-.au-input:focus-within {
+.au-input:has(input:focus) {
   border-color: var(--au-focus);
   box-shadow: var(--au-ring);
 }
 .au-input[data-state='error'] {
   border-color: var(--bad);
 }
+/* Show / Hide at the end of a password field (PasswordInput): text, a 44px target, no pressed look. */
+.au-reveal {
+  flex: none;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  margin-inline-end: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+.au-reveal:hover {
+  color: var(--ink);
+}
+.au-reveal:focus-visible {
+  outline: 2px solid var(--au-focus);
+  outline-offset: -2px;
+}
+.au-reveal[aria-disabled='true'] {
+  cursor: progress;
+}
 
 /* A message under one field (ADR 0015 Addendum v3b): only the bad tone so far. */
 .au-msg {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
   font-size: 13px;
   line-height: 18px;
@@ -126,7 +154,7 @@
 .au-rules li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   color: var(--muted);
   font-size: 13px;
 }

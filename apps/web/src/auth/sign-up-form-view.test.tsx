@@ -296,6 +296,31 @@ describe('SignUpFormView', () => {
     }
   });
 
+  it('gives each password field its own Show button, hidden again by a submit and while pending', () => {
+    const { rerender } = render(view({ kind: 'idle' }));
+    const showPassword = screen.getByRole('button', { name: 'Show password' });
+    const showConfirm = screen.getByRole('button', {
+      name: 'Show confirmation',
+    });
+    expect(
+      [showPassword, showConfirm].map((b) => b.getAttribute('aria-controls')),
+    ).toEqual(['sign-up-password', 'sign-up-confirm']);
+    fireEvent.click(showConfirm);
+    expect([input('Password').type, input('Confirm password').type]).toEqual([
+      'password',
+      'text',
+    ]);
+    submit();
+    expect(input('Confirm password').type).toBe('password');
+
+    fireEvent.click(showConfirm);
+    rerender(view({ kind: 'idle' }, true));
+    expect(input('Confirm password').type).toBe('password');
+    expect(
+      [showPassword, showConfirm].map((b) => b.getAttribute('aria-disabled')),
+    ).toEqual(['true', 'true']);
+  });
+
   it('keeps a typed password across a pending rerender (only hiding empties it)', () => {
     const { rerender } = render(view({ kind: 'idle' }));
     const password = input('Password');

@@ -1,17 +1,17 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-23 (OTA-139 v3b-a)
+Updated: 2026-11-23 (OTA-139 v3b-b)
 ## Current milestone
 W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-v3b-wiring (#122–#148) and v3b part A (#150), OTA-207 throttle for Server Action POSTs (#135, #145, #146), OTA-197, 199–204, earlier W3/W7 slices.
 ## Last session
-OTA-139 v3b-a (this branch): "Confirm password" field (never posted), `ul.au-rules` live checklist, `signUpSubmitBlock` before the action (0 calls on an unmet rule or mismatch). Review fixes (75b629c): stale server alert dismissed on a blocked submit; CSS `content` fallback for old Safari/Firefox; reset via `useLayoutEffect`, so it also runs on Suspense fallbacks. Reviews: code-reviewer and security-reviewer (Fable), no Critical. Open Minors in `docs/progress/OTA-139.md`.
-Merged: #150 (OTA-139 v3b part A: shared password rule), #149 (OTA-222: sign-in password emptied when hidden), #148 (OTA-139 sign-up wiring: panel in `/auth?mode=sign-up`, switch links, `/sign-up` 308; one-frame sign-in flash on hard load accepted; switch links drop `next`), #147, OTA-217 (#144), OTA-205-a (#137), OTA-206 (#139).
+OTA-139 v3b-b (this branch): `PasswordInput` Show/Hide on the three password fields, sign-in included; revealed resets on submit before the gate, on hide and on pagehide. `FocusHeading` focuses the panel h1 and restores to "Welcome back" (skipped if a panel field has focus); ADR 0015 addendum amended. Reviews: code-reviewer and security-reviewer (Fable), no Critical; Minors in `docs/progress/OTA-139.md`.
+Merged: #151 (OTA-139 v3b-a), #150 (OTA-139 v3b part A: shared password rule), #149 (OTA-222: sign-in password emptied when hidden), #148 (OTA-139 sign-up wiring: panel in `/auth?mode=sign-up`, switch links, `/sign-up` 308; one-frame sign-in flash on hard load accepted; switch links drop `next`), #147, OTA-217 (#144), OTA-205-a (#137), OTA-206 (#139).
 ## In progress
-- OTA-139 (Todo): v3b-b (Show buttons via `PasswordInput`, sign-in too; `FocusHeading`), 1f-vi, 1f-vii. 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
+- OTA-139 (Todo): remaining 1f-vi, 1f-vii. 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
 - OTA-205 (High): 205-b (bounded retry in `deleteSession`) and 205-c (sign-out-everywhere button, `session_ended`); independent.
 - OTA-214 slice B on its branch; OTA-215 web slice waits on OTA-216. OTA-197 leftovers: Vercel firewall rule, forged `X-Forwarded-For` spoof check on a preview. OTA-136 slices 2–4; OTA-147 `/contact` (needs an email provider).
 ## Next 3 tasks
-1. OTA-139 v3b-b, then 1f-vi, 1f-vii; sign-up stays `SIGN_UP_CLOSED` until the email sender exists.
+1. OTA-139 1f-vi, then 1f-vii; sign-up stays `SIGN_UP_CLOSED` until the email sender exists.
 2. OTA-205 205-b / 205-c.
 3. OTA-207 beta gate after deploy (Farouk): 200 sign-out POSTs in 50 s; more than 60 passing means several instances, so 207-b is not the whole answer.
 Later: OTA-216 (needs-human): live AniList run, re-record OTA-215 fixtures; OTA-209 (pin image URLs); OTA-212 Design: error pages mascot; Design for the empty right half of the anime header; OTA-186 Mailpit or OTA-184 slice 2 (Farouk decides); OTA-198 `claimsSlugs` gate; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 (shared `currentSeason`). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.

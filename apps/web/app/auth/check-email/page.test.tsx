@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { use } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import CheckEmailPage, { metadata } from './page';
@@ -54,6 +54,17 @@ describe('Check email page', () => {
     expect(page.querySelector('strong, form, input, button')).toBeNull();
     expect(page.innerHTML).not.toContain('@');
     expect(addressStub).toHaveBeenCalledOnce();
+  });
+
+  it('focuses its h1 on arrival', async () => {
+    // A sync act defers passive effects while a sibling suspends; the browser runs them at commit.
+    await act(() => {
+      render(<CheckEmailPage />);
+      return Promise.resolve();
+    });
+    expect(document.activeElement).toBe(
+      screen.getByRole('heading', { name: 'Check your email' }),
+    );
   });
 
   it('has a title only: no canonical, no description, no robots key', () => {
