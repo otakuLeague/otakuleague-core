@@ -1,7 +1,17 @@
-import { IDENTIFIER_MAX, PASSWORD_RAW_MAX } from '@otakuleague/shared-types';
+import {
+  IDENTIFIER_MAX,
+  PASSWORD_MIN,
+  PASSWORD_RAW_MAX,
+  type SignUpPasswordRules,
+  signUpPasswordRules,
+} from '@otakuleague/shared-types';
 import type { FormEvent } from 'react';
 import { clearOnHide } from './clear-on-hide';
 import { retryWaitCopy } from './sign-in-form-view';
+import {
+  type SignUpSubmitBlock,
+  signUpSubmitBlock,
+} from './sign-up-password-checks';
 import type {
   SignUpFailureState,
   SignUpField,
@@ -18,7 +28,12 @@ type SignUpFormViewProps = {
   readonly state: SignUpFormState;
   readonly pending: boolean;
   readonly kept: SignUpKeptFields;
+  readonly rules: SignUpPasswordRules;
+  readonly block: SignUpSubmitBlock;
   readonly onFieldsSubmit: (kept: SignUpKeptFields) => void;
+  /** Booleans only: nothing typed leaves a handler (ADR 0015 Addendum v3b, N33). */
+  readonly onRulesChange: (rules: SignUpPasswordRules) => void;
+  readonly onBlockChange: (block: SignUpSubmitBlock) => void;
   readonly formAction: (formData: FormData) => void;
 };
 
@@ -30,13 +45,28 @@ type AlertCopy = {
 };
 
 const ALERT_ID = 'sign-up-alert';
-const HINT_ID = 'sign-up-password-hint';
+const PASSWORD_ID = 'sign-up-password';
+const CONFIRM_ID = 'sign-up-confirm';
+const RULE_LENGTH_ID = 'sign-up-rule-length';
+const RULE_SYMBOL_ID = 'sign-up-rule-symbol';
 
 const FIELD_COPY: Readonly<Record<SignUpField, string>> = {
   username: 'Usernames are 3 to 20 letters, numbers or underscores.',
   email: 'Enter a valid email address.',
-  password:
-    'Passwords need 8 to 128 characters with a number or symbol, and common ones are refused.',
+  password: `Passwords need ${PASSWORD_MIN} to 128 characters with a number or symbol, and common ones are refused.`,
+};
+
+type BlockKind = Exclude<SignUpSubmitBlock, 'none'>;
+
+/** ADR 0015 Addendum v3b decision 4: the field a block stops on, and what it says under it. */
+const BLOCK_COPY: Readonly<
+  Record<BlockKind, { readonly id: string; readonly message: string }>
+> = {
+  rules_unmet: {
+    id: PASSWORD_ID,
+    message: `Passwords need at least ${PASSWORD_MIN} characters and a number or symbol.`,
+  },
+  confirm_mismatch: { id: CONFIRM_ID, message: "Passwords don't match." },
 };
 
 type FixedKind = Exclude<
@@ -105,24 +135,75 @@ function keptFrom(form: HTMLFormElement): SignUpKeptFields {
   return { username: read('username'), email: read('email') };
 }
 
-/** Pure sign-up form: three uncontrolled fields, one alert, one submit in flight (N29). */
+/** By id; anything but one input reads as empty, so a missing field blocks the submit. */
+function inputOf(form: HTMLFormElement, id: string): HTMLInputElement | null {
+  const element = form.elements.namedItem(id);
+  return element instanceof HTMLInputElement ? element : null;
+}
+
+/** Under its field; an edit removes it, so the next blocked submit inserts and announces it again. */
+function BlockMessage({ block }: { readonly block: BlockKind }) {
+  const { id, message } = BLOCK_COPY[block];
+  return (
+    <p className="au-msg" data-tone="bad" role="alert" id={`${id}-error`}>
+      {message}
+    </p>
+  );
+}
+
+function PasswordRule({
+  id,
+  met,
+  label,
+}: {
+  readonly id: string;
+  readonly met: boolean;
+  readonly label: string;
+}) {
+  return (
+    <li id={id} data-met={met ? '' : undefined}>
+      {label}
+      <span className="au-sr">{met ? ': done.' : ': not met.'}</span>
+    </li>
+  );
+}
+
+/**
+ * Pure sign-up form: four uncontrolled fields (the confirmation has no name, so it is never
+ * posted), one alert, one submit in flight (N29), and the browser's password gate (N32).
+ */
 export function SignUpFormView({
   state,
   pending,
   kept,
+  rules,
+  block,
   onFieldsSubmit,
+  onRulesChange,
+  onBlockChange,
   formAction,
 }: SignUpFormViewProps) {
   // Hidden while pending, so a repeated refusal inserts a new alert node and is announced again.
   const copy = state.kind === 'idle' || pending ? null : alertCopy(state);
   const isInvalid = (field: SignUpField) =>
     copy?.invalid?.includes(field) === true;
-  const fieldProps = (field: SignUpField, describedBy = ALERT_ID) =>
+  const fieldProps = (field: SignUpField) =>
     isInvalid(field)
-      ? ({ 'aria-invalid': true, 'aria-describedby': describedBy } as const)
+      ? ({ 'aria-invalid': true, 'aria-describedby': ALERT_ID } as const)
       : {};
   const inputState = (field: SignUpField) =>
     isInvalid(field) ? 'error' : undefined;
+  const passwordBlocked = block === 'rules_unmet';
+  const passwordInvalid = isInvalid('password') || passwordBlocked;
+  const confirmBlocked = block === 'confirm_mismatch';
+  const passwordDescribedBy = [
+    isInvalid('password') && ALERT_ID,
+    passwordBlocked && `${PASSWORD_ID}-error`,
+    RULE_LENGTH_ID,
+    RULE_SYMBOL_ID,
+  ]
+    .filter(Boolean)
+    .join(' ');
   return (
     <form
       className="au-card"
@@ -133,7 +214,18 @@ export function SignUpFormView({
           event.preventDefault();
           return;
         }
-        onFieldsSubmit(keptFrom(event.currentTarget));
+        const form = event.currentTarget;
+        const next = signUpSubmitBlock(
+          inputOf(form, PASSWORD_ID)?.value ?? '',
+          inputOf(form, CONFIRM_ID)?.value ?? '',
+        );
+        onBlockChange(next);
+        if (next !== 'none') {
+          event.preventDefault();
+          inputOf(form, BLOCK_COPY[next].id)?.focus();
+          return;
+        }
+        onFieldsSubmit(keptFrom(form));
       }}
     >
       {copy && (
@@ -181,10 +273,13 @@ export function SignUpFormView({
         </div>
       </div>
       <div className="au-field">
-        <label htmlFor="sign-up-password">Password</label>
-        <div className="au-input" data-state={inputState('password')}>
+        <label htmlFor={PASSWORD_ID}>Password</label>
+        <div
+          className="au-input"
+          data-state={passwordInvalid ? 'error' : undefined}
+        >
           <input
-            id="sign-up-password"
+            id={PASSWORD_ID}
             name="password"
             type="password"
             autoComplete="new-password"
@@ -195,13 +290,55 @@ export function SignUpFormView({
             required
             readOnly={pending}
             ref={clearOnHide}
-            aria-describedby={HINT_ID}
-            {...fieldProps('password', `${ALERT_ID} ${HINT_ID}`)}
+            aria-invalid={passwordInvalid || undefined}
+            aria-describedby={passwordDescribedBy}
+            onChange={(event) => {
+              onRulesChange(signUpPasswordRules(event.currentTarget.value));
+              onBlockChange('none');
+            }}
           />
         </div>
-        <p className="au-field-hint" id={HINT_ID}>
-          8 to 128 characters, with a number or symbol.
-        </p>
+        {passwordBlocked && <BlockMessage block="rules_unmet" />}
+        {/* The items describe the password, not the list: its aria-label would replace their text. */}
+        {/* role="list": Safari drops list semantics under list-style: none. */}
+        <ul className="au-rules" role="list" aria-label="Password rules">
+          <PasswordRule
+            id={RULE_LENGTH_ID}
+            met={rules.longEnough}
+            label={`At least ${PASSWORD_MIN} characters`}
+          />
+          <PasswordRule
+            id={RULE_SYMBOL_ID}
+            met={rules.hasDigitOrSymbol}
+            label="A number or symbol"
+          />
+        </ul>
+      </div>
+      <div className="au-field">
+        <label htmlFor={CONFIRM_ID}>Confirm password</label>
+        <div
+          className="au-input"
+          data-state={confirmBlocked ? 'error' : undefined}
+        >
+          <input
+            id={CONFIRM_ID}
+            type="password"
+            autoComplete="new-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={PASSWORD_RAW_MAX}
+            required
+            readOnly={pending}
+            ref={clearOnHide}
+            aria-invalid={confirmBlocked || undefined}
+            aria-describedby={
+              confirmBlocked ? `${CONFIRM_ID}-error` : undefined
+            }
+            onChange={() => onBlockChange('none')}
+          />
+        </div>
+        {confirmBlocked && <BlockMessage block="confirm_mismatch" />}
       </div>
       <button className="ol-btn ol-btn--primary au-btn" aria-disabled={pending}>
         {pending && <span className="au-spin" aria-hidden="true" />}
