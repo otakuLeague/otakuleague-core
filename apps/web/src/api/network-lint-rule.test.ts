@@ -314,6 +314,66 @@ describe('network lint rule', () => {
     });
   });
 
+  describe('response redirect gate: NextResponse.redirect and Response.redirect only in the slug proxy', () => {
+    const SLUG_PROXY = 'src/anime/slug-proxy.ts';
+    const RESPONSE_REDIRECTS = [
+      "import { NextResponse } from 'next/server';\nexport const leave = () => NextResponse.redirect('https://x.example/', 303);\n",
+      "export const leave = () => Response.redirect('https://x.example/', 303);\n",
+      "import { NextResponse } from 'next/server';\nexport const leave = () => NextResponse['redirect']('https://x.example/');\n",
+      "export const leave = () => globalThis.Response.redirect('https://x.example/');\n",
+      "import * as server from 'next/server';\nexport const leave = () => server.NextResponse.redirect('https://x.example/');\n",
+      "import { NextResponse } from 'next/server';\nconst { redirect } = NextResponse;\nexport const leave = redirect;\n",
+      "const { redirect: leave } = Response;\nexport const go = leave;\n",
+    ];
+
+    it.each(
+      everywhere(
+        [
+          OUTSIDE_API_FOLDER,
+          AUTH_FILE,
+          REDIRECT_TO,
+          'proxy.ts',
+          'app/auth/verify/route.ts',
+        ],
+        RESPONSE_REDIRECTS,
+      ),
+    )('fires in %s:\n%s', async (filePath, code) => {
+      expect(await ruleIdsFor(code, filePath)).toContain(
+        'no-restricted-syntax',
+      );
+    });
+
+    it.each(RESPONSE_REDIRECTS.slice(0, 2))(
+      'allows in the slug proxy:\n%s',
+      async (code) => {
+        expect(await ruleIdsFor(code, SLUG_PROXY)).not.toContain(
+          'no-restricted-syntax',
+        );
+      },
+    );
+
+    it('keeps every other redirect gate in the slug proxy', async () => {
+      expect(
+        await ruleIdsFor(
+          "import { redirect } from 'next/navigation';\nexport const leave = redirect;\n",
+          SLUG_PROXY,
+        ),
+      ).toContain('no-restricted-syntax');
+    });
+
+    it('allows the other Response members and a hand-built 303', async () => {
+      const code =
+        "import { NextResponse } from 'next/server';\n" +
+        'export const pass = () => [NextResponse.next(), NextResponse.rewrite(new URL("https://x.example/"))];\n' +
+        "export const see = () => new Response(null, { status: 303, headers: { Location: '/auth' } });\n" +
+        'export const followed = (response: Response) => response.redirected;\n';
+
+      expect(await ruleIdsFor(code, AUTH_FILE)).not.toContain(
+        'no-restricted-syntax',
+      );
+    });
+  });
+
   describe('dynamic import gate: a literal import() of a gated module is refused', () => {
     const importing = (source: string, before = '') =>
       `${before}export async function load(): Promise<unknown> {\n  return await import(${source});\n}\n`;
