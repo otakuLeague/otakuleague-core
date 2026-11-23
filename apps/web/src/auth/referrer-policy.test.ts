@@ -35,7 +35,7 @@ const SCANNED = filesUnder('').filter(
   (file) => !TEST_FILE.test(file) && !file.endsWith('.tsbuildinfo'),
 );
 
-// The one exception (ADR 0015 Addendum 1f-vi decision 3): the email link handler's bodiless 303,
+// The one exception (ADR 0015 Addendum 1f-vi decision 3): the email link handler's bodiless 303 and 503,
 // which no document or form inherits. The literal appears there exactly once.
 const SEE_OTHER = path.join('src', 'auth', 'see-other.ts');
 
