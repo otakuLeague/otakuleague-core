@@ -202,6 +202,8 @@ describe('perIpHits', () => {
     ['a mapped IPv4', '::ffff:203.0.113.7', 'username-availability'],
     ['an IPv4', '203.0.113.7', 'sign-up'],
     ['a mapped IPv4', '::ffff:203.0.113.7', 'sign-up'],
+    ['an IPv4', '203.0.113.7', 'email-verification-resend'],
+    ['a mapped IPv4', '::ffff:203.0.113.7', 'email-verification-resend'],
   ] as const)('counts %s %s once: no /48 exists', (_, header, route) => {
     const ip = ipKey(header);
 

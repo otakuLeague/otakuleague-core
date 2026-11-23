@@ -1252,29 +1252,32 @@ describe('POST /auth/email-verification', () => {
       expect(await prisma.authRateLimit.count()).toBe(2);
     });
 
-    it('caps one IPv6 /48 at 30 resends an hour, across its /64s (ADR 0020 Addendum OTA-224); another /48 and an IPv4 still get 202', async () => {
+    it('caps one IPv6 /48 at 30 resends an hour, counted after its /64s: a refused /64 never spends the site (ADR 0020 Addendum OTA-224); another /48 and an IPv4 still get 202', async () => {
       // Four /64s of one /48 and a /64 of the next /48, in the documentation range (RFC 3849).
       const site64 = (n: number): string => `2001:db8:aa:${n}::7`;
+      const resendFrom = (n: number) =>
+        resend({ email: 'member1@example.test' }, from(site64(n)));
       await seedAccount(1, { pendingExpiresAt: at(DAY) });
-      for (const n of [1, 2, 3]) {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await resendFrom(1).expect(202, {});
+      }
+      const refusedAt64 = await resendFrom(1).expect(429);
+      expect(refusedAt64.body).toEqual(RESEND_LIMITED);
+      expect(refusedAt64.headers['retry-after']).toBe('3600');
+      // The site counted /64 1's ten answered resends only, so /64s 2 and 3 still get 20.
+      for (const n of [2, 3]) {
         for (let attempt = 0; attempt < 10; attempt += 1) {
-          await resend(
-            { email: 'member1@example.test' },
-            from(site64(n)),
-          ).expect(202, {});
+          await resendFrom(n).expect(202, {});
         }
       }
 
-      const refused = await resend(
-        { email: 'member1@example.test' },
-        from(site64(4)),
-      ).expect(429);
+      const refusedAt48 = await resendFrom(4).expect(429);
 
-      expect(refused.body).toEqual(RESEND_LIMITED);
-      expect(refused.headers['retry-after']).toBe('3600');
-      expect(refused.headers['cache-control']).toBe('no-store');
+      expect(refusedAt48.body).toEqual(RESEND_LIMITED);
+      expect(refusedAt48.headers['retry-after']).toBe('3600');
+      expect(refusedAt48.headers['cache-control']).toBe('no-store');
       expect(await verificationMails()).toHaveLength(30);
-      // Four /64 counters and one counter for the whole site.
+      // Four /64 counters and one counter for the whole site (/64 1's 11th wrote no new row).
       expect(await prisma.authRateLimit.count()).toBe(5);
 
       await resend(
