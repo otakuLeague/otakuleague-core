@@ -1,17 +1,17 @@
 # Progress (handoff)
 Rewritten at the end of every session by `/ship` or `/wrap`. Max ~40 lines. Read this first; don't re-explore the repo.
-Updated: 2026-11-23 (OTA-139 1f-vi-b)
+Updated: 2026-11-23 (OTA-139 1f-vii-a)
 ## Current milestone
 W4 Accounts (OTA-139), then W5 My List. Done: catalog list API (OTA-135, 177, 190), OTA-137 slice 1, OTA-136 Home slice 1, OTA-184 slice 1 (ADR 0017), OTA-189 A–C, OTA-139 slices 1a–1f-v3b-wiring (#122–#148) and v3b part A (#150), OTA-207 throttle for Server Action POSTs (#135, #145, #146), OTA-197, 199–204, earlier W3/W7 slices.
 ## Last session
-OTA-139 1f-vi-b (this branch): four static result screens under `/auth/verify/*` (signed-in, confirmed, expired, try-again), robots and canonical rules; the handler answers speculative loads (`Sec-Purpose`, `Purpose: prefetch`) with a bodiless 503 so Chrome does not reuse a try-again 303 for the click. Reviews (Fable): no Critical; details in `docs/progress/OTA-139.md`.
-Merged: #153 (OTA-139 1f-vi-a: GET `/auth/verify` handler), #152 (v3b-b), #151 (v3b-a), #150 (shared password rule), #149 (OTA-222), #148 (sign-up wiring), #147, OTA-217 (#144), OTA-205-a (#137), OTA-206 (#139).
+OTA-139 1f-vii-a (this branch, autopilot): ADR 0015 Addendum 1f-vii (resend plan, split vii-a/b/c) and `resendVerificationAction()` + `resendVerificationStateFrom` (address from `ol_flash` only, no caller yet). Fable quota out until 2026-11-29: planned on Opus, reviewed by Sonnet (interim, no Critical), so the PR stays a draft for a Fable review. Details in `docs/progress/OTA-139.md`.
+Merged: #155 (1f-vi-c: `/auth/verify/password` + `confirmEmailAction`), #154 (1f-vi-b result screens), #153 (OTA-139 1f-vi-a: GET `/auth/verify` handler), #152 (v3b-b), #151 (v3b-a), #150 (shared password rule), #149 (OTA-222), #148 (sign-up wiring), #147, OTA-217 (#144), OTA-205-a (#137), OTA-206 (#139).
 ## In progress
-- OTA-139: 1f-vi-c (`/auth/verify/password` page + `confirmEmailAction`) in this PR; next 1f-vii (resend). 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
+- OTA-139: 1f-vii-a in this PR; next vii-b (Resend form on `/auth/check-email`, screenshot), then vii-c (typed email on `/auth/verify/expired`). 1f-iv-c2 sign-out and frame headers on beta not browser-verified.
 - OTA-205 (High): 205-b (bounded retry in `deleteSession`) and 205-c (sign-out-everywhere button, `session_ended`); independent.
 - OTA-214 slice B on its branch; OTA-215 web slice waits on OTA-216. OTA-197 leftovers: Vercel firewall rule, forged `X-Forwarded-For` spoof check on a preview. OTA-136 slices 2–4; OTA-147 `/contact` (needs an email provider).
 ## Next 3 tasks
-1. OTA-139 1f-vii (resend); sign-up stays `SIGN_UP_CLOSED` until the email sender exists.
+1. OTA-139 1f-vii-b, then vii-c; sign-up stays `SIGN_UP_CLOSED` until the email sender exists.
 2. OTA-205 205-b / 205-c.
 3. OTA-223 web throttle for `/auth/verify`.
 Later: OTA-207 beta gate after deploy (Farouk): 200 sign-out POSTs in 50 s; more than 60 passing means several instances, so 207-b is not the whole answer. OTA-216 (needs-human): live AniList run, re-record OTA-215 fixtures; OTA-209 (pin image URLs); OTA-212 Design: error pages mascot; Design for the empty right half of the anime header; OTA-186 Mailpit or OTA-184 slice 2 (Farouk decides); OTA-198 `claimsSlugs` gate; OTA-137 slice 2; OTA-182 slice 2b; OTA-194 (shared `currentSeason`). Launch gate: DPAs, OTA-180/181/179, contact mailbox, OTA-107.
@@ -21,7 +21,7 @@ Later: OTA-207 beta gate after deploy (Farouk): 200 sign-out POSTs in 50 s; more
 - Before 1f-iii-b deploys: a forwarded Server Action hop (`x-action-forwarded`) is refused; `x-forwarded-for` is the visitor's (also on post-redirect prefetch: API `X-Client-Ip`); Vercel system env vars stay exposed.
 - `AUTH_HMAC_KEY` on Railway (API): `[A-Za-z0-9_-]{43,128}`, distinct from every `INTERNAL_API_KEY*`; boot fails without it. `SHOW timezone` on Railway's Postgres must be UTC (OTA-200).
 - Cloud runs: Node 22 (repo wants 24). Install with `--config.engine-strict=false --ignore-scripts`, then `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm exec prisma generate`; integration via apt Postgres 16; argon2 specs fail; Google Fonts blocked: `next build --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES`.
-- Resend account and DNS (Farouk, OTA-178) before mail sends. OTA-203 (Farouk): disable "Claude" workflow, revoke `CLAUDE_CODE_OAUTH_TOKEN`, delete `claude-ok` label, close Dependabot #112, delete ~30 merged branches holding `claude.yml`.
+- Resend account and DNS (Farouk, OTA-178) before mail sends; OTA-224 (resend/sign-up /48 limit) must land first. OTA-203 (Farouk): disable "Claude" workflow, revoke `CLAUDE_CODE_OAUTH_TOKEN`, delete `claude-ok` label, close Dependabot #112, delete ~30 merged branches holding `claude.yml`.
 - Squash merges add a `Co-authored-by: Claude` trailer (cloud commits take it from the machine's git config; CLAUDE.md forbids AI attribution). Farouk decides.
 - OTA-207 questions for Farouk: HMAC privacy sentence; 429/`throttled` wording; 60/min per network cap and shared-NAT trade-off; beta gate.
 ## Known bugs
