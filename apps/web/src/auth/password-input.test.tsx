@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { FormEvent } from 'react';
+import { Activity, type FormEvent } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PasswordInput } from './password-input';
 
@@ -51,17 +51,33 @@ describe('PasswordInput', () => {
     ]);
   });
 
-  it('is a read-only password field with an aria-disabled button while pending', () => {
-    const { rerender } = render(field(false));
-    fireEvent.click(reveal());
-    rerender(field(true));
+  it('is a read-only password field with an aria-disabled button that does nothing while pending', () => {
+    const { rerender } = render(field(true));
     expect([input().type, input().readOnly]).toEqual(['password', true]);
     expect(reveal().getAttribute('aria-disabled')).toBe('true');
     expect(reveal().hasAttribute('disabled')).toBe(false);
     fireEvent.click(reveal());
 
     rerender(field(false));
-    expect([input().type, input().readOnly]).toEqual(['text', false]);
+    expect([input().type, input().readOnly]).toEqual(['password', false]);
+  });
+
+  it('hides a revealed field on pagehide (bfcache keeps the DOM) and when hidden in an Activity', () => {
+    const inActivity = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>{field(false)}</Activity>
+    );
+    const { rerender } = render(inActivity('visible'));
+    fireEvent.click(reveal());
+    fireEvent(window, new Event('pagehide'));
+    expect(input().type).toBe('password');
+
+    fireEvent.click(reveal());
+    rerender(inActivity('hidden'));
+    rerender(inActivity('visible'));
+    expect([input().type, reveal().textContent]).toEqual([
+      'password',
+      'Show password',
+    ]);
   });
 
   it('hides a revealed field before the form handlers run, so the gate sees a password field', () => {

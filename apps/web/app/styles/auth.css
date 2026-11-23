@@ -84,7 +84,7 @@
 .au-input input:read-only {
   color: var(--muted);
 }
-.au-input:focus-within {
+.au-input:has(input:focus) {
   border-color: var(--au-focus);
   box-shadow: var(--au-ring);
 }
